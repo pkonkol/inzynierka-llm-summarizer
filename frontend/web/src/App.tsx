@@ -136,20 +136,43 @@ function App() {
   }, [flashMessage]);
 
   return (
-    <div className="page-shell">
-      <div className="page-glow page-glow-top" aria-hidden="true" />
-      <div className="page-glow page-glow-bottom" aria-hidden="true" />
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-20 -top-55 h-120 w-120 rounded-full bg-glow-mint opacity-60 blur-[70px]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-30 -bottom-57.5 h-120 w-120 rounded-full bg-glow-peach opacity-60 blur-[70px]"
+      />
 
-      <main className={hasDetailOpen ? "layout has-panel" : "layout"}>
-        <section className={hasDetailOpen ? "left-column focused" : "left-column"}>
+      <main
+        className={
+          hasDetailOpen
+            ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
+            : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+        }
+      >
+        <section
+          className={
+            hasDetailOpen
+              ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
+              : "min-w-0"
+          }
+        >
           {!hasDetailOpen ? <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} /> : null}
 
-          {flashMessage ? <div className="flash-message">{flashMessage}</div> : null}
+          {flashMessage ? (
+            <div className="mt-3.5 rounded-xl border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
+              {flashMessage}
+            </div>
+          ) : null}
 
           <CompletedJobsList
             jobs={jobs}
             selectedJobId={selectedJobId}
             isLoading={isLoadingJobs}
+            isFocused={hasDetailOpen}
             onSelectJob={setSelectedJobId}
           />
         </section>

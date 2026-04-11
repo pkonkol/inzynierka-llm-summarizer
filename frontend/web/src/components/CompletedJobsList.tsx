@@ -4,6 +4,7 @@ interface CompletedJobsListProps {
     jobs: JobListItem[];
     selectedJobId: string | null;
     isLoading: boolean;
+    isFocused: boolean;
     onSelectJob: (jobId: string) => void;
 }
 
@@ -11,28 +12,45 @@ export function CompletedJobsList({
     jobs,
     selectedJobId,
     isLoading,
+    isFocused,
     onSelectJob,
 }: CompletedJobsListProps) {
+    const baseItemClass =
+        "w-full min-w-0 cursor-pointer overflow-hidden rounded-card px-3 py-[11px] text-left transition-[border-color,background-color] duration-200";
+
+    const selectedItemClass = `${baseItemClass} border border-selected-border bg-selected-bg`;
+    const defaultItemClass = `${baseItemClass} border border-transparent bg-subtle hover:border-panel-border hover:bg-subtle-hover`;
+
     return (
-        <section className="jobs-section">
-            <div className="jobs-header">
-                <h2>Gotowe podsumowania</h2>
-                <span>{jobs.length}</span>
+        <section
+            className={
+                isFocused
+                    ? "panel-shell"
+                    : "panel-shell mt-6"
+            }
+        >
+            <div className="mb-3 flex items-baseline justify-between gap-2.5">
+                <h2 className="m-0 font-display text-[1.2rem]">Gotowe podsumowania</h2>
+                <span className="text-[0.9rem] text-muted">{jobs.length}</span>
             </div>
-            {isLoading ? <p className="jobs-empty">Ladowanie listy...</p> : null}
+            {isLoading ? <p className="helper-copy">Ladowanie listy...</p> : null}
             {!isLoading && jobs.length === 0 ? (
-                <p className="jobs-empty">Brak gotowych wynikow. Dodaj pierwszy URL powyzej.</p>
+                <p className="helper-copy">Brak gotowych wynikow. Dodaj pierwszy URL powyzej.</p>
             ) : null}
-            <ul className="jobs-list">
+            <ul className="mt-3.5 grid min-w-0 list-none gap-2.25 p-0">
                 {jobs.map((job) => (
-                    <li key={job.job_id}>
+                    <li key={job.job_id} className="min-w-0">
                         <button
                             type="button"
-                            className={selectedJobId === job.job_id ? "job-item active" : "job-item"}
+                            className={selectedJobId === job.job_id ? selectedItemClass : defaultItemClass}
                             onClick={() => onSelectJob(job.job_id)}
                         >
-                            <strong>{job.title || "Bez tytulu"}</strong>
-                            <span>{job.source_url}</span>
+                            <strong className="line-clamp-2 overflow-hidden text-[0.98rem] leading-[1.35]">
+                                {job.title || "Bez tytulu"}
+                            </strong>
+                            <span className="mt-0.75 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] text-muted">
+                                {job.source_url}
+                            </span>
                         </button>
                     </li>
                 ))}

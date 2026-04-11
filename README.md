@@ -11,6 +11,12 @@ infra/     Infrastructure assets (Docker, Kubernetes manifests, scripts)
 ```
 
 ## Quick Start
+Start local infrastructure (MongoDB):
+
+```bash
+./dev.sh up
+```
+
 Run backend from repository root:
 
 ```bash
@@ -18,3 +24,9 @@ uvicorn backend.app.main:app --reload
 ```
 
 Backend details and setup are documented in `backend/README.md`.
+
+Stop local infrastructure:
+
+```bash
+./dev.sh down
+```

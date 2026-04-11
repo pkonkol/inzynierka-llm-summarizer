@@ -21,6 +21,9 @@ Preferred: keep API keys in `backend/.env`:
 ```env
 GEMINI_API_KEY=your_key_here
 DEBUG=true
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DB_NAME=web_summarization
+MONGODB_JOBS_COLLECTION=jobs
 ```
 
 The app loads `backend/.env` automatically via Pydantic Settings, regardless of where you start Uvicorn.
@@ -35,6 +38,8 @@ SUMMARY_MAX_OUTPUT_TOKENS=1600
 
 When `DEBUG=true`, backend logs detailed steps of: queueing job, scraping, LLM call, and final status.
 
+Jobs are persisted in MongoDB (naive create/read/update), not in RAM.
+
 Alternative (terminal/session only):
 
 ```bash
@@ -42,6 +47,12 @@ export GEMINI_API_KEY="your_key_here"
 ```
 
 ## Run
+Before starting backend, start local MongoDB from repository root:
+
+```bash
+./dev.sh up
+```
+
 ### Option A (from repository root)
 Recommended in monorepo mode:
 
@@ -87,12 +98,30 @@ curl -X 'POST' \
 4. Run `GET /api/v1/jobs/{job_id}` repeatedly until status is `completed` or `failed`.
 5. On success, read structured output from `summary_data`.
 
+For frontend list view (ready results), use:
+
+```bash
+curl -X 'GET' 'http://localhost:8000/api/v1/jobs'
+```
+
+Optional `limit` query param:
+
+```bash
+curl -X 'GET' 'http://localhost:8000/api/v1/jobs?limit=100'
+```
+
 `summary_data` now also contains `source_url` (original link).
 
 Expected statuses:
 - `pending`: background task still running
 - `completed`: summary generated successfully
 - `failed`: scraping or generation failed
+
+To stop local MongoDB:
+
+```bash
+./dev.sh down
+```
 
 ## Why the previous import error happened
 `No module named 'app'` appears when Python is started from a directory where `app` is not importable as a top-level module. Use one of the commands above to run with the correct module path.

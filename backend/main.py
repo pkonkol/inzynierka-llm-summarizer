@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import setup_logging
+from app.core.mongo import close_mongo, init_mongo
 from app.routers import health, summarize
 
 setup_logging()
@@ -19,3 +20,13 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(summarize.router)
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_mongo()
+
+
+@app.on_event("shutdown")
+def on_shutdown() -> None:
+    close_mongo()

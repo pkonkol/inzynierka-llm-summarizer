@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     summary_base_output_tokens: int = 300
     summary_tokens_per_1000_chars: int = 120
     summary_max_output_tokens: int = 1600
+    mongodb_uri: str = "mongodb://localhost:27017"
+    mongodb_db_name: str = "web_summarization"
+    mongodb_jobs_collection: str = "jobs"
 
 
 settings = Settings()

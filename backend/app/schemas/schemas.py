@@ -14,3 +14,10 @@ class JobStatusResponse(BaseModel):
     source_url: str
     status: Literal["pending", "completed", "failed"]
     summary_data: SummaryResponse | None = None
+    error: str | None = None
+
+
+class JobListItemResponse(BaseModel):
+    job_id: str
+    source_url: str
+    title: str

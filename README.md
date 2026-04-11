@@ -25,6 +25,18 @@ uvicorn backend.app.main:app --reload
 
 Backend details and setup are documented in `backend/README.md`.
 
+Run parallel frontend implementation (custom SPA):
+
+```bash
+cd frontend/web
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Reference-only design source remains in:
+- `frontend/MVP Frontend for Summaries/`
+
 Stop local infrastructure:
 
 ```bash

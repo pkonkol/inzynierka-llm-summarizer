@@ -7,6 +7,9 @@ CONTEXT.md
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
+.firebase/
+.firebaserc
+.agents/
 
 
 # macOS

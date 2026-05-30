@@ -1,3 +1,17 @@
+resource "google_secret_manager_secret" "mongodb_uri" {
+  secret_id = "mongodb_uri"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "gemini_key" {
+  secret_id = "gemini_key"
+  replication {
+    auto {}
+  }
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name     = "llm-summarizer-backend"
   location = var.region
@@ -42,4 +56,17 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
   name     = google_cloud_run_v2_service.backend.name
   role     = "roles/run.invoker"
   member   = "allUsers" # publiczny endpoint; usuń jeśli chcesz auth
+}
+
+# SA dla Cloud Run musi mieć dostęp do sekretów
+resource "google_secret_manager_secret_iam_member" "cloudrun_mongo" {
+  secret_id = google_secret_manager_secret.mongodb_uri.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_gemini" {
+  secret_id = google_secret_manager_secret.gemini_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }

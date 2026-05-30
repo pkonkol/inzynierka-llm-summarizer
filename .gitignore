@@ -3,6 +3,11 @@
 **/__pycache__/
 AGENTS.md
 CONTEXT.md
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+
 
 # macOS
 .DS_Store
@@ -27,3 +32,4 @@ pnpm-debug.log*
 
 # Reference-only generated frontend (do not commit)
 frontend/MVP Frontend for Summaries/
+.aider*

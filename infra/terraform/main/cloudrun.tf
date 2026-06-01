@@ -1,20 +1,34 @@
-resource "google_secret_manager_secret" "mongodb_uri" {
+data "google_secret_manager_secret" "mongodb_uri" {
   secret_id = "mongodb_uri"
-  replication {
-    auto {}
-  }
 }
 
-resource "google_secret_manager_secret" "gemini_key" {
+# resource "google_secret_manager_secret" "mongodb_uri" {
+#   secret_id = "mongodb_uri"
+#   replication {
+#     auto {}
+#   }
+# }
+
+data "google_secret_manager_secret" "gemini_key" {
   secret_id = "gemini_key"
-  replication {
-    auto {}
-  }
+}
+# resource "google_secret_manager_secret" "gemini_key" {
+#   secret_id = "gemini_key"
+#   replication {
+#     auto {}
+#   }
+# }
+
+resource "google_service_account" "cloudrun_sa" {
+  account_id   = "cloudrun-sa"
+  display_name = "Cloud Run service account"
 }
 
 resource "google_cloud_run_v2_service" "backend" {
-  name     = "llm-summarizer-backend"
-  location = var.region
+  name                = "llm-summarizer-backend"
+  location            = var.region
+  deletion_protection = false
+
 
   template {
     service_account = google_service_account.cloudrun_sa.email
@@ -31,7 +45,7 @@ resource "google_cloud_run_v2_service" "backend" {
         name = "MONGODB_URI"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.mongodb_uri.secret_id
+            secret  = data.google_secret_manager_secret.mongodb_uri.secret_id
             version = "latest"
           }
         }
@@ -40,10 +54,18 @@ resource "google_cloud_run_v2_service" "backend" {
         name = "GEMINI_API_KEY"
         value_source {
           secret_key_ref {
-            secret  = google_secret_manager_secret.gemini_key.secret_id
+            secret  = data.google_secret_manager_secret.gemini_key.secret_id
             version = "latest"
           }
         }
+      }
+      env {
+        name  = "MONGODB_DB_NAME"
+        value = "test-inzynierka-db"
+      }
+      env {
+        name  = "MONGODB_JOBS_COLLECTION"
+        value = "jobs"
       }
 
       resources { limits = { cpu = "1", memory = "512Mi" } }
@@ -60,13 +82,13 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
 
 # SA dla Cloud Run musi mieć dostęp do sekretów
 resource "google_secret_manager_secret_iam_member" "cloudrun_mongo" {
-  secret_id = google_secret_manager_secret.mongodb_uri.secret_id
+  secret_id = data.google_secret_manager_secret.mongodb_uri.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "cloudrun_gemini" {
-  secret_id = google_secret_manager_secret.gemini_key.secret_id
+  secret_id = data.google_secret_manager_secret.gemini_key.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }

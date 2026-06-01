@@ -54,6 +54,27 @@ resource "google_storage_bucket" "tf_state" {
 
   versioning { enabled = true }
   uniform_bucket_level_access = true
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "google_artifact_registry_repository" "app" {
+  repository_id = "app"
+  format        = "DOCKER"
+  location      = var.region
+}
+
+data "google_artifact_registry_repository" "app" {
+  repository_id = google_artifact_registry_repository.app.repository_id
+  location      = google_artifact_registry_repository.app.location
+}
+
+output "artifact_registry_repo" {
+  value = google_artifact_registry_repository.app.id
+}
+output "artifact_registry_repo_test" {
+  value = google_artifact_registry_repository.app.name
 }
 
 output "bucket_name" {

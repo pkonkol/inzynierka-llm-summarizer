@@ -37,6 +37,8 @@ jobs:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
       IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/app/backend
+    outputs:
+      vite_api_url: ${{ steps.write_frontend_env.outputs.vite_api_url }}
 
     steps:
       - uses: actions/checkout@v4

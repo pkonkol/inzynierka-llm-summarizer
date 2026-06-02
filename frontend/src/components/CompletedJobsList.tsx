@@ -16,19 +16,13 @@ export function CompletedJobsList({
     onSelectJob,
 }: CompletedJobsListProps) {
     const baseItemClass =
-        "w-full min-w-0 cursor-pointer overflow-hidden rounded-card px-3 py-[11px] text-left transition-[border-color,background-color] duration-200";
+        "w-full min-w-0 cursor-pointer overflow-hidden border px-3 py-[11px] text-left transition-[border-color,background-color] duration-200";
 
     const selectedItemClass = `${baseItemClass} border border-selected-border bg-selected-bg`;
-    const defaultItemClass = `${baseItemClass} border border-transparent bg-subtle hover:border-panel-border hover:bg-subtle-hover`;
+    const defaultItemClass = `${baseItemClass} border border-panel-border bg-subtle hover:bg-subtle-hover`;
 
     return (
-        <section
-            className={
-                isFocused
-                    ? "panel-shell"
-                    : "panel-shell mt-6"
-            }
-        >
+        <section className={isFocused ? "panel-shell" : "panel-shell mt-6"}>
             <div className="mb-3 flex items-baseline justify-between gap-2.5">
                 <h2 className="m-0 font-display text-[1.2rem]">Gotowe podsumowania</h2>
                 <span className="text-[0.9rem] text-muted">{jobs.length}</span>

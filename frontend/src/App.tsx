@@ -137,15 +137,6 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-20 -top-55 h-120 w-120 rounded-full bg-glow-mint opacity-60 blur-[70px]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-30 -bottom-57.5 h-120 w-120 rounded-full bg-glow-peach opacity-60 blur-[70px]"
-      />
-
       <main
         className={
           hasDetailOpen
@@ -163,7 +154,7 @@ function App() {
           {!hasDetailOpen ? <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} /> : null}
 
           {flashMessage ? (
-            <div className="mt-3.5 rounded-xl border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
+            <div className="mt-3.5 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
               {flashMessage}
             </div>
           ) : null}

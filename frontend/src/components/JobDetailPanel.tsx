@@ -25,13 +25,13 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
     }
 
     return (
-        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto rounded-t-2xl border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:rounded-panel lg:border lg:p-6 lg:shadow-detail-desktop">
+        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
             <div className="mb-4.5 flex items-center justify-between border-b border-divider pb-3">
                 <h3 className="m-0 font-display text-[1.1rem]">Szczegoly</h3>
                 <button
                     type="button"
                     onClick={onClose}
-                    className="h-9 cursor-pointer rounded-full border border-panel-border bg-close-bg px-3 text-ink"
+                    className="h-9 cursor-pointer border border-panel-border bg-close-bg px-3 text-ink"
                 >
                     Zamknij
                 </button>
@@ -46,7 +46,7 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
             {!isLoading && job ? (
                 <article className="grid gap-4.5">
                     <p
-                        className={`m-0 w-fit rounded-full px-2.5 py-1 text-[0.82rem] font-bold uppercase tracking-[0.01em] ${getStatusClass(job.status)}`}
+                        className={`m-0 w-fit border border-panel-border px-2.5 py-1 text-[0.82rem] font-bold uppercase tracking-[0.01em] ${getStatusClass(job.status)}`}
                     >
                         Status: {job.status}
                     </p>

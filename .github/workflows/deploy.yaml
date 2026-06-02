@@ -57,14 +57,20 @@ jobs:
           docker push $IMAGE:${{ github.sha }}
 
       - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.15.5
-          terraform_wrapper: false
+        #with:
+          #terraform_version: 1.15.5
+          #terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: infra/terraform/main
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=${{ vars.TF_STATE_PREFIX }}"
 
       - name: Terraform Apply
         working-directory: infra/terraform/main
         run: |
-          terraform init
           terraform apply -auto-approve -var="image_tag=${{ github.sha }}" --var-file=../common.tfvars
 
       - name: Write frontend env

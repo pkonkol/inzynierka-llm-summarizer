@@ -11,28 +11,28 @@ permissions:
   id-token: write   # wymagane dla OIDC
 
 jobs:
-  changes:
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      infra: ${{ steps.filter.outputs.infra }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-            infra:
-              - 'infra/terraform/**'
+#  changes:
+#    outputs:
+#      backend: ${{ steps.filter.outputs.backend }}
+#      frontend: ${{ steps.filter.outputs.frontend }}
+#      infra: ${{ steps.filter.outputs.infra }}
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: dorny/paths-filter@v3
+#        id: filter
+#        with:
+#          filters: |
+#            backend:
+#              - 'backend/**'
+#            frontend:
+#              - 'frontend/**'
+#            infra:
+#              - 'infra/terraform/**'
 
   deploy-backend:
-    needs: changes
+    #needs: changes
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true'
+    #if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true'
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
@@ -69,11 +69,11 @@ jobs:
 
   deploy-frontend:
     runs-on: ubuntu-latest
-    needs: [changes, deploy-backend]
-        if: |
-      always() &&
-      needs.changes.outputs.frontend == 'true' &&
-      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
+    needs: [deploy-backend]
+    #if: |
+    #    always() &&
+    #    needs.changes.outputs.frontend == 'true' &&
+    #    (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
     env:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}

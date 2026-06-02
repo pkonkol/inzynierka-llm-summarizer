@@ -38,7 +38,7 @@ jobs:
       REGION: ${{ vars.GCP_REGION }}
       IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/app/backend
     outputs:
-      vite_api_url: ${{ steps.write_frontend_env.outputs.vite_api_url }}
+      vite_api_url: ${{ steps.tf_apply.outputs.vite_api_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -71,13 +71,13 @@ jobs:
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX }}"
 
       - name: Terraform Apply
+        id: tf_apply
         working-directory: infra/terraform/main
         run: |
           terraform apply -auto-approve -var="image_tag=${{ github.sha }}" --var-file=../common.tfvars
-
-      - name: Write frontend env
-        run: |
-          echo "vite_api_url=$(terraform -chdir=infra/terraform/main output -raw backend_url)" >> $GITHUB_OUTPUT
+          terraform output -raw backend_url
+          URL=$(terraform output -raw backend_url)
+          echo "vite_api_url=$URL" >> $GITHUB_OUTPUT
 
   deploy-frontend:
     runs-on: ubuntu-latest
@@ -104,8 +104,9 @@ jobs:
       - name: Build
         working-directory: frontend
         run: |
-          echo "VITE_API_URL=${{ needs.deploy-backend.outputs.vite_api_url }}" > frontend/.env.production
-          cd frontend && npm ci && npm run build
+          echo "VITE_API_URL=${{ needs.deploy-backend.outputs.vite_api_url }}" > .env.production
+          npm ci
+          npm run build
 
       - name: Deploy to Firebase
         working-directory: frontend

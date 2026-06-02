@@ -25,6 +25,7 @@ resource "google_project_iam_member" "github_actions_roles" {
     "roles/run.admin",
     "roles/artifactregistry.writer",
     "roles/iam.serviceAccountUser",
+    "roles/secretmanager.viewer",
     "roles/secretmanager.secretAccessor",
     #"roles/storage.admin", # prostsza wersja zeby dzialal backend gcs
   ])

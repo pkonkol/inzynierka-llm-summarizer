@@ -56,6 +56,11 @@ jobs:
           docker build -t $IMAGE:${{ github.sha }} ./backend
           docker push $IMAGE:${{ github.sha }}
 
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
       - name: Terraform Apply
         working-directory: infra/terraform/main
         run: |

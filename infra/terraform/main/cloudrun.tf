@@ -68,7 +68,10 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "jobs"
       }
 
-      resources { limits = { cpu = "1", memory = "512Mi" } }
+      resources {
+        limits   = { cpu = "1", memory = "512Mi" }
+        cpu_idle = true
+      }
     }
   }
 }

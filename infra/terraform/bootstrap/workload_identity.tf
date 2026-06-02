@@ -26,10 +26,17 @@ resource "google_project_iam_member" "github_actions_roles" {
     "roles/artifactregistry.writer",
     "roles/iam.serviceAccountUser",
     "roles/secretmanager.secretAccessor",
+    #"roles/storage.admin", # prostsza wersja zeby dzialal backend gcs
   ])
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+resource "google_storage_bucket_iam_member" "state_bucket_access" {
+  bucket = "${var.project_name}-tf-state" # Nazwa Twojego bucketu
+  role   = "roles/storage.objectAdmin"    # Pełna kontrola nad plikami, ale brak uprawnień do usuwania samego bucketu
+  member = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
 resource "google_service_account_iam_member" "github_wi_binding" {

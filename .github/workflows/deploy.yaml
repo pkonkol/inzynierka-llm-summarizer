@@ -75,8 +75,7 @@ jobs:
 
       - name: Write frontend env
         run: |
-          echo "VITE_API_URL=$(terraform -chdir=infra/terraform/main output -raw backend_url)" \
-            > frontend/.env.production
+          echo "vite_api_url=$(terraform -chdir=infra/terraform/main output -raw backend_url)" >> $GITHUB_OUTPUT
 
   deploy-frontend:
     runs-on: ubuntu-latest
@@ -102,7 +101,7 @@ jobs:
 
       - name: Build
         run: |
-          echo "VITE_API_URL=${{ needs.deploy-backend.outputs.backend_url }}" > frontend/.env.production
+          echo "VITE_API_URL=${{ needs.deploy-backend.outputs.vite_api_url }}" > frontend/.env.production
           cd frontend && npm ci && npm run build
 
       - name: Deploy to Firebase

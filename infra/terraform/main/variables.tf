@@ -15,5 +15,6 @@ variable "project_name" {
 
 variable "image_tag" {
   type        = string
-  description = "Docker image tag (git SHA z CI)"
+  description = "Docker image tag assigned to build backend image and deployed to Cloud Run"
+  default     = "manual"
 }

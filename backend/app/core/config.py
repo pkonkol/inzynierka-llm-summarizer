@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Web Summarization Backend"
-    gemini_model: str = "gemini-flash-lite-latest"
+    gemini_model: str = "gemini-2.5-flash-lite" # to jest na free tier czy nie
     gemini_api_key: str | None = None
     google_api_key: str | None = None
     debug: bool = False

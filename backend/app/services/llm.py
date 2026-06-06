@@ -75,10 +75,14 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
         },
     )
 
+    usage_meta = getattr(response, "usage_metadata", None)
     logger.info(
-        "LLM: model=%s raw response=%s",
+        "LLM: model=%s finish_reason=%s input_tokens=%s output_tokens=%s thinking_tokens=%s",
         _GEMINI_MODEL,
-        response
+        response.candidates[0].finish_reason if response.candidates else None,
+        getattr(usage_meta, "prompt_token_count", 0),
+        getattr(usage_meta, "candidates_token_count", 0),
+        getattr(usage_meta, "thoughts_token_count", 0),
     )
 
     pprint.pprint("raw gemini response:")
@@ -86,16 +90,26 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
     pprint.pprint(response.text)
     print("\n\n")
 
+    def _extract_usage():
+        return {
+            "input_tokens": getattr(usage_meta, "prompt_token_count", 0),
+            "output_tokens": getattr(usage_meta, "candidates_token_count", 0),
+            "thinking_tokens": getattr(usage_meta, "thoughts_token_count", 0),
+            "total_tokens": getattr(usage_meta, "total_token_count", 0),
+        }
+
     if response.parsed is not None:
         if isinstance(response.parsed, SummaryResponse):
             result = response.parsed.model_dump()
             if source_url:
                 result["source_url"] = source_url
+            result["usage"] = _extract_usage()
             return result
 
         result = SummaryResponse.model_validate(response.parsed).model_dump()
         if source_url:
             result["source_url"] = source_url
+        result["usage"] = _extract_usage()
         return result
 
     raw_text = response.text
@@ -110,6 +124,7 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
     result = SummaryResponse.model_validate(payload).model_dump()
     if source_url:
         result["source_url"] = source_url
+    result["usage"] = _extract_usage()
 
     logger.debug(
         "LLM: response parsed title_len=%s summary_len=%s",

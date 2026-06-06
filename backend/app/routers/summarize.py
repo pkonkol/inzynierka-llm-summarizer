@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 def run_summarization_job(job_id: str, url: str) -> None:
     jobs_collection = get_jobs_collection()
+    started_at = datetime.now(timezone.utc)
 
     try:
         logger.debug("[job=%s] started for url=%s", job_id, url)
@@ -24,36 +25,58 @@ def run_summarization_job(job_id: str, url: str) -> None:
         text = extract_text_from_url(url)
         summary = generate_summary(text, source_url=url)
 
+        finished_at = datetime.now(timezone.utc)
+        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
+
         logger.debug(
-            "[job=%s] completed text_chars=%s summary_keys=%s",
+            "[job=%s] completed text_chars=%s summary_keys=%s duration_ms=%s",
             job_id,
             len(text),
             sorted(summary.keys()),
+            duration_ms,
         )
+
+        summary_data = {k: v for k, v in summary.items() if k != "usage"}
+        usage = summary.get("usage", {})
 
         jobs_collection.update_one(
             {"job_id": job_id},
             {
                 "$set": {
                     "source_url": url,
+                    "provider": "gemini",
+                    "model_name": "gemini-2.5-flash-lite",
                     "status": "completed",
-                    "summary_data": summary,
+                    "summary_data": summary_data,
+                    "usage": usage,
+                    "started_at": started_at,
+                    "finished_at": finished_at,
+                    "duration_ms": duration_ms,
                     "error": None,
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": finished_at,
                 }
             },
         )
     except Exception as exc:
+        finished_at = datetime.now(timezone.utc)
+        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
+
         logger.exception("[job=%s] failed: %s", job_id, exc)
         jobs_collection.update_one(
             {"job_id": job_id},
             {
                 "$set": {
                     "source_url": url,
+                    "provider": "gemini",
+                    "model_name": "gemini-2.5-flash-lite",
                     "status": "failed",
                     "summary_data": None,
+                    "usage": {},
+                    "started_at": started_at,
+                    "finished_at": finished_at,
+                    "duration_ms": duration_ms,
                     "error": str(exc),
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": finished_at,
                 }
             },
         )
@@ -75,10 +98,16 @@ async def create_summarize_job(
             {
                 "job_id": job_id,
                 "source_url": payload.url,
+                "provider": "gemini",
+                "model_name": "gemini-2.5-flash-lite",
                 "status": "pending",
                 "summary_data": None,
-                "error": None,
+                "usage": {},
                 "created_at": now,
+                "started_at": None,
+                "finished_at": None,
+                "duration_ms": 0,
+                "error": None,
                 "updated_at": now,
             }
         )

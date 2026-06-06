@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -9,11 +10,25 @@ class JobCreateRequest(BaseModel):
     url: str
 
 
+class UsageMetadata(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    thinking_tokens: int = 0
+    total_tokens: int = 0
+
+
 class JobStatusResponse(BaseModel):
     job_id: str
     source_url: str
     status: Literal["pending", "completed", "failed"]
+    provider: str = "gemini"
+    model_name: str = ""
     summary_data: SummaryResponse | None = None
+    usage: UsageMetadata = UsageMetadata()
+    created_at: datetime | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    duration_ms: int = 0
     error: str | None = None
 
 

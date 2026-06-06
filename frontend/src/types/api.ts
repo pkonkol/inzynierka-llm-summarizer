@@ -13,11 +13,25 @@ export interface SummaryData {
     source_url: string;
 }
 
+export interface UsageMetadata {
+    input_tokens: number;
+    output_tokens: number;
+    thinking_tokens: number;
+    total_tokens: number;
+}
+
 export interface JobStatus {
     job_id: string;
     source_url: string;
+    provider: string;
+    model_name: string;
     status: JobStatusValue;
     summary_data: SummaryData | null;
+    usage: UsageMetadata;
+    created_at: string | null;
+    started_at: string | null;
+    finished_at: string | null;
+    duration_ms: number;
     error: string | null;
 }
 

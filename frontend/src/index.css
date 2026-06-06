@@ -65,4 +65,8 @@
       linear-gradient(to right, rgba(17, 17, 17, 0.03) 1px, transparent 1px);
     background-size: 28px 28px;
   }
+
+  button {
+    @apply transition-colors;
+  }
 }

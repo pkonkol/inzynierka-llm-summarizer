@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
 
 
-def run_summarization_job(job_id: str, url: str) -> None:
+def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
 
@@ -23,7 +23,7 @@ def run_summarization_job(job_id: str, url: str) -> None:
         logger.debug("[job=%s] started for url=%s", job_id, url)
 
         text = extract_text_from_url(url)
-        summary = generate_summary(text, source_url=url)
+        summary = generate_summary(text, url, model_name, model_provider)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -44,8 +44,8 @@ def run_summarization_job(job_id: str, url: str) -> None:
             {
                 "$set": {
                     "source_url": url,
-                    "provider": "gemini",
-                    "model_name": "gemini-2.5-flash-lite",
+                    "provider": model_provider,
+                    "model_name": model_name,
                     "status": "completed",
                     "summary_data": summary_data,
                     "usage": usage,
@@ -67,8 +67,8 @@ def run_summarization_job(job_id: str, url: str) -> None:
             {
                 "$set": {
                     "source_url": url,
-                    "provider": "gemini",
-                    "model_name": "gemini-2.5-flash-lite",
+                    "provider": model_provider,
+                    "model_name": model_name,
                     "status": "failed",
                     "summary_data": None,
                     "usage": {},
@@ -87,6 +87,9 @@ async def create_summarize_job(
     payload: JobCreateRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
+
+    _verify_model_availability(payload.model_provider, payload.model_name)
+
     jobs_collection = get_jobs_collection()
     job_id = str(uuid4())
 
@@ -98,8 +101,8 @@ async def create_summarize_job(
             {
                 "job_id": job_id,
                 "source_url": payload.url,
-                "provider": "gemini",
-                "model_name": "gemini-2.5-flash-lite",
+                "provider": payload.model_provider,
+                "model_name": payload.model_name,
                 "status": "pending",
                 "summary_data": None,
                 "usage": {},
@@ -114,7 +117,7 @@ async def create_summarize_job(
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
-    background_tasks.add_task(run_summarization_job, job_id, payload.url)
+    background_tasks.add_task(run_summarization_job, job_id, payload.url, payload.model_name, payload.model_provider)
     return {"job_id": job_id}
 
 
@@ -158,3 +161,11 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     logger.debug("[job=%s] status check -> %s", job_id, job_data.get("status"))
 
     return JobStatusResponse.model_validate(job_data)
+
+
+def _verify_model_availability(provider: str, model_name: str) -> None:
+    # Tu można rozbudować o faktyczne sprawdzanie dostępności modeli, np. przez API providerów
+    if provider.lower() != "gemini":
+        raise HTTPException(status_code=400, detail=f"Unsupported model provider: {provider}")
+    if model_name.lower() not in {"gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"}:
+        raise HTTPException(status_code=400, detail=f"Unsupported model name: {model_name}")

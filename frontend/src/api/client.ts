@@ -19,10 +19,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return (await response.json()) as T;
 }
 
-export function createSummaryJob(url: string): Promise<CreateJobResponse> {
+export function createSummaryJob(url: string, model_provider: string, model_name: string): Promise<CreateJobResponse> {
     return request<CreateJobResponse>("/api/v1/jobs/summarize", {
         method: "POST",
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, model_provider, model_name }),
     });
 }
 

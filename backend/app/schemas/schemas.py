@@ -7,6 +7,8 @@ from .summary import SummaryResponse
 
 
 class JobCreateRequest(BaseModel):
+    model_name: str
+    model_provider: str
     url: str
 
 
@@ -21,7 +23,7 @@ class JobStatusResponse(BaseModel):
     job_id: str
     source_url: str
     status: Literal["pending", "completed", "failed"]
-    provider: str = "gemini"
+    model_provider: str = ""
     model_name: str = ""
     summary_data: SummaryResponse | None = None
     usage: UsageMetadata = UsageMetadata()

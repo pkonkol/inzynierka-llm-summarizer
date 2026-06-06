@@ -14,14 +14,14 @@ def init_mongo() -> None:
     _mongo_client = MongoClient(
         settings.mongodb_uri,
         # Kluczowe dla stabilności w Cloud Run:
-        retryWrites=False, 
+        retryWrites=False,
         retryReads=True,
         serverSelectionTimeoutMS=5000,
         connectTimeoutMS=10000,
         # Nie zostawiaj None! Ustaw sensowny timeout dla LLM/Scrapera
-        socketTimeoutMS=30000, 
+        socketTimeoutMS=30000,
         # Automatyczne czyszczenie starych połączeń po uśpieniu kontenera
-        maxIdleTimeMS=50000, 
+        maxIdleTimeMS=50000,
         maxPoolSize=10
     )
 

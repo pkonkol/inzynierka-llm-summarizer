@@ -9,25 +9,24 @@ from ..core.config import settings
 from ..schemas.summary import SummaryResponse
 
 
-_GEMINI_MODEL = settings.gemini_model
 logger = logging.getLogger(__name__)
 
 
-def _get_client() -> genai.Client:
-    api_key = settings.gemini_api_key or settings.google_api_key
+def _get_genai() -> genai.Client:
+    api_key = settings.gemini_api_key
     if not api_key:
         raise ValueError(
-            "Missing Gemini API key. Set GEMINI_API_KEY or GOOGLE_API_KEY in backend/.env."
+            "Missing Gemini API key. Set GEMINI_API_KEY in backend/.env."
         )
     return genai.Client(api_key=api_key)
 
 
 def _get_target_output_tokens(text: str) -> int:
-    text_len = len(text)
-    dynamic = settings.summary_base_output_tokens + (
-        (text_len // 1000) * settings.summary_tokens_per_1000_chars
-    )
-    return min(dynamic, settings.summary_max_output_tokens)
+    # text_len = len(text)
+    # dynamic = settings.summary_base_output_tokens + (
+    #     (text_len // 1000) * settings.summary_tokens_per_1000_chars
+    # )
+    return settings.summary_max_output_tokens
 
 
 def _build_detail_guidance(text: str) -> str:
@@ -38,8 +37,41 @@ def _build_detail_guidance(text: str) -> str:
         return "Write a medium-depth summary with 5-7 specific key takeaways."
     return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
 
+def _generate_content(
+    prompt: str,
+    target_tokens: int,
+    model_name: str,
+    model_provider: str,
+):
+    if model_provider.lower() not in settings.supported_models.keys():
+        raise ValueError(f"Unsupported model provider: {model_provider}")
+    if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
+        raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")
 
-def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]:
+    if model_provider.lower() == "gemini":
+        client = _get_genai()
+        response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "response_schema": SummaryResponse,
+                    "max_output_tokens": target_tokens,
+                },
+        )
+        return response
+    elif model_provider.lower() == "openrouter":
+        # Tu można dodać implementację dla OpenRoutera, np. używając openai SDK z odpowiednim endpointem
+        raise NotImplementedError("OpenRouter integration is not implemented yet")
+    elif model_provider.lower() == "ollama":
+        # Tu można dodać implementację dla Ollama, np. wysyłając zapytania HTTP do lokalnego endpointa
+        raise NotImplementedError("Ollama integration is not implemented yet")
+
+    raise ValueError(f"Model provider {model_provider} is not implemented yet")
+
+def generate_summary(
+        text: str, source_url: str, model_name: str, model_provider: str
+) -> dict[str, Any]:
     if not text or not text.strip():
         raise ValueError("Input text cannot be empty")
 
@@ -58,37 +90,37 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
     )
 
     logger.debug(
-        "LLM: model=%s text_chars=%s target_tokens=%s",
-        _GEMINI_MODEL,
+        "LLM: model=%s:%s text_chars=%s target_tokens=%s",
+        model_provider, model_name,
         len(text),
         target_tokens,
     )
 
-    client = _get_client()
-    response = client.models.generate_content(
-        model=_GEMINI_MODEL,
-        contents=prompt,
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": SummaryResponse,
-            "max_output_tokens": target_tokens,
-        },
-    )
+    response = _generate_content(prompt, target_tokens, model_name, model_provider)
+    # client.models.generate_content(
+    #     model=_GEMINI_MODEL,
+    #     contents=prompt,
+    #     config={
+    #         "response_mime_type": "application/json",
+    #         "response_schema": SummaryResponse,
+    #         "max_output_tokens": target_tokens,
+    #     },
+    # )
 
     usage_meta = getattr(response, "usage_metadata", None)
     logger.info(
-        "LLM: model=%s finish_reason=%s input_tokens=%s output_tokens=%s thinking_tokens=%s",
-        _GEMINI_MODEL,
+        "LLM: model=%s:%s finish_reason=%s input_tokens=%s output_tokens=%s thinking_tokens=%s",
+        model_provider, model_name,
         response.candidates[0].finish_reason if response.candidates else None,
         getattr(usage_meta, "prompt_token_count", 0),
         getattr(usage_meta, "candidates_token_count", 0),
         getattr(usage_meta, "thoughts_token_count", 0),
     )
 
-    pprint.pprint("raw gemini response:")
-    pprint.pprint(response)
-    pprint.pprint(response.text)
-    print("\n\n")
+    # pprint.pprint("raw gemini response:")
+    # pprint.pprint(response)
+    # pprint.pprint(response.text)
+    # print("\n\n")
 
     def _extract_usage():
         return {

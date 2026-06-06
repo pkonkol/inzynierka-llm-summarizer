@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 interface UrlSubmitCardProps {
-    onSubmit: (url: string) => Promise<void>;
+    onSubmit: (url: string, model_provider: string, model_name: string) => Promise<void>;
     isSubmitting: boolean;
 }
 
@@ -24,14 +24,15 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
             return;
         }
 
-        await onSubmit(url.trim());
+        // TODO tutaj wybor providera z gui na bazie api przychodzacego z backendu o wspieranych modelach
+        await onSubmit(url.trim(), "gemini", "gemini-3.5-flash");
         setUrl("");
     };
 
     return (
         <section className="animate-[riseIn_.55s_ease_both]">
             <h1 className="m-0 text-balance font-display text-[clamp(2rem,5vw,3.7rem)] tracking-[-0.04em]">
-                Summarize the Web, Clearly
+                Praca Inżynierska - Podsumowanie Artykułów z LLM
             </h1>
             <p className="mt-3 max-w-170 text-[1.05rem] text-muted">
                 Wklej link do artykulu, a system wygeneruje podsumowanie i zapisze wynik do listy.

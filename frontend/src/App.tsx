@@ -38,12 +38,12 @@ function App() {
     }
   };
 
-  const handleSubmit = async (url: string) => {
+  const handleSubmit = async (url: string, model_provider: string, model_name: string) => {
     setIsSubmitting(true);
     setFlashMessage("Zadanie zostalo utworzone. Trwa analiza artykulu...");
 
     try {
-      const created = await createSummaryJob(url);
+      const created = await createSummaryJob(url, model_provider, model_name);
       setActiveJobId(created.job_id);
     } catch (error) {
       setFlashMessage(`Nie udalo sie utworzyc joba: ${String(error)}`);

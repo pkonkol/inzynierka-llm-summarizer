@@ -13,12 +13,16 @@ def init_mongo() -> None:
     # retryWrites=True + serverSelectionTimeoutMS dla Cloud Run
     _mongo_client = MongoClient(
         settings.mongodb_uri,
-        retryWrites=False,  # Wróć do True dla retry na błędy tymczasowe
+        # Kluczowe dla stabilności w Cloud Run:
+        retryWrites=False, 
+        retryReads=True,
         serverSelectionTimeoutMS=5000,
         connectTimeoutMS=10000,
-        socketTimeoutMS=None,  # Bez timeout dla long operations
-        # retryConnectionErrors=True,  # Cloud Run wymaga tego
-        maxPoolSize=1,  # KLUCZOWE dla Cloud Run - no pooling!
+        # Nie zostawiaj None! Ustaw sensowny timeout dla LLM/Scrapera
+        socketTimeoutMS=30000, 
+        # Automatyczne czyszczenie starych połączeń po uśpieniu kontenera
+        maxIdleTimeMS=50000, 
+        maxPoolSize=10
     )
 
     # Test connection

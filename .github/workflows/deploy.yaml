@@ -56,6 +56,8 @@ jobs:
       - name: Build & Push
         run: |
           docker build -t $IMAGE:${{ github.sha }} ./backend
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:latest
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:latest-github-actions
 
       - name: Push
         run: |

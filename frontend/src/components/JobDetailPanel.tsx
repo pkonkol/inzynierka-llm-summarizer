@@ -1,3 +1,6 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import type { JobStatus } from "../types/api";
 
 interface JobDetailPanelProps {
@@ -62,7 +65,15 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
                     </section>
                     <section>
                         <h5 className="section-kicker">Najwazniejsze punkty</h5>
-                        <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data?.key_takeaways || "Brak tresci"}</p>
+                        <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
+                            {job.summary_data?.key_takeaways ? (
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {job.summary_data.key_takeaways}
+                                </ReactMarkdown>
+                            ) : (
+                                <p className="m-0">Brak tresci</p>
+                            )}
+                        </div>
                     </section>
                     {job.error ? (
                         <section>

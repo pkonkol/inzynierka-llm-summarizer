@@ -10,6 +10,8 @@ from ..schemas.schemas import JobCreateRequest, JobListItemResponse, JobStatusRe
 from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
 
+from ..core.config import settings
+
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 logger = logging.getLogger(__name__)
@@ -163,9 +165,9 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     return JobStatusResponse.model_validate(job_data)
 
 
-def _verify_model_availability(provider: str, model_name: str) -> None:
-    # Tu można rozbudować o faktyczne sprawdzanie dostępności modeli, np. przez API providerów
-    if provider.lower() != "gemini":
-        raise HTTPException(status_code=400, detail=f"Unsupported model provider: {provider}")
-    if model_name.lower() not in {"gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"}:
-        raise HTTPException(status_code=400, detail=f"Unsupported model name: {model_name}")
+# TODO rm albo zrobic jak w llm.py
+def _verify_model_availability(model_provider: str, model_name: str) -> None:
+    if model_provider.lower() not in settings.supported_models.keys():
+        raise ValueError(f"Unsupported model provider: {model_provider}")
+    if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
+        raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

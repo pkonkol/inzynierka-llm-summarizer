@@ -33,3 +33,7 @@ export function listCompletedJobs(limit = 50): Promise<JobListItem[]> {
 export function getJobStatus(jobId: string): Promise<JobStatus> {
     return request<JobStatus>(`/api/v1/jobs/${jobId}`);
 }
+
+export function getSupportedModels(): Promise<Record<string, string[]>> {
+    return request<Record<string, string[]>>("/api/v1/models");
+}

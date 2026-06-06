@@ -19,6 +19,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(summarize.router)
+app.include_router(summarize.models_router)
 
 
 @app.on_event("startup")

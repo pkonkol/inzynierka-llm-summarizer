@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+
+import { getSupportedModels } from "../api/client";
 
 interface UrlSubmitCardProps {
     onSubmit: (url: string, model_provider: string, model_name: string) => Promise<void>;
@@ -9,6 +11,28 @@ interface UrlSubmitCardProps {
 export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
     const [url, setUrl] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [models, setModels] = useState<Record<string, string[]>>({});
+    const [selectedModel, setSelectedModel] = useState("");
+    const [isLoadingModels, setIsLoadingModels] = useState(true);
+
+    useEffect(() => {
+        const loadModels = async () => {
+            try {
+                const data = await getSupportedModels();
+                setModels(data);
+                const firstProvider = Object.keys(data)[0];
+                const firstModel = data[firstProvider]?.[0];
+                if (firstProvider && firstModel) {
+                    setSelectedModel(`${firstProvider}:${firstModel}`);
+                }
+            } catch (err) {
+                setError(`Nie udalo sie pobrac listy modeli: ${String(err)}`);
+            } finally {
+                setIsLoadingModels(false);
+            }
+        };
+        void loadModels();
+    }, []);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -24,8 +48,8 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
             return;
         }
 
-        // TODO tutaj wybor providera z gui na bazie api przychodzacego z backendu o wspieranych modelach
-        await onSubmit(url.trim(), "gemini", "gemini-3.5-flash");
+        const [provider, model] = selectedModel.split(":");
+        await onSubmit(url.trim(), provider, model);
         setUrl("");
     };
 
@@ -62,6 +86,26 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     >
                         {isSubmitting ? "Przetwarzanie..." : "Start"}
                     </button>
+                </div>
+                <div className="mt-3.5">
+                    <label htmlFor="model-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
+                        Model
+                    </label>
+                    <select
+                        id="model-select"
+                        value={selectedModel}
+                        onChange={(event) => setSelectedModel(event.target.value)}
+                        disabled={isSubmitting || isLoadingModels}
+                        className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
+                    >
+                        {Object.entries(models).map(([provider, modelList]) =>
+                            modelList.map((model) => (
+                                <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
+                                    {provider} - {model}
+                                </option>
+                            ))
+                        )}
+                    </select>
                 </div>
                 {error ? <p className="mt-2.5 text-[0.9rem] text-danger">{error}</p> : null}
             </form>

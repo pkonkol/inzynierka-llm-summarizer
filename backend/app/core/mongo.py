@@ -9,7 +9,7 @@ _mongo_client: MongoClient | None = None
 def init_mongo() -> None:
     """Inicjalizuj klient MongoDB z prawidłowymi settings dla Cloud Run"""
     global _mongo_client
-    
+
     # retryWrites=True + serverSelectionTimeoutMS dla Cloud Run
     _mongo_client = MongoClient(
         settings.mongodb_uri,
@@ -20,7 +20,7 @@ def init_mongo() -> None:
         # retryConnectionErrors=True,  # Cloud Run wymaga tego
         maxPoolSize=1,  # KLUCZOWE dla Cloud Run - no pooling!
     )
-    
+
     # Test connection
     _mongo_client.admin.command('ping')
 

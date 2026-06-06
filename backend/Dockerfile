@@ -11,7 +11,6 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 
-COPY main.py .
 COPY app ./app
 
 ENV PYTHONUNBUFFERED=1

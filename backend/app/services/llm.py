@@ -1,5 +1,6 @@
 import json
 import logging
+import pprint
 from typing import Any
 
 from google import genai
@@ -49,6 +50,7 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
         "Summarize the provided web content. Return high-signal output in the requested JSON schema. "
         "Adapt detail level to article length. "
         f"{detail_guidance}\n"
+        "Format the summary text in markdown, separate key takeaways by newlines"
         "Ensure key_takeaways is content-rich and specific, not generic.\n\n"
         f"{source_line}"
         f"Content:\n{text.strip()}"
@@ -71,6 +73,17 @@ def generate_summary(text: str, source_url: str | None = None) -> dict[str, Any]
             "max_output_tokens": target_tokens,
         },
     )
+
+    logger.info(
+        "LLM: model=%s raw response=%s",
+        _GEMINI_MODEL,
+        response
+    )
+
+    pprint.pprint("raw gemini response:")
+    pprint.pprint(response)
+    pprint.pprint(response.text)
+    print("\n\n")
 
     if response.parsed is not None:
         if isinstance(response.parsed, SummaryResponse):

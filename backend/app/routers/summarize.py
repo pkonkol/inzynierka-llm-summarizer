@@ -69,7 +69,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
             {
                 "$set": {
                     "source_url": url,
-                    "provider": model_provider,
+                    "model_provider": model_provider,
                     "model_name": model_name,
                     "status": "failed",
                     "summary_data": None,
@@ -103,7 +103,7 @@ async def create_summarize_job(
             {
                 "job_id": job_id,
                 "source_url": payload.url,
-                "provider": payload.model_provider,
+                "model_provider": payload.model_provider,
                 "model_name": payload.model_name,
                 "status": "pending",
                 "summary_data": None,
@@ -165,9 +165,14 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     return JobStatusResponse.model_validate(job_data)
 
 
-# TODO rm albo zrobic jak w llm.py
 def _verify_model_availability(model_provider: str, model_name: str) -> None:
     if model_provider.lower() not in settings.supported_models.keys():
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")
+
+
+# TODO czemu front tego nie widzi, mozna z jobs/models przeniesc do osobnego routera? --- IGNORE ---
+@router.get("/models", summary="Get supported models")
+async def get_supported_models() -> dict[str, list[str]]:
+    return settings.supported_models

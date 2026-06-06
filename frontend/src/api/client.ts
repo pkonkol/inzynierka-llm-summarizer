@@ -35,5 +35,5 @@ export function getJobStatus(jobId: string): Promise<JobStatus> {
 }
 
 export function getSupportedModels(): Promise<Record<string, string[]>> {
-    return request<Record<string, string[]>>("/api/v1/models");
+    return request<Record<string, string[]>>("/api/v1/jobs/models");
 }

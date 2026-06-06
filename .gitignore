@@ -11,6 +11,7 @@ terraform.tfstate.backup
 .firebaserc
 .agents/
 NOTES.md
+logs.md
 .env*
 
 

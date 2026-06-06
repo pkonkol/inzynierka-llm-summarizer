@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .routers import health, summarize
-
 setup_logging()
 
 app = FastAPI(title="Web Summarization Backend")
@@ -19,7 +18,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(summarize.router)
-app.include_router(summarize.models_router)
+# app.include_router(get_supported_models.router)
 
 
 @app.on_event("startup")

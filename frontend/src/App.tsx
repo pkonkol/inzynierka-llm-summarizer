@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { clearToken, createSummaryJob, getJobStatus, getToken, listCompletedJobs } from "./api/client";
+import { createSummaryJob, getAuthStatus, getJobStatus, getToken, listCompletedJobs } from "./api/client";
 import { CompletedJobsList } from "./components/CompletedJobsList";
 import { JobDetailPanel } from "./components/JobDetailPanel";
 import { LoginOverlay } from "./components/LoginOverlay";
@@ -10,8 +10,18 @@ import type { JobListItem, JobStatus } from "./types/api";
 const LIST_REFRESH_MS = 20_000;
 const POLLING_MS = 2_500;
 
+type PendingSubmit = {
+  url: string;
+  model_provider: string;
+  model_name: string;
+  language: string;
+} | null;
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getToken()));
+  const [isAuthEnabled, setIsAuthEnabled] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<PendingSubmit>(null);
+
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,18 +50,34 @@ function App() {
     }
   };
 
-  const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string) => {
+  const submitSummary = async (url: string, model_provider: string, model_name: string, language: string) => {
     setIsSubmitting(true);
-    setFlashMessage("Zadanie zostalo utworzone. Trwa analiza artykulu...");
-
+    setFlashMessage("Zadanie zostało utworzone. Trwa analiza artykułu...");
     try {
       const created = await createSummaryJob(url, model_provider, model_name, language);
       setActiveJobId(created.job_id);
     } catch (error) {
-      setFlashMessage(`Nie udalo sie utworzyc joba: ${String(error)}`);
+      setFlashMessage(`Nie udało się utworzyć joba: ${String(error)}`);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string) => {
+    if (!isAuthEnabled || getToken()) {
+      await submitSummary(url, model_provider, model_name, language);
+      return;
+    }
+    setPendingSubmit({ url, model_provider, model_name, language });
+    setIsLoginOpen(true);
+  };
+
+  const handleLoginSuccess = async () => {
+    setIsLoginOpen(false);
+    if (!pendingSubmit) return;
+    const { url, model_provider, model_name, language } = pendingSubmit;
+    setPendingSubmit(null);
+    await submitSummary(url, model_provider, model_name, language);
   };
 
   useEffect(() => {
@@ -59,14 +85,16 @@ function App() {
 
     const initialize = async () => {
       try {
-        const data = await listCompletedJobs(50);
+        const [{ enabled }, data] = await Promise.all([
+          getAuthStatus(),
+          listCompletedJobs(50),
+        ]);
         if (isMounted) {
+          setIsAuthEnabled(enabled);
           setJobs(data);
         }
       } finally {
-        if (isMounted) {
-          setIsLoadingJobs(false);
-        }
+        if (isMounted) setIsLoadingJobs(false);
       }
     };
 
@@ -87,61 +115,51 @@ function App() {
       setSelectedJob(null);
       return;
     }
-
     void loadJobDetail(selectedJobId);
   }, [selectedJobId]);
 
   useEffect(() => {
-    if (!activeJobId) {
-      return;
-    }
+    if (!activeJobId) return;
 
     const poll = async () => {
       try {
         const status = await getJobStatus(activeJobId);
+
         if (status.status === "completed") {
-          setFlashMessage("Podsumowanie gotowe. Mozesz podejrzec wynik po prawej.");
+          setFlashMessage("Podsumowanie gotowe. Możesz podejrzeć wynik po prawej.");
           setActiveJobId(null);
           await loadCompletedJobs();
           setSelectedJobId(status.job_id);
         }
 
         if (status.status === "failed") {
-          setFlashMessage(`Job zakonczyl sie bledem: ${status.error ?? "nieznany blad"}`);
+          setFlashMessage(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`);
           setActiveJobId(null);
         }
       } catch (error) {
-        setFlashMessage(`Blad podczas odczytu statusu: ${String(error)}`);
+        setFlashMessage(`Błąd podczas odczytu statusu: ${String(error)}`);
         setActiveJobId(null);
       }
     };
 
-    const interval = setInterval(() => {
-      void poll();
-    }, POLLING_MS);
-
+    const interval = setInterval(() => { void poll(); }, POLLING_MS);
     void poll();
-
     return () => clearInterval(interval);
   }, [activeJobId]);
 
   useEffect(() => {
-    if (!flashMessage) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setFlashMessage(null);
-    }, 4500);
-
+    if (!flashMessage) return;
+    const timeout = setTimeout(() => setFlashMessage(null), 4500);
     return () => clearTimeout(timeout);
   }, [flashMessage]);
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      {!isAuthenticated && (
-        <LoginOverlay onSuccess={() => setIsAuthenticated(true)} />
-      )}
+      <LoginOverlay
+        isOpen={isLoginOpen}
+        onClose={() => { setIsLoginOpen(false); setPendingSubmit(null); }}
+        onSuccess={() => { void handleLoginSuccess(); }}
+      />
       <main
         className={
           hasDetailOpen

@@ -1,7 +1,6 @@
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.auth import require_auth
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .routers import auth, health, meta, summarize
@@ -20,8 +19,8 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
-app.include_router(summarize.router, dependencies=[Depends(require_auth)])
-app.include_router(meta.router, dependencies=[Depends(require_auth)])
+app.include_router(summarize.router)
+app.include_router(meta.router)
 
 
 @app.on_event("startup")

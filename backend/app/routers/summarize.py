@@ -2,15 +2,15 @@ import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
+from ..core.auth import require_auth
+from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..schemas.schemas import JobCreateRequest, JobListItemResponse, JobStatusResponse
 from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
-
-from ..core.config import settings
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
@@ -84,12 +84,11 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         )
 
 
-@router.post("/summarize", summary="Create summarize job")
+@router.post("/summarize", summary="Create summarize job", dependencies=[Depends(require_auth)])
 async def create_summarize_job(
     payload: JobCreateRequest,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
-
     _verify_model_availability(payload.model_provider, payload.model_name)
 
     jobs_collection = get_jobs_collection()

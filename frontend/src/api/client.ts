@@ -67,5 +67,5 @@ export function getSupportedModels(): Promise<Record<string, string[]>> {
 }
 
 export function getSupportedLanguages(): Promise<string[]> {
-    return request<string[]>("/api/v1/jobs/languages");
+    return request<string[]>("/api/v1/meta/languages");
 }

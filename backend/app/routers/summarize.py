@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
 
 
-def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str) -> None:
+def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
 
@@ -25,7 +25,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         logger.debug("[job=%s] started for url=%s", job_id, url)
 
         text = extract_text_from_url(url)
-        summary = generate_summary(text, url, model_name, model_provider)
+        summary = generate_summary(text, url, model_name, model_provider, language)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -119,7 +119,9 @@ async def create_summarize_job(
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
-    background_tasks.add_task(run_summarization_job, job_id, payload.url, payload.model_name, payload.model_provider)
+    background_tasks.add_task(
+        run_summarization_job, job_id, payload.url, payload.model_name, payload.model_provider, payload.language
+    )
     return {"job_id": job_id}
 
 

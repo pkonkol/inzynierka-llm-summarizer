@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
-import { getSupportedModels } from "../api/client";
+import { getSupportedLanguages, getSupportedModels } from "../api/client";
 
 interface UrlSubmitCardProps {
-    onSubmit: (url: string, model_provider: string, model_name: string) => Promise<void>;
+    onSubmit: (url: string, model_provider: string, model_name: string, language: string) => Promise<void>;
     isSubmitting: boolean;
 }
 
@@ -14,12 +14,16 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
     const [models, setModels] = useState<Record<string, string[]>>({});
     const [selectedModel, setSelectedModel] = useState("");
     const [isLoadingModels, setIsLoadingModels] = useState(true);
+    const [languages, setLanguages] = useState<string[]>([]);
+    const [selectedLanguage, setSelectedLanguage] = useState("en");
 
     useEffect(() => {
         const loadModels = async () => {
             try {
-                const data = await getSupportedModels();
+                const [data, langs] = await Promise.all([getSupportedModels(), getSupportedLanguages()]);
                 setModels(data);
+                setLanguages(langs);
+                if (langs[0]) setSelectedLanguage(langs[0]);
                 const firstProvider = Object.keys(data)[0];
                 const firstModel = data[firstProvider]?.[0];
                 if (firstProvider && firstModel) {
@@ -49,7 +53,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
         }
 
         const [provider, model] = selectedModel.split(":");
-        await onSubmit(url.trim(), provider, model);
+        await onSubmit(url.trim(), provider, model, selectedLanguage);
         setUrl("");
     };
 
@@ -105,6 +109,22 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                                 </option>
                             ))
                         )}
+                    </select>
+                </div>
+                <div className="mt-3.5">
+                    <label htmlFor="language-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
+                        Język podsumowania
+                    </label>
+                    <select
+                        id="language-select"
+                        value={selectedLanguage}
+                        onChange={(event) => setSelectedLanguage(event.target.value)}
+                        disabled={isSubmitting || isLoadingModels}
+                        className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
+                    >
+                        {languages.map((lang) => (
+                            <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                        ))}
                     </select>
                 </div>
                 {error ? <p className="mt-2.5 text-[0.9rem] text-danger">{error}</p> : null}

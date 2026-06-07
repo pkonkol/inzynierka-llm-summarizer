@@ -10,6 +10,7 @@ class JobCreateRequest(BaseModel):
     model_name: str
     model_provider: str
     url: str
+    language: str = "en"
 
 
 class UsageMetadata(BaseModel):

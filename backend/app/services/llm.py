@@ -58,15 +58,17 @@ def _extract_usage(usage_meta) -> UsageMetadata:
     )
 
 
-def generate_summary(text: str, source_url: str, model_name: str, model_provider: str) -> dict[str, Any]:
+def generate_summary(text: str, source_url: str, model_name: str, model_provider: str, language: str) -> dict[str, Any]:
     if not text or not text.strip():
         raise ValueError("Input text cannot be empty")
 
     target_tokens = settings.summary_max_output_tokens
+    lang_instruction = f"Write the entire summary in language code: {language}.\n"
     prompt = (
         "Summarize the provided web content. Return high-signal output in the requested JSON schema. "
         "Adapt detail level to article length. "
         f"{_build_detail_guidance(text)}\n"
+        f"{lang_instruction}"
         "Format key_takeaways as a markdown bullet list with one takeaway per line. "
         "Do not compress the takeaways into a single paragraph or numbered block. "
         "Ensure key_takeaways is content-rich and specific, not generic.\n\n"

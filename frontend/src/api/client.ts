@@ -19,10 +19,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return (await response.json()) as T;
 }
 
-export function createSummaryJob(url: string, model_provider: string, model_name: string): Promise<CreateJobResponse> {
+export function createSummaryJob(url: string, model_provider: string, model_name: string, language: string): Promise<CreateJobResponse> {
     return request<CreateJobResponse>("/api/v1/jobs/summarize", {
         method: "POST",
-        body: JSON.stringify({ url, model_provider, model_name }),
+        body: JSON.stringify({ url, model_provider, model_name, language }),
     });
 }
 
@@ -36,4 +36,8 @@ export function getJobStatus(jobId: string): Promise<JobStatus> {
 
 export function getSupportedModels(): Promise<Record<string, string[]>> {
     return request<Record<string, string[]>>("/api/v1/meta/models");
+}
+
+export function getSupportedLanguages(): Promise<string[]> {
+    return request<string[]>("/api/v1/meta/languages");
 }

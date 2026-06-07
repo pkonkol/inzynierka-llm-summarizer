@@ -40,6 +40,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     return (await response.json()) as T;
 }
 
+export function getAuthStatus(): Promise<{ enabled: boolean }> {
+    return request<{ enabled: boolean }>("/auth/status");
+}
+
 export function login(password: string): Promise<{ token: string }> {
     return request<{ token: string }>("/auth/token", {
         method: "POST",

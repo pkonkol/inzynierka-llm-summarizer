@@ -85,13 +85,19 @@ function App() {
 
     const initialize = async () => {
       try {
-        const [{ enabled }, data] = await Promise.all([
+        // run independently so auth failure doesn't block job list
+        const [authResult, jobsData] = await Promise.allSettled([
           getAuthStatus(),
           listCompletedJobs(50),
         ]);
-        if (isMounted) {
-          setIsAuthEnabled(enabled);
-          setJobs(data);
+
+        if (!isMounted) return;
+
+        if (authResult.status === "fulfilled") {
+          setIsAuthEnabled(authResult.value.enabled);
+        }
+        if (jobsData.status === "fulfilled") {
+          setJobs(jobsData.value);
         }
       } finally {
         if (isMounted) setIsLoadingJobs(false);

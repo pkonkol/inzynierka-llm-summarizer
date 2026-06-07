@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
@@ -9,6 +11,7 @@ setup_logging()
 
 app = FastAPI(title="Web Summarization Backend")
 
+# CORSMiddleware must be added before other middleware and routers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

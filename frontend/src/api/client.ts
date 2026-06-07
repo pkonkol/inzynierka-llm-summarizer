@@ -26,14 +26,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...options,
     });
 
-    if (response.status === 401) {
-        clearToken();
-        window.location.reload();
-        throw new Error("Unauthorized");
-    }
-
     if (!response.ok) {
-        const message = await response.text();
+        // 401 on auth endpoints (login) should just throw, not reload the page
+        if (response.status === 401 && !path.startsWith("/auth/")) {
+            clearToken();
+        }
+        const message = await response.text().catch(() => "");
         throw new Error(message || `Request failed with status ${response.status}`);
     }
 

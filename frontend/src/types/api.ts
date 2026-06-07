@@ -23,7 +23,7 @@ export interface UsageMetadata {
 export interface JobStatus {
     job_id: string;
     source_url: string;
-    provider: string;
+    model_provider: string;
     model_name: string;
     status: JobStatusValue;
     summary_data: SummaryData | null;
@@ -38,3 +38,5 @@ export interface JobStatus {
 export interface CreateJobResponse {
     job_id: string;
 }
+
+// export interface SupportedModelsResponse { // }

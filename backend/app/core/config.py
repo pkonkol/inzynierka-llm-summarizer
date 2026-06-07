@@ -32,6 +32,9 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-2.5-flash-lite",
     }
+    auth_secret: str = ""
+    jwt_secret: str = ""
+    jwt_expire_hours: int = 168
 
 
 settings = Settings()

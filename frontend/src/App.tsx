@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { createSummaryJob, getJobStatus, listCompletedJobs } from "./api/client";
+import { clearToken, createSummaryJob, getJobStatus, getToken, listCompletedJobs } from "./api/client";
 import { CompletedJobsList } from "./components/CompletedJobsList";
 import { JobDetailPanel } from "./components/JobDetailPanel";
+import { LoginOverlay } from "./components/LoginOverlay";
 import { UrlSubmitCard } from "./components/UrlSubmitCard";
 import type { JobListItem, JobStatus } from "./types/api";
 
@@ -10,6 +11,7 @@ const LIST_REFRESH_MS = 20_000;
 const POLLING_MS = 2_500;
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getToken()));
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +139,9 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
+      {!isAuthenticated && (
+        <LoginOverlay onSuccess={() => setIsAuthenticated(true)} />
+      )}
       <main
         className={
           hasDetailOpen

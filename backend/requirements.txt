@@ -4,3 +4,4 @@ pydantic-settings
 google-genai
 trafilatura
 pymongo
+pyjwt

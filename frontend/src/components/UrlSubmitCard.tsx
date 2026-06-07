@@ -91,41 +91,43 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                         {isSubmitting ? "Przetwarzanie..." : "Start"}
                     </button>
                 </div>
-                <div className="mt-3.5">
-                    <label htmlFor="model-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
-                        Model
-                    </label>
-                    <select
-                        id="model-select"
-                        value={selectedModel}
-                        onChange={(event) => setSelectedModel(event.target.value)}
-                        disabled={isSubmitting || isLoadingModels}
-                        className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
-                    >
-                        {Object.entries(models).map(([provider, modelList]) =>
-                            modelList.map((model) => (
-                                <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
-                                    {provider} - {model}
-                                </option>
-                            ))
-                        )}
-                    </select>
-                </div>
-                <div className="mt-3.5">
-                    <label htmlFor="language-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
-                        Język podsumowania
-                    </label>
-                    <select
-                        id="language-select"
-                        value={selectedLanguage}
-                        onChange={(event) => setSelectedLanguage(event.target.value)}
-                        disabled={isSubmitting || isLoadingModels}
-                        className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
-                    >
-                        {languages.map((lang) => (
-                            <option key={lang} value={lang}>{lang.toUpperCase()}</option>
-                        ))}
-                    </select>
+                <div className="mt-3.5 grid sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div>
+                        <label htmlFor="model-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
+                            Model
+                        </label>
+                        <select
+                            id="model-select"
+                            value={selectedModel}
+                            onChange={(event) => setSelectedModel(event.target.value)}
+                            disabled={isSubmitting || isLoadingModels}
+                            className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
+                        >
+                            {Object.entries(models).map(([provider, modelList]) =>
+                                modelList.map((model) => (
+                                    <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
+                                        {provider} - {model}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="language-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">
+                            Język podsumowania
+                        </label>
+                        <select
+                            id="language-select"
+                            value={selectedLanguage}
+                            onChange={(event) => setSelectedLanguage(event.target.value)}
+                            disabled={isSubmitting || isLoadingModels}
+                            className="w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65"
+                        >
+                            {languages.map((lang) => (
+                                <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 {error ? <p className="mt-2.5 text-[0.9rem] text-danger">{error}</p> : null}
             </form>

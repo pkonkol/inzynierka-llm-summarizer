@@ -11,6 +11,8 @@ interface JobDetailPanelProps {
     isOpen: boolean;
     isLoading: boolean;
     onClose: () => void;
+    /** When true (debug /jobs page): show all jobs flat with label "Wynik", no pass/fail split */
+    debugMode?: boolean;
 }
 
 function InfoRow({ label, value }: { label: string; value: string | number }) {
@@ -122,10 +124,10 @@ function JobEntry({ job }: { job: JobStatus }) {
     );
 }
 
-export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: JobDetailPanelProps) {
+export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, debugMode = false }: JobDetailPanelProps) {
     if (!isOpen) return null;
 
-    const completedOrPending = jobs.filter(j => j.status !== "failed");
+    const passed = jobs.filter(j => j.status !== "failed");
     const failed = jobs.filter(j => j.status === "failed");
 
     return (
@@ -156,26 +158,44 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: 
                         {sourceUrl}
                     </a>
 
-                    {/* Completed + pending */}
-                    <div className="border-t border-divider pt-4">
-                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
-                            Wyniki dla modeli
-                        </h5>
-                        {completedOrPending.length === 0 ? (
-                            <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
-                        ) : (
-                            completedOrPending.map(job => <JobEntry key={job.job_id} job={job} />)
-                        )}
-                    </div>
-
-                    {/* Failed — separate section below a divider */}
-                    {failed.length > 0 && (
+                    {debugMode ? (
+                        /* /jobs page: flat list, all statuses, label "Wynik" */
                         <div className="border-t border-divider pt-4">
-                            <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">
-                                Nieudane ({failed.length})
+                            <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
+                                Wynik
                             </h5>
-                            {failed.map(job => <JobEntry key={job.job_id} job={job} />)}
+                            {jobs.length === 0 ? (
+                                <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
+                            ) : (
+                                jobs.map(job => <JobEntry key={job.job_id} job={job} />)
+                            )}
                         </div>
+                    ) : (
+                        /* home page: passed on top, failed below separator */
+                        <>
+                            <div className="border-t border-divider pt-4">
+                                <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
+                                    Wyniki dla modeli
+                                </h5>
+                                {passed.length === 0 ? (
+                                    <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
+                                ) : (
+                                    passed.map(job => <JobEntry key={job.job_id} job={job} />)
+                                )}
+                            </div>
+
+                            {failed.length > 0 && (
+                                <>
+                                    <hr className="border-t border-divider" />
+                                    <div>
+                                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">
+                                            Nieudane ({failed.length})
+                                        </h5>
+                                        {failed.map(job => <JobEntry key={job.job_id} job={job} />)}
+                                    </div>
+                                </>
+                            )}
+                        </>
                     )}
                 </article>
             )}

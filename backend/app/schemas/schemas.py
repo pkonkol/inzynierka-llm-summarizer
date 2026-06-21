@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from .summary import SummaryResponse
 
@@ -28,14 +28,14 @@ class UsageMetadata(BaseModel):
 
 
 class JobStatusResponse(BaseModel):
-    job_id: str
-    source_url: str
-    status: Literal["pending", "completed", "failed"]
+    job_id: str = ""
+    source_url: str = ""
+    status: Literal["pending", "completed", "failed"] = "pending"
     model_provider: str = ""
     model_name: str = ""
     summary_data: SummaryResponse | None = None
-    usage: UsageMetadata = UsageMetadata()
-    raw_metadata: dict[str, Any] = {}
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -48,6 +48,9 @@ class JobStatusResponse(BaseModel):
         if isinstance(values, dict):
             if not values.get("usage"):
                 values["usage"] = {}
+            elif isinstance(values["usage"], dict):
+                # coerce any None values in usage sub-dict
+                values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}
         return values

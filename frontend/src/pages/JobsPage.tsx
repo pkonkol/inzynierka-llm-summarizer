@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { listAllJobsFlat } from "../api/client";
+import { listAllJobsFlat, getJobsForUrl } from "../api/client";
+import { JobDetailPanel } from "../components/JobDetailPanel";
 import { formatDateMinute } from "../utils/format";
 import type { JobListItem, JobStatus } from "../types/api";
-import { getJobsForUrl } from "../api/client";
-import { JobDetailPanel } from "../components/JobDetailPanel";
 
 const STATUS_COLORS: Record<string, string> = {
     completed: "text-success",
@@ -89,6 +88,7 @@ export function JobsPage() {
                 jobs={detailJobs}
                 isLoading={isLoadingDetail}
                 onClose={() => { setSelectedUrl(null); setDetailJobs([]); }}
+                debugMode
             />
         </div>
     );

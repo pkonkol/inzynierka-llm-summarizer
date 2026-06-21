@@ -2,22 +2,13 @@ data "google_secret_manager_secret" "mongodb_uri" {
   secret_id = "mongodb_uri"
 }
 
-# resource "google_secret_manager_secret" "mongodb_uri" {
-#   secret_id = "mongodb_uri"
-#   replication {
-#     auto {}
-#   }
-# }
-
 data "google_secret_manager_secret" "gemini_key" {
   secret_id = "gemini_key"
 }
-# resource "google_secret_manager_secret" "gemini_key" {
-#   secret_id = "gemini_key"
-#   replication {
-#     auto {}
-#   }
-# }
+
+data "google_secret_manager_secret" "openrouter_api_key" {
+  secret_id = "openrouter_api_key"
+}
 
 resource "google_service_account" "cloudrun_sa" {
   account_id   = "cloudrun-sa"
@@ -58,6 +49,28 @@ resource "google_cloud_run_v2_service" "backend" {
             version = "latest"
           }
         }
+      }
+      env {
+        name = "OPENROUTER_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.openrouter_api_key.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name = "AUTH_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.auth_secret.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "JWT_SECRET"
+        value = "a39266b6a02434340521aa66ba1df7d2ce5f92123893cbd3b7095d8ee60edc99"
       }
       env {
         name  = "MONGODB_DB_NAME"

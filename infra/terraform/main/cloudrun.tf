@@ -10,6 +10,10 @@ data "google_secret_manager_secret" "openrouter_api_key" {
   secret_id = "openrouter_api_key"
 }
 
+data "google_secret_manager_secret" "jwt_secret" {
+  secret_id = "jwt_secret"
+}
+
 resource "google_service_account" "cloudrun_sa" {
   account_id   = "cloudrun-sa"
   display_name = "Cloud Run service account"
@@ -69,8 +73,13 @@ resource "google_cloud_run_v2_service" "backend" {
         }
       }
       env {
-        name  = "JWT_SECRET"
-        value = "a39266b6a02434340521aa66ba1df7d2ce5f92123893cbd3b7095d8ee60edc99"
+        name = "JWT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.jwt_secret.secret_id
+            version = "latest"
+          }
+        }
       }
       env {
         name  = "MONGODB_DB_NAME"
@@ -105,6 +114,12 @@ resource "google_secret_manager_secret_iam_member" "cloudrun_mongo" {
 
 resource "google_secret_manager_secret_iam_member" "cloudrun_gemini" {
   secret_id = data.google_secret_manager_secret.gemini_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_jwt" {
+  secret_id = data.google_secret_manager_secret.jwt_secret.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }

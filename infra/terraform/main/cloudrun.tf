@@ -10,6 +10,10 @@ data "google_secret_manager_secret" "openrouter_api_key" {
   secret_id = "openrouter_api_key"
 }
 
+data "google_secret_manager_secret" "auth_secret" {
+  secret_id = "auth_secret"
+}
+
 data "google_secret_manager_secret" "jwt_secret" {
   secret_id = "jwt_secret"
 }
@@ -114,6 +118,18 @@ resource "google_secret_manager_secret_iam_member" "cloudrun_mongo" {
 
 resource "google_secret_manager_secret_iam_member" "cloudrun_gemini" {
   secret_id = data.google_secret_manager_secret.gemini_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_openrouter" {
+  secret_id = data.google_secret_manager_secret.openrouter_api_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_auth" {
+  secret_id = data.google_secret_manager_secret.auth_secret.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }

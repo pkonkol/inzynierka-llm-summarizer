@@ -30,7 +30,7 @@ function formatDuration(ms: number): string {
 }
 
 function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpanded: boolean; onToggle: () => void }) {
-    const modelLabel = job.model_name ? `${job.provider}:${job.model_name}` : job.provider;
+    const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
     return (
         <div className="border border-panel-border mb-3">

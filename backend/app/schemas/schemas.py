@@ -36,9 +36,10 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
-class JobListItemResponse(BaseModel):
-    job_id: str
+class UrlSummaryListItem(BaseModel):
+    """One entry per unique source_url for the left-hand list."""
     source_url: str
-    title: str
-    short_summary: str = ""
-    updated_at: datetime | None = None
+    completed_count: int
+    failed_count: int
+    latest_title: str
+    latest_updated_at: datetime | None = None

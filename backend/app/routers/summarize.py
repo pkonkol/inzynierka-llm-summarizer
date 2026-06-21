@@ -8,7 +8,7 @@ from pymongo.errors import DuplicateKeyError
 from ..core.auth import require_auth
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
-from ..schemas.schemas import JobCreateRequest, JobListItemResponse, JobStatusResponse
+from ..schemas.schemas import JobCreateRequest, JobStatusResponse, UrlSummaryListItem
 from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
 
@@ -125,41 +125,63 @@ async def create_summarize_job(
     return {"job_id": job_id}
 
 
-@router.get("", response_model=list[JobListItemResponse], summary="List completed jobs")
-async def list_completed_jobs(
+@router.get("", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped)")
+async def list_summarized_urls(
     limit: int = Query(default=50, ge=1, le=200),
-) -> list[JobListItemResponse]:
+) -> list[UrlSummaryListItem]:
+    """Returns one entry per unique source_url, sorted by most-recently updated."""
     jobs_collection = get_jobs_collection()
-    cursor = jobs_collection.find(
-        {"status": "completed"},
-        {
-            "_id": 0,
-            "job_id": 1,
-            "source_url": 1,
-            "summary_data.title": 1,
-            "summary_data.short_summary": 1,
-            "updated_at": 1,
-        },
-    ).sort("updated_at", -1).limit(limit)
 
-    items: list[JobListItemResponse] = []
-    for doc in cursor:
-        summary_data = doc.get("summary_data") or {}
-        items.append(
-            JobListItemResponse(
-                job_id=str(doc.get("job_id", "")),
-                source_url=str(doc.get("source_url", "")),
-                title=str(summary_data.get("title", "")),
-                short_summary=str(summary_data.get("short_summary", "")),
-                updated_at=doc.get("updated_at"),
+    pipeline = [
+        {"$match": {"status": {"$in": ["completed", "failed"]}}},
+        {"$sort": {"updated_at": -1}},
+        {
+            "$group": {
+                "_id": "$source_url",
+                "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+                "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
+                # first doc after sort = most recent; pick title only from completed ones
+                "latest_updated_at": {"$first": "$updated_at"},
+                "latest_title": {"$first": "$summary_data.title"},
+            }
+        },
+        {"$sort": {"latest_updated_at": -1}},
+        {"$limit": limit},
+    ]
+
+    results: list[UrlSummaryListItem] = []
+    for doc in jobs_collection.aggregate(pipeline):
+        results.append(
+            UrlSummaryListItem(
+                source_url=doc["_id"],
+                completed_count=doc["completed_count"],
+                failed_count=doc["failed_count"],
+                latest_title=doc.get("latest_title") or "",
+                latest_updated_at=doc.get("latest_updated_at"),
             )
         )
 
-    logger.debug("listed completed jobs count=%s", len(items))
-    return items
+    logger.debug("list_summarized_urls returned %s unique URLs", len(results))
+    return results
 
 
-@router.get("/{job_id}", response_model=JobStatusResponse, summary="Get job status")
+@router.get("/by-url", response_model=list[JobStatusResponse], summary="Get all jobs for a URL")
+async def get_jobs_for_url(
+    source_url: str = Query(..., description="Exact source URL to fetch jobs for"),
+) -> list[JobStatusResponse]:
+    """Returns all jobs for the given source_url, newest first."""
+    jobs_collection = get_jobs_collection()
+    cursor = (
+        jobs_collection
+        .find({"source_url": source_url}, {"_id": 0})
+        .sort("updated_at", -1)
+    )
+    jobs = [JobStatusResponse.model_validate(doc) for doc in cursor]
+    logger.debug("get_jobs_for_url url=%s returned %s jobs", source_url, len(jobs))
+    return jobs
+
+
+@router.get("/{job_id}", response_model=JobStatusResponse, summary="Get job status (used for polling)")
 async def get_job_status(job_id: str) -> JobStatusResponse:
     jobs_collection = get_jobs_collection()
     job_data = jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
@@ -167,7 +189,6 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
         raise HTTPException(status_code=404, detail="Job not found")
 
     logger.debug("[job=%s] status check -> %s", job_id, job_data.get("status"))
-
     return JobStatusResponse.model_validate(job_data)
 
 

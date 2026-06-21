@@ -2,32 +2,22 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import type { JobStatus } from "../types/api";
+import { formatDateMinute, formatDuration } from "../utils/format";
+import type { JobStatus, JobStatusValue } from "../types/api";
 
 interface JobDetailPanelProps {
-    job: JobStatus | null;
+    sourceUrl: string | null;
+    jobs: JobStatus[];
     isOpen: boolean;
     isLoading: boolean;
     onClose: () => void;
 }
 
-function formatDuration(ms: number): string {
-    if (ms < 1000) return `${ms}ms`;
-    return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatDate(iso: string | null): string {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleString("pl-PL", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-    });
-}
-
 function InfoRow({ label, value }: { label: string; value: string | number }) {
     return (
         <div className="flex flex-col gap-0.5">
-            <span className="text-muted block text-[0.72rem] uppercase tracking-wider">{label}</span>
-            <span className="text-[0.88rem] font-mono">{value}</span>
+            <span className="block text-[0.72rem] uppercase tracking-wider text-muted">{label}</span>
+            <span className="font-mono text-[0.88rem]">{value}</span>
         </div>
     );
 }
@@ -35,19 +25,18 @@ function InfoRow({ label, value }: { label: string; value: string | number }) {
 function RawMetadata({ data }: { data: Record<string, unknown> }) {
     const [open, setOpen] = useState(false);
     if (!data || Object.keys(data).length === 0) return null;
-
     return (
         <div className="border border-panel-border">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
-                className="w-full px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted hover:bg-subtle transition-colors flex items-center justify-between"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
             >
                 <span>Raw metadata</span>
                 <span>{open ? "▼" : "▶"}</span>
             </button>
             {open && (
-                <pre className="m-0 overflow-x-auto p-3 text-[0.75rem] leading-[1.5] bg-subtle">
+                <pre className="m-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
                     {JSON.stringify(data, null, 2)}
                 </pre>
             )}
@@ -55,58 +44,88 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
     );
 }
 
-function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpanded: boolean; onToggle: () => void }) {
+function statusChip(status: JobStatusValue) {
+    if (status === "failed") return <span className="ml-2 text-[0.7rem] font-mono text-error uppercase">failed</span>;
+    if (status === "pending") return <span className="ml-2 text-[0.7rem] font-mono text-warning uppercase">pending</span>;
+    return null;
+}
+
+function JobEntry({ job }: { job: JobStatus }) {
+    const [open, setOpen] = useState(false);
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
+    const headerBg =
+        job.status === "failed"
+            ? "bg-error-subtle border-error-border"
+            : job.status === "pending"
+            ? "bg-warning-subtle border-warning-border"
+            : "";
+
     return (
-        <div className="border border-panel-border mb-3">
+        <div className="mb-3 border border-panel-border">
             <button
                 type="button"
-                onClick={onToggle}
-                className="w-full px-4 py-3 text-left font-display text-[0.95rem] font-semibold flex items-center justify-between hover:bg-subtle transition-colors"
+                onClick={() => setOpen(v => !v)}
+                className={`flex w-full items-start justify-between px-4 py-3 text-left transition-colors hover:bg-subtle ${headerBg}`}
             >
-                <span>{modelLabel}</span>
-                <span className="text-[0.8rem] text-muted">({formatDuration(job.duration_ms)})</span>
-                <span className="ml-2">{isExpanded ? "▼" : "▶"}</span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-mono text-[0.85rem] font-semibold">
+                        {modelLabel}
+                        {statusChip(job.status)}
+                    </span>
+                    <span className="text-[0.78rem] text-muted">{formatDateMinute(job.created_at)}</span>
+                    {job.summary_data?.title ? (
+                        <span className="mt-0.5 text-[0.88rem] font-display leading-[1.3]">
+                            {job.summary_data.title}
+                        </span>
+                    ) : null}
+                </span>
+                <span className="ml-3 mt-0.5 shrink-0 text-[0.8rem] text-muted">{open ? "▼" : "▶"}</span>
             </button>
 
-            {isExpanded && (
-                <div className="px-4 py-3 border-t border-panel-border bg-subtle space-y-4">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.85rem]">
-                        <InfoRow label="Wywołano" value={formatDate(job.created_at)} />
-                        <InfoRow label="Zakończono" value={formatDate(job.finished_at)} />
-                        <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
-                        <InfoRow label="Input tokens" value={job.usage.input_tokens} />
-                        <InfoRow label="Output tokens" value={job.usage.output_tokens} />
-                        {job.usage.thinking_tokens > 0 && (
-                            <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
-                        )}
-                        <InfoRow label="Total tokens" value={job.usage.total_tokens} />
-                    </div>
-
-                    <section>
-                        <h5 className="section-kicker">Krotkie podsumowanie</h5>
-                        <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data?.short_summary || "Brak tresci"}</p>
-                    </section>
-
-                    <section>
-                        <h5 className="section-kicker">Najwazniejsze punkty</h5>
-                        <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
-                            {job.summary_data?.key_takeaways ? (
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                    {job.summary_data.key_takeaways}
-                                </ReactMarkdown>
-                            ) : (
-                                <p className="m-0">Brak tresci</p>
-                            )}
-                        </div>
-                    </section>
-
-                    {job.error && (
+            {open && (
+                <div className="border-t border-panel-border bg-subtle px-4 py-3 space-y-4">
+                    {job.status === "failed" && job.error && (
                         <section>
-                            <h5 className="section-kicker">Blad</h5>
-                            <p className="m-0 text-[1.02rem] leading-[1.72]">{job.error}</p>
+                            <h5 className="section-kicker">Błąd</h5>
+                            <p className="m-0 text-[1.02rem] leading-[1.72] text-error">{job.error}</p>
                         </section>
+                    )}
+
+                    {job.status !== "pending" && (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.85rem]">
+                            <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
+                            <InfoRow label="Zakończono" value={formatDateMinute(job.finished_at)} />
+                            <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
+                            <InfoRow label="Input tokens" value={job.usage?.input_tokens ?? 0} />
+                            <InfoRow label="Output tokens" value={job.usage?.output_tokens ?? 0} />
+                            {(job.usage?.thinking_tokens ?? 0) > 0 && (
+                                <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
+                            )}
+                            <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
+                        </div>
+                    )}
+
+                    {job.summary_data && (
+                        <>
+                            <section>
+                                <h5 className="section-kicker">Krótkie podsumowanie</h5>
+                                <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data.short_summary || "Brak treści"}</p>
+                            </section>
+
+                            <section>
+                                <h5 className="section-kicker">Najważniejsze punkty</h5>
+                                <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
+                                    {job.summary_data.key_takeaways ? (
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {job.summary_data.key_takeaways}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        <p className="m-0">Brak treści</p>
+                                    )}
+                                </div>
+                            </section>
+                        </>
                     )}
 
                     <RawMetadata data={job.raw_metadata} />
@@ -116,19 +135,13 @@ function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpand
     );
 }
 
-export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPanelProps) {
-    const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-
+export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: JobDetailPanelProps) {
     if (!isOpen) return null;
-
-    const displayedJobId = job?.job_id;
-    const isExpanded = expandedJobId === displayedJobId || !expandedJobId;
 
     return (
         <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
-            {/* Header */}
             <div className="mb-4.5 flex items-center justify-between border-b border-divider pb-3">
-                <h3 className="m-0 font-display text-[1.1rem]">Szczegoly</h3>
+                <h3 className="m-0 font-display text-[1.1rem]">Szczegóły</h3>
                 <button
                     type="button"
                     onClick={onClose}
@@ -138,48 +151,34 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
                 </button>
             </div>
 
-            {!isLoading && !job ? (
-                <p className="m-0 text-[0.95rem] text-muted">Wybierz podsumowanie z listy, aby zobaczyc szczegoly.</p>
-            ) : null}
-
-            {isLoading ? <p className="m-0 text-[0.95rem] text-muted">Ladowanie szczegolow...</p> : null}
-
-            {!isLoading && job ? (
+            {isLoading ? (
+                <p className="m-0 text-[0.95rem] text-muted">Ładowanie wyników...</p>
+            ) : !sourceUrl ? (
+                <p className="m-0 text-[0.95rem] text-muted">Wybierz URL z listy, aby zobaczyć szczegóły.</p>
+            ) : (
                 <article className="grid gap-4.5">
-                    {/* Big URL + meta header */}
-                    <div className="grid gap-1.5">
-                        <a
-                            href={job.source_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="wrap-anywhere font-mono text-[1.05rem] font-bold text-link no-underline leading-[1.35]"
-                        >
-                            {job.source_url}
-                        </a>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.82rem] text-muted">
-                            <span>Model: {job.model_provider}:{job.model_name}</span>
-                            <span>{formatDate(job.created_at)}</span>
-                        </div>
-                        {/* Title */}
-                        {job.summary_data?.title ? (
-                            <h4 className="m-0 mt-1 font-display text-[1.55rem] leading-[1.3]">
-                                {job.summary_data.title}
-                            </h4>
-                        ) : null}
-                    </div>
+                    {/* URL header */}
+                    <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="wrap-anywhere font-mono text-[1.05rem] font-bold text-link no-underline leading-[1.35]"
+                    >
+                        {sourceUrl}
+                    </a>
 
                     <div className="border-t border-divider pt-4">
-                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">Wyniki dla modeli</h5>
-                        {job && (
-                            <SummaryResult
-                                job={job}
-                                isExpanded={isExpanded}
-                                onToggle={() => setExpandedJobId(isExpanded ? null : displayedJobId || null)}
-                            />
+                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
+                            Wyniki dla modeli
+                        </h5>
+                        {jobs.length === 0 ? (
+                            <p className="m-0 text-[0.95rem] text-muted">Brak wyników dla tego URL.</p>
+                        ) : (
+                            jobs.map((job) => <JobEntry key={job.job_id} job={job} />)
                         )}
                     </div>
                 </article>
-            ) : null}
+            )}
         </aside>
     );
 }

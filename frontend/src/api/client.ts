@@ -1,4 +1,4 @@
-import type { CreateJobResponse, JobListItem, JobStatus } from "../types/api";
+import type { CreateJobResponse, JobStatus, SummaryUrlListItem } from "../types/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const TOKEN_KEY = "auth_token";
@@ -27,7 +27,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     });
 
     if (!response.ok) {
-        // 401 on auth endpoints (login) should just throw, not reload the page
         if (response.status === 401 && !path.startsWith("/auth/")) {
             clearToken();
         }
@@ -49,17 +48,29 @@ export function login(password: string): Promise<{ token: string }> {
     });
 }
 
-export function createSummaryJob(url: string, model_provider: string, model_name: string, language: string): Promise<CreateJobResponse> {
+export function createSummaryJob(
+    url: string,
+    model_provider: string,
+    model_name: string,
+    language: string,
+): Promise<CreateJobResponse> {
     return request<CreateJobResponse>("/api/v1/jobs/summarize", {
         method: "POST",
         body: JSON.stringify({ url, model_provider, model_name, language }),
     });
 }
 
-export function listCompletedJobs(limit = 50): Promise<JobListItem[]> {
-    return request<JobListItem[]>(`/api/v1/jobs?limit=${limit}`);
+/** GET /api/v1/jobs — one record per unique source_url */
+export function listSummarizedUrls(limit = 50): Promise<SummaryUrlListItem[]> {
+    return request<SummaryUrlListItem[]>(`/api/v1/jobs?limit=${limit}`);
 }
 
+/** GET /api/v1/jobs/by-url?source_url=... — all jobs for a URL, newest first */
+export function getJobsForUrl(sourceUrl: string): Promise<JobStatus[]> {
+    return request<JobStatus[]>(`/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}`);
+}
+
+/** GET /api/v1/jobs/:id — used for polling a freshly submitted job */
 export function getJobStatus(jobId: string): Promise<JobStatus> {
     return request<JobStatus>(`/api/v1/jobs/${jobId}`);
 }

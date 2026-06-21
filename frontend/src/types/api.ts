@@ -1,11 +1,12 @@
 export type JobStatusValue = "pending" | "completed" | "failed";
 
-export interface JobListItem {
-    job_id: string;
+/** One entry per unique source_url returned by GET /api/v1/jobs */
+export interface SummaryUrlListItem {
     source_url: string;
-    title: string;
-    short_summary: string;
-    updated_at: string | null;
+    completed_count: number;
+    failed_count: number;
+    latest_title: string;
+    latest_updated_at: string | null;
 }
 
 export interface SummaryData {

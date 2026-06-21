@@ -28,6 +28,8 @@ def init_mongo() -> None:
     # Test connection
     _mongo_client.admin.command('ping')
 
+    ensure_indexes(get_jobs_collection())
+
 def close_mongo() -> None:
     global _mongo_client
     if _mongo_client is not None:
@@ -45,3 +47,7 @@ def get_jobs_collection() -> Collection:
     client = get_mongo_client()
     db = client[settings.mongodb_db_name]
     return db[settings.mongodb_jobs_collection]
+
+def ensure_indexes(collection) -> None:
+    collection.create_index("source_url")
+    collection.create_index([("created_at", -1)])

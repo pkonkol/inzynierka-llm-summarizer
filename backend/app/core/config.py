@@ -26,8 +26,10 @@ class Settings(BaseSettings):
     supported_summary_languages: list[str] = ["en", "pl"]
     supported_models: dict[str, list[str]] = {
         "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
-        "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free", "openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free"],
-        #"ollama": ["llama2-7b", "llama2-13b", "llama2-70b"],
+        "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free", "openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free",
+                       "google/gemma-4-31b-it:free", "nex-agi/nex-n2-pro:free"],
+        #"ollama": ["qwen-3.5-9b-hauhau-agr:latest", "deepseek-v3.2:cloud", "gemma4:31b-cloud",
+        #            "glm-5.2:cloud", "deepseek-v4-flash:cloud", "deepseek-v4-pro:cloud" ],
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",

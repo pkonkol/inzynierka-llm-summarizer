@@ -170,4 +170,6 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
     if model_provider.lower() not in settings.supported_models.keys():
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
+        logger.warning(f"Model name: {model_name} for provider {model_provider} is not supported")
+        logger.warning(f"Supported models for provider {model_provider}: {settings.supported_models.get(model_provider.lower(), [])}")
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

@@ -52,7 +52,11 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
             return;
         }
 
-        const [provider, model] = selectedModel.split(":");
+        const [provider, ...modelParts] = selectedModel.split(":");
+        const model = modelParts.join(":"); // zachowuje wszystkie kolejne ":"
+
+
+        // const [provider, model] = selectedModel.split(":");
         await onSubmit(url.trim(), provider, model, selectedLanguage);
         setUrl("");
     };

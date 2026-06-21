@@ -72,6 +72,7 @@ function App() {
     setIsLoginOpen(true);
   };
 
+  // TODO duplikacja czy co? Czemu oba maja submitSummary?
   const handleLoginSuccess = async () => {
     setIsLoginOpen(false);
     if (!pendingSubmit) return;

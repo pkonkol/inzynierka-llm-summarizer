@@ -63,27 +63,57 @@ def _build_detail_guidance(text: str) -> str:
     return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
 
 
+def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
+    """Normalize usage from AIMessage across providers; return (usage, raw_metadata)."""
+    usage_meta = getattr(ai_message, "usage_metadata", None) or {}
+    response_meta = getattr(ai_message, "response_metadata", None) or {}
+
+    usage = UsageMetadata(
+        input_tokens=usage_meta.get("input_tokens", 0),
+        output_tokens=usage_meta.get("output_tokens", 0),
+        thinking_tokens=usage_meta.get("input_token_details", {}).get("thinking", 0),
+        total_tokens=usage_meta.get("total_tokens", 0),
+    )
+
+    # total_tokens fallback when provider omits it
+    if usage.total_tokens == 0 and (usage.input_tokens or usage.output_tokens):
+        usage = usage.model_copy(update={"total_tokens": usage.input_tokens + usage.output_tokens})
+
+    raw_metadata: dict[str, Any] = {}
+    if usage_meta:
+        raw_metadata["usage_metadata"] = dict(usage_meta)
+    if response_meta:
+        raw_metadata["response_metadata"] = dict(response_meta)
+
+    return usage, raw_metadata
+
+
 def generate_summary(text: str, source_url: str, model_name: str, model_provider: str, language: str) -> dict[str, Any]:
     if not text or not text.strip():
         raise ValueError("Input text cannot be empty")
 
     llm = _build_llm(model_provider, model_name)
-    chain = _SUMMARY_PROMPT | llm.with_structured_output(SummaryResponse)
+    chain = _SUMMARY_PROMPT | llm.with_structured_output(SummaryResponse, include_raw=True)
 
     logger.debug("LLM: model=%s:%s text_chars=%s", model_provider, model_name, len(text))
 
-    summary: SummaryResponse = chain.invoke({
+    raw_output: dict[str, Any] = chain.invoke({
         "language": language,
         "detail_guidance": _build_detail_guidance(text),
         "source_url": source_url or "",
         "text": text.strip(),
     })
 
+    summary: SummaryResponse = raw_output["parsed"]
+    ai_message = raw_output.get("raw")
+
     logger.info("LLM: model=%s:%s summary generated", model_provider, model_name)
+
+    usage, raw_metadata = _extract_usage(ai_message)
 
     result = summary.model_dump()
     if source_url:
         result["source_url"] = source_url
-    # usage metadata not available uniformly across providers in LangChain — placeholder
-    result["usage"] = UsageMetadata().model_dump()
+    result["usage"] = usage.model_dump()
+    result["raw_metadata"] = raw_metadata
     return result

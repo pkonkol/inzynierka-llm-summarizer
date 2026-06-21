@@ -28,6 +28,7 @@ export interface JobStatus {
     status: JobStatusValue;
     summary_data: SummaryData | null;
     usage: UsageMetadata;
+    raw_metadata: Record<string, unknown>;
     created_at: string | null;
     started_at: string | null;
     finished_at: string | null;
@@ -38,5 +39,3 @@ export interface JobStatus {
 export interface CreateJobResponse {
     job_id: string;
 }
-
-// export interface SupportedModelsResponse { // }

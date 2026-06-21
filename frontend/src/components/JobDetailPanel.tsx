@@ -12,21 +12,54 @@ interface JobDetailPanelProps {
 }
 
 function getStatusClass(status: JobStatus["status"]): string {
-    if (status === "completed") {
-        return "bg-status-completed-bg text-status-completed-text";
-    }
-
-    if (status === "failed") {
-        return "bg-status-failed-bg text-status-failed-text";
-    }
-
+    if (status === "completed") return "bg-status-completed-bg text-status-completed-text";
+    if (status === "failed") return "bg-status-failed-bg text-status-failed-text";
     return "bg-status-pending-bg text-status-pending-text";
 }
 
 function formatDuration(ms: number): string {
     if (ms < 1000) return `${ms}ms`;
-    const seconds = (ms / 1000).toFixed(1);
-    return `${seconds}s`;
+    return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatDate(iso: string | null): string {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString("pl-PL", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+}
+
+function InfoRow({ label, value }: { label: string; value: string | number }) {
+    return (
+        <div className="flex flex-col gap-0.5">
+            <span className="text-muted block text-[0.72rem] uppercase tracking-wider">{label}</span>
+            <span className="text-[0.88rem] font-mono">{value}</span>
+        </div>
+    );
+}
+
+function RawMetadata({ data }: { data: Record<string, unknown> }) {
+    const [open, setOpen] = useState(false);
+    if (!data || Object.keys(data).length === 0) return null;
+
+    return (
+        <div className="border border-panel-border">
+            <button
+                type="button"
+                onClick={() => setOpen(v => !v)}
+                className="w-full px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted hover:bg-subtle transition-colors flex items-center justify-between"
+            >
+                <span>Raw metadata</span>
+                <span>{open ? "▼" : "▶"}</span>
+            </button>
+            {open && (
+                <pre className="m-0 overflow-x-auto p-3 text-[0.75rem] leading-[1.5] bg-subtle">
+                    {JSON.stringify(data, null, 2)}
+                </pre>
+            )}
+        </div>
+    );
 }
 
 function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpanded: boolean; onToggle: () => void }) {
@@ -46,25 +79,16 @@ function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpand
 
             {isExpanded && (
                 <div className="px-4 py-3 border-t border-panel-border bg-subtle space-y-4">
-                    <div className="grid grid-cols-2 gap-2 text-[0.85rem]">
-                        <div>
-                            <span className="text-muted block text-[0.75rem] uppercase tracking-wider">Input Tokens</span>
-                            <span className="font-display">{job.usage.input_tokens}</span>
-                        </div>
-                        <div>
-                            <span className="text-muted block text-[0.75rem] uppercase tracking-wider">Output Tokens</span>
-                            <span className="font-display">{job.usage.output_tokens}</span>
-                        </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.85rem]">
+                        <InfoRow label="Wywołano" value={formatDate(job.created_at)} />
+                        <InfoRow label="Zakończono" value={formatDate(job.finished_at)} />
+                        <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
+                        <InfoRow label="Input tokens" value={job.usage.input_tokens} />
+                        <InfoRow label="Output tokens" value={job.usage.output_tokens} />
                         {job.usage.thinking_tokens > 0 && (
-                            <div>
-                                <span className="text-muted block text-[0.75rem] uppercase tracking-wider">Thinking Tokens</span>
-                                <span className="font-display">{job.usage.thinking_tokens}</span>
-                            </div>
+                            <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
                         )}
-                        <div>
-                            <span className="text-muted block text-[0.75rem] uppercase tracking-wider">Total Tokens</span>
-                            <span className="font-display">{job.usage.total_tokens}</span>
-                        </div>
+                        <InfoRow label="Total tokens" value={job.usage.total_tokens} />
                     </div>
 
                     <section>
@@ -91,6 +115,8 @@ function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpand
                             <p className="m-0 text-[1.02rem] leading-[1.72]">{job.error}</p>
                         </section>
                     )}
+
+                    <RawMetadata data={job.raw_metadata} />
                 </div>
             )}
         </div>
@@ -100,11 +126,8 @@ function SummaryResult({ job, isExpanded, onToggle }: { job: JobStatus; isExpand
 export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPanelProps) {
     const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-    if (!isOpen) {
-        return null;
-    }
+    if (!isOpen) return null;
 
-    // If single job, expand it by default
     const displayedJobId = job?.job_id;
     const isExpanded = expandedJobId === displayedJobId || !expandedJobId;
 
@@ -130,9 +153,7 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
             {!isLoading && job ? (
                 <article className="grid gap-4.5">
                     <div>
-                        <p
-                            className={`m-0 w-fit border border-panel-border px-2.5 py-1 text-[0.82rem] font-bold uppercase tracking-[0.01em] ${getStatusClass(job.status)}`}
-                        >
+                        <p className={`m-0 w-fit border border-panel-border px-2.5 py-1 text-[0.82rem] font-bold uppercase tracking-[0.01em] ${getStatusClass(job.status)}`}>
                             Status: {job.status}
                         </p>
                     </div>

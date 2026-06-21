@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -28,6 +28,7 @@ class JobStatusResponse(BaseModel):
     model_name: str = ""
     summary_data: SummaryResponse | None = None
     usage: UsageMetadata = UsageMetadata()
+    raw_metadata: dict[str, Any] = {}
     created_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None

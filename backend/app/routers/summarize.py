@@ -31,15 +31,13 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
         logger.debug(
-            "[job=%s] completed text_chars=%s summary_keys=%s duration_ms=%s",
-            job_id,
-            len(text),
-            sorted(summary.keys()),
-            duration_ms,
+            "[job=%s] completed text_chars=%s duration_ms=%s",
+            job_id, len(text), duration_ms,
         )
 
-        summary_data = {k: v for k, v in summary.items() if k != "usage"}
+        summary_data = {k: v for k, v in summary.items() if k not in ("usage", "raw_metadata")}
         usage = summary.get("usage", {})
+        raw_metadata = summary.get("raw_metadata", {})
 
         jobs_collection.update_one(
             {"job_id": job_id},
@@ -51,6 +49,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                     "status": "completed",
                     "summary_data": summary_data,
                     "usage": usage,
+                    "raw_metadata": raw_metadata,
                     "started_at": started_at,
                     "finished_at": finished_at,
                     "duration_ms": duration_ms,
@@ -74,6 +73,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                     "status": "failed",
                     "summary_data": None,
                     "usage": {},
+                    "raw_metadata": {},
                     "started_at": started_at,
                     "finished_at": finished_at,
                     "duration_ms": duration_ms,
@@ -107,6 +107,7 @@ async def create_summarize_job(
                 "status": "pending",
                 "summary_data": None,
                 "usage": {},
+                "raw_metadata": {},
                 "created_at": now,
                 "started_at": None,
                 "finished_at": None,
@@ -137,7 +138,7 @@ async def list_completed_jobs(
             "source_url": 1,
             "summary_data.title": 1,
         },
-    ).sort("updated_at", -1).limit(limit)
+    ).sort("created_at", -1).limit(limit)
 
     items: list[JobListItemResponse] = []
     for doc in cursor:
@@ -171,5 +172,4 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
         logger.warning(f"Model name: {model_name} for provider {model_provider} is not supported")
-        logger.warning(f"Supported models for provider {model_provider}: {settings.supported_models.get(model_provider.lower(), [])}")
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { listAllJobsFlat, getJobsForUrl } from "../api/client";
+import { listAllJobsFlat, getJobStatus } from "../api/client";
 import { JobDetailPanel } from "../components/JobDetailPanel";
 import { formatDateMinute } from "../utils/format";
 import type { JobListItem, JobStatus } from "../types/api";
@@ -14,8 +14,8 @@ const STATUS_COLORS: Record<string, string> = {
 export function JobsPage() {
     const [jobs, setJobs] = useState<JobListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
-    const [detailJobs, setDetailJobs] = useState<JobStatus[]>([]);
+    const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+    const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
     useEffect(() => {
@@ -24,11 +24,12 @@ export function JobsPage() {
             .finally(() => setIsLoading(false));
     }, []);
 
-    const handleSelect = async (url: string) => {
-        setSelectedUrl(url);
+    const handleSelect = async (job: JobListItem) => {
+        setSelectedJobId(job.job_id);
+        setSelectedJob(null);
         setIsLoadingDetail(true);
         try {
-            setDetailJobs(await getJobsForUrl(url));
+            setSelectedJob(await getJobStatus(job.job_id));
         } finally {
             setIsLoadingDetail(false);
         }
@@ -40,11 +41,11 @@ export function JobsPage() {
 
     return (
         <div className={
-            selectedUrl
+            selectedJobId
                 ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
                 : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
         }>
-            <section className={selectedUrl ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5" : "min-w-0"}>
+            <section className={selectedJobId ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5" : "min-w-0"}>
                 <div className="panel-shell">
                     <div className="mb-3 flex items-baseline justify-between gap-2.5">
                         <h2 className="m-0 font-display text-[1.2rem]">Gotowe podsumowania</h2>
@@ -61,8 +62,8 @@ export function JobsPage() {
                             <li key={job.job_id} className="min-w-0">
                                 <button
                                     type="button"
-                                    className={selectedUrl === job.source_url ? selectedItem : defaultItem}
-                                    onClick={() => { void handleSelect(job.source_url); }}
+                                    className={selectedJobId === job.job_id ? selectedItem : defaultItem}
+                                    onClick={() => { void handleSelect(job); }}
                                 >
                                     <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-mono text-link">
                                         {job.source_url}
@@ -83,11 +84,11 @@ export function JobsPage() {
             </section>
 
             <JobDetailPanel
-                isOpen={Boolean(selectedUrl)}
-                sourceUrl={selectedUrl}
-                jobs={detailJobs}
+                isOpen={Boolean(selectedJobId)}
+                sourceUrl={selectedJob?.source_url ?? null}
+                jobs={selectedJob ? [selectedJob] : []}
                 isLoading={isLoadingDetail}
-                onClose={() => { setSelectedUrl(null); setDetailJobs([]); }}
+                onClose={() => { setSelectedJobId(null); setSelectedJob(null); }}
                 debugMode
             />
         </div>

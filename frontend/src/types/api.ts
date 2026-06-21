@@ -4,6 +4,8 @@ export interface JobListItem {
     job_id: string;
     source_url: string;
     title: string;
+    short_summary: string;
+    updated_at: string | null;
 }
 
 export interface SummaryData {

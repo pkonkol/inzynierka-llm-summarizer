@@ -11,12 +11,6 @@ interface JobDetailPanelProps {
     onClose: () => void;
 }
 
-function getStatusClass(status: JobStatus["status"]): string {
-    if (status === "completed") return "bg-status-completed-bg text-status-completed-text";
-    if (status === "failed") return "bg-status-failed-bg text-status-failed-text";
-    return "bg-status-pending-bg text-status-pending-text";
-}
-
 function formatDuration(ms: number): string {
     if (ms < 1000) return `${ms}ms`;
     return `${(ms / 1000).toFixed(1)}s`;
@@ -26,7 +20,6 @@ function formatDate(iso: string | null): string {
     if (!iso) return "—";
     return new Date(iso).toLocaleString("pl-PL", {
         year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit", second: "2-digit",
     });
 }
 
@@ -133,6 +126,7 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
 
     return (
         <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
+            {/* Header */}
             <div className="mb-4.5 flex items-center justify-between border-b border-divider pb-3">
                 <h3 className="m-0 font-display text-[1.1rem]">Szczegoly</h3>
                 <button
@@ -152,19 +146,27 @@ export function JobDetailPanel({ job, isOpen, isLoading, onClose }: JobDetailPan
 
             {!isLoading && job ? (
                 <article className="grid gap-4.5">
-                    <div>
-                        <p className={`m-0 w-fit border border-panel-border px-2.5 py-1 text-[0.82rem] font-bold uppercase tracking-[0.01em] ${getStatusClass(job.status)}`}>
-                            Status: {job.status}
-                        </p>
+                    {/* Big URL + meta header */}
+                    <div className="grid gap-1.5">
+                        <a
+                            href={job.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="wrap-anywhere font-mono text-[1.05rem] font-bold text-link no-underline leading-[1.35]"
+                        >
+                            {job.source_url}
+                        </a>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[0.82rem] text-muted">
+                            <span>Model: {job.model_provider}:{job.model_name}</span>
+                            <span>{formatDate(job.created_at)}</span>
+                        </div>
+                        {/* Title */}
+                        {job.summary_data?.title ? (
+                            <h4 className="m-0 mt-1 font-display text-[1.55rem] leading-[1.3]">
+                                {job.summary_data.title}
+                            </h4>
+                        ) : null}
                     </div>
-                    <div>
-                        <h4 className="m-0 font-display text-[1.9rem] leading-[1.3]">
-                            {job.summary_data?.title || "Brak tytulu"}
-                        </h4>
-                    </div>
-                    <a href={job.source_url} target="_blank" rel="noreferrer" className="wrap-anywhere text-[0.88rem] text-link no-underline">
-                        {job.source_url}
-                    </a>
 
                     <div className="border-t border-divider pt-4">
                         <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">Wyniki dla modeli</h5>

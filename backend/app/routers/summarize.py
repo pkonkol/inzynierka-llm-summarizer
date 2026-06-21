@@ -137,8 +137,10 @@ async def list_completed_jobs(
             "job_id": 1,
             "source_url": 1,
             "summary_data.title": 1,
+            "summary_data.short_summary": 1,
+            "updated_at": 1,
         },
-    ).sort("created_at", -1).limit(limit)
+    ).sort("updated_at", -1).limit(limit)
 
     items: list[JobListItemResponse] = []
     for doc in cursor:
@@ -148,6 +150,8 @@ async def list_completed_jobs(
                 job_id=str(doc.get("job_id", "")),
                 source_url=str(doc.get("source_url", "")),
                 title=str(summary_data.get("title", "")),
+                short_summary=str(summary_data.get("short_summary", "")),
+                updated_at=doc.get("updated_at"),
             )
         )
 
@@ -171,6 +175,5 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
     if model_provider.lower() not in settings.supported_models.keys():
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
-        logger.warning(f"Model name: {model_name} for provider {model_provider} is not supported")
-        logger.warning(f"Supported models for provider {model_provider}: {settings.supported_models.get(model_provider.lower(), [])}")
+        logger.warning("Model name: %s for provider %s is not supported", model_name, model_provider)
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

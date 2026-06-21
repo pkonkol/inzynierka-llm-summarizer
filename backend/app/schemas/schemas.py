@@ -40,3 +40,5 @@ class JobListItemResponse(BaseModel):
     job_id: str
     source_url: str
     title: str
+    short_summary: str = ""
+    updated_at: datetime | None = None

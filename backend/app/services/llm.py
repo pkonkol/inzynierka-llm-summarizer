@@ -75,7 +75,6 @@ def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
         total_tokens=usage_meta.get("total_tokens", 0),
     )
 
-    # total_tokens fallback when provider omits it
     if usage.total_tokens == 0 and (usage.input_tokens or usage.output_tokens):
         usage = usage.model_copy(update={"total_tokens": usage.input_tokens + usage.output_tokens})
 
@@ -104,14 +103,24 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
         "text": text.strip(),
     })
 
-    summary: SummaryResponse = raw_output["parsed"]
-    ai_message = raw_output.get("raw")
+    # Guard against providers that return choices=None (e.g. Nemotron, Gemma4 on openrouter)
+    # with_structured_output uses include_raw=True so parsed may be None when the model
+    # returns an empty or malformed response.
+    parsed: SummaryResponse | None = raw_output.get("parsed")
+    if parsed is None:
+        raw_msg = raw_output.get("raw")
+        raw_text = getattr(raw_msg, "content", None) or str(raw_output)
+        raise ValueError(
+            f"Model {model_provider}:{model_name} returned empty/unparseable response. "
+            f"Raw content: {raw_text[:300]}"
+        )
 
+    ai_message = raw_output.get("raw")
     logger.info("LLM: model=%s:%s summary generated", model_provider, model_name)
 
     usage, raw_metadata = _extract_usage(ai_message)
 
-    result = summary.model_dump()
+    result = parsed.model_dump()
     if source_url:
         result["source_url"] = source_url
     result["usage"] = usage.model_dump()

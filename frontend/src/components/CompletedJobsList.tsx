@@ -8,6 +8,14 @@ interface CompletedJobsListProps {
     onSelectJob: (jobId: string) => void;
 }
 
+function formatDate(iso: string | null): string {
+    if (!iso) return "";
+    return new Date(iso).toLocaleString("pl-PL", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit",
+    });
+}
+
 export function CompletedJobsList({
     jobs,
     selectedJobId,
@@ -39,12 +47,24 @@ export function CompletedJobsList({
                             className={selectedJobId === job.job_id ? selectedItemClass : defaultItemClass}
                             onClick={() => onSelectJob(job.job_id)}
                         >
-                            <strong className="line-clamp-2 overflow-hidden text-[0.98rem] leading-[1.35]">
-                                {job.title || "Bez tytulu"}
-                            </strong>
-                            <span className="mt-0.75 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] text-muted">
+                            {/* URL — most prominent */}
+                            <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-mono text-link">
                                 {job.source_url}
                             </span>
+                            {/* Short summary */}
+                            {job.short_summary ? (
+                                <span className="mt-1 line-clamp-2 block text-[0.88rem] leading-[1.4] text-ink">
+                                    {job.short_summary}
+                                </span>
+                            ) : (
+                                <span className="mt-1 block text-[0.88rem] text-muted">{job.title || "Bez tytulu"}</span>
+                            )}
+                            {/* Updated at */}
+                            {job.updated_at ? (
+                                <span className="mt-1 block text-[0.75rem] text-muted">
+                                    {formatDate(job.updated_at)}
+                                </span>
+                            ) : null}
                         </button>
                     </li>
                 ))}

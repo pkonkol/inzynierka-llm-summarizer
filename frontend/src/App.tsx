@@ -5,6 +5,7 @@ import {
     getAuthStatus,
     getJobsForUrl,
     getJobStatus,
+    getToken,
     listSummarizedUrls,
 } from "./api/client";
 import { CompletedJobsList } from "./components/CompletedJobsList";
@@ -12,6 +13,8 @@ import { JobDetailPanel } from "./components/JobDetailPanel";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
 import { UrlSubmitCard } from "./components/UrlSubmitCard";
+import { JobsPage } from "./pages/JobsPage";
+import { ResearchPage } from "./pages/ResearchPage";
 import type { JobStatus, SummaryUrlListItem } from "./types/api";
 
 const LIST_REFRESH_MS = 20_000;
@@ -25,26 +28,6 @@ type PendingSubmit = {
     model_name: string;
     language: string;
 } | null;
-
-function ResearchPlaceholder() {
-    return (
-        <div className="mx-auto w-full max-w-355 px-3.5 py-12">
-            <p className="font-mono text-[0.9rem] text-muted">
-                [Research] — placeholder. Tu trafi wyszukiwanie semantyczne i query expansion.
-            </p>
-        </div>
-    );
-}
-
-function JobsPage() {
-    return (
-        <div className="mx-auto w-full max-w-355 px-3.5 py-7">
-            <p className="font-mono text-[0.9rem] text-muted">
-                /jobs — legacy widok pojedynczych jobów (do zachowania dla debugowania).
-            </p>
-        </div>
-    );
-}
 
 function App() {
     const [route, setRoute] = useState<Route>("home");
@@ -66,8 +49,6 @@ function App() {
 
     const hasDetailOpen = Boolean(selectedUrl);
 
-    // ── data fetchers ──────────────────────────────────────────────────────────
-
     const loadUrlList = async () => {
         const data = await listSummarizedUrls(50);
         setUrlList(data);
@@ -76,19 +57,13 @@ function App() {
     const loadDetailForUrl = async (url: string) => {
         setIsLoadingDetail(true);
         try {
-            const jobs = await getJobsForUrl(url);
-            setDetailJobs(jobs);
+            setDetailJobs(await getJobsForUrl(url));
         } finally {
             setIsLoadingDetail(false);
         }
     };
 
-    const submitSummary = async (
-        url: string,
-        model_provider: string,
-        model_name: string,
-        language: string,
-    ) => {
+    const submitSummary = async (url: string, model_provider: string, model_name: string, language: string) => {
         setIsSubmitting(true);
         setFlashMessage("Zadanie zostało utworzone. Trwa analiza artykułu...");
         try {
@@ -101,12 +76,7 @@ function App() {
         }
     };
 
-    const handleSubmit = async (
-        url: string,
-        model_provider: string,
-        model_name: string,
-        language: string,
-    ) => {
+    const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string) => {
         if (!isAuthEnabled || getToken()) {
             await submitSummary(url, model_provider, model_name, language);
             return;
@@ -123,11 +93,8 @@ function App() {
         await submitSummary(url, model_provider, model_name, language);
     };
 
-    // ── effects ────────────────────────────────────────────────────────────────
-
     useEffect(() => {
         let isMounted = true;
-
         const initialize = async () => {
             try {
                 const [authResult, listResult] = await Promise.allSettled([
@@ -141,7 +108,6 @@ function App() {
                 if (isMounted) setIsLoadingList(false);
             }
         };
-
         void initialize();
         const interval = setInterval(() => { void loadUrlList(); }, LIST_REFRESH_MS);
         return () => { isMounted = false; clearInterval(interval); };
@@ -154,11 +120,9 @@ function App() {
 
     useEffect(() => {
         if (!activeJobId) return;
-
         const poll = async () => {
             try {
                 const status = await getJobStatus(activeJobId);
-
                 if (status.status === "completed") {
                     setFlashMessage("Podsumowanie gotowe.");
                     setActiveJobId(null);
@@ -173,7 +137,6 @@ function App() {
                 setActiveJobId(null);
             }
         };
-
         const interval = setInterval(() => { void poll(); }, POLLING_MS);
         void poll();
         return () => clearInterval(interval);
@@ -185,8 +148,6 @@ function App() {
         return () => clearTimeout(t);
     }, [flashMessage]);
 
-    // ── render ─────────────────────────────────────────────────────────────────
-
     return (
         <div className="relative min-h-screen overflow-x-hidden">
             <LoginOverlay
@@ -197,24 +158,20 @@ function App() {
 
             <NavDock active={route} onNavigate={setRoute} />
 
-            {route === "research" && <ResearchPlaceholder />}
+            {route === "research" && <ResearchPage />}
             {route === "jobs" && <JobsPage />}
 
             {route === "home" && (
-                <main
-                    className={
+                <main className={
+                    hasDetailOpen
+                        ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
+                        : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+                }>
+                    <section className={
                         hasDetailOpen
-                            ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
-                            : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
-                    }
-                >
-                    <section
-                        className={
-                            hasDetailOpen
-                                ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
-                                : "min-w-0"
-                        }
-                    >
+                            ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
+                            : "min-w-0"
+                    }>
                         {!hasDetailOpen ? (
                             <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} />
                         ) : null}
@@ -246,8 +203,5 @@ function App() {
         </div>
     );
 }
-
-// helper used in App — imported from localStorage
-import { getToken } from "./api/client";
 
 export default App;

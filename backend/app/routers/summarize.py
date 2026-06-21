@@ -8,7 +8,12 @@ from pymongo.errors import DuplicateKeyError
 from ..core.auth import require_auth
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
-from ..schemas.schemas import JobCreateRequest, JobStatusResponse, UrlSummaryListItem
+from ..schemas.schemas import (
+    JobCreateRequest,
+    JobListItemResponse,
+    JobStatusResponse,
+    UrlSummaryListItem,
+)
 from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
 
@@ -30,10 +35,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
-        logger.debug(
-            "[job=%s] completed text_chars=%s duration_ms=%s",
-            job_id, len(text), duration_ms,
-        )
+        logger.debug("[job=%s] completed text_chars=%s duration_ms=%s", job_id, len(text), duration_ms)
 
         summary_data = {k: v for k, v in summary.items() if k not in ("usage", "raw_metadata")}
         usage = summary.get("usage", {})
@@ -41,22 +43,20 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
 
         jobs_collection.update_one(
             {"job_id": job_id},
-            {
-                "$set": {
-                    "source_url": url,
-                    "model_provider": model_provider,
-                    "model_name": model_name,
-                    "status": "completed",
-                    "summary_data": summary_data,
-                    "usage": usage,
-                    "raw_metadata": raw_metadata,
-                    "started_at": started_at,
-                    "finished_at": finished_at,
-                    "duration_ms": duration_ms,
-                    "error": None,
-                    "updated_at": finished_at,
-                }
-            },
+            {"$set": {
+                "source_url": url,
+                "model_provider": model_provider,
+                "model_name": model_name,
+                "status": "completed",
+                "summary_data": summary_data,
+                "usage": usage,
+                "raw_metadata": raw_metadata,
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "duration_ms": duration_ms,
+                "error": None,
+                "updated_at": finished_at,
+            }},
         )
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -65,22 +65,20 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         logger.exception("[job=%s] failed: %s", job_id, exc)
         jobs_collection.update_one(
             {"job_id": job_id},
-            {
-                "$set": {
-                    "source_url": url,
-                    "model_provider": model_provider,
-                    "model_name": model_name,
-                    "status": "failed",
-                    "summary_data": None,
-                    "usage": {},
-                    "raw_metadata": {},
-                    "started_at": started_at,
-                    "finished_at": finished_at,
-                    "duration_ms": duration_ms,
-                    "error": str(exc),
-                    "updated_at": finished_at,
-                }
-            },
+            {"$set": {
+                "source_url": url,
+                "model_provider": model_provider,
+                "model_name": model_name,
+                "status": "failed",
+                "summary_data": None,
+                "usage": {},
+                "raw_metadata": {},
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "duration_ms": duration_ms,
+                "error": str(exc),
+                "updated_at": finished_at,
+            }},
         )
 
 
@@ -93,29 +91,27 @@ async def create_summarize_job(
 
     jobs_collection = get_jobs_collection()
     job_id = str(uuid4())
+    now = datetime.now(timezone.utc)
 
     logger.debug("[job=%s] queued for url=%s", job_id, payload.url)
 
-    now = datetime.now(timezone.utc)
     try:
-        jobs_collection.insert_one(
-            {
-                "job_id": job_id,
-                "source_url": payload.url,
-                "model_provider": payload.model_provider,
-                "model_name": payload.model_name,
-                "status": "pending",
-                "summary_data": None,
-                "usage": {},
-                "raw_metadata": {},
-                "created_at": now,
-                "started_at": None,
-                "finished_at": None,
-                "duration_ms": 0,
-                "error": None,
-                "updated_at": now,
-            }
-        )
+        jobs_collection.insert_one({
+            "job_id": job_id,
+            "source_url": payload.url,
+            "model_provider": payload.model_provider,
+            "model_name": payload.model_name,
+            "status": "pending",
+            "summary_data": None,
+            "usage": {},
+            "raw_metadata": {},
+            "created_at": now,
+            "started_at": None,
+            "finished_at": None,
+            "duration_ms": 0,
+            "error": None,
+            "updated_at": now,
+        })
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
@@ -125,78 +121,106 @@ async def create_summarize_job(
     return {"job_id": job_id}
 
 
-@router.get("", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped)")
+@router.get("", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped, home page)")
 async def list_summarized_urls(
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[UrlSummaryListItem]:
-    """Returns one entry per unique source_url, sorted by most-recently updated."""
+    """One entry per unique source_url, sorted by most-recently updated."""
     jobs_collection = get_jobs_collection()
 
     pipeline = [
         {"$match": {"status": {"$in": ["completed", "failed"]}}},
         {"$sort": {"updated_at": -1}},
-        {
-            "$group": {
-                "_id": "$source_url",
-                "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
-                "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
-                # first doc after sort = most recent; pick title only from completed ones
-                "latest_updated_at": {"$first": "$updated_at"},
-                "latest_title": {"$first": "$summary_data.title"},
-            }
-        },
+        {"$group": {
+            "_id": "$source_url",
+            "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+            "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
+            "latest_updated_at": {"$first": "$updated_at"},
+            "latest_title": {"$first": "$summary_data.title"},
+        }},
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
 
-    results: list[UrlSummaryListItem] = []
-    for doc in jobs_collection.aggregate(pipeline):
-        results.append(
-            UrlSummaryListItem(
-                source_url=doc["_id"],
-                completed_count=doc["completed_count"],
-                failed_count=doc["failed_count"],
-                latest_title=doc.get("latest_title") or "",
-                latest_updated_at=doc.get("latest_updated_at"),
-            )
+    results = [
+        UrlSummaryListItem(
+            source_url=doc["_id"],
+            completed_count=doc["completed_count"],
+            failed_count=doc["failed_count"],
+            latest_title=doc.get("latest_title") or "",
+            latest_updated_at=doc.get("latest_updated_at"),
         )
-
+        for doc in jobs_collection.aggregate(pipeline)
+    ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
+    return results
+
+
+@router.get("/list", response_model=list[JobListItemResponse], summary="List all jobs flat (debug /jobs page)")
+async def list_all_jobs_flat(
+    limit: int = Query(default=100, ge=1, le=500),
+) -> list[JobListItemResponse]:
+    """Flat list of all jobs across all statuses, sorted newest first. Used by the /jobs debug page."""
+    jobs_collection = get_jobs_collection()
+    cursor = jobs_collection.find(
+        {},
+        {
+            "_id": 0,
+            "job_id": 1,
+            "source_url": 1,
+            "status": 1,
+            "model_provider": 1,
+            "model_name": 1,
+            "summary_data.title": 1,
+            "summary_data.short_summary": 1,
+            "updated_at": 1,
+        },
+    ).sort("updated_at", -1).limit(limit)
+
+    results = []
+    for doc in cursor:
+        sd = doc.get("summary_data") or {}
+        results.append(JobListItemResponse(
+            job_id=str(doc.get("job_id", "")),
+            source_url=str(doc.get("source_url", "")),
+            status=doc.get("status", "pending"),
+            title=str(sd.get("title", "")),
+            short_summary=str(sd.get("short_summary", "")),
+            model_provider=str(doc.get("model_provider", "")),
+            model_name=str(doc.get("model_name", "")),
+            updated_at=doc.get("updated_at"),
+        ))
+    logger.debug("list_all_jobs_flat returned %s jobs", len(results))
     return results
 
 
 @router.get("/by-url", response_model=list[JobStatusResponse], summary="Get all jobs for a URL")
 async def get_jobs_for_url(
-    source_url: str = Query(..., description="Exact source URL to fetch jobs for"),
+    source_url: str = Query(..., description="Exact source URL"),
 ) -> list[JobStatusResponse]:
-    """Returns all jobs for the given source_url, newest first."""
+    """All jobs for the given source_url, newest first (all statuses)."""
     jobs_collection = get_jobs_collection()
-    cursor = (
-        jobs_collection
-        .find({"source_url": source_url}, {"_id": 0})
-        .sort("updated_at", -1)
-    )
+    cursor = jobs_collection.find({"source_url": source_url}, {"_id": 0}).sort("updated_at", -1)
     jobs = [JobStatusResponse.model_validate(doc) for doc in cursor]
     logger.debug("get_jobs_for_url url=%s returned %s jobs", source_url, len(jobs))
     return jobs
 
 
-@router.get("/{job_id}", response_model=JobStatusResponse, summary="Get job status (used for polling)")
+@router.get("/{job_id}", response_model=JobStatusResponse, summary="Get job status (polling)")
 async def get_job_status(job_id: str) -> JobStatusResponse:
     jobs_collection = get_jobs_collection()
     job_data = jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
     if not job_data:
         raise HTTPException(status_code=404, detail="Job not found")
-
     logger.debug("[job=%s] status check -> %s", job_id, job_data.get("status"))
     return JobStatusResponse.model_validate(job_data)
 
 
 def _verify_model_availability(model_provider: str, model_name: str) -> None:
-    if model_provider.lower() not in settings.supported_models.keys():
+    if model_provider.lower() not in settings.supported_models:
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
-        logger.warning("Model name: %s for provider %s is not supported", model_name, model_provider)
+        logger.warning("Model %s for provider %s not in supported list", model_name, model_provider)
         # Ta linia ponizej ma zostac - prosba do LLM
-        logger.warning(f"Supported models for provider {model_provider}: {settings.supported_models.get(model_provider.lower(), [])}")
+        logger.warning("Supported: %s", settings.supported_models.get(model_provider.lower(), []))
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

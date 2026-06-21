@@ -1,12 +1,24 @@
 export type JobStatusValue = "pending" | "completed" | "failed";
 
-/** One entry per unique source_url returned by GET /api/v1/jobs */
+/** Grouped by source_url — used by home page list */
 export interface SummaryUrlListItem {
     source_url: string;
     completed_count: number;
     failed_count: number;
     latest_title: string;
     latest_updated_at: string | null;
+}
+
+/** Flat per-job entry — used by /jobs debug page */
+export interface JobListItem {
+    job_id: string;
+    source_url: string;
+    status: JobStatusValue;
+    title: string;
+    short_summary: string;
+    model_provider: string;
+    model_name: string;
+    updated_at: string | null;
 }
 
 export interface SummaryData {

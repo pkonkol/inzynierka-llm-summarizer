@@ -44,9 +44,9 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
     );
 }
 
-function statusChip(status: JobStatusValue) {
-    if (status === "failed") return <span className="ml-2 text-[0.7rem] font-mono text-error uppercase">failed</span>;
-    if (status === "pending") return <span className="ml-2 text-[0.7rem] font-mono text-warning uppercase">pending</span>;
+function statusBadge(status: JobStatusValue) {
+    if (status === "failed") return <span className="ml-2 font-mono text-[0.68rem] uppercase text-error">failed</span>;
+    if (status === "pending") return <span className="ml-2 font-mono text-[0.68rem] uppercase text-warning">pending</span>;
     return null;
 }
 
@@ -54,37 +54,27 @@ function JobEntry({ job }: { job: JobStatus }) {
     const [open, setOpen] = useState(false);
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
-    const headerBg =
-        job.status === "failed"
-            ? "bg-error-subtle border-error-border"
-            : job.status === "pending"
-            ? "bg-warning-subtle border-warning-border"
-            : "";
-
     return (
-        <div className="mb-3 border border-panel-border">
+        <div className="mb-2 border border-panel-border">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
-                className={`flex w-full items-start justify-between px-4 py-3 text-left transition-colors hover:bg-subtle ${headerBg}`}
+                className="flex w-full items-start justify-between px-4 py-3 text-left transition-colors hover:bg-subtle"
             >
                 <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="font-mono text-[0.85rem] font-semibold">
-                        {modelLabel}
-                        {statusChip(job.status)}
+                        {modelLabel}{statusBadge(job.status)}
                     </span>
                     <span className="text-[0.78rem] text-muted">{formatDateMinute(job.created_at)}</span>
                     {job.summary_data?.title ? (
-                        <span className="mt-0.5 text-[0.88rem] font-display leading-[1.3]">
-                            {job.summary_data.title}
-                        </span>
+                        <span className="mt-0.5 font-display text-[0.88rem] leading-[1.3]">{job.summary_data.title}</span>
                     ) : null}
                 </span>
                 <span className="ml-3 mt-0.5 shrink-0 text-[0.8rem] text-muted">{open ? "▼" : "▶"}</span>
             </button>
 
             {open && (
-                <div className="border-t border-panel-border bg-subtle px-4 py-3 space-y-4">
+                <div className="space-y-4 border-t border-panel-border bg-subtle px-4 py-3">
                     {job.status === "failed" && job.error && (
                         <section>
                             <h5 className="section-kicker">Błąd</h5>
@@ -112,14 +102,11 @@ function JobEntry({ job }: { job: JobStatus }) {
                                 <h5 className="section-kicker">Krótkie podsumowanie</h5>
                                 <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data.short_summary || "Brak treści"}</p>
                             </section>
-
                             <section>
                                 <h5 className="section-kicker">Najważniejsze punkty</h5>
                                 <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
                                     {job.summary_data.key_takeaways ? (
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                            {job.summary_data.key_takeaways}
-                                        </ReactMarkdown>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.summary_data.key_takeaways}</ReactMarkdown>
                                     ) : (
                                         <p className="m-0">Brak treści</p>
                                     )}
@@ -137,6 +124,9 @@ function JobEntry({ job }: { job: JobStatus }) {
 
 export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: JobDetailPanelProps) {
     if (!isOpen) return null;
+
+    const completedOrPending = jobs.filter(j => j.status !== "failed");
+    const failed = jobs.filter(j => j.status === "failed");
 
     return (
         <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
@@ -157,7 +147,6 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: 
                 <p className="m-0 text-[0.95rem] text-muted">Wybierz URL z listy, aby zobaczyć szczegóły.</p>
             ) : (
                 <article className="grid gap-4.5">
-                    {/* URL header */}
                     <a
                         href={sourceUrl}
                         target="_blank"
@@ -167,16 +156,27 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose }: 
                         {sourceUrl}
                     </a>
 
+                    {/* Completed + pending */}
                     <div className="border-t border-divider pt-4">
                         <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
                             Wyniki dla modeli
                         </h5>
-                        {jobs.length === 0 ? (
-                            <p className="m-0 text-[0.95rem] text-muted">Brak wyników dla tego URL.</p>
+                        {completedOrPending.length === 0 ? (
+                            <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
                         ) : (
-                            jobs.map((job) => <JobEntry key={job.job_id} job={job} />)
+                            completedOrPending.map(job => <JobEntry key={job.job_id} job={job} />)
                         )}
                     </div>
+
+                    {/* Failed — separate section below a divider */}
+                    {failed.length > 0 && (
+                        <div className="border-t border-divider pt-4">
+                            <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">
+                                Nieudane ({failed.length})
+                            </h5>
+                            {failed.map(job => <JobEntry key={job.job_id} job={job} />)}
+                        </div>
+                    )}
                 </article>
             )}
         </aside>

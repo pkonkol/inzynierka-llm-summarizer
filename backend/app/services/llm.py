@@ -6,6 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from ..core.config import settings
 from ..schemas.schemas import UsageMetadata
@@ -24,6 +25,21 @@ _SUMMARY_PROMPT = ChatPromptTemplate.from_messages([
      "Source URL: {source_url}\n"
      "Content:\n{text}"),
 ])
+
+_PROMPT_TEMPLATE: list[dict[str, str]] = [
+    {"role": role, "content": content}
+    for role, content in [
+        ("system",
+         "You are an expert summarizer. Write the entire output in language code: {language}. "
+         "Return only valid JSON matching the requested schema."),
+        ("human",
+         "Summarize the following web content. {detail_guidance}\n"
+         "Format key_takeaways as a markdown bullet list, one takeaway per line. "
+         "Ensure key_takeaways is content-rich and specific, not generic.\n\n"
+         "Source URL: {source_url}\n"
+         "Content:\n{text}"),
+    ]
+]
 
 
 def _build_llm(model_provider: str, model_name: str) -> BaseChatModel:
@@ -45,7 +61,7 @@ def _build_llm(model_provider: str, model_name: str) -> BaseChatModel:
         return ChatOpenAI(
             model=model_name,
             base_url="https://openrouter.ai/api/v1",
-            api_key=settings.openrouter_api_key,
+            api_key=SecretStr(settings.openrouter_api_key),
         )
 
     if provider == "ollama":
@@ -96,16 +112,16 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
 
     logger.debug("LLM: model=%s:%s text_chars=%s", model_provider, model_name, len(text))
 
-    raw_output: dict[str, Any] = chain.invoke({
+    detail_guidance = _build_detail_guidance(text)
+    invoke_params = {
         "language": language,
-        "detail_guidance": _build_detail_guidance(text),
+        "detail_guidance": detail_guidance,
         "source_url": source_url or "",
         "text": text.strip(),
-    })
+    }
 
-    # Guard against providers that return choices=None (e.g. Nemotron, Gemma4 on openrouter)
-    # with_structured_output uses include_raw=True so parsed may be None when the model
-    # returns an empty or malformed response.
+    raw_output: dict[str, Any] = chain.invoke(invoke_params)
+
     parsed: SummaryResponse | None = raw_output.get("parsed")
     if parsed is None:
         raw_msg = raw_output.get("raw")
@@ -125,4 +141,7 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
         result["source_url"] = source_url
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata
+    result["input_text"] = text.strip()
+    result["prompt_template"] = _PROMPT_TEMPLATE
+    result["prompt_params"] = {k: v for k, v in invoke_params.items() if k != "text"}
     return result

@@ -36,6 +36,9 @@ class JobStatusResponse(BaseModel):
     summary_data: SummaryResponse | None = None
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
+    input_text: str = ""
+    prompt_template: list[dict[str, str]] = Field(default_factory=list)
+    prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -49,7 +52,6 @@ class JobStatusResponse(BaseModel):
             if not values.get("usage"):
                 values["usage"] = {}
             elif isinstance(values["usage"], dict):
-                # coerce any None values in usage sub-dict
                 values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}

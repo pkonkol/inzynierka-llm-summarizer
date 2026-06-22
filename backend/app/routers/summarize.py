@@ -21,6 +21,13 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 logger = logging.getLogger(__name__)
 
+_LIST_PROJECTION = {
+    "_id": 0,
+    "input_text": 0,
+    "prompt_template": 0,
+    "prompt_params": 0,
+}
+
 
 def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
     jobs_collection = get_jobs_collection()
@@ -37,7 +44,9 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
 
         logger.debug("[job=%s] completed text_chars=%s duration_ms=%s", job_id, len(text), duration_ms)
 
-        summary_data = {k: v for k, v in summary.items() if k not in ("usage", "raw_metadata")}
+        summary_data = {k: v for k, v in summary.items() if k not in (
+            "usage", "raw_metadata", "input_text", "prompt_template", "prompt_params"
+        )}
         usage = summary.get("usage", {})
         raw_metadata = summary.get("raw_metadata", {})
 
@@ -51,6 +60,9 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "summary_data": summary_data,
                 "usage": usage,
                 "raw_metadata": raw_metadata,
+                "input_text": summary.get("input_text", ""),
+                "prompt_template": summary.get("prompt_template", []),
+                "prompt_params": summary.get("prompt_params", {}),
                 "started_at": started_at,
                 "finished_at": finished_at,
                 "duration_ms": duration_ms,
@@ -73,6 +85,9 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "summary_data": None,
                 "usage": {},
                 "raw_metadata": {},
+                "input_text": "",
+                "prompt_template": [],
+                "prompt_params": {},
                 "started_at": started_at,
                 "finished_at": finished_at,
                 "duration_ms": duration_ms,
@@ -105,6 +120,9 @@ async def create_summarize_job(
             "summary_data": None,
             "usage": {},
             "raw_metadata": {},
+            "input_text": "",
+            "prompt_template": [],
+            "prompt_params": {},
             "created_at": now,
             "started_at": None,
             "finished_at": None,
@@ -166,14 +184,11 @@ async def list_all_jobs_flat(
         {},
         {
             "_id": 0,
-            "job_id": 1,
-            "source_url": 1,
-            "status": 1,
-            "model_provider": 1,
-            "model_name": 1,
-            "summary_data.title": 1,
-            "summary_data.short_summary": 1,
-            "updated_at": 1,
+            "input_text": 0,
+            "prompt_template": 0,
+            "prompt_params": 0,
+            "raw_metadata": 0,
+            "summary_data.key_takeaways": 0,
         },
     ).sort("updated_at", -1).limit(limit)
 

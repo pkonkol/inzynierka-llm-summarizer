@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { formatDateMinute, formatDuration } from "../utils/format";
-import type { JobStatus, JobStatusValue } from "../types/api";
+import type { JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 
 interface JobDetailPanelProps {
     sourceUrl: string | null;
@@ -24,9 +24,8 @@ function InfoRow({ label, value }: { label: string; value: string | number }) {
     );
 }
 
-function RawMetadata({ data }: { data: Record<string, unknown> }) {
+function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
-    if (!data || Object.keys(data).length === 0) return null;
     return (
         <div className="border border-panel-border">
             <button
@@ -34,15 +33,69 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
                 onClick={() => setOpen(v => !v)}
                 className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
             >
-                <span>Raw metadata</span>
+                <span>{label}</span>
                 <span>{open ? "▼" : "▶"}</span>
             </button>
-            {open && (
-                <pre className="m-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
-                    {JSON.stringify(data, null, 2)}
-                </pre>
-            )}
+            {open && <div className="border-t border-panel-border">{children}</div>}
         </div>
+    );
+}
+
+function RawMetadata({ data }: { data: Record<string, unknown> }) {
+    if (!data || Object.keys(data).length === 0) return null;
+    return (
+        <Collapsible label="Raw metadata">
+            <pre className="m-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
+                {JSON.stringify(data, null, 2)}
+            </pre>
+        </Collapsible>
+    );
+}
+
+function PromptSection({
+    template,
+    params,
+    inputText,
+}: {
+    template: PromptMessage[];
+    params: Record<string, string>;
+    inputText: string;
+}) {
+    if (template.length === 0 && !inputText) return null;
+    return (
+        <Collapsible label="Prompt">
+            <div className="space-y-3 p-3">
+                {template.length > 0 && (
+                    <div>
+                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Template</p>
+                        {template.map((msg, i) => (
+                            <div key={i} className="mb-2">
+                                <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
+                                <pre className="m-0 whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                                    {msg.content}
+                                </pre>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {Object.keys(params).length > 0 && (
+                    <div>
+                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Parametry</p>
+                        <pre className="m-0 overflow-x-auto bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                            {JSON.stringify(params, null, 2)}
+                        </pre>
+                    </div>
+                )}
+                {inputText && (
+                    <div>
+                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
+                        <pre className="m-0 max-h-96 overflow-y-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                            {inputText}
+                        </pre>
+                    </div>
+                )}
+            </div>
+        </Collapsible>
     );
 }
 
@@ -50,6 +103,11 @@ function statusBadge(status: JobStatusValue) {
     if (status === "failed") return <span className="ml-2 font-mono text-[0.68rem] uppercase text-error">failed</span>;
     if (status === "pending") return <span className="ml-2 font-mono text-[0.68rem] uppercase text-warning">pending</span>;
     return null;
+}
+
+function tokensPerSecond(outputTokens: number, durationMs: number): string {
+    if (!durationMs || !outputTokens) return "—";
+    return (outputTokens / (durationMs / 1000)).toFixed(1);
 }
 
 function JobEntry({ job }: { job: JobStatus }) {
@@ -95,6 +153,10 @@ function JobEntry({ job }: { job: JobStatus }) {
                                 <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
                             )}
                             <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
+                            <InfoRow
+                                label="Tokens / s"
+                                value={tokensPerSecond(job.usage?.output_tokens ?? 0, job.duration_ms)}
+                            />
                         </div>
                     )}
 
@@ -116,6 +178,12 @@ function JobEntry({ job }: { job: JobStatus }) {
                             </section>
                         </>
                     )}
+
+                    <PromptSection
+                        template={job.prompt_template ?? []}
+                        params={job.prompt_params ?? {}}
+                        inputText={job.input_text ?? ""}
+                    />
 
                     <RawMetadata data={job.raw_metadata} />
                 </div>
@@ -159,7 +227,6 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                     </a>
 
                     {debugMode ? (
-                        /* /jobs page: flat list, all statuses, label "Wynik" */
                         <div className="border-t border-divider pt-4">
                             <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
                                 Wynik
@@ -171,7 +238,6 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                             )}
                         </div>
                     ) : (
-                        /* home page: passed on top, failed below separator */
                         <>
                             <div className="border-t border-divider pt-4">
                                 <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,10 +13,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    app_name: str = "Praca Inżynierska - LLM Summary Service"
-    gemini_api_key: str | None = None
-    openrouter_api_key: str | None = None
-    ollama_url: str = "http://localhost:11434"
+    app_name: str = "Piotr Konkol - Praca inżynierska - Podsumowania z użyciem LLM"
+    gemini_api_key: SecretStr | None = None
+    openrouter_api_key: SecretStr | None = None
+    ollama_url: str = ""
     debug: bool = False
     # summary_base_output_tokens: int = 10000
     # summary_tokens_per_1000_chars: int = 120

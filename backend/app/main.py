@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
+from .core.config import settings
 from .routers import auth, health, meta, summarize
 
 setup_logging()
 
-app = FastAPI(title="Piotr Konkol - Praca inżynierska - Podsumowania z użyciem LLM", version="0.0.1")
+
+app = FastAPI(title=settings.app_name, version="0.0.1")
 
 # CORSMiddleware must be added before other middleware and routers
 app.add_middleware(

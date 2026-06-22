@@ -199,7 +199,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
     const failed = jobs.filter(j => j.status === "failed");
 
     return (
-        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
+        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-x-hidden overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
             <div className="mb-4.5 flex items-center justify-between border-b border-divider pb-3">
                 <h3 className="m-0 font-display text-[1.1rem]">Szczegóły</h3>
                 <button
@@ -216,7 +216,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
             ) : !sourceUrl ? (
                 <p className="m-0 text-[0.95rem] text-muted">Wybierz URL z listy, aby zobaczyć szczegóły.</p>
             ) : (
-                <article className="grid gap-4.5">
+                <article className="grid max-w-full gap-4.5 overflow-hidden">
                     <a
                         href={sourceUrl}
                         target="_blank"

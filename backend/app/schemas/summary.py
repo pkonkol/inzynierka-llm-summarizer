@@ -2,8 +2,8 @@ from pydantic import BaseModel, HttpUrl
 
 
 # todo remove?
-class SummaryRequest(BaseModel):
-    url: HttpUrl
+#class SummaryRequest(BaseModel):
+#    url: HttpUrl
 
 
 class SummaryResponse(BaseModel):

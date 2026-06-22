@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 
 from ..core.config import settings
 from ..schemas.schemas import UsageMetadata
@@ -26,6 +26,7 @@ _SUMMARY_PROMPT = ChatPromptTemplate.from_messages([
      "Content:\n{text}"),
 ])
 
+# TODO usunac duplikacje zrobiona przez chata tutaj
 _PROMPT_TEMPLATE: list[dict[str, str]] = [
     {"role": role, "content": content}
     for role, content in [
@@ -61,7 +62,7 @@ def _build_llm(model_provider: str, model_name: str) -> BaseChatModel:
         return ChatOpenAI(
             model=model_name,
             base_url="https://openrouter.ai/api/v1",
-            api_key=SecretStr(settings.openrouter_api_key),
+            api_key=settings.openrouter_api_key,
         )
 
     if provider == "ollama":
@@ -120,7 +121,8 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
         "text": text.strip(),
     }
 
-    raw_output: dict[str, Any] = chain.invoke(invoke_params)
+    raw_output: dict[str, Any] | BaseModel = chain.invoke(invoke_params)
+    logger.debug("LLM: model=%s:%s raw output:\n%s\n", model_provider, model_name, raw_output)
 
     parsed: SummaryResponse | None = raw_output.get("parsed")
     if parsed is None:

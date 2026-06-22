@@ -18,6 +18,10 @@ data "google_secret_manager_secret" "jwt_secret" {
   secret_id = "jwt_secret"
 }
 
+data "google_secret_manager_secret" "supported_models" {
+  secret_id = "supported_models"
+}
+
 resource "google_service_account" "cloudrun_sa" {
   account_id   = "cloudrun-sa"
   display_name = "Cloud Run service account"
@@ -86,6 +90,15 @@ resource "google_cloud_run_v2_service" "backend" {
         }
       }
       env {
+        name = "SUPPORTED_MODELS"
+        value_source {
+          secret_key_ref {
+            secret  = data.google_secret_manager_secret.supported_models.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
         name  = "MONGODB_DB_NAME"
         value = "test-inzynierka-db"
       }
@@ -136,6 +149,12 @@ resource "google_secret_manager_secret_iam_member" "cloudrun_auth" {
 
 resource "google_secret_manager_secret_iam_member" "cloudrun_jwt" {
   secret_id = data.google_secret_manager_secret.jwt_secret.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cloudrun_supported_models" {
+  secret_id = data.google_secret_manager_secret.supported_models.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }

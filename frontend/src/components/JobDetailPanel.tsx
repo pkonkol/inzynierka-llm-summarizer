@@ -27,7 +27,7 @@ function InfoRow({ label, value }: { label: string; value: string | number }) {
 function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="border border-panel-border">
+        <div className="w-full min-w-0 overflow-hidden border border-panel-border">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
@@ -36,7 +36,7 @@ function Collapsible({ label, children }: { label: string; children: React.React
                 <span>{label}</span>
                 <span>{open ? "▼" : "▶"}</span>
             </button>
-            {open && <div className="border-t border-panel-border">{children}</div>}
+            {open && <div className="w-full min-w-0 border-t border-panel-border">{children}</div>}
         </div>
     );
 }
@@ -45,7 +45,7 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
     if (!data || Object.keys(data).length === 0) return null;
     return (
         <Collapsible label="Raw metadata">
-            <pre className="m-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
+            <pre className="m-0 w-full min-w-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
                 {JSON.stringify(data, null, 2)}
             </pre>
         </Collapsible>
@@ -64,14 +64,14 @@ function PromptSection({
     if (template.length === 0 && !inputText) return null;
     return (
         <Collapsible label="Prompt">
-            <div className="space-y-3 p-3">
+            <div className="w-full min-w-0 space-y-3 p-3">
                 {template.length > 0 && (
-                    <div>
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Template</p>
                         {template.map((msg, i) => (
-                            <div key={i} className="mb-2">
+                            <div key={i} className="mb-2 min-w-0">
                                 <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
-                                <pre className="m-0 whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                                <pre className="m-0 w-full min-w-0 overflow-x-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
                                     {msg.content}
                                 </pre>
                             </div>
@@ -79,17 +79,17 @@ function PromptSection({
                     </div>
                 )}
                 {Object.keys(params).length > 0 && (
-                    <div>
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Parametry</p>
-                        <pre className="m-0 overflow-x-auto bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                        <pre className="m-0 w-full min-w-0 overflow-x-auto bg-subtle p-2 text-[0.75rem] leading-[1.5]">
                             {JSON.stringify(params, null, 2)}
                         </pre>
                     </div>
                 )}
                 {inputText && (
-                    <div>
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
-                        <pre className="m-0 max-h-96 overflow-y-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                        <pre className="m-0 max-h-96 w-full min-w-0 overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
                             {inputText}
                         </pre>
                     </div>
@@ -115,7 +115,7 @@ function JobEntry({ job }: { job: JobStatus }) {
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
     return (
-        <div className="mb-2 border border-panel-border">
+        <div className="mb-2 w-full min-w-0 border border-panel-border">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
@@ -134,7 +134,7 @@ function JobEntry({ job }: { job: JobStatus }) {
             </button>
 
             {open && (
-                <div className="space-y-4 border-t border-panel-border bg-subtle px-4 py-3">
+                <div className="w-full min-w-0 space-y-4 border-t border-panel-border bg-subtle px-4 py-3">
                     {job.status === "failed" && job.error && (
                         <section>
                             <h5 className="section-kicker">Błąd</h5>

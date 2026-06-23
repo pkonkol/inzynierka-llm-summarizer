@@ -57,10 +57,6 @@ class JobStatusResponse(BaseModel):
                 values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}
-            # migrate old dict format {role: content} -> [[role, content], ...]
-            pt = values.get("prompt_template")
-            if isinstance(pt, dict):
-                values["prompt_template"] = [[role, content] for role, content in pt.items()]
         return values
 
 

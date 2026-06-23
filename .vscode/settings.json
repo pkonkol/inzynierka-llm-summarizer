@@ -7,5 +7,6 @@
         "backend/venv",
         "backend/.venv"
     ],
-    "python.envFile": "${workspaceFolder}/backend/.env"
+    "python.envFile": "${workspaceFolder}/backend/.env",
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/activate",
 }

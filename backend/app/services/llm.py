@@ -178,8 +178,6 @@ def generate_summary(
 
     usage, raw_metadata = _extract_usage(ai_message)
 
-    logger.debug("PROMPT_TEMPLATE_EXPORT:\n%s\n", json.dumps(_SUMMARY_PROMPT_MESSAGES, indent=2, ensure_ascii=False))
-
     result = parsed.model_dump()
     if source_url:
         result["source_url"] = source_url

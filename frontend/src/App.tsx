@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { NavDock } from "./components/NavDock";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
@@ -12,30 +14,29 @@ function getRoute(): Route {
     return "home";
 }
 
-function navigate(route: Route) {
-    const path = route === "home" ? "/" : `/${route}`;
-    window.history.pushState({}, "", path);
-    // force re-render via popstate
-    window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 function App() {
-    const [route, setRoute] = window.__reactUseStateShim
-        ? window.__reactUseStateShim<Route>(getRoute)
-        : // eslint-disable-next-line react-hooks/rules-of-hooks
-          (() => {
-              const { useState, useEffect } = require("react") as typeof import("react");
-              const [r, setR] = useState<Route>(getRoute);
-              useEffect(() => {
-                  const onPop = () => setR(getRoute());
-                  window.addEventListener("popstate", onPop);
-                  return () => window.removeEventListener("popstate", onPop);
-              }, []);
-              return [r, setR] as const;
-          })();
+    const [route, setRoute] = useState<Route>(getRoute);
 
-    void route; void setRoute;
-    return <></>;
+    useEffect(() => {
+        const onPop = () => setRoute(getRoute());
+        window.addEventListener("popstate", onPop);
+        return () => window.removeEventListener("popstate", onPop);
+    }, []);
+
+    function navigate(next: Route) {
+        const path = next === "home" ? "/" : `/${next}`;
+        window.history.pushState({}, "", path);
+        setRoute(next);
+    }
+
+    return (
+        <div className="relative min-h-screen overflow-x-hidden">
+            <NavDock active={route} onNavigate={navigate} />
+            {route === "home" && <HomePage />}
+            {route === "jobs" && <JobsPage />}
+            {route === "research" && <ResearchPage />}
+        </div>
+    );
 }
 
 export default App;

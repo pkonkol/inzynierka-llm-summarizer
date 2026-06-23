@@ -27,7 +27,7 @@ function InfoRow({ label, value }: { label: string; value: string | number }) {
 function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="border border-panel-border">
+        <div className="border border-panel-border min-w-0">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
@@ -36,8 +36,16 @@ function Collapsible({ label, children }: { label: string; children: React.React
                 <span>{label}</span>
                 <span>{open ? "▼" : "▶"}</span>
             </button>
-            {open && <div className="border-t border-panel-border">{children}</div>}
+            {open && <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>}
         </div>
+    );
+}
+
+function PreBlock({ children }: { children: string }) {
+    return (
+        <pre className="m-0 overflow-x-auto whitespace-pre-wrap break-words bg-subtle p-3 text-[0.75rem] leading-[1.5] min-w-0">
+            {children}
+        </pre>
     );
 }
 
@@ -45,9 +53,16 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
     if (!data || Object.keys(data).length === 0) return null;
     return (
         <Collapsible label="Raw metadata">
-            <pre className="m-0 overflow-x-auto bg-subtle p-3 text-[0.75rem] leading-[1.5]">
-                {JSON.stringify(data, null, 2)}
-            </pre>
+            <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>
+        </Collapsible>
+    );
+}
+
+function RawOutput({ text }: { text: string }) {
+    if (!text) return null;
+    return (
+        <Collapsible label="Raw output">
+            <PreBlock>{text}</PreBlock>
         </Collapsible>
     );
 }
@@ -57,39 +72,41 @@ function PromptSection({
     params,
     inputText,
 }: {
-    template: PromptMessage[];
+    template: PromptMessage[] | [string, string][];
     params: Record<string, string>;
     inputText: string;
 }) {
     if (template.length === 0 && !inputText) return null;
+
+    // normalise both PromptMessage ({role, content}) and [role, content] tuple formats
+    const messages: { role: string; content: string }[] = template.map((m) =>
+        Array.isArray(m) ? { role: m[0], content: m[1] } : m
+    );
+
     return (
         <Collapsible label="Prompt">
-            <div className="space-y-3 p-3">
-                {template.length > 0 && (
-                    <div>
+            <div className="space-y-3 p-3 min-w-0">
+                {messages.length > 0 && (
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Template</p>
-                        {template.map((msg, i) => (
-                            <div key={i} className="mb-2">
+                        {messages.map((msg, i) => (
+                            <div key={i} className="mb-2 min-w-0">
                                 <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
-                                <pre className="m-0 whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
-                                    {msg.content}
-                                </pre>
+                                <PreBlock>{msg.content}</PreBlock>
                             </div>
                         ))}
                     </div>
                 )}
                 {Object.keys(params).length > 0 && (
-                    <div>
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Parametry</p>
-                        <pre className="m-0 overflow-x-auto bg-subtle p-2 text-[0.75rem] leading-[1.5]">
-                            {JSON.stringify(params, null, 2)}
-                        </pre>
+                        <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
                     </div>
                 )}
                 {inputText && (
-                    <div>
+                    <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
-                        <pre className="m-0 max-h-96 overflow-y-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5]">
+                        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5] min-w-0">
                             {inputText}
                         </pre>
                     </div>
@@ -115,7 +132,7 @@ function JobEntry({ job }: { job: JobStatus }) {
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
     return (
-        <div className="mb-2 border border-panel-border">
+        <div className="mb-2 border border-panel-border min-w-0">
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
@@ -134,7 +151,7 @@ function JobEntry({ job }: { job: JobStatus }) {
             </button>
 
             {open && (
-                <div className="space-y-4 border-t border-panel-border bg-subtle px-4 py-3">
+                <div className="space-y-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-hidden">
                     {job.status === "failed" && job.error && (
                         <section>
                             <h5 className="section-kicker">Błąd</h5>
@@ -179,6 +196,8 @@ function JobEntry({ job }: { job: JobStatus }) {
                         </>
                     )}
 
+                    <RawOutput text={job.raw_output ?? ""} />
+
                     <PromptSection
                         template={job.prompt_template ?? []}
                         params={job.prompt_params ?? {}}
@@ -216,7 +235,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
             ) : !sourceUrl ? (
                 <p className="m-0 text-[0.95rem] text-muted">Wybierz URL z listy, aby zobaczyć szczegóły.</p>
             ) : (
-                <article className="grid gap-4.5">
+                <article className="grid gap-4.5 min-w-0">
                     <a
                         href={sourceUrl}
                         target="_blank"
@@ -227,7 +246,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                     </a>
 
                     {debugMode ? (
-                        <div className="border-t border-divider pt-4">
+                        <div className="border-t border-divider pt-4 min-w-0">
                             <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
                                 Wynik
                             </h5>
@@ -239,7 +258,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                         </div>
                     ) : (
                         <>
-                            <div className="border-t border-divider pt-4">
+                            <div className="border-t border-divider pt-4 min-w-0">
                                 <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
                                     Wyniki dla modeli
                                 </h5>
@@ -253,7 +272,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                             {failed.length > 0 && (
                                 <>
                                     <hr className="border-t border-divider" />
-                                    <div>
+                                    <div className="min-w-0">
                                         <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">
                                             Nieudane ({failed.length})
                                         </h5>

@@ -36,8 +36,10 @@ class JobStatusResponse(BaseModel):
     summary_data: SummaryResponse | None = None
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
+    raw_output: str = ""
     input_text: str = ""
-    prompt_template: dict[str, str] = Field(default_factory=dict)
+    # list of [role, content] pairs, e.g. [["system", "..."], ["human", "..."]]
+    prompt_template: list[list[str]] = Field(default_factory=list)
     prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime | None = None
     started_at: datetime | None = None
@@ -55,6 +57,10 @@ class JobStatusResponse(BaseModel):
                 values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}
+            # migrate old dict format {role: content} -> [[role, content], ...]
+            pt = values.get("prompt_template")
+            if isinstance(pt, dict):
+                values["prompt_template"] = [[role, content] for role, content in pt.items()]
         return values
 
 

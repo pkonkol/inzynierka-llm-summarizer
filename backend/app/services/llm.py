@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any
 
@@ -26,20 +27,9 @@ _SUMMARY_PROMPT = ChatPromptTemplate.from_messages([
      "Content:\n{text}"),
 ])
 
-# TODO usunac duplikacje zrobiona przez chata tutaj
-_PROMPT_TEMPLATE: list[dict[str, str]] = [
+_PROMPT_TEMPLATE_EXPORT: list[dict[str, str]] = [
     {"role": role, "content": content}
-    for role, content in [
-        ("system",
-         "You are an expert summarizer. Write the entire output in language code: {language}. "
-         "Return only valid JSON matching the requested schema."),
-        ("human",
-         "Summarize the following web content. {detail_guidance}\n"
-         "Format key_takeaways as a markdown bullet list, one takeaway per line. "
-         "Ensure key_takeaways is content-rich and specific, not generic.\n\n"
-         "Source URL: {source_url}\n"
-         "Content:\n{text}"),
-    ]
+    for role, content in _SUMMARY_PROMPT.messages  # type: ignore[union-attr]
 ]
 
 
@@ -80,10 +70,19 @@ def _build_detail_guidance(text: str) -> str:
     return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
 
 
+def _as_dict(obj: Any) -> dict[str, Any]:
+    """Coerce Pydantic BaseModel or plain dict to dict safely."""
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
+    if isinstance(obj, dict):
+        return obj
+    return {}
+
+
 def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     """Normalize usage from AIMessage across providers; return (usage, raw_metadata)."""
-    usage_meta = getattr(ai_message, "usage_metadata", None) or {}
-    response_meta = getattr(ai_message, "response_metadata", None) or {}
+    usage_meta = _as_dict(getattr(ai_message, "usage_metadata", None) or {})
+    response_meta = _as_dict(getattr(ai_message, "response_metadata", None) or {})
 
     usage = UsageMetadata(
         input_tokens=usage_meta.get("input_tokens", 0),
@@ -97,14 +96,33 @@ def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
 
     raw_metadata: dict[str, Any] = {}
     if usage_meta:
-        raw_metadata["usage_metadata"] = dict(usage_meta)
+        raw_metadata["usage_metadata"] = usage_meta
     if response_meta:
-        raw_metadata["response_metadata"] = dict(response_meta)
+        raw_metadata["response_metadata"] = response_meta
 
     return usage, raw_metadata
 
 
-def generate_summary(text: str, source_url: str, model_name: str, model_provider: str, language: str) -> dict[str, Any]:
+def _raw_content_from_invoke(raw_output: Any) -> str:
+    """Best-effort extraction of raw LLM text from include_raw=True output."""
+    if isinstance(raw_output, dict):
+        raw_msg = raw_output.get("raw")
+        content = getattr(raw_msg, "content", None)
+        if content:
+            try:
+                return json.dumps(json.loads(content), indent=2, ensure_ascii=False)
+            except (json.JSONDecodeError, TypeError):
+                return str(content)
+    return str(raw_output)
+
+
+def generate_summary(
+    text: str, source_url: str, model_name: str, model_provider: str, language: str
+) -> dict[str, Any]:
+    """
+    Returns a dict with all result fields.
+    On parse failure raises ValueError with raw_output attached as .raw_output attribute.
+    """
     if not text or not text.strip():
         raise ValueError("Input text cannot be empty")
 
@@ -121,22 +139,27 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
         "text": text.strip(),
     }
 
-    raw_output: dict[str, Any] | BaseModel = chain.invoke(invoke_params)
-    logger.debug("LLM: model=%s:%s raw output:\n%s\n", model_provider, model_name, raw_output)
+    raw_invoke_output: dict[str, Any] | BaseModel = chain.invoke(invoke_params)
+    logger.debug("LLM raw output:\n%s\n", _raw_content_from_invoke(raw_invoke_output))
 
-    parsed: SummaryResponse | None = raw_output.get("parsed")
+    if isinstance(raw_invoke_output, BaseModel):
+        raw_invoke_output = raw_invoke_output.model_dump()
+
+    parsed: SummaryResponse | None = raw_invoke_output.get("parsed")
+    raw_content_str = _raw_content_from_invoke(raw_invoke_output)
+
     if parsed is None:
-        raw_msg = raw_output.get("raw")
-        raw_text = getattr(raw_msg, "content", None) or str(raw_output)
-        raise ValueError(
-            f"Model {model_provider}:{model_name} returned empty/unparseable response. "
-            f"Raw content: \n{raw_text}\n"
+        err = ValueError(
+            f"Model {model_provider}:{model_name} returned empty/unparseable response."
         )
+        err.raw_output = raw_content_str  # type: ignore[attr-defined]
+        raise err
 
-    ai_message = raw_output.get("raw")
+    ai_message = raw_invoke_output.get("raw")
     logger.info("LLM: model=%s:%s summary generated", model_provider, model_name)
 
     usage, raw_metadata = _extract_usage(ai_message)
+    raw_metadata["raw_output"] = raw_content_str
 
     result = parsed.model_dump()
     if source_url:
@@ -144,6 +167,6 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata
     result["input_text"] = text.strip()
-    result["prompt_template"] = _PROMPT_TEMPLATE
+    result["prompt_template"] = _PROMPT_TEMPLATE_EXPORT
     result["prompt_params"] = {k: v for k, v in invoke_params.items() if k != "text"}
     return result

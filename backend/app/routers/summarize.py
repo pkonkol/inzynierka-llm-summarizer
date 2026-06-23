@@ -47,8 +47,6 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         summary_data = {k: v for k, v in summary.items() if k not in (
             "usage", "raw_metadata", "input_text", "prompt_template", "prompt_params"
         )}
-        usage = summary.get("usage", {})
-        raw_metadata = summary.get("raw_metadata", {})
 
         jobs_collection.update_one(
             {"job_id": job_id},
@@ -58,8 +56,8 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "model_name": model_name,
                 "status": "completed",
                 "summary_data": summary_data,
-                "usage": usage,
-                "raw_metadata": raw_metadata,
+                "usage": summary.get("usage", {}),
+                "raw_metadata": summary.get("raw_metadata", {}),
                 "input_text": summary.get("input_text", ""),
                 "prompt_template": summary.get("prompt_template", []),
                 "prompt_params": summary.get("prompt_params", {}),
@@ -74,7 +72,9 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
+        raw_output: str = getattr(exc, "raw_output", "")
         logger.exception("[job=%s] failed: %s", job_id, exc)
+
         jobs_collection.update_one(
             {"job_id": job_id},
             {"$set": {
@@ -84,7 +84,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "status": "failed",
                 "summary_data": None,
                 "usage": {},
-                "raw_metadata": {},
+                "raw_metadata": {"raw_output": raw_output} if raw_output else {},
                 "input_text": "",
                 "prompt_template": [],
                 "prompt_params": {},
@@ -236,6 +236,5 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
         logger.warning("Model %s for provider %s not in supported list", model_name, model_provider)
-        # Ta linia ponizej ma zostac - prosba do LLM
         logger.warning("Supported: %s", settings.supported_models.get(model_provider.lower(), []))
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

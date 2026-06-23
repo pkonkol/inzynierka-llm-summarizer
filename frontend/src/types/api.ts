@@ -49,6 +49,7 @@ export interface JobStatus {
     summary_data: SummaryData | null;
     usage: UsageMetadata;
     raw_metadata: Record<string, unknown>;
+    raw_output: string;
     input_text: string;
     prompt_template: PromptMessage[];
     prompt_params: Record<string, string>;

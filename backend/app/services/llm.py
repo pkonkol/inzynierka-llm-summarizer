@@ -130,7 +130,7 @@ def generate_summary(text: str, source_url: str, model_name: str, model_provider
         raw_text = getattr(raw_msg, "content", None) or str(raw_output)
         raise ValueError(
             f"Model {model_provider}:{model_name} returned empty/unparseable response. "
-            f"Raw content: {raw_text[:300]}"
+            f"Raw content: \n{raw_text}\n"
         )
 
     ai_message = raw_output.get("raw")

@@ -3,6 +3,13 @@ resource "google_service_account" "cloudrun_sa" {
   display_name = "Cloud Run service account"
 }
 
+locals {
+  env_vars = {
+    MONGODB_DB_NAME         = "test-inzynierka-db"
+    MONGODB_JOBS_COLLECTION = "jobs"
+  }
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name                = "llm-summarizer-backend"
   location            = var.region
@@ -33,14 +40,12 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
-
-      env {
-        name  = "MONGODB_DB_NAME"
-        value = "test-inzynierka-db"
-      }
-      env {
-        name  = "MONGODB_JOBS_COLLECTION"
-        value = "jobs"
+      dynamic "env" {
+        for_each = local.env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
 
       resources {

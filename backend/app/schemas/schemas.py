@@ -37,7 +37,7 @@ class JobStatusResponse(BaseModel):
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
     input_text: str = ""
-    prompt_template: list[dict[str, str]] = Field(default_factory=list)
+    prompt_template: dict[str, str] = Field(default_factory=dict)
     prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime | None = None
     started_at: datetime | None = None

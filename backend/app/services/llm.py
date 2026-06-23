@@ -15,7 +15,7 @@ from ..schemas.summary import SummaryResponse
 
 logger = logging.getLogger(__name__)
 
-_SUMMARY_PROMPT = ChatPromptTemplate.from_messages([
+_SUMMARY_PROMPT_MESSAGES = [
     ("system",
      "You are an expert summarizer. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
@@ -25,12 +25,9 @@ _SUMMARY_PROMPT = ChatPromptTemplate.from_messages([
      "Ensure key_takeaways is content-rich and specific, not generic.\n\n"
      "Source URL: {source_url}\n"
      "Content:\n{text}"),
-])
-
-_PROMPT_TEMPLATE_EXPORT: list[dict[str, str]] = [
-    {"role": role, "content": content}
-    for role, content in _SUMMARY_PROMPT.messages  # type: ignore[union-attr]
 ]
+
+_SUMMARY_PROMPT = ChatPromptTemplate.from_messages(_SUMMARY_PROMPT_MESSAGES)
 
 
 def _build_llm(model_provider: str, model_name: str) -> BaseChatModel:
@@ -161,12 +158,14 @@ def generate_summary(
     usage, raw_metadata = _extract_usage(ai_message)
     raw_metadata["raw_output"] = raw_content_str
 
+    logger.debug("PROMPT_TEMPLATE_EXPORT:\n%s\n", json.dumps(_SUMMARY_PROMPT_MESSAGES, indent=2, ensure_ascii=False))
+
     result = parsed.model_dump()
     if source_url:
         result["source_url"] = source_url
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata
     result["input_text"] = text.strip()
-    result["prompt_template"] = _PROMPT_TEMPLATE_EXPORT
+    result["prompt_template"] = {k: v for k, v in _SUMMARY_PROMPT_MESSAGES}
     result["prompt_params"] = {k: v for k, v in invoke_params.items() if k != "text"}
     return result

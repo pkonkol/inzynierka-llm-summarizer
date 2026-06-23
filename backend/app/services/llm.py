@@ -76,6 +76,25 @@ def _as_dict(obj: Any) -> dict[str, Any]:
     return {}
 
 
+def _extract_text_from_content(content: Any) -> str:
+    """
+    Normalize AIMessage.content to a plain string.
+    Gemini returns a list of blocks: [{'type': 'text', 'text': '...', 'extras': {...}}]
+    Other providers return a plain string.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(block.get("text", ""))
+            elif isinstance(block, str):
+                parts.append(block)
+        return "".join(parts)
+    return str(content)
+
+
 def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     """Normalize usage from AIMessage across providers; return (usage, raw_metadata)."""
     usage_meta = _as_dict(getattr(ai_message, "usage_metadata", None) or {})
@@ -100,17 +119,18 @@ def _extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     return usage, raw_metadata
 
 
-def _raw_content_from_invoke(raw_output: Any) -> str:
-    """Best-effort extraction of raw LLM text from include_raw=True output."""
-    if isinstance(raw_output, dict):
-        raw_msg = raw_output.get("raw")
-        content = getattr(raw_msg, "content", None)
-        if content:
-            try:
-                return json.dumps(json.loads(content), indent=2, ensure_ascii=False)
-            except (json.JSONDecodeError, TypeError):
-                return str(content)
-    return str(raw_output)
+def _raw_output_str(raw_invoke_output: Any) -> str:
+    """
+    Extract the raw LLM text from include_raw=True chain output.
+    Always returns a clean plain string — never a Python repr of a list.
+    """
+    if not isinstance(raw_invoke_output, dict):
+        return str(raw_invoke_output)
+    raw_msg = raw_invoke_output.get("raw")
+    content = getattr(raw_msg, "content", None)
+    if content is None:
+        return ""
+    return _extract_text_from_content(content)
 
 
 def generate_summary(
@@ -137,13 +157,14 @@ def generate_summary(
     }
 
     raw_invoke_output: dict[str, Any] | BaseModel = chain.invoke(invoke_params)
-    logger.debug("LLM raw output:\n%s\n", _raw_content_from_invoke(raw_invoke_output))
 
     if isinstance(raw_invoke_output, BaseModel):
         raw_invoke_output = raw_invoke_output.model_dump()
 
+    raw_content_str = _raw_output_str(raw_invoke_output)
+    logger.debug("LLM raw output:\n%s\n", raw_content_str)
+
     parsed: SummaryResponse | None = raw_invoke_output.get("parsed")
-    raw_content_str = _raw_content_from_invoke(raw_invoke_output)
 
     if parsed is None:
         err = ValueError(
@@ -156,7 +177,6 @@ def generate_summary(
     logger.info("LLM: model=%s:%s summary generated", model_provider, model_name)
 
     usage, raw_metadata = _extract_usage(ai_message)
-    raw_metadata["raw_output"] = raw_content_str
 
     logger.debug("PROMPT_TEMPLATE_EXPORT:\n%s\n", json.dumps(_SUMMARY_PROMPT_MESSAGES, indent=2, ensure_ascii=False))
 
@@ -165,7 +185,8 @@ def generate_summary(
         result["source_url"] = source_url
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata
+    result["raw_output"] = raw_content_str
     result["input_text"] = text.strip()
-    result["prompt_template"] = {k: v for k, v in _SUMMARY_PROMPT_MESSAGES}
+    result["prompt_template"] = list(_SUMMARY_PROMPT_MESSAGES)
     result["prompt_params"] = {k: v for k, v in invoke_params.items() if k != "text"}
     return result

@@ -28,6 +28,9 @@ _LIST_PROJECTION = {
     "prompt_params": 0,
 }
 
+# Keys from generate_summary() that are stored as dedicated top-level job fields
+_SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
+
 
 def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
     jobs_collection = get_jobs_collection()
@@ -44,9 +47,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
 
         logger.debug("[job=%s] completed text_chars=%s duration_ms=%s", job_id, len(text), duration_ms)
 
-        summary_data = {k: v for k, v in summary.items() if k not in (
-            "usage", "raw_metadata", "input_text", "prompt_template", "prompt_params"
-        )}
+        summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
 
         jobs_collection.update_one(
             {"job_id": job_id},
@@ -58,6 +59,7 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "summary_data": summary_data,
                 "usage": summary.get("usage", {}),
                 "raw_metadata": summary.get("raw_metadata", {}),
+                "raw_output": summary.get("raw_output", ""),
                 "input_text": summary.get("input_text", ""),
                 "prompt_template": summary.get("prompt_template", []),
                 "prompt_params": summary.get("prompt_params", {}),
@@ -84,7 +86,8 @@ def run_summarization_job(job_id: str, url: str, model_name: str, model_provider
                 "status": "failed",
                 "summary_data": None,
                 "usage": {},
-                "raw_metadata": {"raw_output": raw_output} if raw_output else {},
+                "raw_metadata": {},
+                "raw_output": raw_output,
                 "input_text": "",
                 "prompt_template": [],
                 "prompt_params": {},
@@ -120,6 +123,7 @@ async def create_summarize_job(
             "summary_data": None,
             "usage": {},
             "raw_metadata": {},
+            "raw_output": "",
             "input_text": "",
             "prompt_template": [],
             "prompt_params": {},

@@ -1,4 +1,6 @@
 # backend/app/core/mongo.py
+from datetime import datetime, timedelta, timezone
+
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from contextlib import asynccontextmanager
@@ -29,6 +31,8 @@ def init_mongo() -> None:
     _mongo_client.admin.command('ping')
 
     ensure_indexes(get_jobs_collection())
+    count = cleanup_stale_pending_jobs(max_age_hours=2)
+    print(f"MongoDB initialized. Cleaned up {count} stale pending jobs.")
 
 def close_mongo() -> None:
     global _mongo_client
@@ -51,3 +55,21 @@ def get_jobs_collection() -> Collection:
 def ensure_indexes(collection) -> None:
     collection.create_index("source_url")
     collection.create_index([("created_at", -1)])
+
+
+def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:
+    """
+    Mark pending jobs older than max_age_hours as failed.
+    Call once at startup to handle jobs killed mid-execution.
+    """
+    jobs_collection = get_jobs_collection()
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    result = jobs_collection.update_many(
+        {"status": "pending", "created_at": {"$lt": cutoff}},
+        {"$set": {
+            "status": "failed",
+            "error": "Job killed before completion (server restart)",
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+    return result.modified_count

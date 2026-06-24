@@ -133,7 +133,7 @@ def _raw_output_str(raw_invoke_output: Any) -> str:
     return _extract_text_from_content(content)
 
 
-def generate_summary(
+async def generate_summary(
     text: str, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """
@@ -156,7 +156,7 @@ def generate_summary(
         "text": text.strip(),
     }
 
-    raw_invoke_output: dict[str, Any] | BaseModel = chain.invoke(invoke_params)
+    raw_invoke_output: dict[str, Any] | BaseModel = await chain.ainvoke(invoke_params)
 
     if isinstance(raw_invoke_output, BaseModel):
         raw_invoke_output = raw_invoke_output.model_dump()

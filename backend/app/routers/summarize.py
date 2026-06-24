@@ -32,15 +32,15 @@ _LIST_PROJECTION = {
 _SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
 
 
-def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
+async def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
 
     try:
         logger.debug("[job=%s] started for url=%s", job_id, url)
 
-        text = extract_text_from_url(url)
-        summary = generate_summary(text, url, model_name, model_provider, language)
+        text = await extract_text_from_url(url)
+        summary = await generate_summary(text, url, model_name, model_provider, language)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)

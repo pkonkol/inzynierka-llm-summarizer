@@ -27,10 +27,10 @@ app.include_router(meta.router)
 
 
 @app.on_event("startup")
-def on_startup() -> None:
-    init_mongo()
+async def on_startup() -> None:
+    await init_mongo()
 
 
 @app.on_event("shutdown")
-def on_shutdown() -> None:
-    close_mongo()
+async def on_shutdown() -> None:
+    await close_mongo()

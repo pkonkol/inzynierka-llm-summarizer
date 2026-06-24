@@ -2,9 +2,11 @@ fastapi
 uvicorn
 pydantic-settings
 trafilatura
-pymongo
+motor
 pyjwt
 langchain-core
 langchain-google-genai
 langchain-openai
 langchain-ollama
+textstat
+spacy

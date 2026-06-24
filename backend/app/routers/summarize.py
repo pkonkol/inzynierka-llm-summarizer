@@ -28,7 +28,6 @@ _LIST_PROJECTION = {
     "prompt_params": 0,
 }
 
-# Keys from generate_summary() that are stored as dedicated top-level job fields
 _SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
 
 
@@ -49,7 +48,7 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
 
         summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
 
-        jobs_collection.update_one(
+        await jobs_collection.update_one(
             {"job_id": job_id},
             {"$set": {
                 "source_url": url,
@@ -77,7 +76,7 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
         raw_output: str = getattr(exc, "raw_output", "")
         logger.exception("[job=%s] failed: %s", job_id, exc)
 
-        jobs_collection.update_one(
+        await jobs_collection.update_one(
             {"job_id": job_id},
             {"$set": {
                 "source_url": url,
@@ -114,7 +113,7 @@ async def create_summarize_job(
     logger.debug("[job=%s] queued for url=%s", job_id, payload.url)
 
     try:
-        jobs_collection.insert_one({
+        await jobs_collection.insert_one({
             "job_id": job_id,
             "source_url": payload.url,
             "model_provider": payload.model_provider,
@@ -172,7 +171,7 @@ async def list_summarized_urls(
             latest_title=doc.get("latest_title") or "",
             latest_updated_at=doc.get("latest_updated_at"),
         )
-        for doc in jobs_collection.aggregate(pipeline)
+        async for doc in await jobs_collection.aggregate(pipeline)
     ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
     return results
@@ -182,7 +181,7 @@ async def list_summarized_urls(
 async def list_all_jobs_flat(
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[JobListItemResponse]:
-    """Flat list of all jobs across all statuses, sorted newest first. Used by the /jobs debug page."""
+    """Flat list of all jobs across all statuses, sorted newest first."""
     jobs_collection = get_jobs_collection()
     cursor = jobs_collection.find(
         {},
@@ -197,7 +196,7 @@ async def list_all_jobs_flat(
     ).sort("updated_at", -1).limit(limit)
 
     results = []
-    for doc in cursor:
+    async for doc in cursor:
         sd = doc.get("summary_data") or {}
         results.append(JobListItemResponse(
             job_id=str(doc.get("job_id", "")),
@@ -217,10 +216,10 @@ async def list_all_jobs_flat(
 async def get_jobs_for_url(
     source_url: str = Query(..., description="Exact source URL"),
 ) -> list[JobStatusResponse]:
-    """All jobs for the given source_url, newest first (all statuses)."""
+    """All jobs for the given source_url, newest first."""
     jobs_collection = get_jobs_collection()
     cursor = jobs_collection.find({"source_url": source_url}, {"_id": 0}).sort("updated_at", -1)
-    jobs = [JobStatusResponse.model_validate(doc) for doc in cursor]
+    jobs = [JobStatusResponse.model_validate(doc) async for doc in cursor]
     logger.debug("get_jobs_for_url url=%s returned %s jobs", source_url, len(jobs))
     return jobs
 
@@ -228,7 +227,7 @@ async def get_jobs_for_url(
 @router.get("/{job_id}", response_model=JobStatusResponse, summary="Get job status (polling)")
 async def get_job_status(job_id: str) -> JobStatusResponse:
     jobs_collection = get_jobs_collection()
-    job_data = jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
+    job_data = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
     if not job_data:
         raise HTTPException(status_code=404, detail="Job not found")
     logger.debug("[job=%s] status check -> %s", job_id, job_data.get("status"))

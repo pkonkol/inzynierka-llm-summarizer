@@ -1,6 +1,5 @@
 export type JobStatusValue = "pending" | "completed" | "failed";
 
-/** Grouped by source_url — used by home page list */
 export interface SummaryUrlListItem {
     source_url: string;
     completed_count: number;
@@ -9,7 +8,6 @@ export interface SummaryUrlListItem {
     latest_updated_at: string | null;
 }
 
-/** Flat per-job entry — used by /jobs debug page */
 export interface JobListItem {
     job_id: string;
     source_url: string;
@@ -43,6 +41,8 @@ export interface PromptMessage {
 export interface JobMetrics {
     source: Record<string, number | null>;
     summary: Record<string, number | null>;
+    key_takeaways: Record<string, number | null>;
+    compression: Record<string, number | null>;
 }
 
 export interface JobStatus {

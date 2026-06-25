@@ -30,6 +30,8 @@ class UsageMetadata(BaseModel):
 class JobMetrics(BaseModel):
     source: dict[str, Any] = Field(default_factory=dict)
     summary: dict[str, Any] = Field(default_factory=dict)
+    key_takeaways: dict[str, Any] = Field(default_factory=dict)
+    compression: dict[str, Any] = Field(default_factory=dict)
 
 
 class JobStatusResponse(BaseModel):
@@ -63,7 +65,7 @@ class JobStatusResponse(BaseModel):
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}
             if not values.get("metrics"):
-                values["metrics"] = {"source": {}, "summary": {}}
+                values["metrics"] = {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}}
         return values
 
 

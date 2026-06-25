@@ -1,14 +1,13 @@
 """
 Text quality metrics for source articles and generated summaries.
 
-Source metrics  : readability (FK, Fog, ARI) — measure how hard the article is to read.
-Summary metrics : avg sentence length, TTR, lexical density, ARI.
-Shared metrics  : compression_ratio (requires both).
+Source metrics       : readability (FK, Fog, ARI), word/sentence counts.
+Summary metrics      : ARI, avg sentence length, TTR, lexical density, word/sentence counts.
+Key-takeaways metrics: simple structural metrics (sentence count, avg length, bullet count).
+Cross metrics        : compression_ratio (summary vs source).
 
-Lexical density uses spaCy; all other metrics use textstat or pure Python.
-spaCy model is loaded lazily on first call — no startup cost if metrics are unused.
+spaCy model is loaded lazily on first call.
 """
-
 import logging
 from functools import lru_cache
 from typing import Any
@@ -18,13 +17,8 @@ import textstat
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# spaCy — lazy singleton
-# ---------------------------------------------------------------------------
-
 @lru_cache(maxsize=1)
 def _nlp():
-    """Load spaCy model once. Requires: python -m spacy download en_core_web_sm"""
     import spacy  # noqa: PLC0415
     try:
         return spacy.load("en_core_web_sm", disable=["parser", "ner"])
@@ -41,7 +35,7 @@ _CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV"}
 # ---------------------------------------------------------------------------
 
 def flesch_kincaid_grade(text: str) -> float | None:
-    """FK Grade Level — higher = harder to read. Meaningful on source and summary."""
+    """FK Grade Level — higher = harder. Good on source text."""
     try:
         return round(textstat.flesch_kincaid_grade(text), 2)
     except Exception:
@@ -49,7 +43,7 @@ def flesch_kincaid_grade(text: str) -> float | None:
 
 
 def gunning_fog(text: str) -> float | None:
-    """Gunning Fog index — years of formal education needed. Best on source text."""
+    """Gunning Fog index — years of education needed."""
     try:
         return round(textstat.gunning_fog(text), 2)
     except Exception:
@@ -57,7 +51,6 @@ def gunning_fog(text: str) -> float | None:
 
 
 def automated_readability_index(text: str) -> float | None:
-    """ARI — similar to FK, character-based formula. Usable on source and summary."""
     try:
         return round(textstat.automated_readability_index(text), 2)
     except Exception:
@@ -65,7 +58,6 @@ def automated_readability_index(text: str) -> float | None:
 
 
 def avg_sentence_length(text: str) -> float | None:
-    """Average number of words per sentence."""
     try:
         sentences = textstat.sentence_count(text)
         words = textstat.lexicon_count(text, removepunct=True)
@@ -77,7 +69,7 @@ def avg_sentence_length(text: str) -> float | None:
 
 
 def type_token_ratio(text: str) -> float | None:
-    """TTR = unique tokens / total tokens. Proxy for lexical diversity (0–1)."""
+    """TTR = unique tokens / total tokens (0–1)."""
     words = text.lower().split()
     if not words:
         return None
@@ -85,11 +77,7 @@ def type_token_ratio(text: str) -> float | None:
 
 
 def lexical_density(text: str) -> float | None:
-    """
-    Lexical density = content POS tokens / total tokens (spaCy).
-    Content POS: NOUN, VERB, ADJ, ADV.
-    Returns None if spaCy model is unavailable.
-    """
+    """Content POS tokens / total tokens (spaCy). None if model unavailable."""
     nlp = _nlp()
     if nlp is None:
         return None
@@ -104,25 +92,12 @@ def lexical_density(text: str) -> float | None:
         return None
 
 
-def compression_ratio(source: str, summary: str) -> float | None:
-    """
-    summary word count / source word count.
-    < 1.0 means summary is shorter (expected).
-    Returns None if source is empty.
-    """
-    src_words = len(source.split())
-    sum_words = len(summary.split())
-    if src_words == 0:
-        return None
-    return round(sum_words / src_words, 4)
-
-
 # ---------------------------------------------------------------------------
 # Aggregate helpers
 # ---------------------------------------------------------------------------
 
 def source_metrics(text: str) -> dict[str, Any]:
-    """All metrics that apply to the source article."""
+    """Metrics for the scraped source article."""
     return {
         "flesch_kincaid_grade": flesch_kincaid_grade(text),
         "gunning_fog": gunning_fog(text),
@@ -134,7 +109,7 @@ def source_metrics(text: str) -> dict[str, Any]:
 
 
 def summary_metrics(text: str) -> dict[str, Any]:
-    """All metrics that apply to the generated summary."""
+    """Metrics for the generated short_summary prose."""
     return {
         "automated_readability_index": automated_readability_index(text),
         "avg_sentence_length": avg_sentence_length(text),
@@ -145,15 +120,41 @@ def summary_metrics(text: str) -> dict[str, Any]:
     }
 
 
-def compute_all(source: str, summary: str) -> dict[str, Any]:
+def key_takeaways_metrics(text: str) -> dict[str, Any]:
     """
-    Compute all basic metrics at once.
-    Returns nested dict: {source: {...}, summary: {...}, shared: {...}}
+    Simple structural metrics for the key_takeaways bullet list.
+    Designed as a placeholder — extend with richer extraction metrics later.
     """
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    bullet_lines = [ln for ln in lines if ln.startswith(("- ", "* ", "• ")) or (len(ln) > 2 and ln[0].isdigit() and ln[1] in ".)" )]
+    words = text.lower().split()
+    unique_words = set(words)
+    avg_bullet_words = (
+        round(sum(len(ln.split()) for ln in bullet_lines) / len(bullet_lines), 2)
+        if bullet_lines else None
+    )
     return {
-        "source": source_metrics(source),
-        "summary": summary_metrics(summary),
-        "shared": {
-            "compression_ratio": compression_ratio(source, summary),
-        },
+        "bullet_count": len(bullet_lines),
+        "total_lines": len(lines),
+        "word_count": len(words),
+        "unique_word_count": len(unique_words),
+        "type_token_ratio": round(len(unique_words) / len(words), 4) if words else None,
+        "avg_bullet_word_count": avg_bullet_words,
+    }
+
+
+def compression_ratio_metrics(source: str, summary: str) -> dict[str, Any]:
+    """
+    Cross-text metrics comparing source and summary.
+    Both word-based and char-based ratios included.
+    """
+    src_words = textstat.lexicon_count(source, removepunct=True)
+    sum_words = textstat.lexicon_count(summary, removepunct=True)
+    src_chars = len(source.replace(" ", ""))
+    sum_chars = len(summary.replace(" ", ""))
+    return {
+        "summary_word_count": sum_words,
+        "source_word_count": src_words,
+        "word_ratio": round(sum_words / src_words, 4) if src_words else None,
+        "char_ratio": round(sum_chars / src_chars, 4) if src_chars else None,
     }

@@ -11,7 +11,6 @@ interface JobDetailPanelProps {
     isOpen: boolean;
     isLoading: boolean;
     onClose: () => void;
-    /** When true (debug /jobs page): show all jobs flat with label "Wynik", no pass/fail split */
     debugMode?: boolean;
 }
 
@@ -49,6 +48,56 @@ function PreBlock({ children }: { children: string }) {
     );
 }
 
+function MetricsGrid({ data }: { data: Record<string, number | null> }) {
+    const fmt = (v: number | null | undefined) =>
+        v === null || v === undefined ? "—" : String(v);
+    return (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {Object.entries(data).map(([k, v]) => (
+                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
+            ))}
+        </div>
+    );
+}
+
+function MetricsSection({ metrics }: { metrics: JobMetrics }) {
+    const tabs = [
+        { key: "source",        label: "Source",           data: metrics.source },
+        { key: "summary",       label: "Summary",          data: metrics.summary },
+        { key: "key_takeaways", label: "Key Takeaways",    data: metrics.key_takeaways },
+        { key: "compression",   label: "Summary / Source", data: metrics.compression },
+    ].filter(t => t.data && Object.keys(t.data).length > 0);
+
+    if (tabs.length === 0) return null;
+
+    const [active, setActive] = useState(tabs[0].key);
+    const current = tabs.find(t => t.key === active) ?? tabs[0];
+
+    return (
+        <Collapsible label="Metrics">
+            <div className="p-3 space-y-3">
+                <div className="flex gap-1 flex-wrap">
+                    {tabs.map(t => (
+                        <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => setActive(t.key)}
+                            className={`px-2 py-1 text-[0.7rem] uppercase tracking-wider border transition-colors ${
+                                active === t.key
+                                    ? "border-panel-border bg-subtle text-ink font-semibold"
+                                    : "border-transparent text-muted hover:text-ink"
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+                <MetricsGrid data={current.data} />
+            </div>
+        </Collapsible>
+    );
+}
+
 function RawMetadata({ data }: { data: Record<string, unknown> }) {
     if (!data || Object.keys(data).length === 0) return null;
     return (
@@ -67,57 +116,17 @@ function RawOutput({ text }: { text: string }) {
     );
 }
 
-function MetricsSection({ metrics }: { metrics: JobMetrics }) {
-    const hasSource = metrics.source && Object.keys(metrics.source).length > 0;
-    const hasSummary = metrics.summary && Object.keys(metrics.summary).length > 0;
-    if (!hasSource && !hasSummary) return null;
-
-    const fmt = (v: number | null | undefined) =>
-        v === null || v === undefined ? "—" : String(v);
-
-    return (
-        <Collapsible label="Metrics">
-            <div className="space-y-4 p-3">
-                {hasSource && (
-                    <div>
-                        <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Source</p>
-                        <div className="grid grid-cols-4 gap-x-4 gap-y-2">
-                            {Object.entries(metrics.source).map(([k, v]) => (
-                                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-                {hasSummary && (
-                    <div>
-                        <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Summary</p>
-                        <div className="grid grid-cols-4 gap-x-4 gap-y-2">
-                            {Object.entries(metrics.summary).map(([k, v]) => (
-                                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </Collapsible>
-    );
-}
-
 function PromptSection({
-    template,
-    params,
-    inputText,
+    template, params, inputText,
 }: {
     template: PromptMessage[] | [string, string][];
     params: Record<string, string>;
     inputText: string;
 }) {
     if (template.length === 0 && !inputText) return null;
-
-    const messages: { role: string; content: string }[] = template.map((m) =>
+    const messages = template.map((m) =>
         Array.isArray(m) ? { role: m[0], content: m[1] } : m
     );
-
     return (
         <Collapsible label="Prompt">
             <div className="space-y-3 p-3 min-w-0">
@@ -178,9 +187,9 @@ function JobEntry({ job }: { job: JobStatus }) {
                         {modelLabel}{statusBadge(job.status)}
                     </span>
                     <span className="text-[0.78rem] text-muted">{formatDateMinute(job.created_at)}</span>
-                    {job.summary_data?.title ? (
+                    {job.summary_data?.title && (
                         <span className="mt-0.5 font-display text-[0.88rem] leading-[1.3]">{job.summary_data.title}</span>
-                    ) : null}
+                    )}
                 </span>
                 <span className="ml-3 mt-0.5 shrink-0 text-[0.8rem] text-muted">{open ? "▼" : "▶"}</span>
             </button>
@@ -230,7 +239,7 @@ function JobEntry({ job }: { job: JobStatus }) {
 
                     <RawOutput text={job.raw_output ?? ""} />
 
-                    <MetricsSection metrics={job.metrics ?? { source: {}, summary: {} }} />
+                    <MetricsSection metrics={job.metrics ?? { source: {}, summary: {}, key_takeaways: {}, compression: {} }} />
 
                     <PromptSection
                         template={job.prompt_template ?? []}
@@ -281,9 +290,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
 
                     {debugMode ? (
                         <div className="border-t border-divider pt-4 min-w-0">
-                            <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
-                                Wynik
-                            </h5>
+                            <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">Wynik</h5>
                             {jobs.length === 0 ? (
                                 <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
                             ) : (
@@ -293,23 +300,18 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                     ) : (
                         <>
                             <div className="border-t border-divider pt-4 min-w-0">
-                                <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">
-                                    Wyniki dla modeli
-                                </h5>
+                                <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-muted">Wyniki dla modeli</h5>
                                 {passed.length === 0 ? (
                                     <p className="m-0 text-[0.95rem] text-muted">Brak wyników.</p>
                                 ) : (
                                     passed.map(job => <JobEntry key={job.job_id} job={job} />)
                                 )}
                             </div>
-
                             {failed.length > 0 && (
                                 <>
                                     <hr className="border-t border-divider" />
                                     <div className="min-w-0">
-                                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">
-                                            Nieudane ({failed.length})
-                                        </h5>
+                                        <h5 className="m-0 mb-3 font-display text-[0.95rem] font-semibold uppercase tracking-wider text-error">Nieudane ({failed.length})</h5>
                                         {failed.map(job => <JobEntry key={job.job_id} job={job} />)}
                                     </div>
                                 </>

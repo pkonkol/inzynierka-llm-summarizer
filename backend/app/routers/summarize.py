@@ -16,49 +16,45 @@ from ..schemas.schemas import (
     UrlSummaryListItem,
 )
 from ..services.llm import generate_summary
-from ..services.metrics import source_metrics, summary_metrics
+from ..services.metrics import (
+    compression_ratio_metrics,
+    key_takeaways_metrics,
+    source_metrics,
+    summary_metrics,
+)
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 logger = logging.getLogger(__name__)
 
-_LIST_PROJECTION = {
-    "_id": 0,
-    "input_text": 0,
-    "prompt_template": 0,
-    "prompt_params": 0,
-}
-
 _SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
 
 
-async def _compute_source_metrics(job_id: str, text: str) -> None:
-    """Compute source metrics in a thread (CPU-bound) and persist to DB."""
+async def _store_metrics(job_id: str, update: dict) -> None:
+    """Persist arbitrary metrics fields under job.metrics via $set."""
     try:
-        metrics = await asyncio.to_thread(source_metrics, text)
-        jobs_collection = get_jobs_collection()
-        await jobs_collection.update_one(
-            {"job_id": job_id},
-            {"$set": {"metrics.source": metrics}},
-        )
-        logger.debug("[job=%s] source metrics stored", job_id)
+        await get_jobs_collection().update_one({"job_id": job_id}, {"$set": update})
     except Exception:
-        logger.exception("[job=%s] source metrics failed", job_id)
+        logger.exception("[job=%s] metrics store failed", job_id)
 
 
-async def _compute_summary_metrics(job_id: str, text: str) -> None:
-    """Compute summary metrics in a thread (CPU-bound) and persist to DB."""
-    try:
-        metrics = await asyncio.to_thread(summary_metrics, text)
-        jobs_collection = get_jobs_collection()
-        await jobs_collection.update_one(
-            {"job_id": job_id},
-            {"$set": {"metrics.summary": metrics}},
-        )
-        logger.debug("[job=%s] summary metrics stored", job_id)
-    except Exception:
-        logger.exception("[job=%s] summary metrics failed", job_id)
+async def _source_metrics_task(job_id: str, text: str) -> None:
+    metrics = await asyncio.to_thread(source_metrics, text)
+    await _store_metrics(job_id, {"metrics.source": metrics})
+    logger.debug("[job=%s] source metrics stored", job_id)
+
+
+async def _summary_metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
+    sm = await asyncio.to_thread(summary_metrics, summary_text)
+    kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
+    cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
+    await _store_metrics(job_id, {
+        "metrics.summary": sm,
+        "metrics.key_takeaways": kt,
+        "metrics.compression": cr,
+    })
+    logger.debug("[job=%s] summary/takeaways/compression metrics stored", job_id)
 
 
 async def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
@@ -69,20 +65,14 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
         logger.debug("[job=%s] started for url=%s", job_id, url)
 
         text = await extract_text_from_url(url)
-
-        # fire source metrics async — does not block LLM call
-        asyncio.create_task(_compute_source_metrics(job_id, text))
+        asyncio.create_task(_source_metrics_task(job_id, text))
 
         summary = await generate_summary(text, url, model_name, model_provider, language)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
-        logger.debug("[job=%s] completed text_chars=%s duration_ms=%s", job_id, len(text), duration_ms)
-
         summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
-
-        asyncio.create_task(_compute_summary_metrics(job_id, summary_data.get("short_summary", "")))
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -106,11 +96,14 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
             }},
         )
 
+        short_summary = summary_data.get("short_summary", "")
+        takeaways = summary_data.get("key_takeaways", "")
+        if short_summary or takeaways:
+            asyncio.create_task(_summary_metrics_task(job_id, short_summary, takeaways, text))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-
         raw_output: str = getattr(exc, "raw_output", "")
         logger.exception("[job=%s] failed: %s", job_id, exc)
 
@@ -158,7 +151,7 @@ async def create_summarize_job(
             "model_name": payload.model_name,
             "status": "pending",
             "summary_data": None,
-            "metrics": {"source": {}, "summary": {}},
+            "metrics": {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}},
             "usage": {},
             "raw_metadata": {},
             "raw_output": "",
@@ -185,9 +178,7 @@ async def create_summarize_job(
 async def list_summarized_urls(
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[UrlSummaryListItem]:
-    """One entry per unique source_url, sorted by most-recently updated."""
     jobs_collection = get_jobs_collection()
-
     pipeline = [
         {"$match": {"status": {"$in": ["completed", "failed"]}}},
         {"$sort": {"updated_at": -1}},
@@ -201,7 +192,6 @@ async def list_summarized_urls(
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
-
     results = [
         UrlSummaryListItem(
             source_url=doc["_id"],
@@ -210,7 +200,7 @@ async def list_summarized_urls(
             latest_title=doc.get("latest_title") or "",
             latest_updated_at=doc.get("latest_updated_at"),
         )
-        async for doc in jobs_collection.aggregate(pipeline)
+        async for doc in await jobs_collection.aggregate(pipeline)
     ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
     return results
@@ -220,18 +210,10 @@ async def list_summarized_urls(
 async def list_all_jobs_flat(
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[JobListItemResponse]:
-    """Flat list of all jobs across all statuses, sorted newest first."""
     jobs_collection = get_jobs_collection()
     cursor = jobs_collection.find(
         {},
-        {
-            "_id": 0,
-            "input_text": 0,
-            "prompt_template": 0,
-            "prompt_params": 0,
-            "raw_metadata": 0,
-            "summary_data.key_takeaways": 0,
-        },
+        {"_id": 0, "input_text": 0, "prompt_template": 0, "prompt_params": 0, "raw_metadata": 0, "summary_data.key_takeaways": 0},
     ).sort("updated_at", -1).limit(limit)
 
     results = []
@@ -255,7 +237,6 @@ async def list_all_jobs_flat(
 async def get_jobs_for_url(
     source_url: str = Query(..., description="Exact source URL"),
 ) -> list[JobStatusResponse]:
-    """All jobs for the given source_url, newest first."""
     jobs_collection = get_jobs_collection()
     cursor = jobs_collection.find({"source_url": source_url}, {"_id": 0}).sort("updated_at", -1)
     jobs = [JobStatusResponse.model_validate(doc) async for doc in cursor]
@@ -277,6 +258,4 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
     if model_provider.lower() not in settings.supported_models:
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
-        logger.warning("Model %s for provider %s not in supported list", model_name, model_provider)
-        logger.warning("Supported: %s", settings.supported_models.get(model_provider.lower(), []))
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")

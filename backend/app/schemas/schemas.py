@@ -27,6 +27,11 @@ class UsageMetadata(BaseModel):
         return values
 
 
+class JobMetrics(BaseModel):
+    source: dict[str, Any] = Field(default_factory=dict)
+    summary: dict[str, Any] = Field(default_factory=dict)
+
+
 class JobStatusResponse(BaseModel):
     job_id: str = ""
     source_url: str = ""
@@ -34,11 +39,11 @@ class JobStatusResponse(BaseModel):
     model_provider: str = ""
     model_name: str = ""
     summary_data: SummaryResponse | None = None
+    metrics: JobMetrics = Field(default_factory=JobMetrics)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
     raw_output: str = ""
     input_text: str = ""
-    # list of [role, content] pairs, e.g. [["system", "..."], ["human", "..."]]
     prompt_template: list[list[str]] = Field(default_factory=list)
     prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime | None = None
@@ -57,6 +62,8 @@ class JobStatusResponse(BaseModel):
                 values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
             if not values.get("raw_metadata"):
                 values["raw_metadata"] = {}
+            if not values.get("metrics"):
+                values["metrics"] = {"source": {}, "summary": {}}
         return values
 
 

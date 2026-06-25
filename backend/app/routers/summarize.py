@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -15,6 +16,7 @@ from ..schemas.schemas import (
     UrlSummaryListItem,
 )
 from ..services.llm import generate_summary
+from ..services.metrics import source_metrics, summary_metrics
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -31,6 +33,34 @@ _LIST_PROJECTION = {
 _SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
 
 
+async def _compute_source_metrics(job_id: str, text: str) -> None:
+    """Compute source metrics in a thread (CPU-bound) and persist to DB."""
+    try:
+        metrics = await asyncio.to_thread(source_metrics, text)
+        jobs_collection = get_jobs_collection()
+        await jobs_collection.update_one(
+            {"job_id": job_id},
+            {"$set": {"metrics.source": metrics}},
+        )
+        logger.debug("[job=%s] source metrics stored", job_id)
+    except Exception:
+        logger.exception("[job=%s] source metrics failed", job_id)
+
+
+async def _compute_summary_metrics(job_id: str, text: str) -> None:
+    """Compute summary metrics in a thread (CPU-bound) and persist to DB."""
+    try:
+        metrics = await asyncio.to_thread(summary_metrics, text)
+        jobs_collection = get_jobs_collection()
+        await jobs_collection.update_one(
+            {"job_id": job_id},
+            {"$set": {"metrics.summary": metrics}},
+        )
+        logger.debug("[job=%s] summary metrics stored", job_id)
+    except Exception:
+        logger.exception("[job=%s] summary metrics failed", job_id)
+
+
 async def run_summarization_job(job_id: str, url: str, model_name: str, model_provider: str, language: str) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
@@ -39,6 +69,10 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
         logger.debug("[job=%s] started for url=%s", job_id, url)
 
         text = await extract_text_from_url(url)
+
+        # fire source metrics async — does not block LLM call
+        asyncio.create_task(_compute_source_metrics(job_id, text))
+
         summary = await generate_summary(text, url, model_name, model_provider, language)
 
         finished_at = datetime.now(timezone.utc)
@@ -47,6 +81,12 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
         logger.debug("[job=%s] completed text_chars=%s duration_ms=%s", job_id, len(text), duration_ms)
 
         summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
+
+        # extract summary text for metrics (short_summary + key_takeaways)
+        _summary_text = " ".join(filter(None, [
+            summary_data.get("short_summary", ""),
+            summary_data.get("key_takeaways", ""),
+        ]))
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -69,6 +109,11 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
                 "updated_at": finished_at,
             }},
         )
+
+        # fire summary metrics async after job is already marked completed
+        if _summary_text:
+            asyncio.create_task(_compute_summary_metrics(job_id, _summary_text))
+
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -120,6 +165,7 @@ async def create_summarize_job(
             "model_name": payload.model_name,
             "status": "pending",
             "summary_data": None,
+            "metrics": {"source": {}, "summary": {}},
             "usage": {},
             "raw_metadata": {},
             "raw_output": "",
@@ -171,7 +217,7 @@ async def list_summarized_urls(
             latest_title=doc.get("latest_title") or "",
             latest_updated_at=doc.get("latest_updated_at"),
         )
-        async for doc in jobs_collection.aggregate(pipeline)
+        async for doc in await jobs_collection.aggregate(pipeline)
     ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
     return results

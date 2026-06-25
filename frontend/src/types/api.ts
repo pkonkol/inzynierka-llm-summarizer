@@ -40,6 +40,11 @@ export interface PromptMessage {
     content: string;
 }
 
+export interface JobMetrics {
+    source: Record<string, number | null>;
+    summary: Record<string, number | null>;
+}
+
 export interface JobStatus {
     job_id: string;
     source_url: string;
@@ -47,6 +52,7 @@ export interface JobStatus {
     model_name: string;
     status: JobStatusValue;
     summary_data: SummaryData | null;
+    metrics: JobMetrics;
     usage: UsageMetadata;
     raw_metadata: Record<string, unknown>;
     raw_output: string;

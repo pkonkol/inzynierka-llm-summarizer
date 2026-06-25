@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { formatDateMinute, formatDuration } from "../utils/format";
-import type { JobStatus, JobStatusValue, PromptMessage } from "../types/api";
+import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 
 interface JobDetailPanelProps {
     sourceUrl: string | null;
@@ -67,6 +67,42 @@ function RawOutput({ text }: { text: string }) {
     );
 }
 
+function MetricsSection({ metrics }: { metrics: JobMetrics }) {
+    const hasSource = metrics.source && Object.keys(metrics.source).length > 0;
+    const hasSummary = metrics.summary && Object.keys(metrics.summary).length > 0;
+    if (!hasSource && !hasSummary) return null;
+
+    const fmt = (v: number | null | undefined) =>
+        v === null || v === undefined ? "—" : String(v);
+
+    return (
+        <Collapsible label="Metrics">
+            <div className="space-y-4 p-3">
+                {hasSource && (
+                    <div>
+                        <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Source</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {Object.entries(metrics.source).map(([k, v]) => (
+                                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {hasSummary && (
+                    <div>
+                        <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Summary</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {Object.entries(metrics.summary).map(([k, v]) => (
+                                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Collapsible>
+    );
+}
+
 function PromptSection({
     template,
     params,
@@ -78,7 +114,6 @@ function PromptSection({
 }) {
     if (template.length === 0 && !inputText) return null;
 
-    // normalise both PromptMessage ({role, content}) and [role, content] tuple formats
     const messages: { role: string; content: string }[] = template.map((m) =>
         Array.isArray(m) ? { role: m[0], content: m[1] } : m
     );
@@ -160,20 +195,17 @@ function JobEntry({ job }: { job: JobStatus }) {
                     )}
 
                     {job.status !== "pending" && (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[0.85rem]">
+                        <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-[0.85rem]">
                             <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
                             <InfoRow label="Zakończono" value={formatDateMinute(job.finished_at)} />
                             <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
+                            <InfoRow label="Tokens / s" value={tokensPerSecond(job.usage?.output_tokens ?? 0, job.duration_ms)} />
                             <InfoRow label="Input tokens" value={job.usage?.input_tokens ?? 0} />
                             <InfoRow label="Output tokens" value={job.usage?.output_tokens ?? 0} />
                             {(job.usage?.thinking_tokens ?? 0) > 0 && (
                                 <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
                             )}
                             <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
-                            <InfoRow
-                                label="Tokens / s"
-                                value={tokensPerSecond(job.usage?.output_tokens ?? 0, job.duration_ms)}
-                            />
                         </div>
                     )}
 
@@ -197,6 +229,8 @@ function JobEntry({ job }: { job: JobStatus }) {
                     )}
 
                     <RawOutput text={job.raw_output ?? ""} />
+
+                    <MetricsSection metrics={job.metrics ?? { source: {}, summary: {} }} />
 
                     <PromptSection
                         template={job.prompt_template ?? []}

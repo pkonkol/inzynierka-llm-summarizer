@@ -46,7 +46,7 @@ async def extract_text_from_url(url: str) -> str:
     try:
         # Offload the blocking network request to a thread
         downloaded = await asyncio.to_thread(trafilatura.fetch_url, url)
-    except Exception as exc: 
+    except Exception as exc:
         logger.error("Scraper: Network exception for url=%s: %s", url, exc)
         raise ValueError(f"Failed to download URL: {url}") from exc
 
@@ -59,7 +59,7 @@ async def extract_text_from_url(url: str) -> str:
     try:
         # Offload the blocking CPU-intensive parsing to a thread
         text = await asyncio.to_thread(trafilatura.extract, downloaded)
-    except Exception as exc: 
+    except Exception as exc:
         logger.error("Scraper: Extraction exception for url=%s: %s", url, exc)
         raise ValueError("Failed to extract text from downloaded content") from exc
 

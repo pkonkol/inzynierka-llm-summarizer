@@ -82,11 +82,7 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
 
         summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
 
-        # extract summary text for metrics (short_summary + key_takeaways)
-        _summary_text = " ".join(filter(None, [
-            summary_data.get("short_summary", ""),
-            summary_data.get("key_takeaways", ""),
-        ]))
+        asyncio.create_task(_compute_summary_metrics(job_id, summary_data.get("short_summary", "")))
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -110,9 +106,6 @@ async def run_summarization_job(job_id: str, url: str, model_name: str, model_pr
             }},
         )
 
-        # fire summary metrics async after job is already marked completed
-        if _summary_text:
-            asyncio.create_task(_compute_summary_metrics(job_id, _summary_text))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -217,7 +210,7 @@ async def list_summarized_urls(
             latest_title=doc.get("latest_title") or "",
             latest_updated_at=doc.get("latest_updated_at"),
         )
-        async for doc in await jobs_collection.aggregate(pipeline)
+        async for doc in jobs_collection.aggregate(pipeline)
     ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
     return results

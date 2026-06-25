@@ -81,7 +81,7 @@ function MetricsSection({ metrics }: { metrics: JobMetrics }) {
                 {hasSource && (
                     <div>
                         <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Source</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div className="grid grid-cols-4 gap-x-4 gap-y-2">
                             {Object.entries(metrics.source).map(([k, v]) => (
                                 <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
                             ))}
@@ -91,7 +91,7 @@ function MetricsSection({ metrics }: { metrics: JobMetrics }) {
                 {hasSummary && (
                     <div>
                         <p className="mb-2 text-[0.72rem] uppercase tracking-wider text-muted">Summary</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div className="grid grid-cols-4 gap-x-4 gap-y-2">
                             {Object.entries(metrics.summary).map(([k, v]) => (
                                 <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
                             ))}

@@ -200,7 +200,7 @@ async def list_summarized_urls(
             latest_title=doc.get("latest_title") or "",
             latest_updated_at=doc.get("latest_updated_at"),
         )
-        async for doc in await jobs_collection.aggregate(pipeline)
+        async for doc in jobs_collection.aggregate(pipeline)
     ]
     logger.debug("list_summarized_urls returned %s unique URLs", len(results))
     return results

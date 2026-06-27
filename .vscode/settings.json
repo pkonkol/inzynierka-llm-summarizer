@@ -1,5 +1,5 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    // "python-envs.defaultEnvManager": "ms-python.python:venv",
     "python.analysis.autoFormatStrings": true,
     "python-envs.workspaceSearchPaths": [
         ".venv",
@@ -8,5 +8,6 @@
         "backend/.venv"
     ],
     "python.envFile": "${workspaceFolder}/backend/.env",
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/activate",
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    // "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/activate",
 }

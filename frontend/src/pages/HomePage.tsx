@@ -22,6 +22,7 @@ type PendingSubmit = {
     model_provider: string;
     model_name: string;
     language: string;
+    summary_mode: string;
 } | null;
 
 export function HomePage() {
@@ -56,11 +57,11 @@ export function HomePage() {
         }
     };
 
-    const submitSummary = async (url: string, model_provider: string, model_name: string, language: string) => {
+    const submitSummary = async (url: string, model_provider: string, model_name: string, language: string, summary_mode: string) => {
         setIsSubmitting(true);
         setFlashMessage("Zadanie zostało utworzone. Trwa analiza artykułu...");
         try {
-            const created = await createSummaryJob(url, model_provider, model_name, language);
+            const created = await createSummaryJob(url, model_provider, model_name, language, summary_mode);
             setActiveJobId(created.job_id);
         } catch (error) {
             setFlashMessage(`Nie udało się utworzyć joba: ${String(error)}`);
@@ -69,21 +70,21 @@ export function HomePage() {
         }
     };
 
-    const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string) => {
+    const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string, summary_mode: string) => {
         if (!isAuthEnabled || getToken()) {
-            await submitSummary(url, model_provider, model_name, language);
+            await submitSummary(url, model_provider, model_name, language, summary_mode);
             return;
         }
-        setPendingSubmit({ url, model_provider, model_name, language });
+        setPendingSubmit({ url, model_provider, model_name, language, summary_mode });
         setIsLoginOpen(true);
     };
 
     const handleLoginSuccess = async () => {
         setIsLoginOpen(false);
         if (!pendingSubmit) return;
-        const { url, model_provider, model_name, language } = pendingSubmit;
+        const { url, model_provider, model_name, language, summary_mode } = pendingSubmit;
         setPendingSubmit(null);
-        await submitSummary(url, model_provider, model_name, language);
+        await submitSummary(url, model_provider, model_name, language, summary_mode);
     };
 
     useEffect(() => {

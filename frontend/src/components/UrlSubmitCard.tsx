@@ -60,6 +60,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
 
         const [provider, ...modelParts] = selectedModel.split(":");
         const model = modelParts.join(":");
+        console.log("Submitting URL:", url, "Provider:", provider, "Model:", model, "Language:", selectedLanguage, "Mode:", selectedMode);
         await onSubmit(url.trim(), provider, model, selectedLanguage, selectedMode);
         setUrl("");
     };

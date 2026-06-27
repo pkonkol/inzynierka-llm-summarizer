@@ -13,6 +13,7 @@ from ..schemas.schemas import (
     JobCreateRequest,
     JobListItemResponse,
     JobStatusResponse,
+    SummaryMode,
     UrlSummaryListItem,
 )
 from ..services.llm import generate_summary
@@ -56,7 +57,7 @@ async def _summary_metrics_task(job_id: str, summary_text: str, takeaways_text: 
 
 
 async def run_summarization_job(
-    job_id: str, url: str, model_name: str, model_provider: str, language: str, summary_mode: str
+    job_id: str, url: str, model_name: str, model_provider: str, language: str, summary_mode: SummaryMode
 ) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
@@ -67,7 +68,7 @@ async def run_summarization_job(
         text = await extract_text_from_url(url)
         asyncio.create_task(_source_metrics_task(job_id, text))
 
-        summary = await generate_summary(text, url, model_name, model_provider, language, mode=summary_mode)
+        summary = await generate_summary(text, url, model_name, model_provider, language, summary_mode)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -80,7 +81,7 @@ async def run_summarization_job(
                 "source_url": url,
                 "model_provider": model_provider,
                 "model_name": model_name,
-                "summary_mode": summary_mode,
+            "summary_mode": summary_mode,
                 "status": "completed",
                 "summary_data": summary_data,
                 "usage": summary.get("usage", {}),

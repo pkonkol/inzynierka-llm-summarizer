@@ -28,7 +28,7 @@ async def generate_summary(
     if not text or not text.strip():
         raise ValueError("Input text cannot be empty")
 
-    logger.debug("generate_summary mode=%s model=%s:%s", mode, model_provider, model_name)
+    logger.info("generate_summary mode=%s model=%s:%s", mode, model_provider, model_name)
 
     if mode == "simple":
         return await summary_simple.run(text, source_url, model_name, model_provider, language)

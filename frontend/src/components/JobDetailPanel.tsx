@@ -215,6 +215,7 @@ function JobEntry({ job }: { job: JobStatus }) {
                                 <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
                             )}
                             <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
+                            <InfoRow label="Summary mode" value={job.summary_mode ?? "simple(default)"} />
                         </div>
                     )}
 

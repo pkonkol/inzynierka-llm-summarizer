@@ -18,8 +18,6 @@ class Settings(BaseSettings):
     openrouter_api_key: SecretStr | None = None
     ollama_url: str = ""
     debug: bool = False
-    # summary_base_output_tokens: int = 10000
-    # summary_tokens_per_1000_chars: int = 120
     summary_max_output_tokens: int = 32000
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db_name: str = "web_summarization"
@@ -29,6 +27,12 @@ class Settings(BaseSettings):
         "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
         "openrouter": ["openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free", "google/gemma-4-31b-it:free"],
         "ollama": ["gemma4:31b-cloud"],
+    }
+    # mode -> human-readable label
+    supported_summary_modes: dict[str, str] = {
+        "simple":     "Simple — single prompt (extractor + abstractor)",
+        "sequential": "Sequential — two independent prompts (takeaways first, then summary)",
+        "cascade":    "Cascade — takeaways first, summary derived from takeaways",
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",

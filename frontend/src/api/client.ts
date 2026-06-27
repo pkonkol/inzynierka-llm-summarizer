@@ -33,26 +33,22 @@ export const login = (password: string): Promise<{ token: string }> =>
     request<{ token: string }>("/auth/token", { method: "POST", body: JSON.stringify({ password }) });
 
 export const createSummaryJob = (
-    url: string, model_provider: string, model_name: string, language: string,
+    url: string, model_provider: string, model_name: string, language: string, summary_mode: string,
 ): Promise<CreateJobResponse> =>
     request<CreateJobResponse>("/api/v1/jobs/summarize", {
         method: "POST",
-        body: JSON.stringify({ url, model_provider, model_name, language }),
+        body: JSON.stringify({ url, model_provider, model_name, language, summary_mode }),
     });
 
-/** GET /api/v1/jobs — grouped by URL, home page */
 export const listSummarizedUrls = (limit = 50): Promise<SummaryUrlListItem[]> =>
     request<SummaryUrlListItem[]>(`/api/v1/jobs?limit=${limit}`);
 
-/** GET /api/v1/jobs/list — flat all-statuses list, /jobs debug page */
 export const listAllJobsFlat = (limit = 100): Promise<JobListItem[]> =>
     request<JobListItem[]>(`/api/v1/jobs/list?limit=${limit}`);
 
-/** GET /api/v1/jobs/by-url?source_url=... — all jobs for a URL, detail panel */
 export const getJobsForUrl = (sourceUrl: string): Promise<JobStatus[]> =>
     request<JobStatus[]>(`/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}`);
 
-/** GET /api/v1/jobs/:id — polling a freshly submitted job */
 export const getJobStatus = (jobId: string): Promise<JobStatus> =>
     request<JobStatus>(`/api/v1/jobs/${jobId}`);
 
@@ -61,3 +57,7 @@ export const getSupportedModels = (): Promise<Record<string, string[]>> =>
 
 export const getSupportedLanguages = (): Promise<string[]> =>
     request<string[]>("/api/v1/meta/languages");
+
+/** { mode_key: human_readable_label } */
+export const getSupportedModes = (): Promise<Record<string, string>> =>
+    request<Record<string, string>>("/api/v1/meta/modes");

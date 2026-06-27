@@ -1,4 +1,5 @@
 export type JobStatusValue = "pending" | "completed" | "failed";
+export type SummaryMode = "simple" | "sequential" | "cascade";
 
 export interface SummaryUrlListItem {
     source_url: string;
@@ -16,6 +17,7 @@ export interface JobListItem {
     short_summary: string;
     model_provider: string;
     model_name: string;
+    summary_mode: SummaryMode;
     updated_at: string | null;
 }
 
@@ -50,6 +52,7 @@ export interface JobStatus {
     source_url: string;
     model_provider: string;
     model_name: string;
+    summary_mode: SummaryMode;
     status: JobStatusValue;
     summary_data: SummaryData | null;
     metrics: JobMetrics;

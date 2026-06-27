@@ -5,12 +5,15 @@ from pydantic import BaseModel, Field, model_validator
 
 from .summary import SummaryResponse
 
+SummaryMode = Literal["simple", "sequential", "cascade"]
+
 
 class JobCreateRequest(BaseModel):
     model_name: str
     model_provider: str
     url: str
     language: str = "en"
+    summary_mode: SummaryMode = "simple"
 
 
 class UsageMetadata(BaseModel):
@@ -40,6 +43,7 @@ class JobStatusResponse(BaseModel):
     status: Literal["pending", "completed", "failed"] = "pending"
     model_provider: str = ""
     model_name: str = ""
+    summary_mode: SummaryMode = "simple"
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
@@ -66,11 +70,13 @@ class JobStatusResponse(BaseModel):
                 values["raw_metadata"] = {}
             if not values.get("metrics"):
                 values["metrics"] = {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}}
+            if not values.get("summary_mode"):
+                values["summary_mode"] = "simple"
         return values
 
 
 class JobListItemResponse(BaseModel):
-    """Flat per-job entry used by GET /api/v1/jobs/list (the /jobs debug page)."""
+    """Flat per-job entry used by GET /api/v1/jobs/list."""
     job_id: str
     source_url: str
     status: Literal["pending", "completed", "failed"]
@@ -78,6 +84,7 @@ class JobListItemResponse(BaseModel):
     short_summary: str = ""
     model_provider: str = ""
     model_name: str = ""
+    summary_mode: SummaryMode = "simple"
     updated_at: datetime | None = None
 
 

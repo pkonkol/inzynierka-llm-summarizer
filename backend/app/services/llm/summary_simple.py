@@ -10,15 +10,19 @@ from ._base import build_detail_guidance, build_llm, extract_usage, raw_output_s
 
 logger = logging.getLogger(__name__)
 
+class _SummaryPromptResponse(BaseModel):
+    short_summary: str
+    key_takeaways: str
+
 _PROMPT_MESSAGES = [
     ("system",
      "You are an expert summarizer. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Summarize the following web content. {detail_guidance}\n"
+     "Summarize the following web content. Try to include all key facts into short_summary but do not sacrifice fluency and coherence for facts."
+     "{detail_guidance}\n"
      "Format key_takeaways as a markdown bullet list, one takeaway per line. "
-     "Ensure key_takeaways is content-rich and specific, not generic.\n\n"
-     "Source URL: {source_url}\n"
+     "Ensure key_takeaways is content-rich and specific, not generic. It should be non-redundant and cover all key facts from the article.\n\n"
      "Content:\n{text}"),
 ]
 
@@ -26,17 +30,18 @@ _PROMPT = ChatPromptTemplate.from_messages(_PROMPT_MESSAGES)
 
 
 async def run(
-    text: str, source_url: str, model_name: str, model_provider: str, language: str
+    trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Single-call summarization. Returns full result dict."""
     llm = build_llm(model_provider, model_name)
-    chain = _PROMPT | llm.with_structured_output(SummaryResponse, include_raw=True)
+    chain = _PROMPT | llm.with_structured_output(_SummaryPromptResponse, include_raw=True)
+
+    text = trafilatura["text"]
 
     detail_guidance = build_detail_guidance(text)
     invoke_params = {
         "language": language,
         "detail_guidance": detail_guidance,
-        "source_url": source_url or "",
         "text": text.strip(),
     }
 
@@ -59,8 +64,10 @@ async def run(
     usage, raw_metadata = extract_usage(ai_message)
 
     result = parsed.model_dump()
-    if source_url:
-        result["source_url"] = source_url
+
+    result["author"] = trafilatura["author"]
+    result["title"] = trafilatura["title"]
+    result["source_url"] = source_url
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata
     result["raw_output"] = raw_content_str

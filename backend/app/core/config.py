@@ -41,6 +41,20 @@ class Settings(BaseSettings):
     auth_secret: str = ""
     jwt_secret: str = ""
     jwt_expire_hours: int = 168
+    # deepeval_enabled: bool = Field(default=False, alias="DEEPEVAL_ENABLED")
+    deepeval_provider: str = "google"
+    deepeval_model: str = "gemini-flash-lite-latest"
+    # deepeval_temperature: float = Field(default=0.0, alias="DEEPEVAL_TEMPERATURE")
+    # deepeval_threshold: float = Field(default=0.5, alias="DEEPEVAL_THRESHOLD")
+    # google_api_key: str | None = Field(default=None, alias="GOOGLE_API_KEY")
+    # openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    # TODO co to za model_config i czy potrzebne do geval
+    # model_config = SettingsConfigDict(
+    #     env_file=".env",
+    #     env_file_encoding="utf-8",
+    #     extra="ignore",
+    #     populate_by_name=True,
+    # )
 
 
 settings = Settings()

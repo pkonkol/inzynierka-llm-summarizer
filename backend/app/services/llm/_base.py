@@ -42,12 +42,13 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
 
 
 def build_detail_guidance(text: str) -> str:
-    n = len(text)
-    if n < 3000:
-        return "Write a compact summary with 3-4 key takeaways."
-    if n < 9000:
-        return "Write a medium-depth summary with 5-7 specific key takeaways."
-    return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
+    # n = len(text)
+    # if n < 3000:
+    #     return "Write a compact summary with 3-4 key takeaways."
+    # if n < 9000:
+    #     return "Write a medium-depth summary with 5-7 specific key takeaways."
+    # return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
+    return "Write a non-redundant summary containing all key facts. The summary should be easily readable and create low cognitive load on the user."
 
 
 def as_dict(obj: Any) -> dict[str, Any]:

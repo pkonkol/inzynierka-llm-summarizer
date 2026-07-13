@@ -23,7 +23,6 @@ class _TakeawaysOnly(BaseModel):
 
 
 class _SummaryOnly(BaseModel):
-    title: str
     short_summary: str
 
 
@@ -32,10 +31,9 @@ _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
      "You are an expert analyst. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Extract the most important points from the following web content. {detail_guidance}\n"
+     "Extract the most important points from the following content. {detail_guidance}\n"
      "Format key_takeaways as a markdown bullet list, one point per line. "
      "Be specific and content-rich — avoid generic statements.\n\n"
-     "Source URL: {source_url}\n"
      "Content:\n{text}"),
 ])
 
@@ -44,26 +42,26 @@ _PROMPT_SUMMARY = ChatPromptTemplate.from_messages([
      "You are an expert summarizer. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Write a concise title and a short prose summary for the following web content.\n"
+     "Write a concise title and a short prose summary for the following content.\n"
      "The summary should be 2-4 sentences, capturing the core argument or findings.\n\n"
-     "Source URL: {source_url}\n"
      "Content:\n{text}"),
 ])
 
 
 async def run(
-    text: str, source_url: str, model_name: str, model_provider: str, language: str
+    trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Two independent calls run concurrently. Returns merged full result dict."""
     llm = build_llm(model_provider, model_name)
     chain_takeaways = _PROMPT_TAKEAWAYS | llm.with_structured_output(_TakeawaysOnly, include_raw=True)
     chain_summary   = _PROMPT_SUMMARY   | llm.with_structured_output(_SummaryOnly,   include_raw=True)
 
+    text = trafilatura["text"]
+
     detail_guidance = build_detail_guidance(text)
     base_params = {
         "language": language,
         "detail_guidance": detail_guidance,
-        "source_url": source_url or "",
         "text": text.strip(),
     }
 
@@ -104,12 +102,15 @@ async def run(
     raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- summary ---\n{raw_str_sm}"
 
     result = SummaryResponse(
-        title=parsed_sm.title,
+        title=trafilatura["title"],
         short_summary=parsed_sm.short_summary,
         key_takeaways=parsed_tk.key_takeaways,
-        source_url=source_url or "",
+        source_url=source_url,
     ).model_dump()
 
+    result["author"] = trafilatura["author"]
+    result["title"] = trafilatura["title"]
+    result["source_url"] = source_url
     result["usage"]           = combined_usage
     result["raw_metadata"]    = combined_meta
     result["raw_output"]      = raw_output_combined

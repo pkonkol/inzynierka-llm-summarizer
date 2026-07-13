@@ -5,6 +5,8 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
+from dataclasses import asdict
+
 
 from ..core.auth import require_auth
 from ..core.config import settings
@@ -16,6 +18,7 @@ from ..schemas.schemas import (
     SummaryMode,
     UrlSummaryListItem,
 )
+from ..services.deepeval_metrics import evaluate_summary_input_metrics, evaluate_summary_metrics, evaluate_summary_takeaways_metrics, evaluate_takeaways_input_metrics, evaluate_takeaways_metrics
 from ..services.llm import generate_summary
 from ..services.deterministic_metrics import (
     compression_ratio_metrics,
@@ -48,7 +51,6 @@ async def _metrics_task(job_id: str, summary_text: str, takeaways_text: str, sou
     sm = await asyncio.to_thread(summary_metrics, summary_text)
     kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
     cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
-    # TODO add deepeval metrics
     await _store_metrics(job_id, {
         "metrics.summary": sm,
         "metrics.key_takeaways": kt,
@@ -58,7 +60,7 @@ async def _metrics_task(job_id: str, summary_text: str, takeaways_text: str, sou
 
 
 async def run_summarization_job(
-    job_id: str, url: str, model_name: str, model_provider: str, language: str, summary_mode: SummaryMode
+    job_id: str, url: str, model_name: str, model_provider: str, language: str, summary_mode: SummaryMode, run_deepeval: bool
 ) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
@@ -66,10 +68,10 @@ async def run_summarization_job(
     try:
         logger.debug("[job=%s] started url=%s mode=%s", job_id, url, summary_mode)
 
-        text = await extract_text_from_url(url)
-        asyncio.create_task(_source_metrics_task(job_id, text))
+        data = await extract_text_from_url(url)
+        asyncio.create_task(_source_metrics_task(job_id, data["text"]))
 
-        summary = await generate_summary(text, url, model_name, model_provider, language, summary_mode)
+        summary = await generate_summary(data, url, model_name, model_provider, language, summary_mode)
 
         finished_at = datetime.now(timezone.utc)
         duration_ms = int((finished_at - started_at).total_seconds() * 1000)
@@ -82,7 +84,7 @@ async def run_summarization_job(
                 "source_url": url,
                 "model_provider": model_provider,
                 "model_name": model_name,
-            "summary_mode": summary_mode,
+                "summary_mode": summary_mode,
                 "status": "completed",
                 "summary_data": summary_data,
                 "usage": summary.get("usage", {}),
@@ -102,7 +104,9 @@ async def run_summarization_job(
         short_summary = summary_data.get("short_summary", "")
         takeaways = summary_data.get("key_takeaways", "")
         if short_summary or takeaways:
-            asyncio.create_task(_metrics_task(job_id, short_summary, takeaways, text))
+            asyncio.create_task(_metrics_task(job_id, short_summary, takeaways, data["text"]))
+        if run_deepeval and (short_summary or takeaways):
+            asyncio.create_task(_deepeval_metrics_task(job_id, short_summary, takeaways, data["text"]))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -174,9 +178,10 @@ async def create_summarize_job(
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
+    tmp_geval = True
     background_tasks.add_task(
         run_summarization_job,
-        job_id, payload.url, payload.model_name, payload.model_provider, payload.language, payload.summary_mode,
+        job_id, payload.url, payload.model_name, payload.model_provider, payload.language, payload.summary_mode, tmp_geval
     )
     return {"job_id": job_id}
 
@@ -268,3 +273,33 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
 def _verify_mode(mode: str) -> None:
     if mode not in settings.supported_summary_modes:
         raise ValueError(f"Unsupported summary mode: {mode}")
+
+
+async def _deepeval_metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
+    summary_results = await evaluate_summary_metrics(settings, summary_text) if summary_text else []
+    summary_input_results = await evaluate_summary_input_metrics(
+        settings, source_text, summary_text) if summary_text and source_text else []
+    takeaways_results = await evaluate_takeaways_metrics(settings, takeaways_text) if takeaways_text else []
+    takeaways_input_results = await evaluate_takeaways_input_metrics(
+        settings, source_text, takeaways_text) if takeaways_text and source_text else []
+    summary_takeaways_results = await evaluate_summary_takeaways_metrics(
+        settings, source_text, summary_text, takeaways_text) if summary_text and takeaways_text and source_text else []
+    from pprint import pprint
+    pprint(summary_results)
+    pprint(summary_input_results)
+    pprint(takeaways_results)
+    pprint(takeaways_input_results)
+    pprint(summary_takeaways_results)
+
+    # print(dir(summary_results))
+    # print(summary_results[0])
+    # print(dir(summary_results[0]))
+    # print(asdict(summary_results[0]))
+
+    await _store_metrics(job_id, {
+        "deepeval_metrics.summary": [asdict(x) for x in summary_results],
+        "deepeval_metrics.summary_input": [asdict(x) for x in summary_input_results],
+        "deepeval_metrics.takeaways": [asdict(x) for x in takeaways_results],
+        "deepeval_metrics.takeaways_input": [asdict(x) for x in takeaways_input_results],
+        "deepeval_metrics.summary_takeaways": [asdict(x) for x in summary_takeaways_results],
+    })

@@ -23,7 +23,6 @@ class _TakeawaysOnly(BaseModel):
 
 
 class _SummaryOnly(BaseModel):
-    title: str
     short_summary: str
 
 
@@ -35,7 +34,6 @@ _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
      "Extract the most important points from the following web content. {detail_guidance}\n"
      "Format key_takeaways as a markdown bullet list, one point per line. "
      "Be specific and content-rich — avoid generic statements.\n\n"
-     "Source URL: {source_url}\n"
      "Content:\n{text}"),
 ])
 
@@ -47,24 +45,24 @@ _PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages([
      "Based ONLY on the key points below, write a concise title and a short prose summary.\n"
      "The summary should be 2-4 sentences synthesising the core argument.\n"
      "Do NOT introduce information not present in the key points.\n\n"
-     "Source URL: {source_url}\n"
      "Key points:\n{takeaways}"),
 ])
 
 
 async def run(
-    text: str, source_url: str, model_name: str, model_provider: str, language: str
+    trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Two sequential calls: takeaways → synthesis. Returns full result dict."""
     llm = build_llm(model_provider, model_name)
     chain_takeaways = _PROMPT_TAKEAWAYS | llm.with_structured_output(_TakeawaysOnly, include_raw=True)
     chain_synthesis = _PROMPT_SYNTHESIS | llm.with_structured_output(_SummaryOnly,   include_raw=True)
 
+    text = trafilatura["text"]
+
     detail_guidance = build_detail_guidance(text)
     params_1 = {
         "language": language,
         "detail_guidance": detail_guidance,
-        "source_url": source_url or "",
         "text": text.strip(),
     }
 
@@ -83,7 +81,7 @@ async def run(
     # --- call 2: synthesise from takeaways only ---
     params_2 = {
         "language": language,
-        "source_url": source_url or "",
+        "source_url": source_url,
         "takeaways": parsed_tk.key_takeaways,
     }
     raw_sm: dict[str, Any] | BaseModel = await chain_synthesis.ainvoke(params_2)
@@ -109,12 +107,15 @@ async def run(
     raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
 
     result = SummaryResponse(
-        title=parsed_sm.title,
+        title=trafilatura["title"],
         short_summary=parsed_sm.short_summary,
         key_takeaways=parsed_tk.key_takeaways,
-        source_url=source_url or "",
+        source_url=source_url,
     ).model_dump()
 
+    result["author"] = trafilatura["author"]
+    result["title"] = trafilatura["title"]
+    result["source_url"] = source_url
     result["usage"]           = combined_usage
     result["raw_metadata"]    = {"takeaways": meta_tk, "synthesis": meta_sm}
     result["raw_output"]      = raw_output_combined

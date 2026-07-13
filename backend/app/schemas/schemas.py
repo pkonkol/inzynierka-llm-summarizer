@@ -14,6 +14,7 @@ class JobCreateRequest(BaseModel):
     url: str
     language: str = "en"
     summary_mode: SummaryMode = "simple"
+    run_deepeval: bool = False
 
 
 class UsageMetadata(BaseModel):

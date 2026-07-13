@@ -17,7 +17,7 @@ from ..schemas.schemas import (
     UrlSummaryListItem,
 )
 from ..services.llm import generate_summary
-from ..services.metrics import (
+from ..services.deterministic_metrics import (
     compression_ratio_metrics,
     key_takeaways_metrics,
     source_metrics,
@@ -44,10 +44,11 @@ async def _source_metrics_task(job_id: str, text: str) -> None:
     logger.debug("[job=%s] source metrics stored", job_id)
 
 
-async def _summary_metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
+async def _metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
     sm = await asyncio.to_thread(summary_metrics, summary_text)
     kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
     cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
+    # TODO add deepeval metrics
     await _store_metrics(job_id, {
         "metrics.summary": sm,
         "metrics.key_takeaways": kt,
@@ -101,7 +102,7 @@ async def run_summarization_job(
         short_summary = summary_data.get("short_summary", "")
         takeaways = summary_data.get("key_takeaways", "")
         if short_summary or takeaways:
-            asyncio.create_task(_summary_metrics_task(job_id, short_summary, takeaways, text))
+            asyncio.create_task(_metrics_task(job_id, short_summary, takeaways, text))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)

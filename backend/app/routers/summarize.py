@@ -162,6 +162,7 @@ async def create_summarize_job(
             "status": "pending",
             "summary_data": None,
             "metrics": {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}},
+            "deepeval_metrics": {"summary": [], "summary_input": [], "takeaways": [], "takeaways_input": [], "summary_takeaways": []},
             "usage": {},
             "raw_metadata": {},
             "raw_output": "",

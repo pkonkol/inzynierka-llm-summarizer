@@ -53,52 +53,26 @@ class DeepevalMetrics(BaseModel):
     summary_takeaways: list[DeepevalMetricItem] = Field(default_factory=list)
 
 class JobStatusResponse(BaseModel):
-    job_id: str = ""
-    source_url: str = ""
-    status: Literal["pending", "completed", "failed"] = "pending"
-    model_provider: str = ""
-    model_name: str = ""
-    summary_mode: SummaryMode = "simple"
+    job_id: str
+    source_url: str
+    status: Literal["pending", "completed", "failed"]
+    model_provider: str
+    model_name: str
+    summary_mode: SummaryMode
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
     deepeval_metrics: DeepevalMetrics = Field(default_factory=DeepevalMetrics)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
-    raw_metadata: dict[str, Any] = Field(default_factory=dict)
-    raw_output: str = ""
-    input_text: str = ""
-    prompt_template: list[list[str]] = Field(default_factory=list)
-    prompt_params: dict[str, str] = Field(default_factory=dict)
-    created_at: datetime | None = None
-    started_at: datetime | None = None
-    finished_at: datetime | None = None
-    duration_ms: int = 0
+    raw_metadata: dict[str, Any]
+    raw_output: str
+    input_text: str
+    prompt_template: list[list[str]]
+    prompt_params: dict[str, str]
+    created_at: datetime | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    duration_ms: int
     error: str | None = None
-
-
-    # TODO usunac te fallbacki ktore mozna. Zakladamy pozytywny scenariusz
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_missing(cls, values: Any) -> Any:
-        if isinstance(values, dict):
-            if not values.get("usage"):
-                values["usage"] = {}
-            elif isinstance(values["usage"], dict):
-                values["usage"] = {k: (v if v is not None else 0) for k, v in values["usage"].items()}
-            if not values.get("raw_metadata"):
-                values["raw_metadata"] = {}
-            if not values.get("metrics"):
-                values["metrics"] = {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}}
-            if not values.get("deepeval_metrics"):
-                values["deepeval_metrics"] = {
-                    "summary": [],
-                    "summary_input": [],
-                    "takeaways": [],
-                    "takeaways_input": [],
-                    "summary_takeaways": [],
-                }
-            if not values.get("summary_mode"):
-                values["summary_mode"] = "simple"
-        return values
 
 
 class JobListItemResponse(BaseModel):

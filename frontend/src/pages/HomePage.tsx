@@ -9,7 +9,7 @@ import {
     listSummarizedUrls,
 } from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
-import { JobDetailPanel } from "../components/JobDetailPanel";
+import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { LoginOverlay } from "../components/LoginOverlay";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
@@ -164,6 +164,7 @@ export function HomePage() {
         return () => clearTimeout(t);
     }, [flashMessage]);
 
+    console.log(detailJobs);
     return (
         <>
             <LoginOverlay
@@ -174,7 +175,7 @@ export function HomePage() {
 
             <main className={
                 hasDetailOpen
-                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
+                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
                     : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
             }>
                 <section className={
@@ -201,7 +202,7 @@ export function HomePage() {
                     />
                 </section>
 
-                <JobDetailPanel
+                <SummaryDetailPanel
                     isOpen={hasDetailOpen}
                     sourceUrl={selectedUrl}
                     jobs={detailJobs}

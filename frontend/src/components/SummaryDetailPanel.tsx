@@ -49,16 +49,27 @@ function PreBlock({ children }: { children: string }) {
     );
 }
 
+const METRIC_SECTIONS = [
+    { key: "source", label: "Source", field: "source" as const },
+    { key: "summary", label: "Summary", field: "summary" as const },
+    { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
+    { key: "compression", label: "Summary / Source", field: "compression" as const },
+] as const;
+
+const DEEPEVAL_SECTIONS = [
+    { key: "summary", label: "summary", field: "summary" as const },
+    { key: "summary_input", label: "summary_input", field: "summary_input" as const },
+    { key: "takeaways", label: "takeaways", field: "takeaways" as const },
+    { key: "takeaways_input", label: "takeaways_input", field: "takeaways_input" as const },
+    { key: "summary_takeaways", label: "summary_takeaways", field: "summary_takeaways" as const },
+] as const;
+
 function MetricsGrid({ data }: { data: Record<string, number | null> }) {
-    const fmt = (v: number | null | undefined) =>
-        v === null || v === undefined ? "" : String(v);
     return (
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {Object.entries(data)
-                .filter(([, v]) => v !== null && v !== undefined)
-                .map(([k, v]) => (
-                    <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
-                ))}
+            {Object.entries(data).map(([k, v]) => (
+                <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
+            ))}
         </div>
     );
 }
@@ -82,60 +93,54 @@ function DeepevalItemRow({ item }: { item: DeepevalMetricItem }) {
     );
 }
 
+function DeepevalSections({ metrics }: { metrics: NonNullable<JobStatus["deepeval_metrics"]> }) {
+    return (
+        <div className="space-y-3">
+            {DEEPEVAL_SECTIONS.map(section => {
+                const items = metrics[section.field];
+                if (items.length === 0) return null;
+                return (
+                    <div key={section.key} className="space-y-2">
+                        <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
+                            {section.label}
+                        </h6>
+                        <div className="space-y-2">
+                            {items.map((item) => (
+                                <DeepevalItemRow key={item.name} item={item} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function MetricsSection({
     metrics,
     deepevalMetrics,
 }: {
     metrics: JobMetrics;
-    deepevalMetrics?: NonNullable<JobStatus["deepeval_metrics"]>;
+    deepevalMetrics: NonNullable<JobStatus["deepeval_metrics"]>;
 }) {
-    const tabs = [
-        { key: "source", label: "Source", data: metrics.source },
-        { key: "summary", label: "Summary", data: metrics.summary },
-        { key: "key_takeaways", label: "Key Takeaways", data: metrics.key_takeaways },
-        { key: "compression", label: "Summary / Source", data: metrics.compression },
-    ].filter(t => t.data && Object.keys(t.data).length > 0);
-    const deepevalGroups = [
-        { key: "summary", label: "Summary", data: deepevalMetrics?.summary ?? [] },
-        { key: "summary_input", label: "Summary input", data: deepevalMetrics?.summary_input ?? [] },
-        { key: "takeaways", label: "Takeaways", data: deepevalMetrics?.takeaways ?? [] },
-        { key: "takeaways_input", label: "Takeaways input", data: deepevalMetrics?.takeaways_input ?? [] },
-        { key: "summary_takeaways", label: "Summary + takeaways", data: deepevalMetrics?.summary_takeaways ?? [] },
-    ].filter(group => group.data.length > 0);
-
-    if (tabs.length === 0 && deepevalGroups.length === 0) return null;
-
     return (
         <Collapsible label="Metrics">
             <div className="space-y-4 p-3">
-                {tabs.map(tab => (
-                    <div key={tab.key} className="space-y-2">
+                {METRIC_SECTIONS.map(section => (
+                    <div key={section.key} className="space-y-2">
                         <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                            {tab.label}
+                            {section.label}
                         </h6>
-                        <MetricsGrid data={tab.data} />
+                        <MetricsGrid data={metrics[section.field]} />
                     </div>
                 ))}
 
-                {deepevalGroups.length > 0 ? (
-                    <div className="space-y-3 border-t border-divider pt-3">
-                        <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                            Deepeval
-                        </h6>
-                        {deepevalGroups.map(group => (
-                            <div key={group.key} className="space-y-2">
-                                <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
-                                    {group.label}
-                                </h6>
-                                <div className="space-y-2">
-                                    {group.data.map(item => (
-                                        <DeepevalItemRow key={`${group.key}:${item.name}`} item={item} />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : null}
+                <div className="space-y-3 border-t border-divider pt-3">
+                    <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                        Deepeval
+                    </h6>
+                    <DeepevalSections metrics={deepevalMetrics} />
+                </div>
             </div>
         </Collapsible>
     );
@@ -218,14 +223,6 @@ function JobEntry({ job }: { job: JobStatus }) {
     const [open, setOpen] = useState(false);
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
-    const deepevalGroups = [
-        { key: "summary", label: "Summary", data: job.deepeval_metrics?.summary ?? [] },
-        { key: "summary_input", label: "Summary input", data: job.deepeval_metrics?.summary_input ?? [] },
-        { key: "takeaways", label: "Takeaways", data: job.deepeval_metrics?.takeaways ?? [] },
-        { key: "takeaways_input", label: "Takeaways input", data: job.deepeval_metrics?.takeaways_input ?? [] },
-        { key: "summary_takeaways", label: "Summary + takeaways", data: job.deepeval_metrics?.summary_takeaways ?? [] },
-    ].filter(group => group.data.length > 0);
-
     return (
         <div className="mb-2 border border-panel-border min-w-0">
             <button
@@ -256,55 +253,47 @@ function JobEntry({ job }: { job: JobStatus }) {
                             <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
                             <InfoRow label="Zakończono" value={formatDateMinute(job.finished_at)} />
                             <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
-                            <InfoRow label="Tokens / s" value={tokensPerSecond(job.usage?.output_tokens ?? 0, job.duration_ms)} />
-                            <InfoRow label="Input tokens" value={job.usage?.input_tokens ?? 0} />
-                            <InfoRow label="Output tokens" value={job.usage?.output_tokens ?? 0} />
-                            {(job.usage?.thinking_tokens ?? 0) > 0 && (
-                                <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
-                            )}
-                            <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
+                            <InfoRow label="Tokens / s" value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)} />
+                            <InfoRow label="Input tokens" value={job.usage.input_tokens} />
+                            <InfoRow label="Output tokens" value={job.usage.output_tokens} />
+                            {job.usage.thinking_tokens > 0 ? <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} /> : null}
+                            <InfoRow label="Total tokens" value={job.usage.total_tokens} />
                             <InfoRow label="Summary mode" value={job.summary_mode} />
-
-                            {deepevalGroups.map(group => (
+                            {DEEPEVAL_SECTIONS.map((group) => {
+                            const items = job.deepeval_metrics[group.field];
+                            return (
                                 <>
-                                {group.data.map(item => (
-                                    <InfoRow label={`${item.name}`} value={item.score} />
+                                {items.map((item) => (
+                                    <InfoRow key={item.name} label={item.name} value={item.score} />
                                 ))}
                                 </>
-                            ))}
+                            );
+                            })}
                         </div>
                     )}
 
-                    {job.summary_data && (
-                        <>
-                            <section>
-                                <h5 className="section-kicker">Krótkie podsumowanie</h5>
-                                <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data.short_summary || "Brak treści"}</p>
-                            </section>
-                            <section>
-                                <h5 className="section-kicker">Najważniejsze punkty</h5>
-                                <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
-                                    {job.summary_data.key_takeaways ? (
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.summary_data.key_takeaways}</ReactMarkdown>
-                                    ) : (
-                                        <p className="m-0">Brak treści</p>
-                                    )}
-                                </div>
-                            </section>
-                        </>
-                    )}
+                    <section>
+                        <h5 className="section-kicker">Krótkie podsumowanie</h5>
+                        <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data!.short_summary}</p>
+                    </section>
+                    <section>
+                        <h5 className="section-kicker">Najważniejsze punkty</h5>
+                        <div className="grid gap-3 text-[1.02rem] leading-[1.72] [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.summary_data!.key_takeaways}</ReactMarkdown>
+                        </div>
+                    </section>
 
                     <MetricsSection
-                        metrics={job.metrics ?? { source: {}, summary: {}, key_takeaways: {}, compression: {} }}
-                        deepevalMetrics={job.deepeval_metrics ?? { summary: [], summary_input: [], takeaways: [], takeaways_input: [], summary_takeaways: [] }}
+                        metrics={job.metrics}
+                        deepevalMetrics={job.deepeval_metrics}
                     />
 
-                    <RawOutput text={job.raw_output ?? ""} />
+                    <RawOutput text={job.raw_output} />
 
                     <PromptSection
-                        template={job.prompt_template ?? []}
-                        params={job.prompt_params ?? {}}
-                        inputText={job.input_text ?? ""}
+                        template={job.prompt_template}
+                        params={job.prompt_params}
+                        inputText={job.input_text}
                     />
 
                     <RawMetadata data={job.raw_metadata} />
@@ -314,15 +303,17 @@ function JobEntry({ job }: { job: JobStatus }) {
     );
 }
 
-export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, debugMode = false }: JobDetailPanelProps) {
+export function SummaryDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, debugMode = false }: JobDetailPanelProps) {
     if (!isOpen) return null;
+
+    console.log(jobs);
+    const title = jobs[0]?.summary_data?.title || "";
 
     const passed = jobs.filter(j => j.status !== "failed");
     const failed = jobs.filter(j => j.status === "failed");
-    const title = jobs[0]?.summary_data?.title ?? "";
 
     return (
-        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
+        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop xl:w-190">
             <div className="mb-4.5 flex items-center justify-between border-b border-divider pb-3">
                 <h3 className="m-0 font-display text-[1.1rem]">Szczegóły</h3>
                 <button
@@ -337,9 +328,11 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
             {isLoading ? (
                 <p className="m-0 text-[0.95rem] text-muted">Ładowanie wyników...</p>
             ) : !sourceUrl ? (
-                <p className="m-0 text-[0.95rem] text-muted">Wybierz URL z listy, aby zobaczyć szczegóły.</p>
+                null
             ) : (
                 <article className="grid gap-4.5 min-w-0">
+                    <h3 className="m-0 border-b border-divider pb-3 font-display text-[1.05rem] leading-[1.4] text-ink">{title}</h3>
+
                     <a
                         href={sourceUrl}
                         target="_blank"
@@ -348,12 +341,6 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                     >
                         {sourceUrl}
                     </a>
-
-                    {title ? (
-                        <h4 className="m-0 border-b border-divider pb-3 font-display text-[1.05rem] leading-[1.4] text-ink">
-                            {title}
-                        </h4>
-                    ) : null}
 
                     {debugMode ? (
                         <div className="border-t border-divider pt-4 min-w-0">

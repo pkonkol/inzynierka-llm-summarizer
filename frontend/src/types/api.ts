@@ -71,7 +71,7 @@ export interface JobStatus {
     status: JobStatusValue;
     summary_data: SummaryData | null;
     metrics: JobMetrics;
-    deepeval_metrics?: DeepevalMetrics;
+    deepeval_metrics: DeepevalMetrics;
     usage: UsageMetadata;
     raw_metadata: Record<string, unknown>;
     raw_output: string;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { listAllJobsFlat, getJobStatus } from "../api/client";
-import { JobDetailPanel } from "../components/JobDetailPanel";
+import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { formatDateMinute } from "../utils/format";
 import type { JobListItem, JobStatus } from "../types/api";
 
@@ -42,7 +42,7 @@ export function JobsPage() {
     return (
         <div className={
             selectedJobId
-                ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(420px,40%)_minmax(680px,60%)] lg:items-start"
+                ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
                 : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
         }>
             <section className={selectedJobId ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5" : "min-w-0"}>
@@ -68,9 +68,7 @@ export function JobsPage() {
                                     <span className="block overflow-hidden text-ellipsis whitespace-nowrap text-[0.82rem] font-mono text-link">
                                         {job.source_url}
                                     </span>
-                                    <span className="mt-1 block text-[0.88rem] leading-[1.4] text-ink line-clamp-1">
-                                        {job.title || "Bez tytułu"}
-                                    </span>
+                                    <span className="mt-1 block text-[0.88rem] leading-[1.4] text-ink line-clamp-1">{job.title}</span>
                                     <span className="mt-1 flex gap-3 text-[0.75rem] text-muted">
                                         <span className={STATUS_COLORS[job.status] ?? ""}>{job.status}</span>
                                         <span>{job.model_provider}:{job.model_name}</span>
@@ -83,7 +81,7 @@ export function JobsPage() {
                 </div>
             </section>
 
-            <JobDetailPanel
+            <SummaryDetailPanel
                 isOpen={Boolean(selectedJobId)}
                 sourceUrl={selectedJob?.source_url ?? null}
                 jobs={selectedJob ? [selectedJob] : []}

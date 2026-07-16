@@ -14,7 +14,7 @@ class JobCreateRequest(BaseModel):
     url: str
     language: str = "en"
     summary_mode: SummaryMode = "simple"
-    run_deepeval: bool = False
+    run_deepeval: bool = False # TODO przeslanie z frontu
 
 
 class UsageMetadata(BaseModel):
@@ -38,6 +38,20 @@ class JobMetrics(BaseModel):
     compression: dict[str, Any] = Field(default_factory=dict)
 
 
+class DeepevalMetricItem(BaseModel):
+    name: str
+    passed: bool | None = None
+    score: float | None = None
+    reason: str | None = None
+
+
+class DeepevalMetrics(BaseModel):
+    summary: list[DeepevalMetricItem] = Field(default_factory=list)
+    summary_input: list[DeepevalMetricItem] = Field(default_factory=list)
+    takeaways: list[DeepevalMetricItem] = Field(default_factory=list)
+    takeaways_input: list[DeepevalMetricItem] = Field(default_factory=list)
+    summary_takeaways: list[DeepevalMetricItem] = Field(default_factory=list)
+
 class JobStatusResponse(BaseModel):
     job_id: str = ""
     source_url: str = ""
@@ -47,6 +61,7 @@ class JobStatusResponse(BaseModel):
     summary_mode: SummaryMode = "simple"
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
+    deepeval_metrics: DeepevalMetrics = Field(default_factory=DeepevalMetrics)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
     raw_output: str = ""
@@ -59,6 +74,8 @@ class JobStatusResponse(BaseModel):
     duration_ms: int = 0
     error: str | None = None
 
+
+    # TODO usunac te fallbacki ktore mozna. Zakladamy pozytywny scenariusz
     @model_validator(mode="before")
     @classmethod
     def coerce_missing(cls, values: Any) -> Any:
@@ -71,6 +88,14 @@ class JobStatusResponse(BaseModel):
                 values["raw_metadata"] = {}
             if not values.get("metrics"):
                 values["metrics"] = {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}}
+            if not values.get("deepeval_metrics"):
+                values["deepeval_metrics"] = {
+                    "summary": [],
+                    "summary_input": [],
+                    "takeaways": [],
+                    "takeaways_input": [],
+                    "summary_takeaways": [],
+                }
             if not values.get("summary_mode"):
                 values["summary_mode"] = "simple"
         return values

@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { formatDateMinute, formatDuration } from "../utils/format";
-import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
+import type { DeepevalMetricItem, JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 
 interface JobDetailPanelProps {
     sourceUrl: string | null;
@@ -14,7 +14,8 @@ interface JobDetailPanelProps {
     debugMode?: boolean;
 }
 
-function InfoRow({ label, value }: { label: string; value: string | number }) {
+function InfoRow({ label, value }: { label: string; value: string | number | null | undefined }) {
+    if (value === null || value === undefined || value === "") return null;
     return (
         <div className="flex flex-col gap-0.5">
             <span className="block text-[0.72rem] uppercase tracking-wider text-muted">{label}</span>
@@ -42,7 +43,7 @@ function Collapsible({ label, children }: { label: string; children: React.React
 
 function PreBlock({ children }: { children: string }) {
     return (
-        <pre className="m-0 overflow-x-auto whitespace-pre-wrap break-words bg-subtle p-3 text-[0.75rem] leading-[1.5] min-w-0">
+        <pre className="m-0 overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-3 text-[0.75rem] leading-normal min-w-0">
             {children}
         </pre>
     );
@@ -50,49 +51,91 @@ function PreBlock({ children }: { children: string }) {
 
 function MetricsGrid({ data }: { data: Record<string, number | null> }) {
     const fmt = (v: number | null | undefined) =>
-        v === null || v === undefined ? "—" : String(v);
+        v === null || v === undefined ? "" : String(v);
     return (
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {Object.entries(data).map(([k, v]) => (
-                <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
-            ))}
+            {Object.entries(data)
+                .filter(([, v]) => v !== null && v !== undefined)
+                .map(([k, v]) => (
+                    <InfoRow key={k} label={k.replace(/_/g, " ")} value={fmt(v)} />
+                ))}
         </div>
     );
 }
 
-function MetricsSection({ metrics }: { metrics: JobMetrics }) {
+function DeepevalItemRow({ item }: { item: DeepevalMetricItem }) {
+    const valueBits = [
+        item.passed === undefined || item.passed === null ? null : (item.passed ? "passed" : "failed"),
+        item.score === undefined || item.score === null ? null : `score: ${item.score}`,
+    ].filter(Boolean) as string[];
+
+    return (
+        <div className="border border-panel-border bg-panel-bg px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
+                    {item.name}
+                </span>
+                {valueBits.length > 0 ? <span className="font-mono text-[0.75rem] text-muted">{valueBits.join(" · ")}</span> : null}
+            </div>
+            {item.reason ? <p className="mt-2 m-0 text-[0.88rem] leading-[1.55] text-muted">{item.reason}</p> : null}
+        </div>
+    );
+}
+
+function MetricsSection({
+    metrics,
+    deepevalMetrics,
+}: {
+    metrics: JobMetrics;
+    deepevalMetrics?: NonNullable<JobStatus["deepeval_metrics"]>;
+}) {
     const tabs = [
-        { key: "source",        label: "Source",           data: metrics.source },
-        { key: "summary",       label: "Summary",          data: metrics.summary },
-        { key: "key_takeaways", label: "Key Takeaways",    data: metrics.key_takeaways },
-        { key: "compression",   label: "Summary / Source", data: metrics.compression },
+        { key: "source", label: "Source", data: metrics.source },
+        { key: "summary", label: "Summary", data: metrics.summary },
+        { key: "key_takeaways", label: "Key Takeaways", data: metrics.key_takeaways },
+        { key: "compression", label: "Summary / Source", data: metrics.compression },
     ].filter(t => t.data && Object.keys(t.data).length > 0);
+    const deepevalGroups = [
+        { key: "summary", label: "Summary", data: deepevalMetrics?.summary ?? [] },
+        { key: "summary_input", label: "Summary input", data: deepevalMetrics?.summary_input ?? [] },
+        { key: "takeaways", label: "Takeaways", data: deepevalMetrics?.takeaways ?? [] },
+        { key: "takeaways_input", label: "Takeaways input", data: deepevalMetrics?.takeaways_input ?? [] },
+        { key: "summary_takeaways", label: "Summary + takeaways", data: deepevalMetrics?.summary_takeaways ?? [] },
+    ].filter(group => group.data.length > 0);
 
-    if (tabs.length === 0) return null;
-
-    const [active, setActive] = useState(tabs[0].key);
-    const current = tabs.find(t => t.key === active) ?? tabs[0];
+    if (tabs.length === 0 && deepevalGroups.length === 0) return null;
 
     return (
         <Collapsible label="Metrics">
-            <div className="p-3 space-y-3">
-                <div className="flex gap-1 flex-wrap">
-                    {tabs.map(t => (
-                        <button
-                            key={t.key}
-                            type="button"
-                            onClick={() => setActive(t.key)}
-                            className={`px-2 py-1 text-[0.7rem] uppercase tracking-wider border transition-colors ${
-                                active === t.key
-                                    ? "border-panel-border bg-subtle text-ink font-semibold"
-                                    : "border-transparent text-muted hover:text-ink"
-                            }`}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-                <MetricsGrid data={current.data} />
+            <div className="space-y-4 p-3">
+                {tabs.map(tab => (
+                    <div key={tab.key} className="space-y-2">
+                        <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                            {tab.label}
+                        </h6>
+                        <MetricsGrid data={tab.data} />
+                    </div>
+                ))}
+
+                {deepevalGroups.length > 0 ? (
+                    <div className="space-y-3 border-t border-divider pt-3">
+                        <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                            Deepeval
+                        </h6>
+                        {deepevalGroups.map(group => (
+                            <div key={group.key} className="space-y-2">
+                                <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
+                                    {group.label}
+                                </h6>
+                                <div className="space-y-2">
+                                    {group.data.map(item => (
+                                        <DeepevalItemRow key={`${group.key}:${item.name}`} item={item} />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
             </div>
         </Collapsible>
     );
@@ -150,7 +193,7 @@ function PromptSection({
                 {inputText && (
                     <div className="min-w-0">
                         <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
-                        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap break-words bg-subtle p-2 text-[0.75rem] leading-[1.5] min-w-0">
+                        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-[0.75rem] leading-normal min-w-0">
                             {inputText}
                         </pre>
                     </div>
@@ -175,6 +218,14 @@ function JobEntry({ job }: { job: JobStatus }) {
     const [open, setOpen] = useState(false);
     const modelLabel = job.model_name ? `${job.model_provider}:${job.model_name}` : job.model_provider;
 
+    const deepevalGroups = [
+        { key: "summary", label: "Summary", data: job.deepeval_metrics?.summary ?? [] },
+        { key: "summary_input", label: "Summary input", data: job.deepeval_metrics?.summary_input ?? [] },
+        { key: "takeaways", label: "Takeaways", data: job.deepeval_metrics?.takeaways ?? [] },
+        { key: "takeaways_input", label: "Takeaways input", data: job.deepeval_metrics?.takeaways_input ?? [] },
+        { key: "summary_takeaways", label: "Summary + takeaways", data: job.deepeval_metrics?.summary_takeaways ?? [] },
+    ].filter(group => group.data.length > 0);
+
     return (
         <div className="mb-2 border border-panel-border min-w-0">
             <button
@@ -187,9 +238,6 @@ function JobEntry({ job }: { job: JobStatus }) {
                         {modelLabel}{statusBadge(job.status)}
                     </span>
                     <span className="text-[0.78rem] text-muted">{formatDateMinute(job.created_at)}</span>
-                    {job.summary_data?.title && (
-                        <span className="mt-0.5 font-display text-[0.88rem] leading-[1.3]">{job.summary_data.title}</span>
-                    )}
                 </span>
                 <span className="ml-3 mt-0.5 shrink-0 text-[0.8rem] text-muted">{open ? "▼" : "▶"}</span>
             </button>
@@ -215,7 +263,15 @@ function JobEntry({ job }: { job: JobStatus }) {
                                 <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} />
                             )}
                             <InfoRow label="Total tokens" value={job.usage?.total_tokens ?? 0} />
-                            <InfoRow label="Summary mode" value={job.summary_mode ?? "simple(default)"} />
+                            <InfoRow label="Summary mode" value={job.summary_mode} />
+
+                            {deepevalGroups.map(group => (
+                                <>
+                                {group.data.map(item => (
+                                    <InfoRow label={`${item.name}`} value={item.score} />
+                                ))}
+                                </>
+                            ))}
                         </div>
                     )}
 
@@ -238,9 +294,12 @@ function JobEntry({ job }: { job: JobStatus }) {
                         </>
                     )}
 
-                    <RawOutput text={job.raw_output ?? ""} />
+                    <MetricsSection
+                        metrics={job.metrics ?? { source: {}, summary: {}, key_takeaways: {}, compression: {} }}
+                        deepevalMetrics={job.deepeval_metrics ?? { summary: [], summary_input: [], takeaways: [], takeaways_input: [], summary_takeaways: [] }}
+                    />
 
-                    <MetricsSection metrics={job.metrics ?? { source: {}, summary: {}, key_takeaways: {}, compression: {} }} />
+                    <RawOutput text={job.raw_output ?? ""} />
 
                     <PromptSection
                         template={job.prompt_template ?? []}
@@ -260,6 +319,7 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
 
     const passed = jobs.filter(j => j.status !== "failed");
     const failed = jobs.filter(j => j.status === "failed");
+    const title = jobs[0]?.summary_data?.title ?? "";
 
     return (
         <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 shadow-detail-mobile lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 lg:shadow-detail-desktop">
@@ -288,6 +348,12 @@ export function JobDetailPanel({ sourceUrl, jobs, isOpen, isLoading, onClose, de
                     >
                         {sourceUrl}
                     </a>
+
+                    {title ? (
+                        <h4 className="m-0 border-b border-divider pb-3 font-display text-[1.05rem] leading-[1.4] text-ink">
+                            {title}
+                        </h4>
+                    ) : null}
 
                     {debugMode ? (
                         <div className="border-t border-divider pt-4 min-w-0">

@@ -178,10 +178,9 @@ async def create_summarize_job(
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
-    tmp_geval = True
     background_tasks.add_task(
         run_summarization_job,
-        job_id, payload.url, payload.model_name, payload.model_provider, payload.language, payload.summary_mode, tmp_geval
+        job_id, payload.url, payload.model_name, payload.model_provider, payload.language, payload.summary_mode, payload.run_deepeval,
     )
     return {"job_id": job_id}
 

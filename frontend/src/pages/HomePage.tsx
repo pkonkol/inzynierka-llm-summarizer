@@ -23,6 +23,7 @@ type PendingSubmit = {
     model_name: string;
     language: string;
     summary_mode: string;
+    run_deepeval: boolean;
 } | null;
 
 export function HomePage() {
@@ -57,11 +58,25 @@ export function HomePage() {
         }
     };
 
-    const submitSummary = async (url: string, model_provider: string, model_name: string, language: string, summary_mode: string) => {
+    const submitSummary = async (
+        url: string,
+        model_provider: string,
+        model_name: string,
+        language: string,
+        summary_mode: string,
+        run_deepeval: boolean,
+    ) => {
         setIsSubmitting(true);
         setFlashMessage("Zadanie zostało utworzone. Trwa analiza artykułu...");
         try {
-            const created = await createSummaryJob(url, model_provider, model_name, language, summary_mode);
+            const created = await createSummaryJob(
+                url,
+                model_provider,
+                model_name,
+                language,
+                summary_mode,
+                run_deepeval,
+            );
             setActiveJobId(created.job_id);
         } catch (error) {
             setFlashMessage(`Nie udało się utworzyć joba: ${String(error)}`);
@@ -70,21 +85,28 @@ export function HomePage() {
         }
     };
 
-    const handleSubmit = async (url: string, model_provider: string, model_name: string, language: string, summary_mode: string) => {
+    const handleSubmit = async (
+        url: string,
+        model_provider: string,
+        model_name: string,
+        language: string,
+        summary_mode: string,
+        run_deepeval: boolean,
+    ) => {
         if (!isAuthEnabled || getToken()) {
-            await submitSummary(url, model_provider, model_name, language, summary_mode);
+            await submitSummary(url, model_provider, model_name, language, summary_mode, run_deepeval);
             return;
         }
-        setPendingSubmit({ url, model_provider, model_name, language, summary_mode });
+        setPendingSubmit({ url, model_provider, model_name, language, summary_mode, run_deepeval });
         setIsLoginOpen(true);
     };
 
     const handleLoginSuccess = async () => {
         setIsLoginOpen(false);
         if (!pendingSubmit) return;
-        const { url, model_provider, model_name, language, summary_mode } = pendingSubmit;
+        const { url, model_provider, model_name, language, summary_mode, run_deepeval } = pendingSubmit;
         setPendingSubmit(null);
-        await submitSummary(url, model_provider, model_name, language, summary_mode);
+        await submitSummary(url, model_provider, model_name, language, summary_mode, run_deepeval);
     };
 
     useEffect(() => {

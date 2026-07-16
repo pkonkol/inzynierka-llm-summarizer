@@ -4,7 +4,14 @@ import type { FormEvent } from "react";
 import { getSupportedLanguages, getSupportedModels, getSupportedModes } from "../api/client";
 
 interface UrlSubmitCardProps {
-    onSubmit: (url: string, model_provider: string, model_name: string, language: string, summary_mode: string) => Promise<void>;
+    onSubmit: (
+        url: string,
+        model_provider: string,
+        model_name: string,
+        language: string,
+        summary_mode: string,
+        run_deepeval: boolean,
+    ) => Promise<void>;
     isSubmitting: boolean;
 }
 
@@ -18,6 +25,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
     const [selectedLanguage, setSelectedLanguage] = useState("en");
     const [modes, setModes] = useState<Record<string, string>>({});
     const [selectedMode, setSelectedMode] = useState("simple");
+    const [runDeepeval, setRunDeepeval] = useState(false);
 
     useEffect(() => {
         const loadMeta = async () => {
@@ -60,8 +68,14 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
 
         const [provider, ...modelParts] = selectedModel.split(":");
         const model = modelParts.join(":");
-        console.log("Submitting URL:", url, "Provider:", provider, "Model:", model, "Language:", selectedLanguage, "Mode:", selectedMode);
-        await onSubmit(url.trim(), provider, model, selectedLanguage, selectedMode);
+        await onSubmit(
+            url.trim(),
+            provider,
+            model,
+            selectedLanguage,
+            selectedMode,
+            runDeepeval,
+        );
         setUrl("");
     };
 
@@ -151,6 +165,17 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                             ))}
                         </select>
                     </div>
+
+                    <label className="mt-4 flex items-center gap-2 text-[0.95rem] text-muted">
+                        <input
+                            type="checkbox"
+                            checked={runDeepeval}
+                            onChange={(e) => setRunDeepeval(e.target.checked)}
+                            disabled={isSubmitting || isLoadingMeta}
+                            className="h-4 w-4 border border-input-border"
+                        />
+                        Run G-Eval
+                    </label>
                 </div>
 
                 {error ? <p className="mt-2.5 text-[0.9rem] text-danger">{error}</p> : null}

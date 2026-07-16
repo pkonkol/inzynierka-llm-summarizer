@@ -47,6 +47,21 @@ export interface JobMetrics {
     compression: Record<string, number | null>;
 }
 
+export interface DeepevalMetricItem {
+    name: string;
+    passed?: boolean | null;
+    score?: number | null;
+    reason?: string | null;
+}
+
+export interface DeepevalMetrics {
+    summary: DeepevalMetricItem[];
+    summary_input: DeepevalMetricItem[];
+    takeaways: DeepevalMetricItem[];
+    takeaways_input: DeepevalMetricItem[];
+    summary_takeaways: DeepevalMetricItem[];
+}
+
 export interface JobStatus {
     job_id: string;
     source_url: string;
@@ -56,6 +71,7 @@ export interface JobStatus {
     status: JobStatusValue;
     summary_data: SummaryData | null;
     metrics: JobMetrics;
+    deepeval_metrics?: DeepevalMetrics;
     usage: UsageMetadata;
     raw_metadata: Record<string, unknown>;
     raw_output: string;

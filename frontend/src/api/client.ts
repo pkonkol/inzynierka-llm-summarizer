@@ -33,11 +33,23 @@ export const login = (password: string): Promise<{ token: string }> =>
     request<{ token: string }>("/auth/token", { method: "POST", body: JSON.stringify({ password }) });
 
 export const createSummaryJob = (
-    url: string, model_provider: string, model_name: string, language: string, summary_mode: string,
+    url: string,
+    model_provider: string,
+    model_name: string,
+    language: string,
+    summary_mode: string,
+    run_deepeval: boolean,
 ): Promise<CreateJobResponse> =>
     request<CreateJobResponse>("/api/v1/jobs/summarize", {
         method: "POST",
-        body: JSON.stringify({ url, model_provider, model_name, language, summary_mode }),
+        body: JSON.stringify({
+            url,
+            model_provider,
+            model_name,
+            language,
+            summary_mode,
+            run_deepeval,
+        }),
     });
 
 export const listSummarizedUrls = (limit = 50): Promise<SummaryUrlListItem[]> =>

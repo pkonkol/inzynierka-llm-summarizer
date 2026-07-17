@@ -247,9 +247,10 @@ async def list_all_jobs_flat(
 @router.get("/by-url", response_model=list[JobStatusResponse], summary="Get all jobs for a URL")
 async def get_jobs_for_url(
     source_url: str = Query(..., description="Exact source URL"),
+    status: str = Query(..., description="One of supported statuses"),
 ) -> list[JobStatusResponse]:
     jobs_collection = get_jobs_collection()
-    cursor = jobs_collection.find({"source_url": source_url}, {"_id": 0}).sort("updated_at", -1)
+    cursor = jobs_collection.find({"source_url": source_url, "status": status}, {"_id": 0}).sort("updated_at", -1)
     return [JobStatusResponse.model_validate(doc) async for doc in cursor]
 
 

@@ -52,7 +52,7 @@ export function HomePage() {
     const loadDetailForUrl = async (url: string) => {
         setIsLoadingDetail(true);
         try {
-            setDetailJobs(await getJobsForUrl(url));
+            setDetailJobs(await getJobsForUrl(url, "completed"));
         } finally {
             setIsLoadingDetail(false);
         }
@@ -167,49 +167,49 @@ export function HomePage() {
     console.log(detailJobs);
     return (
         <>
-            <LoginOverlay
-                isOpen={isLoginOpen}
-                onClose={() => { setIsLoginOpen(false); setPendingSubmit(null); }}
-                onSuccess={() => { void handleLoginSuccess(); }}
-            />
+        <LoginOverlay
+            isOpen={isLoginOpen}
+            onClose={() => { setIsLoginOpen(false); setPendingSubmit(null); }}
+            onSuccess={() => { void handleLoginSuccess(); }}
+        />
 
-            <main className={
+        <main className={
+            hasDetailOpen
+                ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
+                : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+        }>
+            <section className={
                 hasDetailOpen
-                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
-                    : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+                    ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
+                    : "min-w-0"
             }>
-                <section className={
-                    hasDetailOpen
-                        ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
-                        : "min-w-0"
-                }>
-                    {!hasDetailOpen ? (
-                        <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} />
-                    ) : null}
+                {!hasDetailOpen ? (
+                    <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+                ) : null}
 
-                    {flashMessage ? (
-                        <div className="mt-3.5 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
-                            {flashMessage}
-                        </div>
-                    ) : null}
+                {flashMessage ? (
+                    <div className="mt-3.5 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
+                        {flashMessage}
+                    </div>
+                ) : null}
 
-                    <CompletedJobsList
-                        urls={urlList}
-                        selectedUrl={selectedUrl}
-                        isLoading={isLoadingList}
-                        isFocused={hasDetailOpen}
-                        onSelectUrl={setSelectedUrl}
-                    />
-                </section>
-
-                <SummaryDetailPanel
-                    isOpen={hasDetailOpen}
-                    sourceUrl={selectedUrl}
-                    jobs={detailJobs}
-                    isLoading={isLoadingDetail}
-                    onClose={() => setSelectedUrl(null)}
+                <CompletedJobsList
+                    urls={urlList}
+                    selectedUrl={selectedUrl}
+                    isLoading={isLoadingList}
+                    isFocused={hasDetailOpen}
+                    onSelectUrl={setSelectedUrl}
                 />
-            </main>
+            </section>
+
+            <SummaryDetailPanel
+                isOpen={hasDetailOpen}
+                sourceUrl={selectedUrl}
+                jobs={detailJobs}
+                isLoading={isLoadingDetail}
+                onClose={() => setSelectedUrl(null)}
+            />
+        </main>
         </>
     );
 }

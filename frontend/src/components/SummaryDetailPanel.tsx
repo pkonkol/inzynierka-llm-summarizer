@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { formatDateMinute, formatDuration } from "../utils/format";
-import type { DeepevalMetricItem, JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
+import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 
 interface JobDetailPanelProps {
     sourceUrl: string | null;
@@ -64,56 +64,55 @@ const DEEPEVAL_SECTIONS = [
     { key: "summary_takeaways", label: "summary_takeaways", field: "summary_takeaways" as const },
 ] as const;
 
-function MetricsGrid({ data }: { data: Record<string, number | null> }) {
-    return (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {Object.entries(data).map(([k, v]) => (
-                <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
-            ))}
-        </div>
-    );
-}
-
-function DeepevalItemRow({ item }: { item: DeepevalMetricItem }) {
-    const valueBits = [
-        item.passed === undefined || item.passed === null ? null : (item.passed ? "passed" : "failed"),
-        item.score === undefined || item.score === null ? null : `score: ${item.score}`,
-    ].filter(Boolean) as string[];
-
-    return (
-        <div className="border border-panel-border bg-panel-bg px-3 py-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
-                    {item.name}
-                </span>
-                {valueBits.length > 0 ? <span className="font-mono text-[0.75rem] text-muted">{valueBits.join(" · ")}</span> : null}
-            </div>
-            {item.reason ? <p className="mt-2 m-0 text-[0.88rem] leading-[1.55] text-muted">{item.reason}</p> : null}
-        </div>
-    );
-}
-
 function DeepevalSections({ metrics }: { metrics: NonNullable<JobStatus["deepeval_metrics"]> }) {
-    return (
-        <div className="space-y-3">
-            {DEEPEVAL_SECTIONS.map(section => {
-                const items = metrics[section.field];
-                if (items.length === 0) return null;
-                return (
-                    <div key={section.key} className="space-y-2">
-                        <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
-                            {section.label}
-                        </h6>
-                        <div className="space-y-2">
-                            {items.map((item) => (
-                                <DeepevalItemRow key={item.name} item={item} />
-                            ))}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
+    const renderedSections = DEEPEVAL_SECTIONS.map(section => {
+        const items = metrics[section.field];
+        if (!items || items.length === 0) return null;
+
+        const renderedItems = items.map(item => {
+            const hasPassed = item.passed !== undefined && item.passed !== null;
+            const hasScore = item.score !== undefined && item.score !== null;
+
+            const statusText = hasPassed ? (item.passed ? "passed" : "failed") : null;
+            const scoreText = hasScore ? `score: ${item.score}` : null;
+            const valueBits = [statusText, scoreText].filter(Boolean);
+
+            const headerRow = (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
+                        {item.name}
+                    </span>
+                    {valueBits.length > 0 && (
+                        <span className="font-mono text-[0.75rem] text-muted">{valueBits.join(" · ")}</span>
+                    )}
+                </div>
+            );
+
+            const reasonText = item.reason ? (
+                <p className="mt-2 m-0 text-[0.88rem] leading-[1.55] text-muted">{item.reason}</p>
+            ) : null;
+
+            return (
+                <div key={item.name} className="border border-panel-border bg-panel-bg px-3 py-2">
+                    {headerRow}
+                    {reasonText}
+                </div>
+            );
+        });
+
+        return (
+            <div key={section.key} className="space-y-2">
+                <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
+                    {section.label}
+                </h6>
+                <div className="space-y-2">
+                    {renderedItems}
+                </div>
+            </div>
+        );
+    });
+
+    return <div className="space-y-3">{renderedSections}</div>;
 }
 
 function MetricsSection({
@@ -123,24 +122,105 @@ function MetricsSection({
     metrics: JobMetrics;
     deepevalMetrics: NonNullable<JobStatus["deepeval_metrics"]>;
 }) {
+    const defaultMetricsBlocks = METRIC_SECTIONS.map(section => {
+        const data = metrics[section.field];
+        if (!data) return null;
+
+        const gridItems = Object.entries(data).map(([k, v]) => (
+            <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
+        ));
+
+        return (
+            <div key={section.key} className="space-y-2">
+                <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                    {section.label}
+                </h6>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    {gridItems}
+                </div>
+            </div>
+        );
+    });
+
+    const deepevalBlock = deepevalMetrics ? (
+        <div className="space-y-3 border-t border-divider pt-3">
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                Deepeval
+            </h6>
+            <DeepevalSections metrics={deepevalMetrics} />
+        </div>
+    ) : null;
+
     return (
         <Collapsible label="Metrics">
             <div className="space-y-4 p-3">
-                {METRIC_SECTIONS.map(section => (
-                    <div key={section.key} className="space-y-2">
-                        <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                            {section.label}
-                        </h6>
-                        <MetricsGrid data={metrics[section.field]} />
-                    </div>
-                ))}
+                {defaultMetricsBlocks}
+                {deepevalBlock}
+            </div>
+        </Collapsible>
+    );
+}
 
-                <div className="space-y-3 border-t border-divider pt-3">
-                    <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                        Deepeval
-                    </h6>
-                    <DeepevalSections metrics={deepevalMetrics} />
-                </div>
+function PromptSection({
+    template,
+    params,
+    inputText,
+}: {
+    template: PromptMessage[] | [string, string][];
+    params: Record<string, string>;
+    inputText: string;
+}) {
+    if ((!template || template.length === 0) && !inputText) return null;
+
+    let templateBlock = null;
+    if (template && template.length > 0) {
+        const messages = template.map((m) =>
+            Array.isArray(m) ? { role: m[0], content: m[1] } : m
+        );
+        
+        const renderedMessages = messages.map((msg, i) => (
+            <div key={i} className="mb-2 min-w-0">
+                <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
+                <PreBlock>{msg.content}</PreBlock>
+            </div>
+        ));
+
+        templateBlock = (
+            <div className="min-w-0">
+                <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Template</p>
+                {renderedMessages}
+            </div>
+        );
+    }
+
+    let paramsBlock = null;
+    if (params && Object.keys(params).length > 0) {
+        paramsBlock = (
+            <div className="min-w-0">
+                <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Parametry</p>
+                <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
+            </div>
+        );
+    }
+
+    let inputBlock = null;
+    if (inputText) {
+        inputBlock = (
+            <div className="min-w-0">
+                <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
+                <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-[0.75rem] leading-normal min-w-0">
+                    {inputText}
+                </pre>
+            </div>
+        );
+    }
+
+    return (
+        <Collapsible label="Prompt">
+            <div className="space-y-3 p-3 min-w-0">
+                {templateBlock}
+                {paramsBlock}
+                {inputBlock}
             </div>
         </Collapsible>
     );
@@ -148,64 +228,18 @@ function MetricsSection({
 
 function RawMetadata({ data }: { data: Record<string, unknown> }) {
     if (!data || Object.keys(data).length === 0) return null;
-    return (
-        <Collapsible label="Raw metadata">
-            <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>
-        </Collapsible>
-    );
+    
+    const content = <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
+    
+    return <Collapsible label="Raw metadata">{content}</Collapsible>;
 }
 
 function RawOutput({ text }: { text: string }) {
     if (!text) return null;
-    return (
-        <Collapsible label="Raw output">
-            <PreBlock>{text}</PreBlock>
-        </Collapsible>
-    );
-}
-
-function PromptSection({
-    template, params, inputText,
-}: {
-    template: PromptMessage[] | [string, string][];
-    params: Record<string, string>;
-    inputText: string;
-}) {
-    if (template.length === 0 && !inputText) return null;
-    const messages = template.map((m) =>
-        Array.isArray(m) ? { role: m[0], content: m[1] } : m
-    );
-    return (
-        <Collapsible label="Prompt">
-            <div className="space-y-3 p-3 min-w-0">
-                {messages.length > 0 && (
-                    <div className="min-w-0">
-                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Template</p>
-                        {messages.map((msg, i) => (
-                            <div key={i} className="mb-2 min-w-0">
-                                <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
-                                <PreBlock>{msg.content}</PreBlock>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {Object.keys(params).length > 0 && (
-                    <div className="min-w-0">
-                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Parametry</p>
-                        <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
-                    </div>
-                )}
-                {inputText && (
-                    <div className="min-w-0">
-                        <p className="mb-1 text-[0.72rem] uppercase tracking-wider text-muted">Input text</p>
-                        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-[0.75rem] leading-normal min-w-0">
-                            {inputText}
-                        </pre>
-                    </div>
-                )}
-            </div>
-        </Collapsible>
-    );
+    
+    const content = <PreBlock>{text}</PreBlock>;
+    
+    return <Collapsible label="Raw output">{content}</Collapsible>;
 }
 
 function statusBadge(status: JobStatusValue) {

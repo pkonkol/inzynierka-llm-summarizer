@@ -1,4 +1,4 @@
-import type { CreateJobResponse, JobListItem, JobStatus, SummaryUrlListItem } from "../types/api";
+import type { CreateJobResponse, JobListItem, JobStatus, JobStatusValue, SummaryUrlListItem } from "../types/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 const TOKEN_KEY = "auth_token";
@@ -58,8 +58,8 @@ export const listSummarizedUrls = (limit = 50): Promise<SummaryUrlListItem[]> =>
 export const listAllJobsFlat = (limit = 100): Promise<JobListItem[]> =>
     request<JobListItem[]>(`/api/v1/jobs/list?limit=${limit}`);
 
-export const getJobsForUrl = (sourceUrl: string): Promise<JobStatus[]> =>
-    request<JobStatus[]>(`/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}`);
+export const getJobsForUrl = (sourceUrl: string, status: JobStatusValue): Promise<JobStatus[]> =>
+    request<JobStatus[]>(`/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}&status=${status}`);
 
 export const getJobStatus = (jobId: string): Promise<JobStatus> =>
     request<JobStatus>(`/api/v1/jobs/${jobId}`);

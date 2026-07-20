@@ -24,7 +24,7 @@ export interface JobListItem {
 export interface SummaryData {
     title: string;
     summary: string;
-    key_takeaways: string;
+    key_takeaways: string[];
     source_url: string;
 }
 

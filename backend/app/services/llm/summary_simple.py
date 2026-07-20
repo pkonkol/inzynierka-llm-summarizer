@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class _SummaryPromptResponse(BaseModel):
     summary: str
-    key_takeaways: str
+    key_takeaways: list[str]
 
 _PROMPT_MESSAGES = [
     ("system",

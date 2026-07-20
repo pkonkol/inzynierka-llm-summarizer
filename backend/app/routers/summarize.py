@@ -1,12 +1,11 @@
 import asyncio
 import logging
+from dataclasses import asdict
 from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
-from dataclasses import asdict
-
 
 from ..core.auth import require_auth
 from ..core.config import settings
@@ -18,20 +17,37 @@ from ..schemas.schemas import (
     SummaryMode,
     UrlSummaryListItem,
 )
-from ..services.deepeval_metrics import evaluate_summary_input_metrics, evaluate_summary_metrics, evaluate_summary_takeaways_metrics, evaluate_takeaways_input_metrics, evaluate_takeaways_metrics
-from ..services.llm import generate_summary
+from ..services.deepeval_metrics import (
+    evaluate_summary_input_metrics,
+    evaluate_summary_metrics,
+    evaluate_summary_takeaways_metrics,
+    evaluate_takeaways_input_metrics,
+    evaluate_takeaways_metrics,
+)
 from ..services.deterministic_metrics import (
     compression_ratio_metrics,
     key_takeaways_metrics,
     source_metrics,
     summary_metrics,
 )
+from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
 
-_SUMMARY_TOP_LEVEL_KEYS = {"usage", "raw_metadata", "raw_output", "input_text", "prompt_template", "prompt_params"}
+_SUMMARY_TOP_LEVEL_KEYS = {
+    "usage",
+    "raw_metadata",
+    "raw_output",
+    "input_text",
+    "prompt_template",
+    "prompt_params",
+}
+
+
+def _join_takeaways(takeaways: list[str]) -> str:
+    return "\n".join(f"- {item}" for item in takeaways)
 
 
 async def _store_metrics(job_id: str, update: dict) -> None:
@@ -51,16 +67,25 @@ async def _metrics_task(job_id: str, summary_text: str, takeaways_text: str, sou
     sm = await asyncio.to_thread(summary_metrics, summary_text)
     kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
     cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
-    await _store_metrics(job_id, {
-        "metrics.summary": sm,
-        "metrics.key_takeaways": kt,
-        "metrics.compression": cr,
-    })
+    await _store_metrics(
+        job_id,
+        {
+            "metrics.summary": sm,
+            "metrics.key_takeaways": kt,
+            "metrics.compression": cr,
+        },
+    )
     logger.debug("[job=%s] summary/takeaways/compression metrics stored", job_id)
 
 
 async def run_summarization_job(
-    job_id: str, url: str, model_name: str, model_provider: str, language: str, summary_mode: SummaryMode, run_deepeval: bool
+    job_id: str,
+    url: str,
+    model_name: str,
+    model_provider: str,
+    language: str,
+    summary_mode: SummaryMode,
+    run_deepeval: bool,
 ) -> None:
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(timezone.utc)
@@ -80,33 +105,39 @@ async def run_summarization_job(
 
         await jobs_collection.update_one(
             {"job_id": job_id},
-            {"$set": {
-                "source_url": url,
-                "model_provider": model_provider,
-                "model_name": model_name,
-                "summary_mode": summary_mode,
-                "status": "completed",
-                "summary_data": summary_data,
-                "usage": summary.get("usage", {}),
-                "raw_metadata": summary.get("raw_metadata", {}),
-                "raw_output": summary.get("raw_output", ""),
-                "input_text": summary.get("input_text", ""),
-                "prompt_template": summary.get("prompt_template", []),
-                "prompt_params": summary.get("prompt_params", {}),
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "duration_ms": duration_ms,
-                "error": None,
-                "updated_at": finished_at,
-            }},
+            {
+                "$set": {
+                    "source_url": url,
+                    "model_provider": model_provider,
+                    "model_name": model_name,
+                    "summary_mode": summary_mode,
+                    "status": "completed",
+                    "summary_data": summary_data,
+                    "usage": summary.get("usage", {}),
+                    "raw_metadata": summary.get("raw_metadata", {}),
+                    "raw_output": summary.get("raw_output", ""),
+                    "input_text": summary.get("input_text", ""),
+                    "prompt_template": summary.get("prompt_template", []),
+                    "prompt_params": summary.get("prompt_params", {}),
+                    "started_at": started_at,
+                    "finished_at": finished_at,
+                    "duration_ms": duration_ms,
+                    "error": None,
+                    "updated_at": finished_at,
+                }
+            },
         )
 
-        summary = summary_data.get("summary", "")
-        takeaways = summary_data.get("key_takeaways", "")
-        if summary or takeaways:
-            asyncio.create_task(_metrics_task(job_id, summary, takeaways, data["text"]))
-        if run_deepeval and (summary or takeaways):
-            asyncio.create_task(_deepeval_metrics_task(job_id, summary, takeaways, data["text"]))
+        summary_text = summary_data.get("summary", "")
+        takeaways = summary_data.get("key_takeaways", [])
+        takeaways_text = _join_takeaways(takeaways) if isinstance(takeaways, list) else ""
+
+        if summary_text or takeaways_text:
+            asyncio.create_task(_metrics_task(job_id, summary_text, takeaways_text, data["text"]))
+        if run_deepeval and (summary_text or takeaways_text):
+            asyncio.create_task(
+                _deepeval_metrics_task(job_id, summary_text, takeaways_text, data["text"])
+            )
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -116,25 +147,27 @@ async def run_summarization_job(
 
         await jobs_collection.update_one(
             {"job_id": job_id},
-            {"$set": {
-                "source_url": url,
-                "model_provider": model_provider,
-                "model_name": model_name,
-                "summary_mode": summary_mode,
-                "status": "failed",
-                "summary_data": None,
-                "usage": {},
-                "raw_metadata": {},
-                "raw_output": raw_output,
-                "input_text": "",
-                "prompt_template": [],
-                "prompt_params": {},
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "duration_ms": duration_ms,
-                "error": str(exc),
-                "updated_at": finished_at,
-            }},
+            {
+                "$set": {
+                    "source_url": url,
+                    "model_provider": model_provider,
+                    "model_name": model_name,
+                    "summary_mode": summary_mode,
+                    "status": "failed",
+                    "summary_data": None,
+                    "usage": {},
+                    "raw_metadata": {},
+                    "raw_output": raw_output,
+                    "input_text": "",
+                    "prompt_template": [],
+                    "prompt_params": {},
+                    "started_at": started_at,
+                    "finished_at": finished_at,
+                    "duration_ms": duration_ms,
+                    "error": str(exc),
+                    "updated_at": finished_at,
+                }
+            },
         )
 
 
@@ -153,35 +186,49 @@ async def create_summarize_job(
     logger.debug("[job=%s] queued url=%s mode=%s", job_id, payload.url, payload.summary_mode)
 
     try:
-        await jobs_collection.insert_one({
-            "job_id": job_id,
-            "source_url": payload.url,
-            "model_provider": payload.model_provider,
-            "model_name": payload.model_name,
-            "summary_mode": payload.summary_mode,
-            "status": "pending",
-            "summary_data": None,
-            "metrics": {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}},
-            "deepeval_metrics": {"summary": [], "summary_input": [], "takeaways": [], "takeaways_input": [], "summary_takeaways": []},
-            "usage": {},
-            "raw_metadata": {},
-            "raw_output": "",
-            "input_text": "",
-            "prompt_template": [],
-            "prompt_params": {},
-            "created_at": now,
-            "started_at": None,
-            "finished_at": None,
-            "duration_ms": 0,
-            "error": None,
-            "updated_at": now,
-        })
+        await jobs_collection.insert_one(
+            {
+                "job_id": job_id,
+                "source_url": payload.url,
+                "model_provider": payload.model_provider,
+                "model_name": payload.model_name,
+                "summary_mode": payload.summary_mode,
+                "status": "pending",
+                "summary_data": None,
+                "metrics": {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}},
+                "deepeval_metrics": {
+                    "summary": [],
+                    "summary_input": [],
+                    "takeaways": [],
+                    "takeaways_input": [],
+                    "summary_takeaways": [],
+                },
+                "usage": {},
+                "raw_metadata": {},
+                "raw_output": "",
+                "input_text": "",
+                "prompt_template": [],
+                "prompt_params": {},
+                "created_at": now,
+                "started_at": None,
+                "finished_at": None,
+                "duration_ms": 0,
+                "error": None,
+                "updated_at": now,
+            }
+        )
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
     background_tasks.add_task(
         run_summarization_job,
-        job_id, payload.url, payload.model_name, payload.model_provider, payload.language, payload.summary_mode, payload.run_deepeval,
+        job_id,
+        payload.url,
+        payload.model_name,
+        payload.model_provider,
+        payload.language,
+        payload.summary_mode,
+        payload.run_deepeval,
     )
     return {"job_id": job_id}
 
@@ -194,13 +241,15 @@ async def list_summarized_urls(
     pipeline = [
         {"$match": {"status": {"$in": ["completed", "failed"]}}},
         {"$sort": {"updated_at": -1}},
-        {"$group": {
-            "_id": "$source_url",
-            "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
-            "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
-            "latest_updated_at": {"$first": "$updated_at"},
-            "latest_title": {"$first": "$summary_data.title"},
-        }},
+        {
+            "$group": {
+                "_id": "$source_url",
+                "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+                "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
+                "latest_updated_at": {"$first": "$updated_at"},
+                "latest_title": {"$first": "$summary_data.title"},
+            }
+        },
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
@@ -222,25 +271,38 @@ async def list_all_jobs_flat(
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[JobListItemResponse]:
     jobs_collection = get_jobs_collection()
-    cursor = jobs_collection.find(
-        {},
-        {"_id": 0, "input_text": 0, "prompt_template": 0, "prompt_params": 0, "raw_metadata": 0, "summary_data.key_takeaways": 0},
-    ).sort("updated_at", -1).limit(limit)
+    cursor = (
+        jobs_collection.find(
+            {},
+            {
+                "_id": 0,
+                "input_text": 0,
+                "prompt_template": 0,
+                "prompt_params": 0,
+                "raw_metadata": 0,
+                "summary_data.key_takeaways": 0,
+            },
+        )
+        .sort("updated_at", -1)
+        .limit(limit)
+    )
 
     results = []
     async for doc in cursor:
         sd = doc.get("summary_data") or {}
-        results.append(JobListItemResponse(
-            job_id=str(doc.get("job_id", "")),
-            source_url=str(doc.get("source_url", "")),
-            status=doc.get("status", "pending"),
-            title=str(sd.get("title", "")),
-            summary=str(sd.get("summary", "")),
-            model_provider=str(doc.get("model_provider", "")),
-            model_name=str(doc.get("model_name", "")),
-            summary_mode=doc.get("summary_mode") or "simple",
-            updated_at=doc.get("updated_at"),
-        ))
+        results.append(
+            JobListItemResponse(
+                job_id=str(doc.get("job_id", "")),
+                source_url=str(doc.get("source_url", "")),
+                status=doc.get("status", "pending"),
+                title=str(sd.get("title", "")),
+                summary=str(sd.get("summary", "")),
+                model_provider=str(doc.get("model_provider", "")),
+                model_name=str(doc.get("model_name", "")),
+                summary_mode=doc.get("summary_mode") or "simple",
+                updated_at=doc.get("updated_at"),
+            )
+        )
     return results
 
 
@@ -250,7 +312,9 @@ async def get_jobs_for_url(
     status: str = Query(..., description="One of supported statuses"),
 ) -> list[JobStatusResponse]:
     jobs_collection = get_jobs_collection()
-    cursor = jobs_collection.find({"source_url": source_url, "status": status}, {"_id": 0}).sort("updated_at", -1)
+    cursor = jobs_collection.find({"source_url": source_url, "status": status}, {"_id": 0}).sort(
+        "updated_at", -1
+    )
     return [JobStatusResponse.model_validate(doc) async for doc in cursor]
 
 
@@ -278,29 +342,30 @@ def _verify_mode(mode: str) -> None:
 
 async def _deepeval_metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
     summary_results = await evaluate_summary_metrics(settings, summary_text) if summary_text else []
-    summary_input_results = await evaluate_summary_input_metrics(
-        settings, source_text, summary_text) if summary_text and source_text else []
+    summary_input_results = (
+        await evaluate_summary_input_metrics(settings, source_text, summary_text)
+        if summary_text and source_text
+        else []
+    )
     takeaways_results = await evaluate_takeaways_metrics(settings, takeaways_text) if takeaways_text else []
-    takeaways_input_results = await evaluate_takeaways_input_metrics(
-        settings, source_text, takeaways_text) if takeaways_text and source_text else []
-    summary_takeaways_results = await evaluate_summary_takeaways_metrics(
-        settings, source_text, summary_text, takeaways_text) if summary_text and takeaways_text and source_text else []
-    from pprint import pprint
-    pprint(summary_results)
-    pprint(summary_input_results)
-    pprint(takeaways_results)
-    pprint(takeaways_input_results)
-    pprint(summary_takeaways_results)
+    takeaways_input_results = (
+        await evaluate_takeaways_input_metrics(settings, source_text, takeaways_text)
+        if takeaways_text and source_text
+        else []
+    )
+    summary_takeaways_results = (
+        await evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text)
+        if summary_text and takeaways_text and source_text
+        else []
+    )
 
-    # print(dir(summary_results))
-    # print(summary_results[0])
-    # print(dir(summary_results[0]))
-    # print(asdict(summary_results[0]))
-
-    await _store_metrics(job_id, {
-        "deepeval_metrics.summary": [asdict(x) for x in summary_results],
-        "deepeval_metrics.summary_input": [asdict(x) for x in summary_input_results],
-        "deepeval_metrics.takeaways": [asdict(x) for x in takeaways_results],
-        "deepeval_metrics.takeaways_input": [asdict(x) for x in takeaways_input_results],
-        "deepeval_metrics.summary_takeaways": [asdict(x) for x in summary_takeaways_results],
-    })
+    await _store_metrics(
+        job_id,
+        {
+            "deepeval_metrics.summary": [asdict(x) for x in summary_results],
+            "deepeval_metrics.summary_input": [asdict(x) for x in summary_input_results],
+            "deepeval_metrics.takeaways": [asdict(x) for x in takeaways_results],
+            "deepeval_metrics.takeaways_input": [asdict(x) for x in takeaways_input_results],
+            "deepeval_metrics.summary_takeaways": [asdict(x) for x in summary_takeaways_results],
+        },
+    )

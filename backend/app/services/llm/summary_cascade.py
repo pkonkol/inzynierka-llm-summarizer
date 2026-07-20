@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class _TakeawaysOnly(BaseModel):
-    key_takeaways: str
+    key_takeaways: list[str]
 
 
 class _SummaryOnly(BaseModel):
@@ -100,7 +100,7 @@ async def run(
     params_2 = {
         "language": language,
         "source_url": source_url,
-        "takeaways": parsed_tk.key_takeaways,
+        "takeaways": "\n".join(f"- {item}" for item in parsed_tk.key_takeaways),
         "detail_guidance": summary_detail_guidance,
     }
     raw_sm: dict[str, Any] | BaseModel = await chain_synthesis.ainvoke(params_2)

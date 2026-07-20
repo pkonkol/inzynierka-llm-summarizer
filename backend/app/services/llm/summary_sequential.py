@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class _TakeawaysOnly(BaseModel):
-    key_takeaways: str
+    key_takeaways: list[str]
 
 
 class _SummaryOnly(BaseModel):

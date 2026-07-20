@@ -73,7 +73,8 @@ def build_summary_detail_guidance(text: str) -> str:
 
 def build_takeaway_detail_guidance(text: str) -> str:
     return (
-        "Write key_takeaways as a single markdown bullet list, with one takeaway per line. "
+        "Write key_takeaways as a JSON array of strings (list[str]), one concise takeaway per array item. "
+        "Do not return markdown bullets or numbered lists. "
         "Keep the points specific, content-rich, and non-redundant. "
         "Cover the important facts from the source without repeating the same idea."
     )

@@ -14,7 +14,7 @@ export interface JobListItem {
     source_url: string;
     status: JobStatusValue;
     title: string;
-    short_summary: string;
+    summary: string;
     model_provider: string;
     model_name: string;
     summary_mode: SummaryMode;
@@ -23,7 +23,7 @@ export interface JobListItem {
 
 export interface SummaryData {
     title: string;
-    short_summary: string;
+    summary: string;
     key_takeaways: string;
     source_url: string;
 }

@@ -109,7 +109,7 @@ def source_metrics(text: str) -> dict[str, Any]:
 
 
 def summary_metrics(text: str) -> dict[str, Any]:
-    """Metrics for the generated short_summary prose."""
+    """Metrics for the generated summary prose."""
     return {
         "automated_readability_index": automated_readability_index(text),
         "avg_sentence_length": avg_sentence_length(text),

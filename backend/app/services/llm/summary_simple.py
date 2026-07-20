@@ -6,12 +6,19 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from ...schemas.summary import SummaryResponse
-from ._base import build_detail_guidance, build_llm, extract_usage, raw_output_str
+from ._base import (
+    build_generic_detail_guidance,
+    build_structured_llm,
+    build_summary_detail_guidance,
+    build_takeaway_detail_guidance,
+    extract_usage,
+    raw_output_str,
+)
 
 logger = logging.getLogger(__name__)
 
 class _SummaryPromptResponse(BaseModel):
-    short_summary: str
+    summary: str
     key_takeaways: str
 
 _PROMPT_MESSAGES = [
@@ -19,10 +26,7 @@ _PROMPT_MESSAGES = [
      "You are an expert summarizer. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Summarize the following web content. Try to include all key facts into short_summary but do not sacrifice fluency and coherence for facts."
-     "{detail_guidance}\n"
-     "Format key_takeaways as a markdown bullet list, one takeaway per line. "
-     "Ensure key_takeaways is content-rich and specific, not generic. It should be non-redundant and cover all key facts from the article.\n\n"
+    "Generate summary and key_takeaways from the content. {detail_guidance}\n\n"
      "Content:\n{text}"),
 ]
 
@@ -33,19 +37,35 @@ async def run(
     trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Single-call summarization. Returns full result dict."""
-    llm = build_llm(model_provider, model_name)
-    chain = _PROMPT | llm.with_structured_output(_SummaryPromptResponse, include_raw=True)
+    llm = build_structured_llm(_SummaryPromptResponse, model_provider, model_name)
+    chain = _PROMPT | llm
 
     text = trafilatura["text"]
 
-    detail_guidance = build_detail_guidance(text)
+    detail_guidance = "\n".join(
+        [
+            build_generic_detail_guidance(text),
+            build_summary_detail_guidance(text),
+            build_takeaway_detail_guidance(text),
+        ]
+    )
     invoke_params = {
         "language": language,
         "detail_guidance": detail_guidance,
         "text": text.strip(),
     }
 
+    # from pydantic import ValidationError
+    # try:
     raw_invoke_output: dict[str, Any] | BaseModel = await chain.ainvoke(invoke_params)
+    logger.debug("raw invoke struct:\n%s", f"{raw_invoke_output=}")
+    logger.debug("raw invoke dir: %s\n", dir(raw_invoke_output))
+    # except ValidationError as e:
+    #     logger.error("Failed to invoke chain: %s", str(e))
+    #     from pprint import pprint
+    #     pprint(e)
+    #     raise
+
     if isinstance(raw_invoke_output, BaseModel):
         raw_invoke_output = raw_invoke_output.model_dump()
 

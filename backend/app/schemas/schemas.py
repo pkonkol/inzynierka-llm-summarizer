@@ -81,7 +81,7 @@ class JobListItemResponse(BaseModel):
     source_url: str
     status: Literal["pending", "completed", "failed"]
     title: str = ""
-    short_summary: str = ""
+    summary: str = ""
     model_provider: str = ""
     model_name: str = ""
     summary_mode: SummaryMode = "simple"

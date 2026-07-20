@@ -1,7 +1,7 @@
 """Cascade summarization — two sequential LLM calls.
 
 Call 1: extract key_takeaways from raw text.
-Call 2: write title + short_summary using ONLY the takeaways (not the full text).
+Call 2: write title + summary using ONLY the takeaways (not the full text).
 
 The idea: the second call synthesises from the already-distilled points,
 potentially producing a more coherent and focused summary.
@@ -13,7 +13,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from ...schemas.summary import SummaryResponse
-from ._base import build_detail_guidance, build_llm, extract_usage, raw_output_str
+from ._base import (
+    build_generic_detail_guidance,
+    build_structured_llm,
+    build_summary_detail_guidance,
+    build_takeaway_detail_guidance,
+    extract_usage,
+    raw_output_str,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,7 @@ class _TakeawaysOnly(BaseModel):
 
 
 class _SummaryOnly(BaseModel):
-    short_summary: str
+    summary: str
 
 
 _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
@@ -31,9 +38,7 @@ _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
      "You are an expert analyst. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Extract the most important points from the following web content. {detail_guidance}\n"
-     "Format key_takeaways as a markdown bullet list, one point per line. "
-     "Be specific and content-rich — avoid generic statements.\n\n"
+    "Generate key_takeaways from the content. {detail_guidance}\n\n"
      "Content:\n{text}"),
 ])
 
@@ -42,9 +47,7 @@ _PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages([
      "You are an expert editor. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Based ONLY on the key points below, write a concise title and a short prose summary.\n"
-     "The summary should be 2-4 sentences synthesising the core argument.\n"
-     "Do NOT introduce information not present in the key points.\n\n"
+    "Generate summary from the key points. {detail_guidance}\n\n"
      "Key points:\n{takeaways}"),
 ])
 
@@ -53,21 +56,34 @@ async def run(
     trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Two sequential calls: takeaways → synthesis. Returns full result dict."""
-    llm = build_llm(model_provider, model_name)
-    chain_takeaways = _PROMPT_TAKEAWAYS | llm.with_structured_output(_TakeawaysOnly, include_raw=True)
-    chain_synthesis = _PROMPT_SYNTHESIS | llm.with_structured_output(_SummaryOnly,   include_raw=True)
+    takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
+    summary_llm = build_structured_llm(_SummaryOnly, model_provider, model_name)
+    chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
+    chain_synthesis = _PROMPT_SYNTHESIS | summary_llm
 
     text = trafilatura["text"]
 
-    detail_guidance = build_detail_guidance(text)
+    takeaways_detail_guidance = "\n".join(
+        [
+            build_generic_detail_guidance(text),
+            build_takeaway_detail_guidance(text),
+        ]
+    )
+    summary_detail_guidance = "\n".join(
+        [
+            build_generic_detail_guidance(text),
+            build_summary_detail_guidance(text),
+        ]
+    )
     params_1 = {
         "language": language,
-        "detail_guidance": detail_guidance,
         "text": text.strip(),
     }
 
     # --- call 1: extract takeaways ---
-    raw_tk: dict[str, Any] | BaseModel = await chain_takeaways.ainvoke(params_1)
+    raw_tk: dict[str, Any] | BaseModel = await chain_takeaways.ainvoke(
+        {**params_1, "detail_guidance": takeaways_detail_guidance}
+    )
     if isinstance(raw_tk, BaseModel):
         raw_tk = raw_tk.model_dump()
 
@@ -75,7 +91,9 @@ async def run(
     parsed_tk: _TakeawaysOnly | None = raw_tk.get("parsed")
     if parsed_tk is None:
         err = ValueError("[cascade] model returned unparseable takeaways response")
-        err.raw_output = raw_str_tk  # type: ignore[attr-defined]
+        s = raw_str_tk
+        err.raw_output = s # type: ignore[attr-defined]
+        logger.error("raw_output: %s", s)
         raise err
 
     # --- call 2: synthesise from takeaways only ---
@@ -83,6 +101,7 @@ async def run(
         "language": language,
         "source_url": source_url,
         "takeaways": parsed_tk.key_takeaways,
+        "detail_guidance": summary_detail_guidance,
     }
     raw_sm: dict[str, Any] | BaseModel = await chain_synthesis.ainvoke(params_2)
     if isinstance(raw_sm, BaseModel):
@@ -92,7 +111,9 @@ async def run(
     parsed_sm: _SummaryOnly | None = raw_sm.get("parsed")
     if parsed_sm is None:
         err = ValueError("[cascade] model returned unparseable synthesis response")
-        err.raw_output = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"  # type: ignore[attr-defined]
+        s = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
+        err.raw_output = s # type: ignore[attr-defined]
+        logger.error("raw_output: %s", s)
         raise err
 
     usage_tk, meta_tk = extract_usage(raw_tk.get("raw"))
@@ -108,7 +129,7 @@ async def run(
 
     result = SummaryResponse(
         title=trafilatura["title"],
-        short_summary=parsed_sm.short_summary,
+        summary=parsed_sm.summary,
         key_takeaways=parsed_tk.key_takeaways,
         source_url=source_url,
     ).model_dump()
@@ -121,10 +142,15 @@ async def run(
     result["raw_output"]      = raw_output_combined
     result["input_text"]      = text.strip()
     result["prompt_template"] = [
-        ("[takeaways] system",  _PROMPT_TAKEAWAYS.messages[0].prompt.template),
-        ("[takeaways] human",   _PROMPT_TAKEAWAYS.messages[1].prompt.template),
-        ("[synthesis] system",  _PROMPT_SYNTHESIS.messages[0].prompt.template),
-        ("[synthesis] human",   _PROMPT_SYNTHESIS.messages[1].prompt.template),
+        ("[takeaways] system",  _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[takeaways] human",   _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[synthesis] system",  _PROMPT_SYNTHESIS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[synthesis] human",   _PROMPT_SYNTHESIS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
     ]
-    result["prompt_params"] = {k: v for k, v in params_1.items() if k != "text"}
+    result["prompt_params"] = {
+        "language": language,
+        "source_url": source_url,
+        "takeaways_detail_guidance": takeaways_detail_guidance,
+        "summary_detail_guidance": summary_detail_guidance,
+    }
     return result

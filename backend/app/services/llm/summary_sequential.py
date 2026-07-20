@@ -1,7 +1,7 @@
 """Sequential summarization — two independent LLM calls.
 
 Call 1: extract key_takeaways from raw text.
-Call 2: write title + short_summary from raw text (independently).
+Call 2: write title + summary from raw text (independently).
 
 Both calls run concurrently (asyncio.gather). The two usages are summed.
 """
@@ -13,7 +13,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from ...schemas.summary import SummaryResponse
-from ._base import build_detail_guidance, build_llm, extract_usage, raw_output_str
+from ._base import (
+    build_generic_detail_guidance,
+    build_structured_llm,
+    build_summary_detail_guidance,
+    build_takeaway_detail_guidance,
+    extract_usage,
+    raw_output_str,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +30,7 @@ class _TakeawaysOnly(BaseModel):
 
 
 class _SummaryOnly(BaseModel):
-    short_summary: str
+    summary: str
 
 
 _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
@@ -31,9 +38,7 @@ _PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
      "You are an expert analyst. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Extract the most important points from the following content. {detail_guidance}\n"
-     "Format key_takeaways as a markdown bullet list, one point per line. "
-     "Be specific and content-rich — avoid generic statements.\n\n"
+    "Generate key_takeaways from the content. {detail_guidance}\n\n"
      "Content:\n{text}"),
 ])
 
@@ -42,8 +47,7 @@ _PROMPT_SUMMARY = ChatPromptTemplate.from_messages([
      "You are an expert summarizer. Write the entire output in language code: {language}. "
      "Return only valid JSON matching the requested schema."),
     ("human",
-     "Write a concise title and a short prose summary for the following content.\n"
-     "The summary should be 2-4 sentences, capturing the core argument or findings.\n\n"
+    "Generate summary from the content. {detail_guidance}\n\n"
      "Content:\n{text}"),
 ])
 
@@ -52,30 +56,37 @@ async def run(
     trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Two independent calls run concurrently. Returns merged full result dict."""
-    llm = build_llm(model_provider, model_name)
-    chain_takeaways = _PROMPT_TAKEAWAYS | llm.with_structured_output(_TakeawaysOnly, include_raw=True)
-    chain_summary   = _PROMPT_SUMMARY   | llm.with_structured_output(_SummaryOnly,   include_raw=True)
+    takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
+    summary_llm = build_structured_llm(_SummaryOnly, model_provider, model_name)
+    chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
+    chain_summary   = _PROMPT_SUMMARY   | summary_llm
 
     text = trafilatura["text"]
 
-    detail_guidance = build_detail_guidance(text)
+    takeaways_detail_guidance = "\n".join(
+        [
+            build_generic_detail_guidance(text),
+            build_takeaway_detail_guidance(text),
+        ]
+    )
+    summary_detail_guidance = "\n".join(
+        [
+            build_generic_detail_guidance(text),
+            build_summary_detail_guidance(text),
+        ]
+    )
     base_params = {
         "language": language,
-        "detail_guidance": detail_guidance,
         "text": text.strip(),
     }
 
     (raw_tk, raw_sm) = await asyncio.gather(
-        chain_takeaways.ainvoke(base_params),
-        chain_summary.ainvoke(base_params),
+        chain_takeaways.ainvoke({**base_params, "detail_guidance": takeaways_detail_guidance}),
+        chain_summary.ainvoke({**base_params, "detail_guidance": summary_detail_guidance}),
     )
 
-    def _unwrap(raw: Any) -> dict[str, Any]:
-        if isinstance(raw, BaseModel):
-            return raw.model_dump()
-        return raw
-
-    raw_tk, raw_sm = _unwrap(raw_tk), _unwrap(raw_sm)
+    raw_tk = raw_tk.model_dump() if isinstance(raw_tk, BaseModel) else raw_tk
+    raw_sm = raw_sm.model_dump() if isinstance(raw_sm, BaseModel) else raw_sm
 
     raw_str_tk = raw_output_str(raw_tk)
     raw_str_sm = raw_output_str(raw_sm)
@@ -86,7 +97,9 @@ async def run(
     if parsed_tk is None or parsed_sm is None:
         missing = "takeaways" if parsed_tk is None else "summary"
         err = ValueError(f"[sequential] model returned unparseable {missing} response")
-        err.raw_output = f"--- takeaways ---\n{raw_str_tk}\n--- summary ---\n{raw_str_sm}"  # type: ignore[attr-defined]
+        s = f"--- takeaways ---\n{raw_str_tk}\n--- summary ---\n{raw_str_sm}"  # type: ignore[attr-defined]
+        err.raw_output = s # type: ignore[attr-defined]
+        logger.error("raw_output: %s", s)
         raise err
 
     usage_tk, meta_tk = extract_usage(raw_tk.get("raw"))
@@ -103,7 +116,7 @@ async def run(
 
     result = SummaryResponse(
         title=trafilatura["title"],
-        short_summary=parsed_sm.short_summary,
+        summary=parsed_sm.summary,
         key_takeaways=parsed_tk.key_takeaways,
         source_url=source_url,
     ).model_dump()
@@ -116,10 +129,14 @@ async def run(
     result["raw_output"]      = raw_output_combined
     result["input_text"]      = text.strip()
     result["prompt_template"] = [
-        ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),
-        ("[takeaways] human",  _PROMPT_TAKEAWAYS.messages[1].prompt.template),
-        ("[summary] system",   _PROMPT_SUMMARY.messages[0].prompt.template),
-        ("[summary] human",    _PROMPT_SUMMARY.messages[1].prompt.template),
+        ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[takeaways] human",  _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[summary] system",   _PROMPT_SUMMARY.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ("[summary] human",    _PROMPT_SUMMARY.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
     ]
-    result["prompt_params"] = {k: v for k, v in base_params.items() if k != "text"}
+    result["prompt_params"] = {
+        "language": language,
+        "takeaways_detail_guidance": takeaways_detail_guidance,
+        "summary_detail_guidance": summary_detail_guidance,
+    }
     return result

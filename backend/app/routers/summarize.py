@@ -101,12 +101,12 @@ async def run_summarization_job(
             }},
         )
 
-        short_summary = summary_data.get("short_summary", "")
+        summary = summary_data.get("summary", "")
         takeaways = summary_data.get("key_takeaways", "")
-        if short_summary or takeaways:
-            asyncio.create_task(_metrics_task(job_id, short_summary, takeaways, data["text"]))
-        if run_deepeval and (short_summary or takeaways):
-            asyncio.create_task(_deepeval_metrics_task(job_id, short_summary, takeaways, data["text"]))
+        if summary or takeaways:
+            asyncio.create_task(_metrics_task(job_id, summary, takeaways, data["text"]))
+        if run_deepeval and (summary or takeaways):
+            asyncio.create_task(_deepeval_metrics_task(job_id, summary, takeaways, data["text"]))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -235,7 +235,7 @@ async def list_all_jobs_flat(
             source_url=str(doc.get("source_url", "")),
             status=doc.get("status", "pending"),
             title=str(sd.get("title", "")),
-            short_summary=str(sd.get("short_summary", "")),
+            summary=str(sd.get("summary", "")),
             model_provider=str(doc.get("model_provider", "")),
             model_name=str(doc.get("model_name", "")),
             summary_mode=doc.get("summary_mode") or "simple",

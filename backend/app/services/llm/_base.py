@@ -40,15 +40,43 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
 
     raise NotImplementedError(f"Provider {model_provider} is not implemented yet")
 
+def build_structured_llm(structure: type, model_provider: str, model_name: str):
+    llm = build_llm(model_provider, model_name)
 
-def build_detail_guidance(text: str) -> str:
-    # n = len(text)
-    # if n < 3000:
-    #     return "Write a compact summary with 3-4 key takeaways."
-    # if n < 9000:
-    #     return "Write a medium-depth summary with 5-7 specific key takeaways."
-    # return "Write a detailed summary with 8-12 concrete key takeaways and nuanced context."
-    return "Write a non-redundant summary containing all key facts. The summary should be easily readable and create low cognitive load on the user."
+    if model_provider.lower() == "openrouter":
+        return llm.with_structured_output(
+            structure,
+            include_raw=True,
+            method="json_mode",
+        )
+
+    return llm.with_structured_output(
+        structure,
+        include_raw=True,
+    )
+
+def build_generic_detail_guidance(text: str) -> str:
+    return (
+        "Return only valid JSON matching the requested schema. "
+        "Do not wrap the response in markdown code fences. "
+        "Do not add extra keys or explanatory text."
+    )
+
+
+def build_summary_detail_guidance(text: str) -> str:
+    return (
+        "Write a fluent prose summary that stays coherent and easy to read. "
+        "Include all important facts from the source without introducing information that is not present. "
+        "Keep the result concise but complete."
+    )
+
+
+def build_takeaway_detail_guidance(text: str) -> str:
+    return (
+        "Write key_takeaways as a single markdown bullet list, with one takeaway per line. "
+        "Keep the points specific, content-rich, and non-redundant. "
+        "Cover the important facts from the source without repeating the same idea."
+    )
 
 
 def as_dict(obj: Any) -> dict[str, Any]:

@@ -314,7 +314,7 @@ function JobDetails({ job }: { job: JobStatus }) {
 
             <section>
                 <h5 className="section-kicker">Krótkie podsumowanie</h5>
-                <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data?.short_summary}</p>
+                <p className="m-0 text-[1.02rem] leading-[1.72]">{job.summary_data?.summary}</p>
             </section>
 
             <section>

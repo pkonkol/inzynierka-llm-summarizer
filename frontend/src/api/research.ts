@@ -1,0 +1,21 @@
+import { request } from "./client";
+import type {
+    EvaluationSetCreateResponse,
+    EvaluationSetDetail,
+    EvaluationSetImportPayload,
+    EvaluationSetListItem,
+} from "../types/research";
+
+export const listEvaluationSets = (): Promise<EvaluationSetListItem[]> =>
+    request<EvaluationSetListItem[]>("/api/v1/research/evaluation-sets");
+
+export const createEvaluationSet = (
+    payload: EvaluationSetImportPayload,
+): Promise<EvaluationSetCreateResponse> =>
+    request<EvaluationSetCreateResponse>("/api/v1/research/evaluation-sets", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+
+export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
+    request<EvaluationSetDetail>(`/api/v1/research/evaluation-sets/${setId}`);

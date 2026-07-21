@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .core.config import settings
-from .routers import auth, health, meta, summarize
+from .routers import auth, health, meta, summarize, research
 
 setup_logging()
 
@@ -24,6 +24,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(summarize.router)
 app.include_router(meta.router)
+app.include_router(research.router)
 
 
 @app.on_event("startup")

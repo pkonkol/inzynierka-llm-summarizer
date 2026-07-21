@@ -11,6 +11,7 @@ class SourceMeta(BaseModel):
     url: str | None = None
     title: str | None = None
     source: str | None = None   # "cnn", "own", "moldbug", …
+    extra: dict[str, Any] = Field(default_factory=dict)
 
 class TextMetrics(BaseModel):
     word_count: int | None = None
@@ -94,3 +95,55 @@ class EvaluationRunResponse(BaseModel):
     finished_at: datetime | None = None
     entries: list[EvalRunEntry] = Field(default_factory=list)
     aggregate_metrics: dict[str, Any] = Field(default_factory=dict)
+
+
+# --- import/export models
+
+class GoldenMetrics(BaseModel):
+    text_stats: dict[str, Any] | None = None
+    readability: dict[str, Any] | None = None
+    deepeval: dict[str, Any] | None = None
+
+
+class EvaluationSetEntryImport(BaseModel):
+    input_text: str
+    golden_summary: str
+    source_meta: dict[str, Any] = Field(default_factory=dict)
+    golden_metrics: GoldenMetrics | None = None
+
+
+class EvaluationSetImportRequest(BaseModel):
+    name: str
+    language: str = "en"
+    entries: list[EvaluationSetEntryImport]
+
+
+class EvaluationSetEntryResponse(BaseModel):
+    entry_id: str
+    golden_summary: str
+    source_meta: dict[str, Any] = Field(default_factory=dict)
+    golden_metrics: GoldenMetrics | None = None
+
+
+class EvaluationSetListItemResponse(BaseModel):
+    evaluation_set_id: str
+    name: str
+    language: str
+    entry_count: int
+    created_at: datetime
+
+
+class EvaluationSetCreateResponse(BaseModel):
+    evaluation_set_id: str
+    name: str
+    language: str
+    entry_count: int
+    created_at: datetime
+
+
+class EvaluationSetDetailResponse(BaseModel):
+    evaluation_set_id: str
+    name: str
+    language: str
+    created_at: datetime
+    entries: list[EvaluationSetEntryResponse]

@@ -7,7 +7,7 @@ export function getToken(): string | null { return localStorage.getItem(TOKEN_KE
 export function setToken(token: string): void { localStorage.setItem(TOKEN_KEY, token); }
 export function clearToken(): void { localStorage.removeItem(TOKEN_KEY); }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const token = getToken();
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {

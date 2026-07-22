@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { createEvaluationSet, listEvaluationSets } from "../api/research";
+import { createEvaluationSet, getEvaluationSet, listEvaluationSets } from "../api/research";
 import type {
+        EvaluationSetDetail,
     EvaluationSetImportPayload,
     EvaluationSetListItem,
 } from "../types/research";
@@ -22,6 +23,16 @@ const PRETTY_EXAMPLE = `{
   ]
 }`;
 
+function getResearchSetIdFromPath(pathname: string): string | null {
+    const match = pathname.match(/^\/research\/([^/]+)$/);
+    return match?.[1] ?? null;
+}
+
+function navigateTo(path: string) {
+    window.history.pushState({}, "", path);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export function ResearchPage() {
     const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
     const [sets, setSets] = useState<EvaluationSetListItem[]>([]);
@@ -29,6 +40,10 @@ export function ResearchPage() {
     const [isImporting, setIsImporting] = useState(false);
     const [flashMessage, setFlashMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    const [pathname, setPathname] = useState(window.location.pathname);
+    const [selectedSet, setSelectedSet] = useState<EvaluationSetDetail | null>(null);
+    const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
     const parsedPreview = useMemo(() => {
         try {
@@ -49,9 +64,22 @@ export function ResearchPage() {
         }
     }, [rawJson]);
 
+    const selectedSetId = getResearchSetIdFromPath(pathname);
+    const isDetailView = Boolean(selectedSetId);
+
     const loadSets = async () => {
         const data = await listEvaluationSets();
         setSets(data);
+    };
+
+    const loadSetDetail = async (setId: string) => {
+        setIsLoadingDetail(true);
+        try {
+            const data = await getEvaluationSet(setId);
+            setSelectedSet(data);
+        } finally {
+            setIsLoadingDetail(false);
+        }
     };
 
     const handleImport = async () => {
@@ -120,6 +148,21 @@ export function ResearchPage() {
         const t = setTimeout(() => setFlashMessage(null), 4500);
         return () => clearTimeout(t);
     }, [flashMessage]);
+
+    useEffect(() => {
+        const onPop = () => setPathname(window.location.pathname);
+        window.addEventListener("popstate", onPop);
+        return () => window.removeEventListener("popstate", onPop);
+    }, []);
+
+    useEffect(() => {
+        if (!selectedSetId) {
+            setSelectedSet(null);
+            return;
+        }
+
+        void loadSetDetail(selectedSetId);
+    }, [selectedSetId]);
 
     const importPanel = (
         <section className="panel-shell min-w-0">
@@ -243,8 +286,9 @@ export function ResearchPage() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                window.history.pushState({}, "", `/research/${set.evaluation_set_id}`);
-                                                window.dispatchEvent(new PopStateEvent("popstate"));
+                                                // window.history.pushState({}, "", `/research/${set.evaluation_set_id}`);
+                                                navigateTo(`/research/${set.evaluation_set_id}`)
+                                                // window.dispatchEvent(new PopStateEvent("popstate"));
                                             }}
                                             className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
                                         >
@@ -260,10 +304,98 @@ export function ResearchPage() {
         </section>
     );
 
+        const detailPanel = (
+        <section className="panel-shell min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p className="section-kicker">Evaluation set</p>
+                    <h1 className="m-0 font-display text-[1.1rem] uppercase tracking-[0.04em]">
+                        {selectedSet?.name ?? "Loading..."}
+                    </h1>
+                    <p className="helper-copy mt-2">
+                        {selectedSet
+                            ? `${selectedSet.language} · ${selectedSet.entries.length} entries`
+                            : "Ładowanie szczegółów seta..."}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => navigateTo("/research")}
+                    className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
+                >
+                    Back to sets
+                </button>
+            </div>
+
+            {isLoadingDetail ? (
+                <p className="helper-copy mt-4">Ładowanie szczegółów EvaluationSet...</p>
+            ) : selectedSet ? (
+                <div className="mt-4 grid gap-3">
+                    {selectedSet.entries.map((entry, index) => (
+                        <article
+                            key={entry.entry_id}
+                            className="border border-panel-border bg-panel-solid px-3.5 py-3"
+                        >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                        Entry {index + 1}
+                                    </p>
+                                    <p className="m-0 mt-1 font-mono text-[0.82rem] text-muted">
+                                        {entry.entry_id}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-3">
+                                <div>
+                                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                        Golden summary
+                                    </p>
+                                    <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
+                                        {entry.golden_summary}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                        Source meta
+                                    </p>
+                                    <pre className="m-0 mt-1 overflow-x-auto whitespace-pre-wrap border border-panel-border bg-page px-3 py-2 font-mono text-[0.82rem] text-muted">
+{JSON.stringify(entry.source_meta, null, 2)}
+                                    </pre>
+                                </div>
+
+                                <div>
+                                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                        Golden metrics
+                                    </p>
+                                    <pre className="m-0 mt-1 overflow-x-auto whitespace-pre-wrap border border-panel-border bg-page px-3 py-2 font-mono text-[0.82rem] text-muted">
+{JSON.stringify(entry.golden_metrics, null, 2)}
+                                    </pre>
+                                </div>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            ) : (
+                <p className="helper-copy mt-4">Nie znaleziono EvaluationSet.</p>
+            )}
+        </section>
+    );
+
     return (
         <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
-            {importPanel}
-            {listPanel}
+            {isDetailView ? (
+                detailPanel
+            ) : (
+                <>
+                    {importPanel}
+                    {listPanel}
+                </>
+            )}
+
         </main>
     );
 }

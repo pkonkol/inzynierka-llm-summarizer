@@ -22,3 +22,11 @@ export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
 
 export const exportEvaluationSet = (setId: string): Promise<unknown> =>
     request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);
+
+export const evaluateMissingGoldenMetrics = (
+    setId: string,
+): Promise<{ status: string; updated_entries: number; total_entries: number }> =>
+    request<{ status: string; updated_entries: number; total_entries: number }>(
+        `/api/v1/research/evaluation-sets/${setId}/golden-metrics`,
+        { method: "POST" },
+    );

@@ -14,6 +14,7 @@ from ..schemas.research import (
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
 )
+from ..services.evaluation_set_metrics import build_golden_metrics
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
@@ -133,3 +134,35 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
     }
 
     return JSONResponse(content=payload)
+
+@router.post("/evaluation-sets/{set_id}/golden-metrics")
+async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
+    collection = get_evaluation_sets_collection()
+    document = await collection.find_one({"_id": ObjectId(set_id)})
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    entries = document["entries"]
+    updated_count = 0
+
+    for entry in entries:
+        if entry.get("golden_metrics") is not None:
+            continue
+
+        entry["golden_metrics"] = await build_golden_metrics(
+            input_text=entry["input_text"],
+            golden_summary=entry["golden_summary"],
+        )
+        updated_count += 1
+
+    await collection.update_one(
+        {"_id": document["_id"]},
+        {"$set": {"entries": entries}},
+    )
+
+    return {
+        "status": "ok",
+        "updated_entries": updated_count,
+        "total_entries": len(entries),
+    }

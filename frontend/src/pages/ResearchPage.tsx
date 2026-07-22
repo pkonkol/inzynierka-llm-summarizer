@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { createEvaluationSet, getEvaluationSet, listEvaluationSets, exportEvaluationSet } from "../api/research";
+import { evaluateMissingGoldenMetrics, createEvaluationSet, getEvaluationSet, listEvaluationSets, exportEvaluationSet } from "../api/research";
 import type {
         EvaluationSetDetail,
     EvaluationSetImportPayload,
@@ -56,6 +56,8 @@ export function ResearchPage() {
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
     const [isExporting, setIsExporting] = useState(false);
+
+    const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
 
     const parsedPreview = useMemo(() => {
         try {
@@ -149,6 +151,26 @@ export function ResearchPage() {
         }
 
         event.target.value = "";
+    };
+
+    const handleEvaluateMetrics = async () => {
+        if (!selectedSetId) return;
+
+        setErrorMessage(null);
+        setFlashMessage(null);
+        setIsEvaluatingMetrics(true);
+
+        try {
+            const result = await evaluateMissingGoldenMetrics(selectedSetId);
+            setFlashMessage(
+                `Golden metrics updated for ${result.updated_entries} of ${result.total_entries} entries.`,
+            );
+            await loadSetDetail(selectedSetId);
+        } catch (error) {
+            setErrorMessage(`Golden metrics evaluation failed: ${String(error)}`);
+        } finally {
+            setIsEvaluatingMetrics(false);
+        }
     };
 
     useEffect(() => {
@@ -349,6 +371,14 @@ export function ResearchPage() {
                     </p>
                 </div>
 
+                <button
+                    type="button"
+                    onClick={() => void handleEvaluateMetrics()}
+                    disabled={!selectedSet || isEvaluatingMetrics}
+                    className="border border-panel-border bg-accent-500 px-3 py-2 text-[0.85rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {isEvaluatingMetrics ? "Evaluating..." : "Evaluate metrics"}
+                </button>
                 <button
                     type="button"
                     onClick={() => void handleExportSet()}

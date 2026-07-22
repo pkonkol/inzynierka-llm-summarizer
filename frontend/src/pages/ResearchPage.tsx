@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { createEvaluationSet, getEvaluationSet, listEvaluationSets } from "../api/research";
+import { createEvaluationSet, getEvaluationSet, listEvaluationSets, exportEvaluationSet } from "../api/research";
 import type {
         EvaluationSetDetail,
     EvaluationSetImportPayload,
@@ -33,6 +33,16 @@ function navigateTo(path: string) {
     window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
+function downloadJson(filename: string, data: unknown) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 export function ResearchPage() {
     const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
     const [sets, setSets] = useState<EvaluationSetListItem[]>([]);
@@ -44,6 +54,8 @@ export function ResearchPage() {
     const [pathname, setPathname] = useState(window.location.pathname);
     const [selectedSet, setSelectedSet] = useState<EvaluationSetDetail | null>(null);
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+
+    const [isExporting, setIsExporting] = useState(false);
 
     const parsedPreview = useMemo(() => {
         try {
@@ -103,6 +115,24 @@ export function ResearchPage() {
             setErrorMessage(`Import nie powiódł się: ${String(error)}`);
         } finally {
             setIsImporting(false);
+        }
+    };
+
+    const handleExportSet = async () => {
+        if (!selectedSetId || !selectedSet) return;
+
+        setErrorMessage(null);
+        setFlashMessage(null);
+        setIsExporting(true);
+
+        try {
+            const data = await exportEvaluationSet(selectedSetId);
+            downloadJson(`${selectedSet.name}.json`, data);
+            setFlashMessage(`Wyeksportowano EvaluationSet: ${selectedSet.name}.`);
+        } catch (error) {
+            setErrorMessage(`Export nie powiódł się: ${String(error)}`);
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -321,6 +351,14 @@ export function ResearchPage() {
 
                 <button
                     type="button"
+                    onClick={() => void handleExportSet()}
+                    disabled={!selectedSet || isExporting}
+                    className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {isExporting ? "Exporting..." : "Export JSON"}
+                </button>
+                <button
+                    type="button"
                     onClick={() => navigateTo("/research")}
                     className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
                 >
@@ -389,12 +427,10 @@ export function ResearchPage() {
         <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
             {isDetailView ? (
                 detailPanel
-            ) : (
-                <>
-                    {importPanel}
-                    {listPanel}
-                </>
-            )}
+            ) : (<>
+                {importPanel}
+                {listPanel}
+            </>)}
 
         </main>
     );

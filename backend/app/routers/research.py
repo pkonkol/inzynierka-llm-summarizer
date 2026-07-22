@@ -4,6 +4,7 @@ from uuid import uuid4
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 from pymongo import DESCENDING
+from fastapi.responses import JSONResponse
 
 from ..core.mongo import get_evaluation_sets_collection
 from ..schemas.research import (
@@ -108,3 +109,27 @@ async def get_evaluation_set(set_id: str) -> EvaluationSetDetailResponse:
             for entry in document["entries"]
         ],
     )
+
+@router.get("/evaluation-sets/{set_id}/export")
+async def export_evaluation_set(set_id: str) -> JSONResponse:
+    collection = get_evaluation_sets_collection()
+    document = await collection.find_one({"_id": ObjectId(set_id)})
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    payload = {
+        "name": document["name"],
+        "language": document["language"],
+        "entries": [
+            {
+                "input_text": entry["input_text"],
+                "golden_summary": entry["golden_summary"],
+                "source_meta": entry.get("source_meta", {}),
+                "golden_metrics": entry.get("golden_metrics"),
+            }
+            for entry in document["entries"]
+        ],
+    }
+
+    return JSONResponse(content=payload)

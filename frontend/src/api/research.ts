@@ -19,3 +19,6 @@ export const createEvaluationSet = (
 
 export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
     request<EvaluationSetDetail>(`/api/v1/research/evaluation-sets/${setId}`);
+
+export const exportEvaluationSet = (setId: string): Promise<unknown> =>
+    request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);

@@ -2,35 +2,19 @@ import { useEffect, useState } from "react";
 
 import {
     createSummaryJob,
-    getAuthStatus,
     getJobsForUrl,
     getJobStatus,
-    getToken,
     listSummarizedUrls,
 } from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
-import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
-import { LoginOverlay } from "../components/LoginOverlay";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
+import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
 
 const LIST_REFRESH_MS = 20_000;
 const POLLING_MS = 2_500;
 
-type PendingSubmit = {
-    url: string;
-    model_provider: string;
-    model_name: string;
-    language: string;
-    summary_mode: string;
-    run_deepeval: boolean;
-} | null;
-
 export function HomePage() {
-    const [isAuthEnabled, setIsAuthEnabled] = useState(false);
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [pendingSubmit, setPendingSubmit] = useState<PendingSubmit>(null);
-
     const [urlList, setUrlList] = useState<SummaryUrlListItem[]>([]);
     const [isLoadingList, setIsLoadingList] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,41 +69,13 @@ export function HomePage() {
         }
     };
 
-    const handleSubmit = async (
-        url: string,
-        model_provider: string,
-        model_name: string,
-        language: string,
-        summary_mode: string,
-        run_deepeval: boolean,
-    ) => {
-        if (!isAuthEnabled || getToken()) {
-            await submitSummary(url, model_provider, model_name, language, summary_mode, run_deepeval);
-            return;
-        }
-        setPendingSubmit({ url, model_provider, model_name, language, summary_mode, run_deepeval });
-        setIsLoginOpen(true);
-    };
-
-    const handleLoginSuccess = async () => {
-        setIsLoginOpen(false);
-        if (!pendingSubmit) return;
-        const { url, model_provider, model_name, language, summary_mode, run_deepeval } = pendingSubmit;
-        setPendingSubmit(null);
-        await submitSummary(url, model_provider, model_name, language, summary_mode, run_deepeval);
-    };
-
     useEffect(() => {
         let isMounted = true;
         const initialize = async () => {
             try {
-                const [authResult, listResult] = await Promise.allSettled([
-                    getAuthStatus(),
-                    listSummarizedUrls(50),
-                ]);
+                const listResult = await listSummarizedUrls(50);
                 if (!isMounted) return;
-                if (authResult.status === "fulfilled") setIsAuthEnabled(authResult.value.enabled);
-                if (listResult.status === "fulfilled") setUrlList(listResult.value);
+                setUrlList(listResult);
             } finally {
                 if (isMounted) setIsLoadingList(false);
             }
@@ -164,15 +120,7 @@ export function HomePage() {
         return () => clearTimeout(t);
     }, [flashMessage]);
 
-    console.log(detailJobs);
     return (
-        <>
-        <LoginOverlay
-            isOpen={isLoginOpen}
-            onClose={() => { setIsLoginOpen(false); setPendingSubmit(null); }}
-            onSuccess={() => { void handleLoginSuccess(); }}
-        />
-
         <main className={
             hasDetailOpen
                 ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
@@ -184,7 +132,7 @@ export function HomePage() {
                     : "min-w-0"
             }>
                 {!hasDetailOpen ? (
-                    <UrlSubmitCard onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+                    <UrlSubmitCard onSubmit={submitSummary} isSubmitting={isSubmitting} />
                 ) : null}
 
                 {flashMessage ? (
@@ -210,6 +158,5 @@ export function HomePage() {
                 onClose={() => setSelectedUrl(null)}
             />
         </main>
-        </>
     );
 }

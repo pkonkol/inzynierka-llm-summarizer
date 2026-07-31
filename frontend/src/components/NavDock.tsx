@@ -3,6 +3,9 @@ type Route = "home" | "jobs" | "research";
 interface NavDockProps {
     active: Route;
     onNavigate: (route: Route) => void;
+    isAuthEnabled: boolean;
+    isLoggedIn: boolean;
+    onOpenLogin: () => void;
 }
 
 const NAV_ITEMS: { route: Route; label: string }[] = [
@@ -11,7 +14,7 @@ const NAV_ITEMS: { route: Route; label: string }[] = [
     { route: "research", label: "Research" },
 ];
 
-export function NavDock({ active, onNavigate }: NavDockProps) {
+export function NavDock({ active, onNavigate, isAuthEnabled, isLoggedIn, onOpenLogin }: NavDockProps) {
     const navItems = NAV_ITEMS.map(({ route, label }) => (
         <button
             key={route}
@@ -31,10 +34,24 @@ export function NavDock({ active, onNavigate }: NavDockProps) {
     return (
         <div className="flex justify-center pt-4 px-4">
             <nav
-                className="inline-flex border border-panel-border bg-panel-solid shadow-detail-desktop"
+                className="inline-flex items-center border border-panel-border bg-panel-solid shadow-detail-desktop"
                 aria-label="Nawigacja główna"
             >
                 {navItems}
+                {isAuthEnabled && !isLoggedIn ? (
+                    <button
+                        type="button"
+                        onClick={onOpenLogin}
+                        className="border-l border-panel-border px-5 py-2.5 font-mono text-[0.82rem] uppercase tracking-widest text-ink transition-colors duration-150 hover:bg-subtle"
+                    >
+                        Login
+                    </button>
+                ) : null}
+                {isAuthEnabled && isLoggedIn ? (
+                    <span className="border-l border-success-border bg-success-bg px-5 py-2.5 font-mono text-[0.82rem] uppercase tracking-widest text-success-text">
+                        Logged in
+                    </span>
+                ) : null}
             </nav>
         </div>
     );

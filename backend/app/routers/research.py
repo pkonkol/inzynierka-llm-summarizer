@@ -2,11 +2,13 @@ from datetime import datetime, UTC
 from uuid import uuid4
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pymongo import DESCENDING
 from fastapi.responses import JSONResponse
 
+
 from ..core.mongo import get_evaluation_sets_collection
+from ..core.auth import require_auth
 from ..schemas.research import (
     EvaluationSetCreateResponse,
     EvaluationSetDetailResponse,
@@ -19,7 +21,7 @@ from ..services.evaluation_set_metrics import build_golden_metrics
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
 
-@router.post("/evaluation-sets", response_model=EvaluationSetCreateResponse)
+@router.post("/evaluation-sets", response_model=EvaluationSetCreateResponse, dependencies=[Depends(require_auth)])
 async def create_evaluation_set(
     payload: EvaluationSetImportRequest,
 ) -> EvaluationSetCreateResponse:
@@ -135,7 +137,7 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
 
     return JSONResponse(content=payload)
 
-@router.post("/evaluation-sets/{set_id}/golden-metrics")
+@router.post("/evaluation-sets/{set_id}/golden-metrics", dependencies=[Depends(require_auth)])
 async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
     collection = get_evaluation_sets_collection()
     document = await collection.find_one({"_id": ObjectId(set_id)})

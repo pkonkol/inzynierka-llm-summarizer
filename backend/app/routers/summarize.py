@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from dataclasses import asdict
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -52,17 +51,16 @@ async def run_summarization_job(
     started_at = datetime.now(timezone.utc)
 
     try:
-        logger.debug("[job=%s] started url=%s mode=%s", job_id, url, summary_mode)
-
         data = await extract_text_from_url(url)
         asyncio.create_task(store_source_metrics_for_job(job_id, data["text"]))
 
         summary = await generate_summary(data, url, model_name, model_provider, language, summary_mode)
 
         finished_at = datetime.now(timezone.utc)
-        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
 
         summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
+        summary_text = summary["summary"]
+        takeaways_text = join_takeaways(summary["key_takeaways"])
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -74,36 +72,28 @@ async def run_summarization_job(
                     "summary_mode": summary_mode,
                     "status": "completed",
                     "summary_data": summary_data,
-                    "usage": summary.get("usage", {}),
-                    "raw_metadata": summary.get("raw_metadata", {}),
-                    "raw_output": summary.get("raw_output", ""),
-                    "input_text": summary.get("input_text", ""),
-                    "prompt_template": summary.get("prompt_template", []),
-                    "prompt_params": summary.get("prompt_params", {}),
+                    "usage": summary["usage"],
+                    "raw_metadata": summary["raw_metadata"],
+                    "raw_output": summary["raw_output"],
+                    "input_text": summary["input_text"],
+                    "prompt_template": summary["prompt_template"],
+                    "prompt_params": summary["prompt_params"],
                     "started_at": started_at,
                     "finished_at": finished_at,
-                    "duration_ms": duration_ms,
+                    "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
                     "error": None,
                     "updated_at": finished_at,
                 }
             },
         )
 
-        summary_text = summary_data.get("summary", "")
-        takeaways = summary_data.get("key_takeaways", [])
-        takeaways_text = join_takeaways(takeaways) if isinstance(takeaways, list) else ""
-
         if summary_text or takeaways_text:
             asyncio.create_task(store_deterministic_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
         if run_deepeval and (summary_text or takeaways_text):
-            asyncio.create_task(
-                store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"])
-            )
+            asyncio.create_task(store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
-        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-        raw_output: str = getattr(exc, "raw_output", "")
         logger.exception("[job=%s] failed: %s", job_id, exc)
 
         await jobs_collection.update_one(
@@ -118,19 +108,18 @@ async def run_summarization_job(
                     "summary_data": None,
                     "usage": {},
                     "raw_metadata": {},
-                    "raw_output": raw_output,
+                    "raw_output": getattr(exc, "raw_output", ""),
                     "input_text": "",
                     "prompt_template": [],
                     "prompt_params": {},
                     "started_at": started_at,
                     "finished_at": finished_at,
-                    "duration_ms": duration_ms,
+                    "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
                     "error": str(exc),
                     "updated_at": finished_at,
                 }
             },
         )
-
 
 @router.post("/summarize", summary="Create summarize job", dependencies=[Depends(require_auth)])
 async def create_summarize_job(

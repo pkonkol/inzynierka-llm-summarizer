@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { getEvaluationRun } from "../api/research";
+import { evaluateRunDeepeval, getEvaluationRun } from "../api/research";
+import { Collapsible } from "../components/Collapsible";
+import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalItems";
+import { InfoRow } from "../components/InfoRow";
+import { PreBlock } from "../components/PreBlock";
 import type { EvaluationRunDetail } from "../types/research";
 
 function navigateTo(path: string) {
@@ -8,60 +12,12 @@ function navigateTo(path: string) {
     window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
-    const [open, setOpen] = useState(false);
-    return (
-        <div className="border border-panel-border min-w-0">
-            <button
-                type="button"
-                onClick={() => setOpen(v => !v)}
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-            >
-                <span>{label}</span>
-                <span>{open ? "▼" : "▶"}</span>
-            </button>
-            {open && <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>}
-        </div>
-    );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | number | null | undefined }) {
-    if (value === null || value === undefined || value === "") return null;
-    return (
-        <div className="flex flex-col gap-0.5">
-            <span className="block text-[0.72rem] uppercase tracking-wider text-muted">{label}</span>
-            <span className="font-mono text-[0.82rem]">{value}</span>
-        </div>
-    );
-}
-
-function DeepevalItems({ items }: { items: { name: string; score: number | null; passed: boolean | null; reason: string | null }[] }) {
-    return (
-        <div className="space-y-2">
-            {items.map(item => {
-                const statusText = item.passed != null ? (item.passed ? "passed" : "failed") : null;
-                const scoreText = item.score != null ? `score: ${item.score}` : null;
-                const bits = [statusText, scoreText].filter(Boolean);
-                return (
-                    <div key={item.name} className="border border-panel-border bg-panel-bg px-3 py-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">{item.name}</span>
-                            {bits.length > 0 && <span className="font-mono text-[0.75rem] text-muted">{bits.join(" · ")}</span>}
-                        </div>
-                        {item.reason ? <p className="mt-2 m-0 text-[0.82rem] leading-[1.55] text-muted">{item.reason}</p> : null}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
 function GoldenMetricsBlock({ data }: { data: Record<string, unknown> | null }) {
     if (!data) return null;
 
     const textStats = data.text_stats as Record<string, number | null> | undefined;
     const readability = data.readability as Record<string, number | null> | undefined;
-    const deepeval = data.deepeval as Record<string, { name: string; score: number | null; passed: boolean | null; reason: string | null }[]> | undefined;
+    const deepeval = data.deepeval as Record<string, DeepevalDisplayItem[]> | undefined;
 
     return (
         <div className="space-y-4 p-3">
@@ -100,6 +56,7 @@ function AiMetricsBlock({ data }: { data: Record<string, unknown> | null }) {
     if (!data) return null;
 
     const sections = ["summary", "key_takeaways", "compression"] as const;
+    const deepeval = data.deepeval as Record<string, DeepevalDisplayItem[]> | undefined;
 
     return (
         <div className="space-y-4 p-3">
@@ -115,6 +72,17 @@ function AiMetricsBlock({ data }: { data: Record<string, unknown> | null }) {
                     </div>
                 );
             })}
+            {deepeval ? (
+                <div className="space-y-3 border-t border-divider pt-3">
+                    <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Deepeval</h6>
+                    {Object.entries(deepeval).map(([section, items]) => items.length > 0 ? (
+                        <div key={section} className="space-y-2">
+                            <span className="font-mono text-[0.72rem] uppercase tracking-wider text-muted">{section}</span>
+                            <DeepevalItems items={items} />
+                        </div>
+                    ) : null)}
+                </div>
+            ) : null}
         </div>
     );
 }
@@ -127,6 +95,8 @@ export function RunDetailPage({ runId }: Props) {
     const [run, setRun] = useState<EvaluationRunDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [flashMessage, setFlashMessage] = useState<string | null>(null);
+    const [isEvaluatingDeepeval, setIsEvaluatingDeepeval] = useState(false);
 
     const loadRun = async () => {
         try {
@@ -145,8 +115,28 @@ export function RunDetailPage({ runId }: Props) {
         void loadRun();
     }, [runId]);
 
+    useEffect(() => {
+        if (!flashMessage) return;
+        const timeoutId = setTimeout(() => setFlashMessage(null), 4500);
+        return () => clearTimeout(timeoutId);
+    }, [flashMessage]);
+
     const handleBack = () => {
         navigateTo(run ? `/research/${run.evaluation_set_id}` : "/research");
+    };
+
+    const handleDeepeval = async () => {
+        setErrorMessage(null);
+        setFlashMessage(null);
+        setIsEvaluatingDeepeval(true);
+        try {
+            await evaluateRunDeepeval(runId);
+            setFlashMessage("GEval queued. Refresh za chwilę aby zobaczyć wyniki.");
+        } catch (error) {
+            setErrorMessage(`GEval failed: ${String(error)}`);
+        } finally {
+            setIsEvaluatingDeepeval(false);
+        }
     };
 
     return (
@@ -167,6 +157,14 @@ export function RunDetailPage({ runId }: Props) {
                 <div className="flex gap-2.5">
                     <button
                         type="button"
+                        onClick={() => void handleDeepeval()}
+                        disabled={!run || run.status === "pending" || run.status === "running" || isEvaluatingDeepeval}
+                        className="border border-panel-border bg-accent-500 px-3 py-2 text-[0.85rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isEvaluatingDeepeval ? "Running..." : "Run GEVal"}
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => void loadRun()}
                         disabled={isLoading}
                         className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
@@ -183,6 +181,12 @@ export function RunDetailPage({ runId }: Props) {
                 </div>
             </div>
 
+            {flashMessage ? (
+                <div className="mt-4 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
+                    {flashMessage}
+                </div>
+            ) : null}
+
             {errorMessage ? (
                 <div className="mt-4 border border-danger bg-panel-solid px-3.5 py-2.5 text-[0.94rem] text-danger">
                     {errorMessage}
@@ -197,9 +201,9 @@ export function RunDetailPage({ runId }: Props) {
                             <span>Created: {new Date(run.created_at).toLocaleString()}</span>
                             <span>Finished: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}</span>
                         </div>
-                        <pre className="m-0 mt-1 overflow-x-auto whitespace-pre-wrap font-mono text-[0.82rem] text-muted">
-{JSON.stringify(run.aggregate_metrics, null, 2)}
-                        </pre>
+                        <div className="mt-1 text-[0.82rem] text-muted">
+                            <PreBlock>{JSON.stringify(run.aggregate_metrics, null, 2)}</PreBlock>
+                        </div>
                     </div>
 
                     <div className="mt-4 grid gap-3">
@@ -265,7 +269,7 @@ export function RunDetailPage({ runId }: Props) {
                                     ) : null}
                                     <Collapsible label="Cross metrics">
                                         {entry.cross_metrics ? (
-                                            <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 text-[0.75rem] leading-normal min-w-0">{JSON.stringify(entry.cross_metrics, null, 2)}</pre>
+                                            <PreBlock>{JSON.stringify(entry.cross_metrics, null, 2)}</PreBlock>
                                         ) : (
                                             <p className="m-0 p-3 text-[0.82rem] text-muted">Not computed yet.</p>
                                         )}

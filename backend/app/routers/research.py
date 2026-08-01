@@ -23,6 +23,7 @@ from ..schemas.research import (
 from ..services.evaluation_runner import run_evaluation_batch
 
 from ..services.evaluation_set_metrics import build_golden_metrics
+from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
@@ -289,3 +290,25 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         entries=document["entries"],
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
+
+
+@router.post("/runs/{run_id}/deepeval", dependencies=[Depends(require_auth)])
+async def evaluate_run_deepeval(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
+    runs = get_evaluation_runs_collection()
+    document = await runs.find_one({"_id": ObjectId(run_id)})
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+
+    if document["status"] in {"pending", "running"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Evaluation run must be finished before running GEval",
+        )
+
+    background_tasks.add_task(compute_run_deepeval_metrics, run_id)
+
+    return {"status": "queued", "run_id": run_id}

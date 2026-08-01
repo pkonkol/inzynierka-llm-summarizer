@@ -49,3 +49,10 @@ export const createEvaluationRun = (
 
 export const getEvaluationRun = (runId: string): Promise<EvaluationRunDetail> =>
     request<EvaluationRunDetail>(`/api/v1/research/runs/${runId}`);
+
+export const evaluateRunDeepeval = (
+    runId: string,
+): Promise<{ status: string; run_id: string }> =>
+    request<{ status: string; run_id: string }>(`/api/v1/research/runs/${runId}/deepeval`, {
+        method: "POST",
+    });

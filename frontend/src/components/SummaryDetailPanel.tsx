@@ -2,6 +2,10 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { Collapsible } from "./Collapsible";
+import { DeepevalItems } from "./DeepevalItems";
+import { InfoRow } from "./InfoRow";
+import { PreBlock } from "./PreBlock";
 import { formatDateMinute, formatDuration } from "../utils/format";
 import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 
@@ -12,41 +16,6 @@ interface JobDetailPanelProps {
     isLoading: boolean;
     onClose: () => void;
     debugMode?: boolean;
-}
-
-function InfoRow({ label, value }: { label: string; value: string | number | null | undefined }) {
-    if (value === null || value === undefined || value === "") return null;
-    return (
-        <div className="flex flex-col gap-0.5">
-            <span className="block text-[0.72rem] uppercase tracking-wider text-muted">{label}</span>
-            <span className="font-mono text-[0.88rem]">{value}</span>
-        </div>
-    );
-}
-
-function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
-    const [open, setOpen] = useState(false);
-    return (
-        <div className="border border-panel-border min-w-0">
-            <button
-                type="button"
-                onClick={() => setOpen(v => !v)}
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-            >
-                <span>{label}</span>
-                <span>{open ? "▼" : "▶"}</span>
-            </button>
-            {open && <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>}
-        </div>
-    );
-}
-
-function PreBlock({ children }: { children: string }) {
-    return (
-        <pre className="m-0 overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-3 text-[0.75rem] leading-normal min-w-0">
-            {children}
-        </pre>
-    );
 }
 
 const METRIC_SECTIONS = [
@@ -69,45 +38,12 @@ function DeepevalSections({ metrics }: { metrics: NonNullable<JobStatus["deepeva
         const items = metrics[section.field];
         if (!items || items.length === 0) return null;
 
-        const renderedItems = items.map(item => {
-            const hasPassed = item.passed !== undefined && item.passed !== null;
-            const hasScore = item.score !== undefined && item.score !== null;
-
-            const statusText = hasPassed ? (item.passed ? "passed" : "failed") : null;
-            const scoreText = hasScore ? `score: ${item.score}` : null;
-            const valueBits = [statusText, scoreText].filter(Boolean);
-
-            const headerRow = (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
-                        {item.name}
-                    </span>
-                    {valueBits.length > 0 && (
-                        <span className="font-mono text-[0.75rem] text-muted">{valueBits.join(" · ")}</span>
-                    )}
-                </div>
-            );
-
-            const reasonText = item.reason ? (
-                <p className="mt-2 m-0 text-[0.88rem] leading-[1.55] text-muted">{item.reason}</p>
-            ) : null;
-
-            return (
-                <div key={item.name} className="border border-panel-border bg-panel-bg px-3 py-2">
-                    {headerRow}
-                    {reasonText}
-                </div>
-            );
-        });
-
         return (
             <div key={section.key} className="space-y-2">
                 <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
                     {section.label}
                 </h6>
-                <div className="space-y-2">
-                    {renderedItems}
-                </div>
+                <DeepevalItems items={items} />
             </div>
         );
     });
@@ -305,15 +241,15 @@ function JobDetails({ job }: { job: JobStatus }) {
     return (
         <>
             <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-[0.85rem]">
-                <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
-                <InfoRow label="Zakończono" value={formatDateMinute(job.finished_at)} />
-                <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
-                <InfoRow label="Tokens / s" value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)} />
-                <InfoRow label="Input tokens" value={job.usage.input_tokens} />
-                <InfoRow label="Output tokens" value={job.usage.output_tokens} />
-                {job.usage.thinking_tokens > 0 ? <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} /> : null}
-                <InfoRow label="Total tokens" value={job.usage.total_tokens} />
-                <InfoRow label="Summary mode" value={job.summary_mode} />
+                <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Zakończono" value={formatDateMinute(job.finished_at)} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Tokens / s" value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Input tokens" value={job.usage.input_tokens} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Output tokens" value={job.usage.output_tokens} valueClassName="text-[0.88rem]" />
+                {job.usage.thinking_tokens > 0 ? <InfoRow label="Thinking tokens" value={job.usage.thinking_tokens} valueClassName="text-[0.88rem]" /> : null}
+                <InfoRow label="Total tokens" value={job.usage.total_tokens} valueClassName="text-[0.88rem]" />
+                <InfoRow label="Summary mode" value={job.summary_mode} valueClassName="text-[0.88rem]" />
             </div>
 
             <section>

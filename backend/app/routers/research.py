@@ -2,12 +2,12 @@ from datetime import datetime, UTC
 from uuid import uuid4
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pymongo import DESCENDING
 from fastapi.responses import JSONResponse
 
 
-from ..core.mongo import get_evaluation_sets_collection
+from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..core.auth import require_auth
 from ..schemas.research import (
     EvaluationSetCreateResponse,
@@ -15,7 +15,13 @@ from ..schemas.research import (
     EvaluationSetEntryResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
+    EvaluationRunCreateRequest,
+    EvaluationRunCreateResponse,
+    EvaluationRunListItemResponse,
+    EvaluationRunResponse,
 )
+from ..services.evaluation_runner import run_evaluation_batch
+
 from ..services.evaluation_set_metrics import build_golden_metrics
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
@@ -168,3 +174,118 @@ async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
         "updated_entries": updated_count,
         "total_entries": len(entries),
     }
+
+@router.post(
+    "/evaluation-sets/{set_id}/runs",
+    response_model=EvaluationRunCreateResponse,
+    dependencies=[Depends(require_auth)],
+)
+async def create_evaluation_run(
+    set_id: str,
+    payload: EvaluationRunCreateRequest,
+    background_tasks: BackgroundTasks,
+) -> EvaluationRunCreateResponse:
+    sets = get_evaluation_sets_collection()
+    runs = get_evaluation_runs_collection()
+
+    print(payload)
+
+    set_document = await sets.find_one({"_id": ObjectId(set_id)})
+    if set_document is None:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    created_at = datetime.now(UTC)
+
+    entries = [
+        {
+            "entry_id": entry["entry_id"],
+            "golden_summary": entry["golden_summary"],
+            "golden_metrics": entry.get("golden_metrics"),
+            "ai_summary": None,
+            "ai_key_takeaways": [],
+            "ai_metrics": None,
+            "cross_metrics": None,
+            "status": "pending",
+            "error": None,
+        }
+        for entry in set_document["entries"]
+    ]
+
+    document = {
+        "evaluation_set_id": str(set_document["_id"]),
+        "evaluation_set_name": set_document["name"],
+        "model_provider": payload.model_provider,
+        "model_name": payload.model_name,
+        "summary_mode": payload.summary_mode,
+        "language": payload.language,
+        "rate_limit_delay_ms": payload.rate_limit_delay_ms,
+        "status": "pending",
+        "created_at": created_at,
+        "finished_at": None,
+        "entries": entries,
+        "aggregate_metrics": {},
+    }
+
+    result = await runs.insert_one(document)
+    run_id = str(result.inserted_id)
+
+    background_tasks.add_task(run_evaluation_batch, run_id)
+
+    return EvaluationRunCreateResponse(
+        evaluation_run_id=run_id,
+        status="pending",
+        created_at=created_at,
+    )
+
+@router.get(
+    "/evaluation-sets/{set_id}/runs",
+    response_model=list[EvaluationRunListItemResponse],
+)
+async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemResponse]:
+    runs = get_evaluation_runs_collection()
+
+    documents = (
+        await runs.find({"evaluation_set_id": set_id})
+        .sort("created_at", DESCENDING)
+        .to_list(length=1000)
+    )
+
+    return [
+        EvaluationRunListItemResponse(
+            evaluation_run_id=str(doc["_id"]),
+            evaluation_set_id=doc["evaluation_set_id"],
+            evaluation_set_name=doc["evaluation_set_name"],
+            model_provider=doc["model_provider"],
+            model_name=doc["model_name"],
+            summary_mode=doc["summary_mode"],
+            language=doc["language"],
+            status=doc["status"],
+            created_at=doc["created_at"],
+            finished_at=doc.get("finished_at"),
+            entry_count=len(doc["entries"]),
+        )
+        for doc in documents
+    ]
+
+@router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
+async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
+    runs = get_evaluation_runs_collection()
+    document = await runs.find_one({"_id": ObjectId(run_id)})
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+
+    return EvaluationRunResponse(
+        id=str(document["_id"]),
+        evaluation_set_id=document["evaluation_set_id"],
+        evaluation_set_name=document["evaluation_set_name"],
+        model_provider=document["model_provider"],
+        model_name=document["model_name"],
+        summary_mode=document["summary_mode"],
+        language=document["language"],
+        status=document["status"],
+        created_at=document["created_at"],
+        finished_at=document.get("finished_at"),
+        entries=document["entries"],
+        aggregate_metrics=document.get("aggregate_metrics", {}),
+    )

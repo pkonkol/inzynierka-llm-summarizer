@@ -4,6 +4,9 @@ import type {
     EvaluationSetDetail,
     EvaluationSetImportPayload,
     EvaluationSetListItem,
+    EvaluationRunCreatePayload,
+    EvaluationRunCreateResponse,
+    EvaluationRunListItem,
 } from "../types/research";
 
 export const listEvaluationSets = (): Promise<EvaluationSetListItem[]> =>
@@ -30,3 +33,15 @@ export const evaluateMissingGoldenMetrics = (
         `/api/v1/research/evaluation-sets/${setId}/golden-metrics`,
         { method: "POST" },
     );
+
+export const listEvaluationRuns = (setId: string): Promise<EvaluationRunListItem[]> =>
+    request<EvaluationRunListItem[]>(`/api/v1/research/evaluation-sets/${setId}/runs`);
+
+export const createEvaluationRun = (
+    setId: string,
+    payload: EvaluationRunCreatePayload,
+): Promise<EvaluationRunCreateResponse> =>
+    request<EvaluationRunCreateResponse>(`/api/v1/research/evaluation-sets/${setId}/runs`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });

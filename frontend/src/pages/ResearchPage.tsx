@@ -1,10 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { evaluateMissingGoldenMetrics, createEvaluationSet, getEvaluationSet, listEvaluationSets, exportEvaluationSet } from "../api/research";
+import {
+    evaluateMissingGoldenMetrics,
+    createEvaluationSet,
+    getEvaluationSet,
+    listEvaluationSets,
+    exportEvaluationSet,
+    listEvaluationRuns,
+    createEvaluationRun,
+ } from "../api/research";
+import { 
+    getSupportedModels,
+    getSupportedModes,
+} from "../api/client";
+
+import { splitProviderModel } from "../utils/utils";
+
+
 import type {
-        EvaluationSetDetail,
+    EvaluationSetDetail,
     EvaluationSetImportPayload,
     EvaluationSetListItem,
+    EvaluationRunListItem,
 } from "../types/research";
 
 const PRETTY_EXAMPLE = `{
@@ -59,6 +76,18 @@ export function ResearchPage() {
 
     const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
 
+    const [runs, setRuns] = useState<EvaluationRunListItem[]>([]);
+    const [isLoadingRuns, setIsLoadingRuns] = useState(false);
+    const [isCreatingRun, setIsCreatingRun] = useState(false);
+
+    const [runModels, setRunModels] = useState<Record<string, string[]>>({});
+    const [runModes, setRunModes] = useState<Record<string, string>>({});
+    const [selectedRunModel, setSelectedRunModel] = useState("");
+    const [runSummaryMode, setRunSummaryMode] = useState("simple");
+    const [runDelayMs, setRunDelayMs] = useState(1500);
+    const [isLoadingRunMeta, setIsLoadingRunMeta] = useState(true);
+
+
     const parsedPreview = useMemo(() => {
         try {
             const parsed = JSON.parse(rawJson) as EvaluationSetImportPayload;
@@ -95,6 +124,17 @@ export function ResearchPage() {
             setIsLoadingDetail(false);
         }
     };
+
+    const loadRuns = async (setId: string) => {
+        setIsLoadingRuns(true);
+        try {
+            const data = await listEvaluationRuns(setId);
+            setRuns(data);
+        } finally {
+            setIsLoadingRuns(false);
+        }
+    };
+
 
     const handleImport = async () => {
         setErrorMessage(null);
@@ -173,6 +213,33 @@ export function ResearchPage() {
         }
     };
 
+    const handleCreateRun = async () => {
+        if (!selectedSetId || !selectedSet) return;
+
+        setErrorMessage(null);
+        setFlashMessage(null);
+        setIsCreatingRun(true);
+
+        try {
+            const { provider, modelName } = splitProviderModel(selectedRunModel);
+
+            const created = await createEvaluationRun(selectedSetId, {
+                model_provider: provider,
+                model_name: modelName,
+                summary_mode: runSummaryMode,
+                language: "en",
+                rate_limit_delay_ms: runDelayMs,
+            });
+
+            setFlashMessage(`EvaluationRun created: ${created.evaluation_run_id}`);
+            await loadRuns(selectedSetId);
+        } catch (error) {
+            setErrorMessage(`Create run failed: ${String(error)}`);
+        } finally {
+            setIsCreatingRun(false);
+        }
+    };
+
     useEffect(() => {
         let isMounted = true;
 
@@ -210,11 +277,54 @@ export function ResearchPage() {
     useEffect(() => {
         if (!selectedSetId) {
             setSelectedSet(null);
+            setRuns([]);
             return;
         }
 
         void loadSetDetail(selectedSetId);
+        void loadRuns(selectedSetId);
     }, [selectedSetId]);
+
+        useEffect(() => {
+        let isMounted = true;
+
+        const loadRunMeta = async () => {
+            try {
+                const [models, modes] = await Promise.all([
+                    getSupportedModels(),
+                    getSupportedModes(),
+                ]);
+
+                if (!isMounted) return;
+
+                setRunModels(models);
+                setRunModes(modes);
+
+                const firstProvider = Object.keys(models)[0];
+                const firstModel = firstProvider ? models[firstProvider]?.[0] : "";
+                if (firstProvider && firstModel) {
+                    setSelectedRunModel(`${firstProvider}:${firstModel}`);
+                }
+
+                const firstMode = Object.keys(modes)[0];
+                if (firstMode) {
+                    setRunSummaryMode(firstMode);
+                }
+            } catch (error) {
+                if (!isMounted) return;
+                setErrorMessage(`Nie udało się pobrać konfiguracji runa: ${String(error)}`);
+            } finally {
+                if (isMounted) setIsLoadingRunMeta(false);
+            }
+        };
+
+        void loadRunMeta();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
 
     const importPanel = (
         <section className="panel-shell min-w-0">
@@ -356,7 +466,126 @@ export function ResearchPage() {
         </section>
     );
 
-        const detailPanel = (
+    const evaluationRunForm = (
+        <>
+        {selectedSet ? (
+            <section className="mt-4 grid gap-3 border border-panel-border bg-panel-solid px-3.5 py-3">
+                <div>
+                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                        New evaluation run
+                    </p>
+                    <p className="helper-copy mt-1">
+                        Naiwny runner generuje tylko AI summary i podstawowe metryki tekstowe. Bez GEval.
+                    </p>
+                </div>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <label className="grid gap-1.5 md:col-span-2">
+                            <span className="text-[0.9rem] text-label">Model</span>
+                            <select
+                                value={selectedRunModel}
+                                onChange={(event) => setSelectedRunModel(event.target.value)}
+                                disabled={isCreatingRun || isLoadingRunMeta}
+                                className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {Object.entries(runModels).map(([provider, modelList]) =>
+                                    modelList.map((model) => (
+                                        <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
+                                            {provider} – {model}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                        </label>
+
+                        <label className="grid gap-1.5">
+                            <span className="text-[0.9rem] text-label">Summary mode</span>
+                            <select
+                                value={runSummaryMode}
+                                onChange={(event) => setRunSummaryMode(event.target.value)}
+                                disabled={isCreatingRun || isLoadingRunMeta}
+                                className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {Object.entries(runModes).map(([modeKey, modeLabel]) => (
+                                    <option key={modeKey} value={modeKey}>
+                                        {modeLabel}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className="grid gap-1.5">
+                            <span className="text-[0.9rem] text-label">Delay between entries (ms)</span>
+                            <input
+                                type="number"
+                                min={0}
+                                step={100}
+                                value={runDelayMs}
+                                onChange={(event) => setRunDelayMs(Number(event.target.value))}
+                                className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus"
+                            />
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                        <button
+                            type="button"
+                            onClick={() => void handleCreateRun()}
+                            disabled={isCreatingRun || isLoadingRunMeta || !selectedRunModel}
+                            className="border border-panel-border bg-accent-500 px-3.5 py-2 text-[0.94rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isCreatingRun ? "Creating..." : "Create evaluation run"}
+                        </button>
+                    </div>
+                </section>
+            ) : null}
+
+            <section className="mt-4 grid gap-3 border border-panel-border bg-panel-solid px-3.5 py-3">
+                <div>
+                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                        Evaluation runs
+                    </p>
+                </div>
+
+                {isLoadingRuns ? (
+                    <p className="helper-copy">Ładowanie runów...</p>
+                ) : runs.length === 0 ? (
+                    <p className="helper-copy">Brak EvaluationRunów dla tego seta.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-left text-[0.94rem]">
+                            <thead>
+                                <tr className="border-b border-divider">
+                                    <th className="px-2.5 py-2 font-medium">Provider</th>
+                                    <th className="px-2.5 py-2 font-medium">Model</th>
+                                    <th className="px-2.5 py-2 font-medium">Mode</th>
+                                    <th className="px-2.5 py-2 font-medium">Status</th>
+                                    <th className="px-2.5 py-2 font-medium">Entries</th>
+                                    <th className="px-2.5 py-2 font-medium">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {runs.map((run) => (
+                                    <tr key={run.evaluation_run_id} className="border-b border-divider">
+                                        <td className="px-2.5 py-2.5">{run.model_provider}</td>
+                                        <td className="px-2.5 py-2.5">{run.model_name}</td>
+                                        <td className="px-2.5 py-2.5">{run.summary_mode}</td>
+                                        <td className="px-2.5 py-2.5">{run.status}</td>
+                                        <td className="px-2.5 py-2.5">{run.entry_count}</td>
+                                        <td className="px-2.5 py-2.5">
+                                            {new Date(run.created_at).toLocaleString()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+        </>
+    );
+
+    const detailPanel = (
         <section className="panel-shell min-w-0">
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -395,6 +624,8 @@ export function ResearchPage() {
                     Back to sets
                 </button>
             </div>
+
+            {evaluationRunForm}
 
             {isLoadingDetail ? (
                 <p className="helper-copy mt-4">Ładowanie szczegółów EvaluationSet...</p>

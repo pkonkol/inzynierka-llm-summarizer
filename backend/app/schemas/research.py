@@ -9,8 +9,9 @@ from bson import ObjectId
 
 class SourceMeta(BaseModel):
     url: str | None = None
-    title: str | None = None
+    title: str
     source: str | None = None   # "cnn", "own", "moldbug", …
+    author:  str | None = None
     extra: dict[str, Any] = Field(default_factory=dict)
 
 class TextMetrics(BaseModel):
@@ -41,7 +42,7 @@ class EvalSetEntry(BaseModel):
     entry_id: str                          # ulid/uuid generowany przy imporcie
     input_text: str
     golden_summary: str
-    source_meta: SourceMeta = Field(default_factory=SourceMeta)
+    source_meta: SourceMeta
     golden_metrics: QualityMetrics | None = None
 
 class EvaluationSetImport(BaseModel):      # body POST /evaluation-sets
@@ -65,9 +66,9 @@ RunStatus = Literal["pending", "running", "completed", "failed"]
 RunEntryStatus = Literal["pending", "completed", "failed"] # TODO czy to w ogole potrzebne?
 
 
-class EvalRunEntry(BaseModel):
+class EvaluationRunEntry(BaseModel):
     entry_id: str
-    golden_summary: str                    # snapshot z setu
+    golden_summary: str # snapshot z setu
     golden_metrics: QualityMetrics | None = None
     ai_summary: str | None = None
     ai_key_takeaways: list[str] = Field(default_factory=list)
@@ -76,11 +77,12 @@ class EvalRunEntry(BaseModel):
     status: Literal["pending", "completed", "failed"] = "pending"
     error: str | None = None
 
-class EvalRunCreateRequest(BaseModel):
+class EvaluationRunCreateRequest(BaseModel):
     model_provider: str
     model_name: str
     summary_mode: str = "simple"
     language: str = "en"
+    rate_limit_delay_ms: int = 0
 
 class EvaluationRunResponse(BaseModel):
     id: str
@@ -93,8 +95,27 @@ class EvaluationRunResponse(BaseModel):
     status: RunStatus
     created_at: datetime
     finished_at: datetime | None = None
-    entries: list[EvalRunEntry] = Field(default_factory=list)
+    entries: list[EvaluationRunEntry] = Field(default_factory=list)
     aggregate_metrics: dict[str, Any] = Field(default_factory=dict)
+
+class EvaluationRunListItemResponse(BaseModel):
+    evaluation_run_id: str
+    evaluation_set_id: str
+    evaluation_set_name: str
+    model_provider: str
+    model_name: str
+    summary_mode: str
+    language: str
+    status: RunStatus
+    created_at: datetime
+    finished_at: datetime | None = None
+    entry_count: int
+
+
+class EvaluationRunCreateResponse(BaseModel):
+    evaluation_run_id: str
+    status: RunStatus
+    created_at: datetime
 
 
 # --- import/export models

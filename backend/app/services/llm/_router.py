@@ -10,7 +10,7 @@ SummaryMode = Literal["simple", "sequential", "cascade"]
 
 
 async def generate_summary(
-    trafilatura: dict,
+    input: dict,
     source_url: str,
     model_name: str,
     model_provider: str,
@@ -28,10 +28,10 @@ async def generate_summary(
     logger.info("generate_summary mode=%s model=%s:%s", mode, model_provider, model_name)
 
     if mode == "simple":
-        return await summary_simple.run(trafilatura, source_url, model_name, model_provider, language)
+        return await summary_simple.run(input, source_url, model_name, model_provider, language)
     if mode == "sequential":
-        return await summary_sequential.run(trafilatura, source_url, model_name, model_provider, language)
+        return await summary_sequential.run(input, source_url, model_name, model_provider, language)
     if mode == "cascade":
-        return await summary_cascade.run(trafilatura, source_url, model_name, model_provider, language)
+        return await summary_cascade.run(input, source_url, model_name, model_provider, language)
 
     raise NotImplementedError(f"Summary mode '{mode}' is not implemented")

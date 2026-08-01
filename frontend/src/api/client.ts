@@ -70,6 +70,5 @@ export const getSupportedModels = (): Promise<Record<string, string[]>> =>
 export const getSupportedLanguages = (): Promise<string[]> =>
     request<string[]>("/api/v1/meta/languages");
 
-/** { mode_key: human_readable_label } */
 export const getSupportedModes = (): Promise<Record<string, string>> =>
     request<Record<string, string>>("/api/v1/meta/modes");

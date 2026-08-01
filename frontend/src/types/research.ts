@@ -49,3 +49,31 @@ export type EvaluationSetImportPayload = {
     } | null;
   }[];
 };
+
+export type EvaluationRunCreatePayload = {
+    model_provider: string;
+    model_name: string;
+    summary_mode: string;
+    language: string;
+    rate_limit_delay_ms: number;
+};
+
+export type EvaluationRunCreateResponse = {
+    evaluation_run_id: string;
+    status: "pending" | "running" | "completed" | "failed";
+    created_at: string;
+};
+
+export type EvaluationRunListItem = {
+    evaluation_run_id: string;
+    evaluation_set_id: string;
+    evaluation_set_name: string;
+    model_provider: string;
+    model_name: string;
+    summary_mode: string;
+    language: string;
+    status: "pending" | "running" | "completed" | "failed";
+    created_at: string;
+    finished_at: string | null;
+    entry_count: number;
+};

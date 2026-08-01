@@ -34,13 +34,13 @@ _PROMPT = ChatPromptTemplate.from_messages(_PROMPT_MESSAGES)
 
 
 async def run(
-    trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
+    input: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Single-call summarization. Returns full result dict."""
     llm = build_structured_llm(_SummaryPromptResponse, model_provider, model_name)
     chain = _PROMPT | llm
 
-    text = trafilatura["text"]
+    text = input["text"]
 
     detail_guidance = "\n".join(
         [
@@ -85,8 +85,8 @@ async def run(
 
     result = parsed.model_dump()
 
-    result["author"] = trafilatura["author"]
-    result["title"] = trafilatura["title"]
+    result["author"] = input.get("author", "") # TODO handler for datasets with no author?
+    result["title"] = input["title"]
     result["source_url"] = source_url
     result["usage"] = usage.model_dump()
     result["raw_metadata"] = raw_metadata

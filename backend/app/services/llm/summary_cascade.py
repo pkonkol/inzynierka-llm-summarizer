@@ -53,7 +53,7 @@ _PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages([
 
 
 async def run(
-    trafilatura: dict, source_url: str, model_name: str, model_provider: str, language: str
+    input: dict, source_url: str, model_name: str, model_provider: str, language: str
 ) -> dict[str, Any]:
     """Two sequential calls: takeaways → synthesis. Returns full result dict."""
     takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
@@ -61,7 +61,9 @@ async def run(
     chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
     chain_synthesis = _PROMPT_SYNTHESIS | summary_llm
 
-    text = trafilatura["text"]
+    logger.debug("Running cascade summary with input: %s", input)
+
+    text = input["text"]
 
     takeaways_detail_guidance = "\n".join(
         [
@@ -128,14 +130,14 @@ async def run(
     raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
 
     result = SummaryResponse(
-        title=trafilatura["title"],
+        title=input["title"],
         summary=parsed_sm.summary,
         key_takeaways=parsed_tk.key_takeaways,
         source_url=source_url,
     ).model_dump()
 
-    result["author"] = trafilatura["author"]
-    result["title"] = trafilatura["title"]
+    result["author"] = input.get("author", "") # TODO handler for datasets with no author?
+    result["title"] = input["title"]
     result["source_url"] = source_url
     result["usage"]           = combined_usage
     result["raw_metadata"]    = {"takeaways": meta_tk, "synthesis": meta_sm}

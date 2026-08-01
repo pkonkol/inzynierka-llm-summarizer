@@ -17,19 +17,13 @@ from ..schemas.schemas import (
     SummaryMode,
     UrlSummaryListItem,
 )
-from ..services.deepeval_metrics import (
-    evaluate_summary_input_metrics,
-    evaluate_summary_metrics,
-    evaluate_summary_takeaways_metrics,
-    evaluate_takeaways_input_metrics,
-    evaluate_takeaways_metrics,
+from ..services.run_metrics import (
+    store_deepeval_metrics_for_job,
+    store_deterministic_metrics_for_job,
+    store_source_metrics_for_job,
+    join_takeaways,
 )
-from ..services.deterministic_metrics import (
-    compression_ratio_metrics,
-    key_takeaways_metrics,
-    source_metrics,
-    summary_metrics,
-)
+
 from ..services.llm import generate_summary
 from ..services.scraper import extract_text_from_url
 
@@ -44,39 +38,6 @@ _SUMMARY_TOP_LEVEL_KEYS = {
     "prompt_template",
     "prompt_params",
 }
-
-
-def _join_takeaways(takeaways: list[str]) -> str:
-    return "\n".join(f"- {item}" for item in takeaways)
-
-
-async def _store_metrics(job_id: str, update: dict) -> None:
-    try:
-        await get_jobs_collection().update_one({"job_id": job_id}, {"$set": update})
-    except Exception:
-        logger.exception("[job=%s] metrics store failed", job_id)
-
-
-async def _source_metrics_task(job_id: str, text: str) -> None:
-    metrics = await asyncio.to_thread(source_metrics, text)
-    await _store_metrics(job_id, {"metrics.source": metrics})
-    logger.debug("[job=%s] source metrics stored", job_id)
-
-
-async def _metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
-    sm = await asyncio.to_thread(summary_metrics, summary_text)
-    kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
-    cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
-    await _store_metrics(
-        job_id,
-        {
-            "metrics.summary": sm,
-            "metrics.key_takeaways": kt,
-            "metrics.compression": cr,
-        },
-    )
-    logger.debug("[job=%s] summary/takeaways/compression metrics stored", job_id)
-
 
 async def run_summarization_job(
     job_id: str,
@@ -94,7 +55,7 @@ async def run_summarization_job(
         logger.debug("[job=%s] started url=%s mode=%s", job_id, url, summary_mode)
 
         data = await extract_text_from_url(url)
-        asyncio.create_task(_source_metrics_task(job_id, data["text"]))
+        asyncio.create_task(store_source_metrics_for_job(job_id, data["text"]))
 
         summary = await generate_summary(data, url, model_name, model_provider, language, summary_mode)
 
@@ -130,13 +91,13 @@ async def run_summarization_job(
 
         summary_text = summary_data.get("summary", "")
         takeaways = summary_data.get("key_takeaways", [])
-        takeaways_text = _join_takeaways(takeaways) if isinstance(takeaways, list) else ""
+        takeaways_text = join_takeaways(takeaways) if isinstance(takeaways, list) else ""
 
         if summary_text or takeaways_text:
-            asyncio.create_task(_metrics_task(job_id, summary_text, takeaways_text, data["text"]))
+            asyncio.create_task(store_deterministic_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
         if run_deepeval and (summary_text or takeaways_text):
             asyncio.create_task(
-                _deepeval_metrics_task(job_id, summary_text, takeaways_text, data["text"])
+                store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"])
             )
 
     except Exception as exc:
@@ -338,34 +299,3 @@ def _verify_model_availability(model_provider: str, model_name: str) -> None:
 def _verify_mode(mode: str) -> None:
     if mode not in settings.supported_summary_modes:
         raise ValueError(f"Unsupported summary mode: {mode}")
-
-
-async def _deepeval_metrics_task(job_id: str, summary_text: str, takeaways_text: str, source_text: str) -> None:
-    summary_results = await evaluate_summary_metrics(settings, summary_text) if summary_text else []
-    summary_input_results = (
-        await evaluate_summary_input_metrics(settings, source_text, summary_text)
-        if summary_text and source_text
-        else []
-    )
-    takeaways_results = await evaluate_takeaways_metrics(settings, takeaways_text) if takeaways_text else []
-    takeaways_input_results = (
-        await evaluate_takeaways_input_metrics(settings, source_text, takeaways_text)
-        if takeaways_text and source_text
-        else []
-    )
-    summary_takeaways_results = (
-        await evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text)
-        if summary_text and takeaways_text and source_text
-        else []
-    )
-
-    await _store_metrics(
-        job_id,
-        {
-            "deepeval_metrics.summary": [asdict(x) for x in summary_results],
-            "deepeval_metrics.summary_input": [asdict(x) for x in summary_input_results],
-            "deepeval_metrics.takeaways": [asdict(x) for x in takeaways_results],
-            "deepeval_metrics.takeaways_input": [asdict(x) for x in takeaways_input_results],
-            "deepeval_metrics.summary_takeaways": [asdict(x) for x in summary_takeaways_results],
-        },
-    )

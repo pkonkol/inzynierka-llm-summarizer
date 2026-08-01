@@ -6,6 +6,7 @@ import type {
     EvaluationSetListItem,
     EvaluationRunCreatePayload,
     EvaluationRunCreateResponse,
+    EvaluationRunDetail,
     EvaluationRunListItem,
 } from "../types/research";
 
@@ -45,3 +46,6 @@ export const createEvaluationRun = (
         method: "POST",
         body: JSON.stringify(payload),
     });
+
+export const getEvaluationRun = (runId: string): Promise<EvaluationRunDetail> =>
+    request<EvaluationRunDetail>(`/api/v1/research/runs/${runId}`);

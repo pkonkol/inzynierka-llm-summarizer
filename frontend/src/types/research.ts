@@ -77,3 +77,30 @@ export type EvaluationRunListItem = {
     finished_at: string | null;
     entry_count: number;
 };
+
+export type EvaluationRunEntry = {
+    entry_id: string;
+    golden_summary: string;
+    golden_metrics: GoldenMetrics;
+    ai_summary: string | null;
+    ai_key_takeaways: string[];
+    ai_metrics: Record<string, unknown> | null;
+    cross_metrics: Record<string, unknown> | null;
+    status: "pending" | "completed" | "failed";
+    error: string | null;
+};
+
+export type EvaluationRunDetail = {
+    id: string;
+    evaluation_set_id: string;
+    evaluation_set_name: string;
+    model_provider: string;
+    model_name: string;
+    summary_mode: string;
+    language: string;
+    status: "pending" | "running" | "completed" | "failed";
+    created_at: string;
+    finished_at: string | null;
+    entries: EvaluationRunEntry[];
+    aggregate_metrics: Record<string, unknown>;
+};

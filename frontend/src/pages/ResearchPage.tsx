@@ -9,10 +9,12 @@ import {
     listEvaluationRuns,
     createEvaluationRun,
  } from "../api/research";
-import { 
+import {
     getSupportedModels,
     getSupportedModes,
 } from "../api/client";
+import { RunDetailPage } from "./RunDetailPage";
+
 
 import { splitProviderModel } from "../utils/utils";
 
@@ -44,6 +46,12 @@ function getResearchSetIdFromPath(pathname: string): string | null {
     const match = pathname.match(/^\/research\/([^/]+)$/);
     return match?.[1] ?? null;
 }
+
+function getRunIdFromPath(pathname: string): string | null {
+    const match = pathname.match(/^\/research\/runs\/([^/]+)$/);
+    return match?.[1] ?? null;
+}
+
 
 function navigateTo(path: string) {
     window.history.pushState({}, "", path);
@@ -108,7 +116,9 @@ export function ResearchPage() {
     }, [rawJson]);
 
     const selectedSetId = getResearchSetIdFromPath(pathname);
+    const runId = getRunIdFromPath(pathname);
     const isDetailView = Boolean(selectedSetId);
+
 
     const loadSets = async () => {
         const data = await listEvaluationSets();
@@ -562,6 +572,7 @@ export function ResearchPage() {
                                     <th className="px-2.5 py-2 font-medium">Status</th>
                                     <th className="px-2.5 py-2 font-medium">Entries</th>
                                     <th className="px-2.5 py-2 font-medium">Created</th>
+                                    <th className="px-2.5 py-2 font-medium text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -575,7 +586,17 @@ export function ResearchPage() {
                                         <td className="px-2.5 py-2.5">
                                             {new Date(run.created_at).toLocaleString()}
                                         </td>
+                                        <td className="px-2.5 py-2.5 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => navigateTo(`/research/runs/${run.evaluation_run_id}`)}
+                                                className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
+                                            >
+                                                Open
+                                            </button>
+                                        </td>
                                     </tr>
+
                                 ))}
                             </tbody>
                         </table>
@@ -686,7 +707,9 @@ export function ResearchPage() {
 
     return (
         <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
-            {isDetailView ? (
+            {runId ? (
+                <RunDetailPage runId={runId} />
+            ) : isDetailView ? (
                 detailPanel
             ) : (<>
                 {importPanel}

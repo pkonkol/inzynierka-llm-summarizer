@@ -73,8 +73,8 @@ async def run_evaluation_batch(run_id: str) -> None:
 
             # logger.debug("summary generated for entry: %s", result)
 
-            summary_text = result.get("short_summary", "") or "" # TODO check all fallbacks for removal
-            takeaways = result.get("key_takeaways", []) or []
+            summary_text = result["summary"] # TODO check all fallbacks for removal
+            takeaways = result["key_takeaways"]
 
             basic_metrics = await compute_deterministic_metrics(
                 summary_text=summary_text,

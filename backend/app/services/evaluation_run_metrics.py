@@ -24,7 +24,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
     if run_doc is None:
         return
 
-    aggregate_metrics = run_doc.get("aggregate_metrics", {})
+    aggregate_metrics = run_doc["aggregate_metrics"]
     aggregate_metrics["deepeval"] = {
         "status": "running",
         "started_at": datetime.now(UTC),
@@ -54,18 +54,13 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
 
     try:
         for entry in entries:
-            if entry.get("status") != "completed":
+            if entry["status"] != "completed":
                 skipped_entries += 1
                 continue
 
-            summary_text = (entry.get("ai_summary") or "").strip()
-            takeaways = [item for item in entry.get("ai_key_takeaways", []) if item]
-            takeaways_text = join_takeaways(takeaways)
-            source_text = source_by_entry_id.get(entry["entry_id"], "")
-
-            if not summary_text and not takeaways_text:
-                skipped_entries += 1
-                continue
+            summary_text = entry["ai_summary"].strip()
+            takeaways_text = join_takeaways(entry["ai_key_takeaways"])
+            source_text = source_by_entry_id[entry["entry_id"]]
 
             deepeval_metrics = await compute_deepeval_metrics(
                 summary_text=summary_text,
@@ -73,16 +68,14 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
                 source_text=source_text,
             )
 
-            ai_metrics = entry.get("ai_metrics") or {}
+            ai_metrics = entry["ai_metrics"]
             ai_metrics["deepeval"] = deepeval_metrics
             entry["ai_metrics"] = ai_metrics
 
-            if entry["cross_metrics"] is None:
-                entry["cross_metrics"] = await compute_cross_metrics(
-                    reference_text=entry["golden_summary"],
-                    summary_text=summary_text,
-                )
-
+            entry["cross_metrics"] = await compute_cross_metrics(
+                reference_text=entry["golden_summary"],
+                summary_text=summary_text,
+            )
             cross_metrics = entry["cross_metrics"]
             pairwise = await compute_pairwise_cross_deepeval_metrics(
                 source_text=source_text,

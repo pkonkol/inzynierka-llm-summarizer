@@ -22,8 +22,8 @@ class DeepevalItem(BaseModel):
 class PairwiseDeepevalItem(BaseModel):
     name: str
     winner: Literal["A", "B", "tie"]
-    score_A: int
-    score_B: int
+    score_A: float
+    score_B: float
     reason: str
 
 class CrossMetrics(BaseModel):

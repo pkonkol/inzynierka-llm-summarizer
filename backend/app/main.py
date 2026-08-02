@@ -1,8 +1,11 @@
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
+from .core.nltk_data import ensure_wordnet_resources
 from .core.config import settings
 from .routers import auth, health, meta, summarize, research
 
@@ -29,6 +32,7 @@ app.include_router(research.router)
 
 @app.on_event("startup")
 async def on_startup() -> None:
+    await asyncio.to_thread(ensure_wordnet_resources)
     await init_mongo()
 
 

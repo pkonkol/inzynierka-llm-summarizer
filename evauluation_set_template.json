@@ -1,0 +1,16 @@
+{
+  "name": "cnn-sample1",
+  "language": "en",
+  "entries": [
+    {
+      "input_text": "Example input text",
+      "golden_summary": "Example golden summary",
+      "source_meta": {
+        "title": "Example title",
+        "url": "https://example.com/article",
+        "author": "unknown"
+      },
+      "golden_metrics": null
+    }
+  ]
+}

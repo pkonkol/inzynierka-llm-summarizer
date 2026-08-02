@@ -88,7 +88,7 @@ async def compute_deepeval_metrics(
 async def compute_cross_metrics(
     reference_text: str,
     summary_text: str,
-) -> dict[str, float | None]:
+) -> dict[str, float]:
     return await asyncio.to_thread(compute_cross_metrics_sync, reference_text, summary_text)
 
 

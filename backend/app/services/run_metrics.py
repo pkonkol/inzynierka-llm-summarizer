@@ -1,18 +1,22 @@
 import asyncio
 import logging
 from dataclasses import asdict
+from typing import Any
 
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
-from ..services.deepeval_metrics import (
+from ..services.metrics.cross import (
+    compute_cross_metrics as compute_cross_metrics_sync,
+    evaluate_pairwise_cross_deepeval,
+)
+from ..services.metrics.deepeval import (
     evaluate_summary_input_metrics,
     evaluate_summary_metrics,
     evaluate_summary_takeaways_metrics,
     evaluate_takeaways_input_metrics,
     evaluate_takeaways_metrics,
 )
-from ..services.cross_metrics import compute_cross_metrics as compute_cross_metrics_sync
-from ..services.deterministic_metrics import (
+from ..services.metrics.deterministic import (
     compression_ratio_metrics,
     key_takeaways_metrics,
     source_metrics,
@@ -90,6 +94,19 @@ async def compute_cross_metrics(
     summary_text: str,
 ) -> dict[str, float]:
     return await asyncio.to_thread(compute_cross_metrics_sync, reference_text, summary_text)
+
+
+async def compute_pairwise_cross_deepeval_metrics(
+    source_text: str,
+    golden_summary: str,
+    ai_summary: str,
+) -> list[dict[str, Any]]:
+    return await evaluate_pairwise_cross_deepeval(
+        settings=settings,
+        source_text=source_text,
+        summary_a=golden_summary,
+        summary_b=ai_summary,
+    )
 
 
 async def store_source_metrics_for_job(job_id: str, text: str) -> None:

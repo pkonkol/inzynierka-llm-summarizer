@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 from bson import ObjectId
 
 from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
-from app.services.run_metrics import compute_deepeval_metrics, join_takeaways
+from app.services.run_metrics import (
+    compute_cross_metrics,
+    compute_deepeval_metrics,
+    compute_pairwise_cross_deepeval_metrics,
+    join_takeaways,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +76,20 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             ai_metrics = entry.get("ai_metrics") or {}
             ai_metrics["deepeval"] = deepeval_metrics
             entry["ai_metrics"] = ai_metrics
+
+            if entry["cross_metrics"] is None:
+                entry["cross_metrics"] = await compute_cross_metrics(
+                    reference_text=entry["golden_summary"],
+                    summary_text=summary_text,
+                )
+
+            cross_metrics = entry["cross_metrics"]
+            pairwise = await compute_pairwise_cross_deepeval_metrics(
+                source_text=source_text,
+                golden_summary=entry["golden_summary"],
+                ai_summary=summary_text,
+            )
+            cross_metrics["deepeval"] = pairwise
             updated_entries += 1
     except Exception as exc:
         logger.exception("DEEPEVAL failed for run %s", run_id)

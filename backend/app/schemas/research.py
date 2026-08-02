@@ -19,12 +19,19 @@ class DeepevalItem(BaseModel):
     passed: bool | None = None
     reason: str | None = None
 
+class PairwiseDeepevalItem(BaseModel):
+    name: str
+    winner: Literal["A", "B", "tie"]
+    score_A: int
+    score_B: int
+    reason: str
+
 class CrossMetrics(BaseModel):
     rouge1: float | None = None
     rouge2: float | None = None
     rougeL: float | None = None
     meteor: float | None = None
-    deepeval: list[DeepevalItem] = Field(default_factory=list)
+    deepeval: list[PairwiseDeepevalItem] = Field(default_factory=list)
 
 class GoldenMetrics(BaseModel):
     text_stats: dict[str, Any] | None = None

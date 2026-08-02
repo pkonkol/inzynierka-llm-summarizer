@@ -6,7 +6,7 @@ from typing import Any
 import textstat
 
 from app.core.config import settings
-from app.services.deepeval_metrics import (
+from app.services.metrics.deepeval import (
     evaluate_summary_input_metrics,
     evaluate_summary_metrics,
 )

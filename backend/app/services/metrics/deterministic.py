@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def _nlp():
     import spacy  # noqa: PLC0415
+
     try:
         return spacy.load("en_core_web_sm", disable=["parser", "ner"])
     except OSError:
@@ -30,12 +31,7 @@ def _nlp():
 _CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV"}
 
 
-# ---------------------------------------------------------------------------
-# Individual metric functions
-# ---------------------------------------------------------------------------
-
 def flesch_kincaid_grade(text: str) -> float | None:
-    """FK Grade Level — higher = harder. Good on source text."""
     try:
         return round(textstat.flesch_kincaid_grade(text), 2)
     except Exception:
@@ -43,7 +39,6 @@ def flesch_kincaid_grade(text: str) -> float | None:
 
 
 def gunning_fog(text: str) -> float | None:
-    """Gunning Fog index — years of education needed."""
     try:
         return round(textstat.gunning_fog(text), 2)
     except Exception:
@@ -69,7 +64,6 @@ def avg_sentence_length(text: str) -> float | None:
 
 
 def type_token_ratio(text: str) -> float | None:
-    """TTR = unique tokens / total tokens (0–1)."""
     words = text.lower().split()
     if not words:
         return None
@@ -77,27 +71,21 @@ def type_token_ratio(text: str) -> float | None:
 
 
 def lexical_density(text: str) -> float | None:
-    """Content POS tokens / total tokens (spaCy). None if model unavailable."""
     nlp = _nlp()
     if nlp is None:
         return None
     try:
         doc = nlp(text)
-        tokens = [t for t in doc if not t.is_space]
+        tokens = [token for token in doc if not token.is_space]
         if not tokens:
             return None
-        content = sum(1 for t in tokens if t.pos_ in _CONTENT_POS)
+        content = sum(1 for token in tokens if token.pos_ in _CONTENT_POS)
         return round(content / len(tokens), 4)
     except Exception:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Aggregate helpers
-# ---------------------------------------------------------------------------
-
 def source_metrics(text: str) -> dict[str, Any]:
-    """Metrics for the scraped source article."""
     return {
         "flesch_kincaid_grade": flesch_kincaid_grade(text),
         "gunning_fog": gunning_fog(text),
@@ -109,7 +97,6 @@ def source_metrics(text: str) -> dict[str, Any]:
 
 
 def summary_metrics(text: str) -> dict[str, Any]:
-    """Metrics for the generated summary prose."""
     return {
         "automated_readability_index": automated_readability_index(text),
         "avg_sentence_length": avg_sentence_length(text),
@@ -121,16 +108,12 @@ def summary_metrics(text: str) -> dict[str, Any]:
 
 
 def key_takeaways_metrics(text: str) -> dict[str, Any]:
-    """
-    Simple structural metrics for the key_takeaways bullet list.
-    Designed as a placeholder — extend with richer extraction metrics later.
-    """
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    bullet_lines = [ln for ln in lines if ln.startswith(("- ", "* ", "• ")) or (len(ln) > 2 and ln[0].isdigit() and ln[1] in ".)" )]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    bullet_lines = [line for line in lines if line.startswith(("- ", "* ", "• ")) or (len(line) > 2 and line[0].isdigit() and line[1] in ".)")]
     words = text.lower().split()
     unique_words = set(words)
     avg_bullet_words = (
-        round(sum(len(ln.split()) for ln in bullet_lines) / len(bullet_lines), 2)
+        round(sum(len(line.split()) for line in bullet_lines) / len(bullet_lines), 2)
         if bullet_lines else None
     )
     return {
@@ -144,10 +127,6 @@ def key_takeaways_metrics(text: str) -> dict[str, Any]:
 
 
 def compression_ratio_metrics(source: str, summary: str) -> dict[str, Any]:
-    """
-    Cross-text metrics comparing source and summary.
-    Both word-based and char-based ratios included.
-    """
     src_words = textstat.lexicon_count(source, removepunct=True)
     sum_words = textstat.lexicon_count(summary, removepunct=True)
     src_chars = len(source.replace(" ", ""))

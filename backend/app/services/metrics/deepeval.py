@@ -16,9 +16,9 @@ DEEPEVAL_THRESHOLD = 0.5
 @dataclass(slots=True)
 class DeepEvalMetricResult:
     name: str
-    score: float | None
-    reason: str | None
-    passed: bool | None
+    score: float
+    reason: str
+    passed: bool
 
 
 def build_deepeval_model(settings: Settings):
@@ -36,7 +36,7 @@ def build_deepeval_model(settings: Settings):
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
     return DeepEvalMetricResult(
-        name=metric.name,
+        name=getattr(metric, "name", None) or getattr(metric, "__name__", None) or type(metric).__name__,
         score=metric.score,
         reason=metric.reason,
         passed=metric.success,

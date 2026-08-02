@@ -4,22 +4,17 @@ import asyncio
 from typing import Any
 from typing import Literal
 
+from deepeval.metrics import GEval
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from nltk.translate.meteor_score import meteor_score
-from pydantic import BaseModel
 from rouge_score import rouge_scorer
 
 from app.core.config import Settings
 
-from .deepeval import build_deepeval_model
+from .deepeval import build_deepeval_model, run_metric
 
 _ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
-
-
-class PairwiseJudgeResult(BaseModel):
-    winner: Literal["A", "B", "tie"]
-    score_A: float
-    score_B: float
-    reason: str
+PAIRWISE_TIE_MARGIN = 0.05
 
 
 def compute_cross_metrics(reference_text: str, summary_text: str) -> dict[str, float]:
@@ -37,49 +32,51 @@ def compute_cross_metrics(reference_text: str, summary_text: str) -> dict[str, f
     }
 
 
-def _pairwise_prompt_with_input(source_text: str, summary_a: str, summary_b: str) -> str:
-    return f"""
-Evaluate which summary better summarizes the source document.
-Consider faithfulness to source, coverage of key information, coherence, and readability.
-
-Respond with strict JSON only:
-{{
-  "winner": "A" | "B" | "tie",
-  "score_A": number in [0, 1],
-  "score_B": number in [0, 1],
-  "reason": "short explanation (2-3 sentences)"
-}}
-
-Source:
-{source_text}
-
-Summary A:
-{summary_a}
-
-Summary B:
-{summary_b}
-""".strip()
+def _pairwise_metric_with_input(settings: Settings) -> GEval:
+    return GEval(
+        name="pairwise_with_input",
+        model=build_deepeval_model(settings),
+        threshold=0.5,
+        criteria=(
+            "Evaluate whether Summary A (actual_output) is better than Summary B (expected_output) "
+            "for the given source document, using faithfulness to source, coverage of key information, "
+            "coherence, and readability."
+        ),
+        evaluation_steps=[
+            "Read the source document and identify the main points.",
+            "Compare Summary A and Summary B against the source.",
+            "Decide whether Summary A is better overall than Summary B.",
+            "Assign higher score when Summary A is better, lower score when Summary B is better.",
+        ],
+        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
 
-def _pairwise_prompt_without_input(summary_a: str, summary_b: str) -> str:
-    return f"""
-Evaluate which summary is better based only on writing quality and informational value.
-Consider coherence, readability, fluency, factual density, and usefulness.
+def _pairwise_metric_without_input(settings: Settings) -> GEval:
+    return GEval(
+        name="pairwise_without_input",
+        model=build_deepeval_model(settings),
+        threshold=0.5,
+        criteria=(
+            "Evaluate whether Summary A (actual_output) is better than Summary B (expected_output) "
+            "using only summary quality: coherence, readability, fluency, factual density, and usefulness."
+        ),
+        evaluation_steps=[
+            "Read Summary A.",
+            "Read Summary B.",
+            "Compare quality and informativeness.",
+            "Assign higher score when Summary A is better, lower score when Summary B is better.",
+        ],
+        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
-Respond with strict JSON only:
-{{
-  "winner": "A" | "B" | "tie",
-  "score_A": number in [0, 1],
-  "score_B": number in [0, 1],
-  "reason": "short explanation (2-3 sentences)"
-}}
 
-Summary A:
-{summary_a}
-
-Summary B:
-{summary_b}
-""".strip()
+def _winner_from_score(score_a: float) -> Literal["A", "B", "tie"]:
+    if score_a > 0.5 + PAIRWISE_TIE_MARGIN:
+        return "A"
+    if score_a < 0.5 - PAIRWISE_TIE_MARGIN:
+        return "B"
+    return "tie"
 
 
 async def evaluate_pairwise_cross_deepeval(
@@ -88,31 +85,39 @@ async def evaluate_pairwise_cross_deepeval(
     summary_a: str,
     summary_b: str,
 ) -> list[dict[str, Any]]:
-    model = build_deepeval_model(settings)
-    with_input_prompt = _pairwise_prompt_with_input(source_text, summary_a, summary_b)
-    without_input_prompt = _pairwise_prompt_without_input(summary_a, summary_b)
+    with_input_case = LLMTestCase(
+        input=source_text,
+        actual_output=summary_a,
+        expected_output=summary_b,
+    )
+    without_input_case = LLMTestCase(
+        input="",
+        actual_output=summary_a,
+        expected_output=summary_b,
+    )
+    with_input_metric = _pairwise_metric_with_input(settings)
+    without_input_metric = _pairwise_metric_without_input(settings)
 
     with_input_result, without_input_result = await asyncio.gather(
-        asyncio.to_thread(model.generate, with_input_prompt, PairwiseJudgeResult),
-        asyncio.to_thread(model.generate, without_input_prompt, PairwiseJudgeResult),
+        asyncio.to_thread(run_metric, with_input_metric, with_input_case),
+        asyncio.to_thread(run_metric, without_input_metric, without_input_case),
     )
-
-    with_input_json = with_input_result[0]
-    without_input_json = without_input_result[0]
+    with_input_score = round(with_input_result.score, 4)
+    without_input_score = round(without_input_result.score, 4)
 
     return [
         {
             "name": "pairwise_with_input",
-            "winner": with_input_json.winner,
-            "score_A": round(with_input_json.score_A, 4),
-            "score_B": round(with_input_json.score_B, 4),
-            "reason": with_input_json.reason,
+            "winner": _winner_from_score(with_input_score),
+            "score_A": with_input_score,
+            "score_B": round(1 - with_input_score, 4),
+            "reason": with_input_result.reason,
         },
         {
             "name": "pairwise_without_input",
-            "winner": without_input_json.winner,
-            "score_A": round(without_input_json.score_A, 4),
-            "score_B": round(without_input_json.score_B, 4),
-            "reason": without_input_json.reason,
+            "winner": _winner_from_score(without_input_score),
+            "score_A": without_input_score,
+            "score_B": round(1 - without_input_score, 4),
+            "reason": without_input_result.reason,
         },
     ]

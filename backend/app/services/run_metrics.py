@@ -11,6 +11,7 @@ from ..services.deepeval_metrics import (
     evaluate_takeaways_input_metrics,
     evaluate_takeaways_metrics,
 )
+from ..services.cross_metrics import compute_cross_metrics as compute_cross_metrics_sync
 from ..services.deterministic_metrics import (
     compression_ratio_metrics,
     key_takeaways_metrics,
@@ -82,6 +83,13 @@ async def compute_deepeval_metrics(
         "takeaways_input": [asdict(x) for x in takeaways_input_results],
         "summary_takeaways": [asdict(x) for x in summary_takeaways_results],
     }
+
+
+async def compute_cross_metrics(
+    reference_text: str,
+    summary_text: str,
+) -> dict[str, float | None]:
+    return await asyncio.to_thread(compute_cross_metrics_sync, reference_text, summary_text)
 
 
 async def store_source_metrics_for_job(job_id: str, text: str) -> None:

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from bson import ObjectId
 
 from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
-from app.services.run_metrics import compute_deepeval_metrics, join_takeaways
+from app.services.run_metrics import compute_cross_metrics, compute_deepeval_metrics, join_takeaways
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +20,10 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         return
 
     aggregate_metrics = run_doc.get("aggregate_metrics", {})
-    deepeval_summary = {
+    aggregate_metrics["deepeval"] = {
         "status": "running",
         "started_at": datetime.now(UTC),
     }
-    aggregate_metrics["deepeval"] = deepeval_summary
     await runs.update_one(
         {"_id": ObjectId(run_id)},
         {"$set": {"aggregate_metrics": aggregate_metrics}},
@@ -43,11 +42,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         )
         return
 
-    source_by_entry_id = {
-        entry["entry_id"]: entry["input_text"]
-        for entry in set_doc["entries"]
-    }
-
+    source_by_entry_id = {entry["entry_id"]: entry["input_text"] for entry in set_doc["entries"]}
     entries = run_doc["entries"]
     updated_entries = 0
     skipped_entries = 0
@@ -91,6 +86,69 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         raise
 
     aggregate_metrics["deepeval"] = {
+        "status": "completed",
+        "updated_entries": updated_entries,
+        "skipped_entries": skipped_entries,
+        "finished_at": datetime.now(UTC),
+    }
+    await runs.update_one(
+        {"_id": ObjectId(run_id)},
+        {"$set": {"entries": entries, "aggregate_metrics": aggregate_metrics}},
+    )
+
+
+async def compute_run_cross_metrics(run_id: str) -> None:
+    runs = get_evaluation_runs_collection()
+
+    run_doc = await runs.find_one({"_id": ObjectId(run_id)})
+    if run_doc is None:
+        return
+
+    aggregate_metrics = run_doc.get("aggregate_metrics", {})
+    aggregate_metrics["cross_metrics"] = {
+        "status": "running",
+        "started_at": datetime.now(UTC),
+    }
+    await runs.update_one(
+        {"_id": ObjectId(run_id)},
+        {"$set": {"aggregate_metrics": aggregate_metrics}},
+    )
+
+    entries = run_doc["entries"]
+    updated_entries = 0
+    skipped_entries = 0
+
+    try:
+        for entry in entries:
+            if entry.get("status") != "completed":
+                skipped_entries += 1
+                continue
+
+            ai_summary = (entry.get("ai_summary") or "").strip()
+            golden_summary = (entry.get("golden_summary") or "").strip()
+            if not ai_summary or not golden_summary:
+                skipped_entries += 1
+                continue
+
+            entry["cross_metrics"] = await compute_cross_metrics(
+                reference_text=golden_summary,
+                summary_text=ai_summary,
+            )
+            updated_entries += 1
+    except Exception as exc:
+        logger.exception("Cross metrics failed for run %s", run_id)
+        aggregate_metrics["cross_metrics"] = {
+            "status": "failed",
+            "error": str(exc),
+            "finished_at": datetime.now(UTC),
+        }
+        await runs.update_one(
+            {"_id": ObjectId(run_id)},
+            {"$set": {"entries": entries, "aggregate_metrics": aggregate_metrics}},
+        )
+        raise
+
+    aggregate_metrics["cross_metrics"] = {
         "status": "completed",
         "updated_entries": updated_entries,
         "skipped_entries": skipped_entries,

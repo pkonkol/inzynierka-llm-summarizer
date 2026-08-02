@@ -11,3 +11,5 @@ langchain-ollama
 textstat
 spacy
 deepeval
+rouge-score
+nltk

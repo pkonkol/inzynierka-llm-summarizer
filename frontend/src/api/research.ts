@@ -6,8 +6,9 @@ import type {
     EvaluationSetListItem,
     EvaluationRunCreatePayload,
     EvaluationRunCreateResponse,
-    EvaluationRunDetail,
+    EvaluationRunEntry,
     EvaluationRunListItem,
+    EvaluationRunMeta,
 } from "../types/research";
 
 export const listEvaluationSets = (): Promise<EvaluationSetListItem[]> =>
@@ -47,8 +48,11 @@ export const createEvaluationRun = (
         body: JSON.stringify(payload),
     });
 
-export const getEvaluationRun = (runId: string): Promise<EvaluationRunDetail> =>
-    request<EvaluationRunDetail>(`/api/v1/research/runs/${runId}`);
+export const getEvaluationRun = (runId: string): Promise<EvaluationRunMeta> =>
+    request<EvaluationRunMeta>(`/api/v1/research/runs/${runId}`);
+
+export const getEvaluationRunEntries = (runId: string): Promise<{ entries: EvaluationRunEntry[] }> =>
+    request<{ entries: EvaluationRunEntry[] }>(`/api/v1/research/runs/${runId}/entries`);
 
 export const evaluateRunDeepeval = (
     runId: string,

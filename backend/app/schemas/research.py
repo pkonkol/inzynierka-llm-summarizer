@@ -111,8 +111,11 @@ class EvaluationRunResponse(BaseModel):
     status: RunStatus
     created_at: datetime
     finished_at: datetime | None = None
-    entries: list[EvaluationRunEntry] = Field(default_factory=list)
+    entry_count: int
     aggregate_metrics: dict[str, Any] = Field(default_factory=dict)
+
+class EvaluationRunEntriesResponse(BaseModel):
+    entries: list[EvaluationRunEntry] = Field(default_factory=list)
 
 class EvaluationRunListItemResponse(BaseModel):
     evaluation_run_id: str

@@ -6,6 +6,9 @@ import { NavDock } from "./components/NavDock";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
+import { EvaluationSetPage } from "./pages/EvaluationSetPage";
+import { EvaluationRunPage } from "./pages/EvaluationRunPage";
+import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRouting";
 
 type Route = "home" | "jobs" | "research";
 
@@ -14,6 +17,24 @@ function getRoute(): Route {
     if (path.startsWith("/jobs")) return "jobs";
     if (path.startsWith("/research")) return "research";
     return "home";
+}
+
+function ResearchRouter() {
+    const [pathname, setPathname] = useState(window.location.pathname);
+
+    useEffect(() => {
+        const onPop = () => setPathname(window.location.pathname);
+        window.addEventListener("popstate", onPop);
+        return () => window.removeEventListener("popstate", onPop);
+    }, []);
+
+    const runId = getRunIdFromPath(pathname);
+    if (runId) return <EvaluationRunPage runId={runId} />;
+
+    const setId = getEvaluationSetIdFromPath(pathname);
+    if (setId) return <EvaluationSetPage setId={setId} />;
+
+    return <ResearchPage />;
 }
 
 function App() {
@@ -73,7 +94,7 @@ function App() {
             />
             {route === "home" && <HomePage />}
             {route === "jobs" && <JobsPage />}
-            {route === "research" && <ResearchPage />}
+            {route === "research" && <ResearchRouter />}
         </div>
     );
 }

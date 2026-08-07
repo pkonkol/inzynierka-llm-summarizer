@@ -17,6 +17,7 @@ from ..schemas.research import (
     EvaluationSetListItemResponse,
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
+    EvaluationRunEntriesResponse,
     EvaluationRunListItemResponse,
     EvaluationRunResponse,
 )
@@ -224,6 +225,7 @@ async def create_evaluation_run(
         "created_at": created_at,
         "finished_at": None,
         "entries": entries,
+        "entry_count": len(entries),
         "aggregate_metrics": {},
     }
 
@@ -246,7 +248,21 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
     runs = get_evaluation_runs_collection()
 
     documents = (
-        await runs.find({"evaluation_set_id": set_id})
+        await runs.find(
+            {"evaluation_set_id": set_id},
+            {
+                "evaluation_set_id": 1,
+                "evaluation_set_name": 1,
+                "model_provider": 1,
+                "model_name": 1,
+                "summary_mode": 1,
+                "language": 1,
+                "status": 1,
+                "created_at": 1,
+                "finished_at": 1,
+                "entry_count": 1,
+            },
+        )
         .sort("created_at", DESCENDING)
         .to_list(length=1000)
     )
@@ -263,7 +279,7 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
             status=doc["status"],
             created_at=doc["created_at"],
             finished_at=doc.get("finished_at"),
-            entry_count=len(doc["entries"]),
+            entry_count=doc["entry_count"],
         )
         for doc in documents
     ]
@@ -271,7 +287,22 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
 @router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
 async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
     runs = get_evaluation_runs_collection()
-    document = await runs.find_one({"_id": ObjectId(run_id)})
+    document = await runs.find_one(
+        {"_id": ObjectId(run_id)},
+        {
+            "evaluation_set_id": 1,
+            "evaluation_set_name": 1,
+            "model_provider": 1,
+            "model_name": 1,
+            "summary_mode": 1,
+            "language": 1,
+            "status": 1,
+            "created_at": 1,
+            "finished_at": 1,
+            "entry_count": 1,
+            "aggregate_metrics": 1,
+        },
+    )
 
     if document is None:
         raise HTTPException(status_code=404, detail="Evaluation run not found")
@@ -287,9 +318,20 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         status=document["status"],
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
-        entries=document["entries"],
+        entry_count=document["entry_count"],
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
+
+
+@router.get("/runs/{run_id}/entries", response_model=EvaluationRunEntriesResponse)
+async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesResponse:
+    runs = get_evaluation_runs_collection()
+    document = await runs.find_one({"_id": ObjectId(run_id)}, {"entries": 1})
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+
+    return EvaluationRunEntriesResponse(entries=document["entries"])
 
 
 @router.post("/runs/{run_id}/deepeval", dependencies=[Depends(require_auth)])
@@ -298,7 +340,7 @@ async def evaluate_run_deepeval(
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
     runs = get_evaluation_runs_collection()
-    document = await runs.find_one({"_id": ObjectId(run_id)})
+    document = await runs.find_one({"_id": ObjectId(run_id)}, {"status": 1})
 
     if document is None:
         raise HTTPException(status_code=404, detail="Evaluation run not found")

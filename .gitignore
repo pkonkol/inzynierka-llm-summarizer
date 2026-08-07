@@ -13,6 +13,7 @@ terraform.tfstate.backup
 NOTES.md
 logs.md
 .env*
+CLAUDE.local.md
 
 
 # macOS

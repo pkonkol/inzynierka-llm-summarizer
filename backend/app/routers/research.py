@@ -42,7 +42,7 @@ async def create_evaluation_set(
             "entry_id": str(uuid4()),
             "input_text": entry.input_text,
             "golden_summary": entry.golden_summary,
-            "source_meta": entry.source_meta,
+            "source_meta": entry.source_meta.model_dump(),
             "golden_metrics": (
                 entry.golden_metrics.model_dump() if entry.golden_metrics else None
             ),
@@ -137,7 +137,7 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
             {
                 "input_text": entry["input_text"],
                 "golden_summary": entry["golden_summary"],
-                "source_meta": entry.get("source_meta", {}),
+                "source_meta": entry["source_meta"],
                 "golden_metrics": entry.get("golden_metrics"),
             }
             for entry in document["entries"]
@@ -221,7 +221,7 @@ async def create_evaluation_run(
     entries = [
         {
             "entry_id": entry["entry_id"],
-            "source_meta": entry.get("source_meta", {}),
+            "source_meta": entry["source_meta"],
             "golden_summary": entry["golden_summary"],
             "golden_metrics": entry.get("golden_metrics"),
             "ai_summary": None,

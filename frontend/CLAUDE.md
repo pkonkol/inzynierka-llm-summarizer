@@ -30,6 +30,26 @@ function InfoRow({ value }: InfoRowProps) {
 
 - `value ?? ""` / `value || ""` used to mask a value that should already be present — same ban as any other silent fallback.
 
+Real example from this codebase (`EvaluationRunPage.tsx`, evaluation-run entry header): `source_meta` is a required `{url, title}` object per the backend Pydantic schema — every entry has it. It was typed as `Record<string, unknown>` on the frontend, forcing the component to defend against absence that could never happen:
+
+```tsx
+// BAD — defends against a shape that the API contract already guarantees
+function EntryMetaLine({ sourceMeta }: { sourceMeta: Record<string, unknown> }) {
+  const title = typeof sourceMeta.title === "string" ? sourceMeta.title : null;
+  const url = typeof sourceMeta.url === "string" ? sourceMeta.url : null;
+  const bits = [title, url].filter((v): v is string => Boolean(v));
+  if (bits.length === 0) return null;
+  return <p>{bits.join(" · ")}</p>;
+}
+
+// GOOD — type matches the backend contract (SourceMeta = {url: string, title: string}), no runtime guards
+function EntryMetaLine({ sourceMeta }: { sourceMeta: SourceMeta }) {
+  return <p>{sourceMeta.title} · {sourceMeta.url}</p>;
+}
+```
+
+The fix wasn't in the component — it was giving `source_meta` a real type (`SourceMeta`) instead of `Record<string, unknown>`, and fixing the backend Pydantic model (`dict[str, Any]` → `SourceMeta` submodel) so the API boundary actually enforces the field is present. If a defensive check like this shows up, look upstream for a loose type first.
+
 ## Fail fast
 
 A malformed or incomplete API response should throw where it's parsed, not degrade silently into a half-rendered UI. Don't add `try { } catch { /* ignore */ }` around fetches.

@@ -31,6 +31,13 @@ def _nlp():
 _CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV"}
 
 
+def flesch_reading_ease(text: str) -> float | None:
+    try:
+        return round(textstat.flesch_reading_ease(text), 2)
+    except Exception:
+        return None
+
+
 def flesch_kincaid_grade(text: str) -> float | None:
     try:
         return round(textstat.flesch_kincaid_grade(text), 2)
@@ -41,6 +48,27 @@ def flesch_kincaid_grade(text: str) -> float | None:
 def gunning_fog(text: str) -> float | None:
     try:
         return round(textstat.gunning_fog(text), 2)
+    except Exception:
+        return None
+
+
+def smog_index(text: str) -> float | None:
+    try:
+        return round(textstat.smog_index(text), 2)
+    except Exception:
+        return None
+
+
+def coleman_liau_index(text: str) -> float | None:
+    try:
+        return round(textstat.coleman_liau_index(text), 2)
+    except Exception:
+        return None
+
+
+def text_standard(text: str) -> float | None:
+    try:
+        return textstat.text_standard(text, float_output=True)
     except Exception:
         return None
 
@@ -98,12 +126,18 @@ def source_metrics(text: str) -> dict[str, Any]:
 
 def summary_metrics(text: str) -> dict[str, Any]:
     return {
-        "automated_readability_index": automated_readability_index(text),
+        "word_count": textstat.lexicon_count(text, removepunct=True),
+        "sentence_count": textstat.sentence_count(text),
         "avg_sentence_length": avg_sentence_length(text),
         "type_token_ratio": type_token_ratio(text),
         "lexical_density": lexical_density(text),
-        "word_count": textstat.lexicon_count(text, removepunct=True),
-        "sentence_count": textstat.sentence_count(text),
+        "flesch_reading_ease": flesch_reading_ease(text),
+        "flesch_kincaid_grade": flesch_kincaid_grade(text),
+        "gunning_fog": gunning_fog(text),
+        "smog_index": smog_index(text),
+        "coleman_liau_index": coleman_liau_index(text),
+        "automated_readability_index": automated_readability_index(text),
+        "text_standard": text_standard(text),
     }
 
 

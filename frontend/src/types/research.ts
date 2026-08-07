@@ -14,8 +14,7 @@ export type PairwiseDeepevalItem = {
 };
 
 export type GoldenMetrics = {
-  text_stats: Record<string, number> | null;
-  readability: Record<string, number> | null;
+  summary: Record<string, number> | null;
   deepeval: {
     summary: DeepevalItem[];
     summary_input: DeepevalItem[];
@@ -43,6 +42,11 @@ export type CrossMetrics = {
   deepeval: PairwiseDeepevalItem[];
 };
 
+export type SourceMeta = {
+  url: string;
+  title: string;
+};
+
 export type EvaluationSetEntryInputText = {
   entry_id: string;
   input_text: string;
@@ -51,7 +55,7 @@ export type EvaluationSetEntryInputText = {
 export type EvaluationSetEntry = {
   entry_id: string;
   golden_summary: string;
-  source_meta: Record<string, unknown>;
+  source_meta: SourceMeta;
   golden_metrics: GoldenMetrics | null;
 };
 
@@ -85,7 +89,7 @@ export type EvaluationSetImportPayload = {
   entries: {
     input_text: string;
     golden_summary: string;
-    source_meta?: Record<string, unknown>;
+    source_meta: SourceMeta;
     golden_metrics?: GoldenMetrics | null;
   }[];
 };
@@ -120,7 +124,7 @@ export type EvaluationRunListItem = {
 
 export type EvaluationRunEntry = {
     entry_id: string;
-    source_meta: Record<string, unknown>;
+    source_meta: SourceMeta;
     golden_summary: string;
     golden_metrics: GoldenMetrics | null;
     ai_summary: string | null;

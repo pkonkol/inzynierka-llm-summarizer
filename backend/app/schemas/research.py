@@ -7,11 +7,8 @@ from pydantic import BaseModel, Field
 # --- shared sub-models ---
 
 class SourceMeta(BaseModel):
-    url: str | None = None
+    url: str
     title: str
-    source: str | None = None   # "cnn", "own", "moldbug", …
-    author: str | None = None
-    extra: dict[str, Any] = Field(default_factory=dict)
 
 class DeepevalItem(BaseModel):
     name: str
@@ -34,8 +31,7 @@ class CrossMetrics(BaseModel):
     deepeval: list[PairwiseDeepevalItem] = Field(default_factory=list)
 
 class GoldenMetrics(BaseModel):
-    text_stats: dict[str, Any] | None = None
-    readability: dict[str, Any] | None = None
+    summary: dict[str, Any] | None = None
     deepeval: dict[str, Any] | None = None
 
 # --- EvaluationSet ---
@@ -43,7 +39,7 @@ class GoldenMetrics(BaseModel):
 class EvaluationSetEntryImport(BaseModel):
     input_text: str
     golden_summary: str
-    source_meta: dict[str, Any] = Field(default_factory=dict)
+    source_meta: SourceMeta
     golden_metrics: GoldenMetrics | None = None
 
 class EvaluationSetImportRequest(BaseModel):
@@ -54,7 +50,7 @@ class EvaluationSetImportRequest(BaseModel):
 class EvaluationSetEntryResponse(BaseModel):
     entry_id: str
     golden_summary: str
-    source_meta: dict[str, Any] = Field(default_factory=dict)
+    source_meta: SourceMeta
     golden_metrics: GoldenMetrics | None = None
 
 class EvaluationSetEntryInputTextResponse(BaseModel):
@@ -88,7 +84,7 @@ RunStatus = Literal["pending", "running", "completed", "failed"]
 
 class EvaluationRunEntry(BaseModel):
     entry_id: str
-    source_meta: dict[str, Any] = Field(default_factory=dict)
+    source_meta: SourceMeta
     golden_summary: str
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None

@@ -29,13 +29,23 @@ export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
 export const exportEvaluationSet = (setId: string): Promise<unknown> =>
     request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);
 
+const inputTextCache = new Map<string, Promise<EvaluationSetEntryInputText>>();
+
 export const getEvaluationSetEntryInputText = (
     setId: string,
     entryId: string,
-): Promise<EvaluationSetEntryInputText> =>
-    request<EvaluationSetEntryInputText>(
+): Promise<EvaluationSetEntryInputText> => {
+    const cacheKey = `${setId}:${entryId}`;
+    const cached = inputTextCache.get(cacheKey);
+    if (cached) return cached;
+
+    const result = request<EvaluationSetEntryInputText>(
         `/api/v1/research/evaluation-sets/${setId}/entries/${entryId}/input-text`,
     );
+    inputTextCache.set(cacheKey, result);
+    result.catch(() => inputTextCache.delete(cacheKey));
+    return result;
+};
 
 export const evaluateMissingGoldenMetrics = (
     setId: string,

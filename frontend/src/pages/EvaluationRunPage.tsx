@@ -11,17 +11,14 @@ import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalI
 import { InfoRow } from "../components/InfoRow";
 import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
-import type { EvaluationRunEntry, EvaluationRunMeta } from "../types/research";
+import type { EvaluationRunEntry, EvaluationRunMeta, SourceMeta } from "../types/research";
 
-function EntryMetaLine({ sourceMeta }: { sourceMeta: Record<string, unknown> }) {
-    const title = typeof sourceMeta.title === "string" ? sourceMeta.title : null;
-    const url = typeof sourceMeta.url === "string" ? sourceMeta.url : null;
-    const author = typeof sourceMeta.author === "string" ? sourceMeta.author : null;
-
-    const bits = [title, author, url].filter((value): value is string => Boolean(value));
-    if (bits.length === 0) return null;
-
-    return <p className="m-0 mt-0.5 text-[0.78rem] lowercase text-muted">{bits.join(" · ")}</p>;
+function EntryMetaLine({ sourceMeta }: { sourceMeta: SourceMeta }) {
+    return (
+        <p className="m-0 mt-0.5 text-[0.78rem] lowercase text-muted">
+            {sourceMeta.title} · {sourceMeta.url}
+        </p>
+    );
 }
 
 function InputTextSection({ setId, entryId }: { setId: string; entryId: string }) {
@@ -79,28 +76,40 @@ function ColumnsHeader() {
 }
 
 function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
-    const goldenTextStats = entry.golden_metrics?.text_stats ?? {};
-    const goldenReadability = entry.golden_metrics?.readability ?? {};
-    const goldenFlat: Record<string, number> = { ...goldenTextStats, ...goldenReadability };
-
+    const goldenSummary = entry.golden_metrics?.summary ?? {};
     const aiSummary = entry.ai_metrics?.summary ?? {};
-    const aiKeyTakeaways = entry.ai_metrics?.key_takeaways ?? {};
-    const aiCompression = entry.ai_metrics?.compression ?? {};
-    const aiFlat: Record<string, number> = { ...aiSummary, ...aiKeyTakeaways, ...aiCompression };
 
-    const allLabels = Array.from(new Set([...Object.keys(goldenFlat), ...Object.keys(aiFlat)]));
-
-    if (allLabels.length === 0) return null;
+    const allLabels = Array.from(new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]));
 
     return (
         <div className="space-y-2">
-            <ColumnsHeader />
-            {!entry.golden_metrics ? (
-                <p className="m-0 text-[0.78rem] italic text-muted">Golden metrics not computed for this entry.</p>
+            {allLabels.length > 0 ? (
+                <>
+                    <ColumnsHeader />
+                    {!entry.golden_metrics ? (
+                        <p className="m-0 text-[0.78rem] italic text-muted">Golden metrics not computed for this entry.</p>
+                    ) : null}
+                    {allLabels.map((label) => (
+                        <MetricRow key={label} label={formatLabel(label)} golden={goldenSummary[label]} ai={aiSummary[label]} />
+                    ))}
+                </>
             ) : null}
-            {allLabels.map((label) => (
-                <MetricRow key={label} label={formatLabel(label)} golden={goldenFlat[label]} ai={aiFlat[label]} />
-            ))}
+
+            {entry.ai_metrics ? (
+                <div className="space-y-2 border-t border-divider pt-3">
+                    <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                        AI takeaways &amp; compression
+                    </h6>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {Object.entries(entry.ai_metrics.key_takeaways).map(([label, value]) => (
+                            <InfoRow key={label} label={formatLabel(label)} value={value} />
+                        ))}
+                        {Object.entries(entry.ai_metrics.compression).map(([label, value]) => (
+                            <InfoRow key={label} label={formatLabel(label)} value={value} />
+                        ))}
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

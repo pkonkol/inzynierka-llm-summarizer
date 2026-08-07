@@ -2,6 +2,7 @@ import { request } from "./client";
 import type {
     EvaluationSetCreateResponse,
     EvaluationSetDetail,
+    EvaluationSetEntryInputText,
     EvaluationSetImportPayload,
     EvaluationSetListItem,
     EvaluationRunCreatePayload,
@@ -27,6 +28,14 @@ export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
 
 export const exportEvaluationSet = (setId: string): Promise<unknown> =>
     request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);
+
+export const getEvaluationSetEntryInputText = (
+    setId: string,
+    entryId: string,
+): Promise<EvaluationSetEntryInputText> =>
+    request<EvaluationSetEntryInputText>(
+        `/api/v1/research/evaluation-sets/${setId}/entries/${entryId}/input-text`,
+    );
 
 export const evaluateMissingGoldenMetrics = (
     setId: string,

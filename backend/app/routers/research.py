@@ -12,6 +12,7 @@ from ..core.auth import require_auth
 from ..schemas.research import (
     EvaluationSetCreateResponse,
     EvaluationSetDetailResponse,
+    EvaluationSetEntryInputTextResponse,
     EvaluationSetEntryResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
@@ -145,6 +146,25 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
 
     return JSONResponse(content=payload)
 
+@router.get(
+    "/evaluation-sets/{set_id}/entries/{entry_id}/input-text",
+    response_model=EvaluationSetEntryInputTextResponse,
+)
+async def get_evaluation_set_entry_input_text(set_id: str, entry_id: str) -> EvaluationSetEntryInputTextResponse:
+    collection = get_evaluation_sets_collection()
+    document = await collection.find_one(
+        {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
+        {"entries.$": 1},
+    )
+
+    if document is None or not document.get("entries"):
+        raise HTTPException(status_code=404, detail="Evaluation set entry not found")
+
+    return EvaluationSetEntryInputTextResponse(
+        entry_id=entry_id,
+        input_text=document["entries"][0]["input_text"],
+    )
+
 @router.post("/evaluation-sets/{set_id}/golden-metrics", dependencies=[Depends(require_auth)])
 async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
     collection = get_evaluation_sets_collection()
@@ -201,6 +221,7 @@ async def create_evaluation_run(
     entries = [
         {
             "entry_id": entry["entry_id"],
+            "source_meta": entry.get("source_meta", {}),
             "golden_summary": entry["golden_summary"],
             "golden_metrics": entry.get("golden_metrics"),
             "ai_summary": None,
@@ -225,7 +246,6 @@ async def create_evaluation_run(
         "created_at": created_at,
         "finished_at": None,
         "entries": entries,
-        "entry_count": len(entries),
         "aggregate_metrics": {},
     }
 
@@ -247,10 +267,11 @@ async def create_evaluation_run(
 async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemResponse]:
     runs = get_evaluation_runs_collection()
 
-    documents = (
-        await runs.find(
-            {"evaluation_set_id": set_id},
-            {
+    documents = await runs.aggregate([
+        {"$match": {"evaluation_set_id": set_id}},
+        {"$sort": {"created_at": DESCENDING}},
+        {
+            "$project": {
                 "evaluation_set_id": 1,
                 "evaluation_set_name": 1,
                 "model_provider": 1,
@@ -260,12 +281,10 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
                 "status": 1,
                 "created_at": 1,
                 "finished_at": 1,
-                "entry_count": 1,
-            },
-        )
-        .sort("created_at", DESCENDING)
-        .to_list(length=1000)
-    )
+                "entry_count": {"$size": "$entries"},
+            }
+        },
+    ]).to_list(length=1000)
 
     return [
         EvaluationRunListItemResponse(
@@ -299,7 +318,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
             "status": 1,
             "created_at": 1,
             "finished_at": 1,
-            "entry_count": 1,
+            "entries.entry_id": 1,
             "aggregate_metrics": 1,
         },
     )
@@ -318,7 +337,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         status=document["status"],
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
-        entry_count=document["entry_count"],
+        entry_count=len(document["entries"]),
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
 

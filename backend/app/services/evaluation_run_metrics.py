@@ -48,19 +48,19 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         return
 
     source_by_entry_id = {entry["entry_id"]: entry["input_text"] for entry in set_doc["entries"]}
-    entries = run_doc["entries"]
     updated_entries = 0
     skipped_entries = 0
 
     try:
-        for entry in entries:
+        for entry in run_doc["entries"]:
             if entry["status"] != "completed":
                 skipped_entries += 1
                 continue
 
+            entry_id = entry["entry_id"]
             summary_text = entry["ai_summary"].strip()
             takeaways_text = join_takeaways(entry["ai_key_takeaways"])
-            source_text = source_by_entry_id[entry["entry_id"]]
+            source_text = source_by_entry_id[entry_id]
 
             deepeval_metrics = await compute_deepeval_metrics(
                 summary_text=summary_text,
@@ -70,19 +70,27 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
 
             ai_metrics = entry["ai_metrics"]
             ai_metrics["deepeval"] = deepeval_metrics
-            entry["ai_metrics"] = ai_metrics
 
-            entry["cross_metrics"] = await compute_cross_metrics(
+            cross_metrics = await compute_cross_metrics(
                 reference_text=entry["golden_summary"],
                 summary_text=summary_text,
             )
-            cross_metrics = entry["cross_metrics"]
             pairwise = await compute_pairwise_cross_deepeval_metrics(
                 source_text=source_text,
                 golden_summary=entry["golden_summary"],
                 ai_summary=summary_text,
             )
             cross_metrics["deepeval"] = pairwise
+
+            await runs.update_one(
+                {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
+                {
+                    "$set": {
+                        "entries.$.ai_metrics": ai_metrics,
+                        "entries.$.cross_metrics": cross_metrics,
+                    }
+                },
+            )
             updated_entries += 1
     except Exception as exc:
         logger.exception("DEEPEVAL failed for run %s", run_id)
@@ -93,7 +101,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         }
         await runs.update_one(
             {"_id": ObjectId(run_id)},
-            {"$set": {"entries": entries, "aggregate_metrics": aggregate_metrics}},
+            {"$set": {"aggregate_metrics": aggregate_metrics}},
         )
         raise
 
@@ -105,5 +113,5 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
     }
     await runs.update_one(
         {"_id": ObjectId(run_id)},
-        {"$set": {"entries": entries, "aggregate_metrics": aggregate_metrics}},
+        {"$set": {"aggregate_metrics": aggregate_metrics}},
     )

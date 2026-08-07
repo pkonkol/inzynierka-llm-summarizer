@@ -1,12 +1,60 @@
 import { useEffect, useState } from "react";
 
-import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
+import {
+    evaluateRunDeepeval,
+    getEvaluationRun,
+    getEvaluationRunEntries,
+    getEvaluationSetEntryInputText,
+} from "../api/research";
 import { Collapsible } from "../components/Collapsible";
 import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
 import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
 import type { EvaluationRunEntry, EvaluationRunMeta } from "../types/research";
+
+function EntryMetaLine({ sourceMeta }: { sourceMeta: Record<string, unknown> }) {
+    const title = typeof sourceMeta.title === "string" ? sourceMeta.title : null;
+    const url = typeof sourceMeta.url === "string" ? sourceMeta.url : null;
+    const author = typeof sourceMeta.author === "string" ? sourceMeta.author : null;
+
+    const bits = [title, author, url].filter((value): value is string => Boolean(value));
+    if (bits.length === 0) return null;
+
+    return <p className="m-0 mt-0.5 text-[0.78rem] lowercase text-muted">{bits.join(" · ")}</p>;
+}
+
+function InputTextSection({ setId, entryId }: { setId: string; entryId: string }) {
+    const [inputText, setInputText] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getEvaluationSetEntryInputText(setId, entryId)
+            .then((data) => {
+                if (!isMounted) return;
+                setInputText(data.input_text);
+            })
+            .catch((error: unknown) => {
+                if (!isMounted) return;
+                setErrorMessage(`Nie udało się pobrać input text: ${String(error)}`);
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [setId, entryId]);
+
+    if (isLoading) return <p className="m-0 p-3 text-[0.82rem] text-muted">Ładowanie...</p>;
+    if (errorMessage) return <p className="m-0 p-3 text-[0.82rem] text-danger">{errorMessage}</p>;
+
+    return <PreBlock>{inputText ?? ""}</PreBlock>;
+}
 
 function formatLabel(key: string): string {
     return key.replace(/_/g, " ");
@@ -17,6 +65,15 @@ function MetricRow({ label, golden, ai }: { label: string; golden: number | null
         <div className="grid grid-cols-2 gap-3">
             <InfoRow label={label} value={golden} />
             <InfoRow label={label} value={ai} />
+        </div>
+    );
+}
+
+function ColumnsHeader() {
+    return (
+        <div className="grid grid-cols-2 gap-3">
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Golden</h6>
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">AI</h6>
         </div>
     );
 }
@@ -37,10 +94,10 @@ function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
 
     return (
         <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-3">
-                <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Golden</h6>
-                <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">AI</h6>
-            </div>
+            <ColumnsHeader />
+            {!entry.golden_metrics ? (
+                <p className="m-0 text-[0.78rem] italic text-muted">Golden metrics not computed for this entry.</p>
+            ) : null}
             {allLabels.map((label) => (
                 <MetricRow key={label} label={formatLabel(label)} golden={goldenFlat[label]} ai={aiFlat[label]} />
             ))}
@@ -73,8 +130,8 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
                     <div key={section as string} className="space-y-2">
                         <span className="font-mono text-[0.72rem] uppercase tracking-wider text-muted">{section as string}</span>
                         <div className="grid grid-cols-2 gap-3">
-                            <div>{goldenItems.length > 0 ? <DeepevalItems items={goldenItems} /> : null}</div>
-                            <div>{aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : null}</div>
+                            <div>{goldenItems.length > 0 ? <DeepevalItems items={goldenItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
+                            <div>{aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
                         </div>
                     </div>
                 );
@@ -287,9 +344,12 @@ export function EvaluationRunPage({ runId }: Props) {
                                 className="border border-panel-border bg-panel-solid px-3.5 py-3"
                             >
                                 <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                        Entry {index + 1} · {entry.status}
-                                    </p>
+                                    <div>
+                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                            Entry {index + 1} · {entry.status}
+                                        </p>
+                                        <EntryMetaLine sourceMeta={entry.source_meta} />
+                                    </div>
                                     <p className="m-0 font-mono text-[0.82rem] text-muted">{entry.entry_id}</p>
                                 </div>
 
@@ -330,7 +390,12 @@ export function EvaluationRunPage({ runId }: Props) {
                                     </div>
                                 </div>
 
-                                <div className="mt-3">
+                                <div className="mt-3 grid gap-2">
+                                    <Collapsible label="Input text">
+                                        {run ? (
+                                            <InputTextSection setId={run.evaluation_set_id} entryId={entry.entry_id} />
+                                        ) : null}
+                                    </Collapsible>
                                     <Collapsible label="Metrics">
                                         <EntryMetrics entry={entry} />
                                     </Collapsible>

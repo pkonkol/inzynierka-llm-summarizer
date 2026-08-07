@@ -43,6 +43,11 @@ export type CrossMetrics = {
   deepeval: PairwiseDeepevalItem[];
 };
 
+export type EvaluationSetEntryInputText = {
+  entry_id: string;
+  input_text: string;
+};
+
 export type EvaluationSetEntry = {
   entry_id: string;
   golden_summary: string;
@@ -115,6 +120,7 @@ export type EvaluationRunListItem = {
 
 export type EvaluationRunEntry = {
     entry_id: string;
+    source_meta: Record<string, unknown>;
     golden_summary: string;
     golden_metrics: GoldenMetrics | null;
     ai_summary: string | null;

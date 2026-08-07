@@ -57,6 +57,10 @@ class EvaluationSetEntryResponse(BaseModel):
     source_meta: dict[str, Any] = Field(default_factory=dict)
     golden_metrics: GoldenMetrics | None = None
 
+class EvaluationSetEntryInputTextResponse(BaseModel):
+    entry_id: str
+    input_text: str
+
 class EvaluationSetListItemResponse(BaseModel):
     evaluation_set_id: str
     name: str
@@ -84,6 +88,7 @@ RunStatus = Literal["pending", "running", "completed", "failed"]
 
 class EvaluationRunEntry(BaseModel):
     entry_id: str
+    source_meta: dict[str, Any] = Field(default_factory=dict)
     golden_summary: str
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None

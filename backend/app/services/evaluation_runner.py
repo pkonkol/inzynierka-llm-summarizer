@@ -37,14 +37,20 @@ async def run_evaluation_batch(run_id: str) -> None:
 
     await runs.update_one({"_id": ObjectId(run_id)}, {"$set": {"status": "running"}})
 
-    entries = set_doc["entries"]
+    source_entries_by_id = {entry["entry_id"]: entry for entry in set_doc["entries"]}
     delay_ms = run_doc["rate_limit_delay_ms"]
 
-    for entry in entries:
+    statuses: list[str] = []
+
+    for run_entry in run_doc["entries"]:
+        entry_id = run_entry["entry_id"]
+        source_entry = source_entries_by_id[entry_id]
+        update: dict = {}
+
         try:
             summary = await generate_summary(
-                input={"text": entry["input_text"], "title": entry["source_meta"]["title"]},
-                source_url=entry["source_meta"]["url"],
+                input={"text": source_entry["input_text"], "title": source_entry["source_meta"]["title"]},
+                source_url=source_entry["source_meta"]["url"],
                 model_name=run_doc["model_name"],
                 model_provider=run_doc["model_provider"],
                 language=run_doc["language"],
@@ -54,44 +60,45 @@ async def run_evaluation_batch(run_id: str) -> None:
             summary_text = summary["summary"]
             takeaways = summary["key_takeaways"]
 
-            entry["ai_summary"] = summary_text
-            entry["ai_key_takeaways"] = takeaways
-            entry["ai_metrics"] = await compute_deterministic_metrics(
+            update["ai_summary"] = summary_text
+            update["ai_key_takeaways"] = takeaways
+            update["ai_metrics"] = await compute_deterministic_metrics(
                 summary_text=summary_text,
                 takeaways_text=join_takeaways(takeaways),
-                source_text=entry["input_text"],
+                source_text=source_entry["input_text"],
             )
-            entry["cross_metrics"] = await compute_cross_metrics(
-                reference_text=entry["golden_summary"],
+            update["cross_metrics"] = await compute_cross_metrics(
+                reference_text=run_entry["golden_summary"],
                 summary_text=summary_text,
             )
-            entry["status"] = "completed"
-            entry["error"] = None
+            update["status"] = "completed"
+            update["error"] = None
         except Exception as exc:
-            entry["status"] = "failed"
-            entry["error"] = str(exc)
-            logger.error("Failed entry %s for run %s: %s", entry["entry_id"], run_id, exc)
+            update["status"] = "failed"
+            update["error"] = str(exc)
+            logger.error("Failed entry %s for run %s: %s", entry_id, run_id, exc)
+
+        statuses.append(update["status"])
 
         await runs.update_one(
-            {"_id": ObjectId(run_id)},
-            {"$set": {"entries": entries}},
+            {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
+            {"$set": {f"entries.$.{key}": value for key, value in update.items()}},
         )
 
         if delay_ms > 0:
             await asyncio.sleep(delay_ms / 1000)
 
-    completed = sum(1 for item in entries if item["status"] == "completed")
-    failed = sum(1 for item in entries if item["status"] == "failed")
+    completed = sum(1 for status in statuses if status == "completed")
+    failed = sum(1 for status in statuses if status == "failed")
 
     await runs.update_one(
         {"_id": ObjectId(run_id)},
         {
             "$set": {
-                "entries": entries,
                 "status": "completed" if failed == 0 else "failed",
                 "finished_at": datetime.now(UTC),
                 "aggregate_metrics": {
-                    "entry_count": len(entries),
+                    "entry_count": len(statuses),
                     "completed_entries": completed,
                     "failed_entries": failed,
                 },

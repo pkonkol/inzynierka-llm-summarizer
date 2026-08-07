@@ -36,7 +36,8 @@ async def init_mongo() -> None:
     await ensure_evaluation_runs_indexes(evaluation_runs_collection)
 
     count = await cleanup_stale_pending_jobs(max_age_hours=2)
-    print(f"MongoDB initialized. Cleaned up {count} stale pending jobs.")
+    run_count = await cleanup_stale_evaluation_runs(max_age_hours=2)
+    print(f"MongoDB initialized. Cleaned up {count} stale pending jobs, {run_count} stale evaluation runs.")
 
 
 async def close_mongo() -> None:
@@ -94,6 +95,22 @@ async def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:
                 "status": "failed",
                 "error": "Job killed before completion (server restart)",
                 "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+    return result.modified_count
+
+
+async def cleanup_stale_evaluation_runs(max_age_hours: int = 2) -> int:
+    runs_collection = get_evaluation_runs_collection()
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    result = await runs_collection.update_many(
+        {"status": {"$in": ["pending", "running"]}, "created_at": {"$lt": cutoff}},
+        {
+            "$set": {
+                "status": "failed",
+                "finished_at": datetime.now(timezone.utc),
+                "aggregate_metrics.error": "Evaluation run killed before completion (server restart)",
             }
         },
     )

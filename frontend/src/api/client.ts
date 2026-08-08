@@ -64,6 +64,9 @@ export const getJobsForUrl = (sourceUrl: string, status: JobStatusValue): Promis
 export const getJobStatus = (jobId: string): Promise<JobStatus> =>
     request<JobStatus>(`/api/v1/jobs/${jobId}`);
 
+export const deleteJob = (jobId: string): Promise<{ status: string; job_id: string }> =>
+    request<{ status: string; job_id: string }>(`/api/v1/jobs/${jobId}`, { method: "DELETE" });
+
 export const getSupportedModels = (): Promise<Record<string, string[]>> =>
     request<Record<string, string[]>>("/api/v1/meta/models");
 

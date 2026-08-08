@@ -406,3 +406,24 @@ async def evaluate_run_deepeval(
     background_tasks.add_task(compute_run_deepeval_metrics, run_id)
 
     return {"status": "queued", "run_id": run_id}
+
+
+@router.delete("/evaluation-sets/{set_id}", dependencies=[Depends(require_auth)])
+async def delete_evaluation_set(set_id: str) -> dict[str, str | int]:
+    sets = get_evaluation_sets_collection()
+    runs = get_evaluation_runs_collection()
+
+    result = await sets.delete_one({"_id": ObjectId(set_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    deleted_runs = await runs.delete_many({"evaluation_set_id": set_id})
+    return {"status": "deleted", "evaluation_set_id": set_id, "deleted_runs": deleted_runs.deleted_count}
+
+
+@router.delete("/runs/{run_id}", dependencies=[Depends(require_auth)])
+async def delete_evaluation_run(run_id: str) -> dict[str, str]:
+    result = await get_evaluation_runs_collection().delete_one({"_id": ObjectId(run_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+    return {"status": "deleted", "evaluation_run_id": run_id}

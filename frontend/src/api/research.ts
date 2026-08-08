@@ -29,6 +29,14 @@ export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
 export const exportEvaluationSet = (setId: string): Promise<unknown> =>
     request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);
 
+export const deleteEvaluationSet = (
+    setId: string,
+): Promise<{ status: string; evaluation_set_id: string; deleted_runs: number }> =>
+    request<{ status: string; evaluation_set_id: string; deleted_runs: number }>(
+        `/api/v1/research/evaluation-sets/${setId}`,
+        { method: "DELETE" },
+    );
+
 const inputTextCache = new Map<string, Promise<EvaluationSetEntryInputText>>();
 
 export const getEvaluationSetEntryInputText = (
@@ -78,4 +86,9 @@ export const evaluateRunDeepeval = (
 ): Promise<{ status: string; run_id: string }> =>
     request<{ status: string; run_id: string }>(`/api/v1/research/runs/${runId}/deepeval`, {
         method: "POST",
+    });
+
+export const deleteEvaluationRun = (runId: string): Promise<{ status: string; evaluation_run_id: string }> =>
+    request<{ status: string; evaluation_run_id: string }>(`/api/v1/research/runs/${runId}`, {
+        method: "DELETE",
     });

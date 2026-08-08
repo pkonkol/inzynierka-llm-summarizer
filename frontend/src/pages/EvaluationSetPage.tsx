@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 
 import {
     createEvaluationRun,
+    deleteEvaluationRun,
+    deleteEvaluationSet,
     evaluateMissingGoldenMetrics,
     exportEvaluationSet,
     getEvaluationSet,
     listEvaluationRuns,
 } from "../api/research";
 import { getSupportedModels, getSupportedModes } from "../api/client";
+import { Collapsible } from "../components/Collapsible";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { navigateTo } from "../utils/researchRouting";
 import { splitProviderModel } from "../utils/utils";
 import type { EvaluationRunListItem, EvaluationSetDetail } from "../types/research";
@@ -44,6 +48,11 @@ export function EvaluationSetPage({ setId }: Props) {
     const [newRunSummaryMode, setNewRunSummaryMode] = useState("simple");
     const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
     const [isLoadingNewRunOptions, setIsLoadingNewRunOptions] = useState(true);
+
+    const [isSetDeletePending, setIsSetDeletePending] = useState(false);
+    const [isDeletingSet, setIsDeletingSet] = useState(false);
+    const [runPendingDelete, setRunPendingDelete] = useState<EvaluationRunListItem | null>(null);
+    const [isDeletingRun, setIsDeletingRun] = useState(false);
 
     const loadSetDetail = async () => {
         setIsLoadingDetail(true);
@@ -125,6 +134,32 @@ export function EvaluationSetPage({ setId }: Props) {
             setErrorMessage(`Create run failed: ${String(error)}`);
         } finally {
             setIsSubmittingNewRun(false);
+        }
+    };
+
+    const handleConfirmDeleteSet = async () => {
+        setIsDeletingSet(true);
+        try {
+            await deleteEvaluationSet(setId);
+            navigateTo("/research");
+        } catch (error) {
+            setErrorMessage(`Delete set failed: ${String(error)}`);
+            setIsDeletingSet(false);
+            setIsSetDeletePending(false);
+        }
+    };
+
+    const handleConfirmDeleteRun = async () => {
+        if (!runPendingDelete) return;
+        setIsDeletingRun(true);
+        try {
+            await deleteEvaluationRun(runPendingDelete.evaluation_run_id);
+            setRunPendingDelete(null);
+            await loadExistingRuns();
+        } catch (error) {
+            setErrorMessage(`Delete run failed: ${String(error)}`);
+        } finally {
+            setIsDeletingRun(false);
         }
     };
 
@@ -217,6 +252,14 @@ export function EvaluationSetPage({ setId }: Props) {
                         className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
                     >
                         Back to sets
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsSetDeletePending(true)}
+                        disabled={!selectedSet}
+                        className="border border-danger bg-panel-solid px-3 py-2 text-[0.85rem] text-danger hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        Delete set
                     </button>
                 </div>
 
@@ -341,13 +384,22 @@ export function EvaluationSetPage({ setId }: Props) {
                                                 {new Date(run.created_at).toLocaleString()}
                                             </td>
                                             <td className="px-2.5 py-2.5 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => navigateTo(`/research/runs/${run.evaluation_run_id}`)}
-                                                    className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
-                                                >
-                                                    Open
-                                                </button>
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigateTo(`/research/runs/${run.evaluation_run_id}`)}
+                                                        className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
+                                                    >
+                                                        Open
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRunPendingDelete(run)}
+                                                        className="border border-danger bg-panel-solid px-3 py-1.5 text-[0.85rem] text-danger hover:bg-subtle-hover"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -396,14 +448,11 @@ export function EvaluationSetPage({ setId }: Props) {
                                         </p>
                                     </div>
 
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Golden metrics
-                                        </p>
-                                        <pre className="m-0 mt-1 overflow-x-auto whitespace-pre-wrap border border-panel-border bg-page px-3 py-2 font-mono text-[0.82rem] text-muted">
+                                    <Collapsible label="Golden metrics">
+                                        <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 font-mono text-[0.82rem] leading-normal text-muted">
 {JSON.stringify(entry.golden_metrics, null, 2)}
                                         </pre>
-                                    </div>
+                                    </Collapsible>
                                 </div>
                             </article>
                         ))}
@@ -412,6 +461,28 @@ export function EvaluationSetPage({ setId }: Props) {
                     <p className="helper-copy mt-4">Nie znaleziono EvaluationSet.</p>
                 )}
             </section>
+
+            <ConfirmDialog
+                isOpen={isSetDeletePending}
+                title="Usunąć evaluation set?"
+                message={
+                    selectedSet
+                        ? `Usunąć "${selectedSet.name}"?${existingRuns.length > 0 ? ` Usunie to też ${existingRuns.length} evaluation run(y/ów).` : ""}`
+                        : ""
+                }
+                isConfirming={isDeletingSet}
+                onConfirm={() => void handleConfirmDeleteSet()}
+                onClose={() => setIsSetDeletePending(false)}
+            />
+
+            <ConfirmDialog
+                isOpen={Boolean(runPendingDelete)}
+                title="Usunąć evaluation run?"
+                message={runPendingDelete ? `Usunąć run ${runPendingDelete.model_provider}:${runPendingDelete.model_name} (${runPendingDelete.evaluation_run_id})?` : ""}
+                isConfirming={isDeletingRun}
+                onConfirm={() => void handleConfirmDeleteRun()}
+                onClose={() => setRunPendingDelete(null)}
+            />
         </main>
     );
 }

@@ -278,6 +278,14 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     return JobStatusResponse.model_validate(job_data)
 
 
+@router.delete("/{job_id}", dependencies=[Depends(require_auth)])
+async def delete_job(job_id: str) -> dict[str, str]:
+    result = await get_jobs_collection().delete_one({"job_id": job_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"status": "deleted", "job_id": job_id}
+
+
 def _verify_model_availability(model_provider: str, model_name: str) -> None:
     if model_provider.lower() not in settings.supported_models:
         raise ValueError(f"Unsupported model provider: {model_provider}")

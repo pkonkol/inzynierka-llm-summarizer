@@ -11,7 +11,7 @@ import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalI
 import { InfoRow } from "../components/InfoRow";
 import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
-import type { EvaluationRunEntry, EvaluationRunMeta } from "../types/research";
+import type { EvaluationRunEntry, EvaluationRunMeta, SummaryDeterministicMetrics } from "../types/research";
 
 function EntryMetaLine({ title, url }: { title: string; url: string }) {
     return (
@@ -76,10 +76,12 @@ function ColumnsHeader() {
 }
 
 function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
-    const goldenSummary: Record<string, number | null> = entry.golden_metrics?.summary ?? {};
-    const aiSummary: Record<string, number | null> = entry.ai_metrics?.summary ?? {};
+    const goldenSummary: Partial<SummaryDeterministicMetrics> = entry.golden_metrics?.summary ?? {};
+    const aiSummary: Partial<SummaryDeterministicMetrics> = entry.ai_metrics?.summary ?? {};
 
-    const allLabels = Array.from(new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]));
+    const allLabels = Array.from(
+        new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]),
+    ) as (keyof SummaryDeterministicMetrics)[];
 
     return (
         <div className="space-y-2">

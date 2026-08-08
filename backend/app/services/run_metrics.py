@@ -60,32 +60,24 @@ async def compute_deepeval_metrics(
     source_text: str,
 ) -> list[dict]:
     """summary_text/source_text are always non-empty (AI summary, required input_text).
-    takeaways_text can genuinely be empty — the LLM may return zero key takeaways."""
-    summary_results = await evaluate_summary_metrics(settings, summary_text)
-    summary_input_results = await evaluate_summary_input_metrics(settings, source_text, summary_text)
-    takeaways_results = await evaluate_takeaways_metrics(settings, takeaways_text) if takeaways_text else []
-    takeaways_input_results = (
-        await evaluate_takeaways_input_metrics(settings, source_text, takeaways_text)
-        if takeaways_text
-        else []
-    )
-    summary_takeaways_results = (
-        await evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text)
-        if takeaways_text
-        else []
-    )
 
-    return [
-        asdict(x)
-        for results in (
-            summary_results,
-            summary_input_results,
-            takeaways_results,
-            takeaways_input_results,
-            summary_takeaways_results,
-        )
-        for x in results
+    Takeaways-quality GEval judges only run if takeaways_text is non-empty — the LLM
+    may return zero key takeaways, and judging an empty actual/expected_output would
+    produce a meaningless score rather than a real evaluation.
+    """
+    evaluations = [
+        evaluate_summary_metrics(settings, summary_text),
+        evaluate_summary_input_metrics(settings, source_text, summary_text),
     ]
+    if takeaways_text:
+        evaluations += [
+            evaluate_takeaways_metrics(settings, takeaways_text),
+            evaluate_takeaways_input_metrics(settings, source_text, takeaways_text),
+            evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text),
+        ]
+
+    results_by_group = await asyncio.gather(*evaluations)
+    return [asdict(x) for results in results_by_group for x in results]
 
 
 async def compute_cross_metrics(

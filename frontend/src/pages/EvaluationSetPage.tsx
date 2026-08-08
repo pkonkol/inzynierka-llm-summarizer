@@ -12,6 +12,7 @@ import {
 import { getSupportedModels, getSupportedModes } from "../api/client";
 import { Collapsible } from "../components/Collapsible";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { InputTextSection } from "../components/InputTextSection";
 import { navigateTo } from "../utils/researchRouting";
 import { splitProviderModel } from "../utils/utils";
 import type { EvaluationRunListItem, EvaluationSetDetail } from "../types/research";
@@ -447,6 +448,10 @@ export function EvaluationSetPage({ setId }: Props) {
                                             {entry.title} · {entry.url}
                                         </p>
                                     </div>
+
+                                    <Collapsible label="Input text">
+                                        <InputTextSection setId={setId} entryId={entry.entry_id} />
+                                    </Collapsible>
 
                                     <Collapsible label="Golden metrics">
                                         <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 font-mono text-[0.82rem] leading-normal text-muted">

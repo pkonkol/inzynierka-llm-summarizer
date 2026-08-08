@@ -2,9 +2,9 @@
 Text quality metrics for source articles and generated summaries.
 
 Source metrics       : readability (FK, Fog, ARI), word/sentence counts.
-Summary metrics      : ARI, avg sentence length, TTR, lexical density, word/sentence counts.
+Summary metrics      : readability battery, TTR, lexical density, word/sentence counts,
+                        and compression ratio against the source text (word_ratio, char_ratio).
 Key-takeaways metrics: simple structural metrics (sentence count, avg length, bullet count).
-Cross metrics        : compression_ratio (summary vs source).
 
 spaCy model is loaded lazily on first call.
 """
@@ -31,70 +31,42 @@ def _nlp():
 _CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV"}
 
 
-def flesch_reading_ease(text: str) -> float | None:
-    try:
-        return round(textstat.flesch_reading_ease(text), 2)
-    except Exception:
-        return None
+def flesch_reading_ease(text: str) -> float:
+    return round(textstat.flesch_reading_ease(text), 2)
 
 
-def flesch_kincaid_grade(text: str) -> float | None:
-    try:
-        return round(textstat.flesch_kincaid_grade(text), 2)
-    except Exception:
-        return None
+def flesch_kincaid_grade(text: str) -> float:
+    return round(textstat.flesch_kincaid_grade(text), 2)
 
 
-def gunning_fog(text: str) -> float | None:
-    try:
-        return round(textstat.gunning_fog(text), 2)
-    except Exception:
-        return None
+def gunning_fog(text: str) -> float:
+    return round(textstat.gunning_fog(text), 2)
 
 
-def smog_index(text: str) -> float | None:
-    try:
-        return round(textstat.smog_index(text), 2)
-    except Exception:
-        return None
+def smog_index(text: str) -> float:
+    return round(textstat.smog_index(text), 2)
 
 
-def coleman_liau_index(text: str) -> float | None:
-    try:
-        return round(textstat.coleman_liau_index(text), 2)
-    except Exception:
-        return None
+def coleman_liau_index(text: str) -> float:
+    return round(textstat.coleman_liau_index(text), 2)
 
 
-def text_standard(text: str) -> float | None:
-    try:
-        return textstat.text_standard(text, float_output=True)
-    except Exception:
-        return None
+def text_standard(text: str) -> float:
+    return textstat.text_standard(text, float_output=True)
 
 
-def automated_readability_index(text: str) -> float | None:
-    try:
-        return round(textstat.automated_readability_index(text), 2)
-    except Exception:
-        return None
+def automated_readability_index(text: str) -> float:
+    return round(textstat.automated_readability_index(text), 2)
 
 
-def avg_sentence_length(text: str) -> float | None:
-    try:
-        sentences = textstat.sentence_count(text)
-        words = textstat.lexicon_count(text, removepunct=True)
-        if sentences == 0:
-            return None
-        return round(words / sentences, 2)
-    except Exception:
-        return None
+def avg_sentence_length(text: str) -> float:
+    sentences = textstat.sentence_count(text)
+    words = textstat.lexicon_count(text, removepunct=True)
+    return round(words / sentences, 2)
 
 
-def type_token_ratio(text: str) -> float | None:
+def type_token_ratio(text: str) -> float:
     words = text.lower().split()
-    if not words:
-        return None
     return round(len(set(words)) / len(words), 4)
 
 
@@ -124,9 +96,14 @@ def source_metrics(text: str) -> dict[str, Any]:
     }
 
 
-def summary_metrics(text: str) -> dict[str, Any]:
+def summary_metrics(text: str, source_text: str) -> dict[str, Any]:
+    source_word_count = textstat.lexicon_count(source_text, removepunct=True)
+    summary_word_count = textstat.lexicon_count(text, removepunct=True)
+    source_char_count = len(source_text.replace(" ", ""))
+    summary_char_count = len(text.replace(" ", ""))
+
     return {
-        "word_count": textstat.lexicon_count(text, removepunct=True),
+        "word_count": summary_word_count,
         "sentence_count": textstat.sentence_count(text),
         "avg_sentence_length": avg_sentence_length(text),
         "type_token_ratio": type_token_ratio(text),
@@ -138,6 +115,9 @@ def summary_metrics(text: str) -> dict[str, Any]:
         "coleman_liau_index": coleman_liau_index(text),
         "automated_readability_index": automated_readability_index(text),
         "text_standard": text_standard(text),
+        "source_word_count": source_word_count,
+        "word_ratio": round(summary_word_count / source_word_count, 4),
+        "char_ratio": round(summary_char_count / source_char_count, 4),
     }
 
 
@@ -157,17 +137,4 @@ def key_takeaways_metrics(text: str) -> dict[str, Any]:
         "unique_word_count": len(unique_words),
         "type_token_ratio": round(len(unique_words) / len(words), 4) if words else None,
         "avg_bullet_word_count": avg_bullet_words,
-    }
-
-
-def compression_ratio_metrics(source: str, summary: str) -> dict[str, Any]:
-    src_words = textstat.lexicon_count(source, removepunct=True)
-    sum_words = textstat.lexicon_count(summary, removepunct=True)
-    src_chars = len(source.replace(" ", ""))
-    sum_chars = len(summary.replace(" ", ""))
-    return {
-        "summary_word_count": sum_words,
-        "source_word_count": src_words,
-        "word_ratio": round(sum_words / src_words, 4) if src_words else None,
-        "char_ratio": round(sum_chars / src_chars, 4) if src_chars else None,
     }

@@ -8,7 +8,6 @@ from .deepeval import (
     evaluate_takeaways_metrics,
 )
 from .deterministic import (
-    compression_ratio_metrics,
     key_takeaways_metrics,
     source_metrics,
     summary_metrics,
@@ -16,7 +15,6 @@ from .deterministic import (
 
 __all__ = [
     "DeepEvalMetricResult",
-    "compression_ratio_metrics",
     "compute_cross_metrics",
     "evaluate_pairwise_cross_deepeval",
     "evaluate_summary_input_metrics",

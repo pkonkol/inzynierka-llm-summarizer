@@ -20,9 +20,6 @@ async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str
     )
 
     return {
-        "summary": summary_metrics(golden_summary),
-        "deepeval": {
-            "summary": [asdict(x) for x in summary_results],
-            "summary_input": [asdict(x) for x in summary_input_results],
-        },
+        "summary": summary_metrics(golden_summary, input_text),
+        "deepeval": [asdict(x) for x in (*summary_results, *summary_input_results)],
     }

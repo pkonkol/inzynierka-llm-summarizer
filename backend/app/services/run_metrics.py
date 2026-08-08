@@ -17,7 +17,6 @@ from ..services.metrics.deepeval import (
     evaluate_takeaways_metrics,
 )
 from ..services.metrics.deterministic import (
-    compression_ratio_metrics,
     key_takeaways_metrics,
     source_metrics,
     summary_metrics,
@@ -46,14 +45,12 @@ async def compute_deterministic_metrics(
     takeaways_text: str,
     source_text: str,
 ) -> dict:
-    sm = await asyncio.to_thread(summary_metrics, summary_text)
+    sm = await asyncio.to_thread(summary_metrics, summary_text, source_text)
     kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
-    cr = await asyncio.to_thread(compression_ratio_metrics, source_text, summary_text)
 
     return {
         "summary": sm,
         "key_takeaways": kt,
-        "compression": cr,
     }
 
 
@@ -61,32 +58,34 @@ async def compute_deepeval_metrics(
     summary_text: str,
     takeaways_text: str,
     source_text: str,
-) -> dict:
-    summary_results = await evaluate_summary_metrics(settings, summary_text) if summary_text else []
-    summary_input_results = (
-        await evaluate_summary_input_metrics(settings, source_text, summary_text)
-        if summary_text and source_text
-        else []
-    )
+) -> list[dict]:
+    """summary_text/source_text are always non-empty (AI summary, required input_text).
+    takeaways_text can genuinely be empty — the LLM may return zero key takeaways."""
+    summary_results = await evaluate_summary_metrics(settings, summary_text)
+    summary_input_results = await evaluate_summary_input_metrics(settings, source_text, summary_text)
     takeaways_results = await evaluate_takeaways_metrics(settings, takeaways_text) if takeaways_text else []
     takeaways_input_results = (
         await evaluate_takeaways_input_metrics(settings, source_text, takeaways_text)
-        if takeaways_text and source_text
+        if takeaways_text
         else []
     )
     summary_takeaways_results = (
         await evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text)
-        if summary_text and takeaways_text and source_text
+        if takeaways_text
         else []
     )
 
-    return {
-        "summary": [asdict(x) for x in summary_results],
-        "summary_input": [asdict(x) for x in summary_input_results],
-        "takeaways": [asdict(x) for x in takeaways_results],
-        "takeaways_input": [asdict(x) for x in takeaways_input_results],
-        "summary_takeaways": [asdict(x) for x in summary_takeaways_results],
-    }
+    return [
+        asdict(x)
+        for results in (
+            summary_results,
+            summary_input_results,
+            takeaways_results,
+            takeaways_input_results,
+            summary_takeaways_results,
+        )
+        for x in results
+    ]
 
 
 async def compute_cross_metrics(
@@ -127,10 +126,9 @@ async def store_deterministic_metrics_for_job(
         {
             "metrics.summary": metrics["summary"],
             "metrics.key_takeaways": metrics["key_takeaways"],
-            "metrics.compression": metrics["compression"],
         },
     )
-    logger.debug("[job=%s] summary/takeaways/compression metrics stored", job_id)
+    logger.debug("[job=%s] summary/takeaways metrics stored (compression folded into summary)", job_id)
 
 
 async def store_deepeval_metrics_for_job(
@@ -140,14 +138,5 @@ async def store_deepeval_metrics_for_job(
     source_text: str,
 ) -> None:
     metrics = await compute_deepeval_metrics(summary_text, takeaways_text, source_text)
-    await store_job_metrics(
-        job_id,
-        {
-            "deepeval_metrics.summary": metrics["summary"],
-            "deepeval_metrics.summary_input": metrics["summary_input"],
-            "deepeval_metrics.takeaways": metrics["takeaways"],
-            "deepeval_metrics.takeaways_input": metrics["takeaways_input"],
-            "deepeval_metrics.summary_takeaways": metrics["summary_takeaways"],
-        },
-    )
+    await store_job_metrics(job_id, {"deepeval_metrics": metrics})
     logger.debug("[job=%s] deepeval metrics stored", job_id)

@@ -11,12 +11,12 @@ import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalI
 import { InfoRow } from "../components/InfoRow";
 import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
-import type { EvaluationRunEntry, EvaluationRunMeta, SourceMeta } from "../types/research";
+import type { EvaluationRunEntry, EvaluationRunMeta } from "../types/research";
 
-function EntryMetaLine({ sourceMeta }: { sourceMeta: SourceMeta }) {
+function EntryMetaLine({ title, url }: { title: string; url: string }) {
     return (
         <p className="m-0 mt-0.5 text-[0.78rem] lowercase text-muted">
-            {sourceMeta.title} · {sourceMeta.url}
+            {title} · {url}
         </p>
     );
 }
@@ -76,8 +76,8 @@ function ColumnsHeader() {
 }
 
 function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
-    const goldenSummary = entry.golden_metrics?.summary ?? {};
-    const aiSummary = entry.ai_metrics?.summary ?? {};
+    const goldenSummary: Record<string, number | null> = entry.golden_metrics?.summary ?? {};
+    const aiSummary: Record<string, number | null> = entry.ai_metrics?.summary ?? {};
 
     const allLabels = Array.from(new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]));
 
@@ -98,15 +98,15 @@ function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
             {entry.ai_metrics ? (
                 <div className="space-y-2 border-t border-divider pt-3">
                     <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                        AI takeaways &amp; compression
+                        AI key takeaways
                     </h6>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {Object.entries(entry.ai_metrics.key_takeaways).map(([label, value]) => (
-                            <InfoRow key={label} label={formatLabel(label)} value={value} />
-                        ))}
-                        {Object.entries(entry.ai_metrics.compression).map(([label, value]) => (
-                            <InfoRow key={label} label={formatLabel(label)} value={value} />
-                        ))}
+                        <InfoRow label="Bullet count" value={entry.ai_metrics.key_takeaways.bullet_count} />
+                        <InfoRow label="Total lines" value={entry.ai_metrics.key_takeaways.total_lines} />
+                        <InfoRow label="Word count" value={entry.ai_metrics.key_takeaways.word_count} />
+                        <InfoRow label="Unique word count" value={entry.ai_metrics.key_takeaways.unique_word_count} />
+                        <InfoRow label="Type token ratio" value={entry.ai_metrics.key_takeaways.type_token_ratio} />
+                        <InfoRow label="Avg bullet word count" value={entry.ai_metrics.key_takeaways.avg_bullet_word_count} />
                     </div>
                 </div>
             ) : null}
@@ -115,36 +115,18 @@ function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
 }
 
 function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
-    const goldenDeepeval = entry.golden_metrics?.deepeval;
-    const aiDeepeval = entry.ai_metrics?.deepeval;
+    const goldenItems: DeepevalDisplayItem[] = entry.golden_metrics?.deepeval ?? [];
+    const aiItems: DeepevalDisplayItem[] = entry.ai_metrics?.deepeval ?? [];
 
-    const sections = Array.from(
-        new Set([
-            ...(goldenDeepeval ? Object.keys(goldenDeepeval) : []),
-            ...(aiDeepeval ? Object.keys(aiDeepeval) : []),
-        ]),
-    ) as (keyof NonNullable<typeof goldenDeepeval> | keyof NonNullable<typeof aiDeepeval>)[];
-
-    if (sections.length === 0) return null;
+    if (goldenItems.length === 0 && aiItems.length === 0) return null;
 
     return (
-        <div className="space-y-3 border-t border-divider pt-3">
+        <div className="space-y-2 border-t border-divider pt-3">
             <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Deepeval</h6>
-            {sections.map((section) => {
-                const goldenItems = (goldenDeepeval as Record<string, DeepevalDisplayItem[]> | undefined)?.[section as string] ?? [];
-                const aiItems = (aiDeepeval as Record<string, DeepevalDisplayItem[]> | undefined)?.[section as string] ?? [];
-                if (goldenItems.length === 0 && aiItems.length === 0) return null;
-
-                return (
-                    <div key={section as string} className="space-y-2">
-                        <span className="font-mono text-[0.72rem] uppercase tracking-wider text-muted">{section as string}</span>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>{goldenItems.length > 0 ? <DeepevalItems items={goldenItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
-                            <div>{aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
-                        </div>
-                    </div>
-                );
-            })}
+            <div className="grid grid-cols-2 gap-3">
+                <div>{goldenItems.length > 0 ? <DeepevalItems items={goldenItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
+                <div>{aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
+            </div>
         </div>
     );
 }
@@ -357,7 +339,7 @@ export function EvaluationRunPage({ runId }: Props) {
                                         <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
                                             Entry {index + 1} · {entry.status}
                                         </p>
-                                        <EntryMetaLine sourceMeta={entry.source_meta} />
+                                        <EntryMetaLine title={entry.title} url={entry.url} />
                                     </div>
                                     <p className="m-0 font-mono text-[0.82rem] text-muted">{entry.entry_id}</p>
                                 </div>

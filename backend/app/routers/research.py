@@ -19,6 +19,7 @@ from ..schemas.research import (
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
     EvaluationRunEntriesResponse,
+    EvaluationRunEntryResponse,
     EvaluationRunListItemResponse,
     EvaluationRunResponse,
 )
@@ -42,7 +43,8 @@ async def create_evaluation_set(
             "entry_id": str(uuid4()),
             "input_text": entry.input_text,
             "golden_summary": entry.golden_summary,
-            "source_meta": entry.source_meta.model_dump(),
+            "title": entry.title,
+            "url": entry.url,
             "golden_metrics": (
                 entry.golden_metrics.model_dump() if entry.golden_metrics else None
             ),
@@ -115,7 +117,8 @@ async def get_evaluation_set(set_id: str) -> EvaluationSetDetailResponse:
             EvaluationSetEntryResponse(
                 entry_id=entry["entry_id"],
                 golden_summary=entry["golden_summary"],
-                source_meta=entry["source_meta"],
+                title=entry["title"],
+                url=entry["url"],
                 golden_metrics=entry["golden_metrics"],
             )
             for entry in document["entries"]
@@ -137,7 +140,8 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
             {
                 "input_text": entry["input_text"],
                 "golden_summary": entry["golden_summary"],
-                "source_meta": entry["source_meta"],
+                "title": entry["title"],
+                "url": entry["url"],
                 "golden_metrics": entry.get("golden_metrics"),
             }
             for entry in document["entries"]
@@ -221,9 +225,7 @@ async def create_evaluation_run(
     entries = [
         {
             "entry_id": entry["entry_id"],
-            "source_meta": entry["source_meta"],
             "golden_summary": entry["golden_summary"],
-            "golden_metrics": entry.get("golden_metrics"),
             "ai_summary": None,
             "ai_key_takeaways": [],
             "ai_metrics": None,
@@ -345,12 +347,43 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
 @router.get("/runs/{run_id}/entries", response_model=EvaluationRunEntriesResponse)
 async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesResponse:
     runs = get_evaluation_runs_collection()
-    document = await runs.find_one({"_id": ObjectId(run_id)}, {"entries": 1})
+    sets = get_evaluation_sets_collection()
 
-    if document is None:
+    run_document = await runs.find_one(
+        {"_id": ObjectId(run_id)},
+        {"entries": 1, "evaluation_set_id": 1},
+    )
+
+    if run_document is None:
         raise HTTPException(status_code=404, detail="Evaluation run not found")
 
-    return EvaluationRunEntriesResponse(entries=document["entries"])
+    set_document = await sets.find_one(
+        {"_id": ObjectId(run_document["evaluation_set_id"])},
+        {"entries.entry_id": 1, "entries.title": 1, "entries.url": 1, "entries.golden_metrics": 1},
+    )
+    if set_document is None:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    set_entries_by_id = {entry["entry_id"]: entry for entry in set_document["entries"]}
+
+    entries = [
+        EvaluationRunEntryResponse(
+            entry_id=run_entry["entry_id"],
+            title=set_entries_by_id[run_entry["entry_id"]]["title"],
+            url=set_entries_by_id[run_entry["entry_id"]]["url"],
+            golden_summary=run_entry["golden_summary"],
+            golden_metrics=set_entries_by_id[run_entry["entry_id"]]["golden_metrics"],
+            ai_summary=run_entry["ai_summary"],
+            ai_key_takeaways=run_entry["ai_key_takeaways"],
+            ai_metrics=run_entry["ai_metrics"],
+            cross_metrics=run_entry["cross_metrics"],
+            status=run_entry["status"],
+            error=run_entry["error"],
+        )
+        for run_entry in run_document["entries"]
+    ]
+
+    return EvaluationRunEntriesResponse(entries=entries)
 
 
 @router.post("/runs/{run_id}/deepeval", dependencies=[Depends(require_auth)])

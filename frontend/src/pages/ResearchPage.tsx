@@ -11,10 +11,8 @@ const PRETTY_EXAMPLE = `{
     {
       "input_text": "Example input text",
       "golden_summary": "Example golden summary",
-      "source_meta": {
-        "title": "Example title",
-        "url": "https://example.com/article"
-      },
+      "title": "Example title",
+      "url": "https://example.com/article",
       "golden_metrics": null
     }
   ]

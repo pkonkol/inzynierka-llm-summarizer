@@ -49,8 +49,8 @@ async def run_evaluation_batch(run_id: str) -> None:
 
         try:
             summary = await generate_summary(
-                input={"text": source_entry["input_text"], "title": source_entry["source_meta"]["title"]},
-                source_url=source_entry["source_meta"]["url"],
+                input={"text": source_entry["input_text"], "title": source_entry["title"]},
+                source_url=source_entry["url"],
                 model_name=run_doc["model_name"],
                 model_provider=run_doc["model_provider"],
                 language=run_doc["language"],

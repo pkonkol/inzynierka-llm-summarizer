@@ -13,25 +13,42 @@ export type PairwiseDeepevalItem = {
   reason: string;
 };
 
+export type SummaryDeterministicMetrics = {
+  word_count: number;
+  sentence_count: number;
+  avg_sentence_length: number;
+  type_token_ratio: number;
+  lexical_density: number | null;
+  flesch_reading_ease: number;
+  flesch_kincaid_grade: number;
+  gunning_fog: number;
+  smog_index: number;
+  coleman_liau_index: number;
+  automated_readability_index: number;
+  text_standard: number;
+  source_word_count: number;
+  word_ratio: number;
+  char_ratio: number;
+};
+
+export type KeyTakeawaysMetrics = {
+  bullet_count: number;
+  total_lines: number;
+  word_count: number;
+  unique_word_count: number;
+  type_token_ratio: number | null;
+  avg_bullet_word_count: number | null;
+};
+
 export type GoldenMetrics = {
-  summary: Record<string, number> | null;
-  deepeval: {
-    summary: DeepevalItem[];
-    summary_input: DeepevalItem[];
-  } | null;
+  summary: SummaryDeterministicMetrics;
+  deepeval: DeepevalItem[];
 };
 
 export type AiMetrics = {
-  summary: Record<string, number>;
-  key_takeaways: Record<string, number>;
-  compression: Record<string, number>;
-  deepeval?: {
-    summary: DeepevalItem[];
-    summary_input: DeepevalItem[];
-    takeaways: DeepevalItem[];
-    takeaways_input: DeepevalItem[];
-    summary_takeaways: DeepevalItem[];
-  };
+  summary: SummaryDeterministicMetrics;
+  key_takeaways: KeyTakeawaysMetrics;
+  deepeval: DeepevalItem[] | null;
 };
 
 export type CrossMetrics = {
@@ -42,11 +59,6 @@ export type CrossMetrics = {
   deepeval: PairwiseDeepevalItem[];
 };
 
-export type SourceMeta = {
-  url: string;
-  title: string;
-};
-
 export type EvaluationSetEntryInputText = {
   entry_id: string;
   input_text: string;
@@ -55,7 +67,8 @@ export type EvaluationSetEntryInputText = {
 export type EvaluationSetEntry = {
   entry_id: string;
   golden_summary: string;
-  source_meta: SourceMeta;
+  title: string;
+  url: string;
   golden_metrics: GoldenMetrics | null;
 };
 
@@ -89,7 +102,8 @@ export type EvaluationSetImportPayload = {
   entries: {
     input_text: string;
     golden_summary: string;
-    source_meta: SourceMeta;
+    title: string;
+    url: string;
     golden_metrics?: GoldenMetrics | null;
   }[];
 };
@@ -124,7 +138,8 @@ export type EvaluationRunListItem = {
 
 export type EvaluationRunEntry = {
     entry_id: string;
-    source_meta: SourceMeta;
+    title: string;
+    url: string;
     golden_summary: string;
     golden_metrics: GoldenMetrics | null;
     ai_summary: string | null;

@@ -10,12 +10,11 @@ import {
     listEvaluationRuns,
 } from "../api/research";
 import { getSupportedModels, getSupportedModes } from "../api/client";
-import { Collapsible } from "../components/Collapsible";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { InputTextSection } from "../components/InputTextSection";
 import { navigateTo } from "../utils/researchRouting";
 import { splitProviderModel } from "../utils/utils";
-import type { EvaluationRunListItem, EvaluationSetDetail } from "../types/research";
+import type { EvaluationRunListItem, EvaluationSetDetail, EvaluationSetEntry } from "../types/research";
 
 function downloadJson(filename: string, data: unknown) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -25,6 +24,64 @@ function downloadJson(filename: string, data: unknown) {
     link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
+}
+
+type EntryCollapsibleKey = "input" | "metrics";
+
+function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSetEntry; setId: string }) {
+    const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
+
+    const toggleSection = (key: EntryCollapsibleKey) => {
+        setOpenSection(current => (current === key ? null : key));
+    };
+
+    return (
+        <article className="border border-panel-border bg-panel-solid px-3.5 py-3">
+            <p className="m-0 text-[0.82rem] text-ink">
+                <span className="font-medium">{index + 1}</span>
+                {" · "}
+                <span className="lowercase text-muted">{entry.title} · {entry.url}</span>
+            </p>
+
+            <p className="m-0 mt-2 whitespace-pre-wrap text-[0.95rem] text-ink">
+                {entry.golden_summary}
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                    type="button"
+                    onClick={() => toggleSection("input")}
+                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
+                >
+                    <span>Input text</span>
+                    <span>{openSection === "input" ? "▼" : "▶"}</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => toggleSection("metrics")}
+                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
+                >
+                    <span>Golden metrics</span>
+                    <span>{openSection === "metrics" ? "▼" : "▶"}</span>
+                </button>
+            </div>
+
+            {openSection === "input" ? (
+                <div className="border border-t-0 border-panel-border">
+                    <InputTextSection setId={setId} entryId={entry.entry_id} />
+                </div>
+            ) : null}
+
+            {openSection === "metrics" ? (
+                <div className="border border-t-0 border-panel-border">
+                    <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 font-mono text-[0.82rem] leading-normal text-muted">
+{JSON.stringify(entry.golden_metrics, null, 2)}
+                    </pre>
+                </div>
+            ) : null}
+        </article>
+    );
 }
 
 type Props = {
@@ -415,51 +472,12 @@ export function EvaluationSetPage({ setId }: Props) {
                 ) : selectedSet ? (
                     <div className="mt-4 grid gap-3">
                         {selectedSet.entries.map((entry, index) => (
-                            <article
+                            <EntryCard
                                 key={entry.entry_id}
-                                className="border border-panel-border bg-panel-solid px-3.5 py-3"
-                            >
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Entry {index + 1}
-                                        </p>
-                                        <p className="m-0 mt-1 font-mono text-[0.82rem] text-muted">
-                                            {entry.entry_id}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 grid gap-3">
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Golden summary
-                                        </p>
-                                        <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
-                                            {entry.golden_summary}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Source
-                                        </p>
-                                        <p className="m-0 mt-1 text-[0.82rem] text-muted">
-                                            {entry.title} · {entry.url}
-                                        </p>
-                                    </div>
-
-                                    <Collapsible label="Input text">
-                                        <InputTextSection setId={setId} entryId={entry.entry_id} />
-                                    </Collapsible>
-
-                                    <Collapsible label="Golden metrics">
-                                        <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 font-mono text-[0.82rem] leading-normal text-muted">
-{JSON.stringify(entry.golden_metrics, null, 2)}
-                                        </pre>
-                                    </Collapsible>
-                                </div>
-                            </article>
+                                index={index}
+                                entry={entry}
+                                setId={setId}
+                            />
                         ))}
                     </div>
                 ) : (

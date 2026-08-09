@@ -5,7 +5,6 @@ import {
     getEvaluationRun,
     getEvaluationRunEntries,
 } from "../api/research";
-import { Collapsible } from "../components/Collapsible";
 import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
@@ -13,13 +12,7 @@ import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
 import type { EvaluationRunEntry, EvaluationRunMeta, SummaryDeterministicMetrics } from "../types/research";
 
-function EntryMetaLine({ title, url }: { title: string; url: string }) {
-    return (
-        <p className="m-0 mt-0.5 text-[0.78rem] lowercase text-muted">
-            {title} · {url}
-        </p>
-    );
-}
+type EntryCollapsibleKey = "input" | "metrics";
 
 function formatLabel(key: string): string {
     return key.replace(/_/g, " ");
@@ -149,6 +142,95 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
                 <DeepevalMetricsColumns entry={entry} />
             </div>
         </div>
+    );
+}
+
+function RunEntryCard({ index, entry, evaluationSetId }: { index: number; entry: EvaluationRunEntry; evaluationSetId: string }) {
+    const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
+
+    const toggleSection = (key: EntryCollapsibleKey) => {
+        setOpenSection(current => (current === key ? null : key));
+    };
+
+    return (
+        <article className="border border-panel-border bg-panel-solid px-3.5 py-3">
+            <p className="m-0 text-[0.82rem] text-ink">
+                <span className="font-medium">{index + 1}</span>
+                {" · "}
+                <span>{entry.status}</span>
+                {" · "}
+                <span className="lowercase text-muted">{entry.title} · {entry.url}</span>
+            </p>
+
+            {entry.error ? (
+                <p className="m-0 mt-2 text-[0.9rem] text-danger">{entry.error}</p>
+            ) : null}
+
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div>
+                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                        Golden summary
+                    </p>
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
+                        {entry.golden_summary}
+                    </p>
+                </div>
+
+                <div>
+                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                        AI summary
+                    </p>
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
+                        {entry.ai_summary ?? "—"}
+                    </p>
+
+                    {entry.ai_key_takeaways.length > 0 ? (
+                        <div className="mt-3">
+                            <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                                AI key takeaways
+                            </p>
+                            <ul className="m-0 mt-1 list-disc pl-5 text-[0.9rem] text-ink">
+                                {entry.ai_key_takeaways.map((item, i) => (
+                                    <li key={i}>{item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                    type="button"
+                    onClick={() => toggleSection("input")}
+                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
+                >
+                    <span>Input text</span>
+                    <span>{openSection === "input" ? "▼" : "▶"}</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => toggleSection("metrics")}
+                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
+                >
+                    <span>Metrics</span>
+                    <span>{openSection === "metrics" ? "▼" : "▶"}</span>
+                </button>
+            </div>
+
+            {openSection === "input" ? (
+                <div className="border border-t-0 border-panel-border">
+                    <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />
+                </div>
+            ) : null}
+
+            {openSection === "metrics" ? (
+                <div className="border border-t-0 border-panel-border">
+                    <EntryMetrics entry={entry} />
+                </div>
+            ) : null}
+        </article>
     );
 }
 
@@ -297,71 +379,15 @@ export function EvaluationRunPage({ runId }: Props) {
 
                 {isLoadingEntries ? (
                     <p className="helper-copy mt-4">Ładowanie entries...</p>
-                ) : entries ? (
+                ) : entries && run ? (
                     <div className="mt-4 grid gap-3">
                         {entries.map((entry, index) => (
-                            <article
+                            <RunEntryCard
                                 key={entry.entry_id}
-                                className="border border-panel-border bg-panel-solid px-3.5 py-3"
-                            >
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Entry {index + 1} · {entry.status}
-                                        </p>
-                                        <EntryMetaLine title={entry.title} url={entry.url} />
-                                    </div>
-                                    <p className="m-0 font-mono text-[0.82rem] text-muted">{entry.entry_id}</p>
-                                </div>
-
-                                {entry.error ? (
-                                    <p className="m-0 mt-2 text-[0.9rem] text-danger">{entry.error}</p>
-                                ) : null}
-
-                                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            Golden summary
-                                        </p>
-                                        <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
-                                            {entry.golden_summary}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                            AI summary
-                                        </p>
-                                        <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
-                                            {entry.ai_summary ?? "—"}
-                                        </p>
-
-                                        {entry.ai_key_takeaways.length > 0 ? (
-                                            <div className="mt-3">
-                                                <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                                                    AI key takeaways
-                                                </p>
-                                                <ul className="m-0 mt-1 list-disc pl-5 text-[0.9rem] text-ink">
-                                                    {entry.ai_key_takeaways.map((item, i) => (
-                                                        <li key={i}>{item}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 grid gap-2">
-                                    <Collapsible label="Input text">
-                                        {run ? (
-                                            <InputTextSection setId={run.evaluation_set_id} entryId={entry.entry_id} />
-                                        ) : null}
-                                    </Collapsible>
-                                    <Collapsible label="Metrics">
-                                        <EntryMetrics entry={entry} />
-                                    </Collapsible>
-                                </div>
-                            </article>
+                                index={index}
+                                entry={entry}
+                                evaluationSetId={run.evaluation_set_id}
+                            />
                         ))}
                     </div>
                 ) : null}

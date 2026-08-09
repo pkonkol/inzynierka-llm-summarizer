@@ -9,16 +9,22 @@ from fastapi.responses import JSONResponse
 
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..core.auth import require_auth
-from ..schemas.research import (
+from ..schemas.evaluation_set import (
     EvaluationSetCreateResponse,
     EvaluationSetDetailResponse,
+    EvaluationSetDocument,
+    EvaluationSetEntryDocument,
     EvaluationSetEntryInputTextResponse,
     EvaluationSetEntryResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
+)
+from ..schemas.evaluation_run import (
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
+    EvaluationRunDocument,
     EvaluationRunEntriesResponse,
+    EvaluationRunEntryDocument,
     EvaluationRunEntryResponse,
     EvaluationRunListItemResponse,
     EvaluationRunResponse,
@@ -39,27 +45,25 @@ async def create_evaluation_set(
     created_at = datetime.now(UTC)
 
     entries = [
-        {
-            "entry_id": str(uuid4()),
-            "input_text": entry.input_text,
-            "golden_summary": entry.golden_summary,
-            "title": entry.title,
-            "url": entry.url,
-            "golden_metrics": (
-                entry.golden_metrics.model_dump() if entry.golden_metrics else None
-            ),
-        }
+        EvaluationSetEntryDocument(
+            entry_id=str(uuid4()),
+            input_text=entry.input_text,
+            golden_summary=entry.golden_summary,
+            title=entry.title,
+            url=entry.url,
+            golden_metrics=entry.golden_metrics,
+        )
         for entry in payload.entries
     ]
 
-    document = {
-        "name": payload.name,
-        "language": payload.language,
-        "created_at": created_at,
-        "entries": entries,
-    }
+    document = EvaluationSetDocument(
+        name=payload.name,
+        language=payload.language,
+        created_at=created_at,
+        entries=entries,
+    )
 
-    result = await collection.insert_one(document)
+    result = await collection.insert_one(document.model_dump())
 
     return EvaluationSetCreateResponse(
         evaluation_set_id=str(result.inserted_id),
@@ -223,35 +227,29 @@ async def create_evaluation_run(
     created_at = datetime.now(UTC)
 
     entries = [
-        {
-            "entry_id": entry["entry_id"],
-            "golden_summary": entry["golden_summary"],
-            "ai_summary": None,
-            "ai_key_takeaways": [],
-            "ai_metrics": None,
-            "cross_metrics": None,
-            "status": "pending",
-            "error": None,
-        }
+        EvaluationRunEntryDocument(
+            entry_id=entry["entry_id"],
+            golden_summary=entry["golden_summary"],
+        )
         for entry in set_document["entries"]
     ]
 
-    document = {
-        "evaluation_set_id": str(set_document["_id"]),
-        "evaluation_set_name": set_document["name"],
-        "model_provider": payload.model_provider,
-        "model_name": payload.model_name,
-        "summary_mode": payload.summary_mode,
-        "language": payload.language,
-        "rate_limit_delay_ms": payload.rate_limit_delay_ms,
-        "status": "pending",
-        "created_at": created_at,
-        "finished_at": None,
-        "entries": entries,
-        "aggregate_metrics": {},
-    }
+    document = EvaluationRunDocument(
+        evaluation_set_id=str(set_document["_id"]),
+        evaluation_set_name=set_document["name"],
+        model_provider=payload.model_provider,
+        model_name=payload.model_name,
+        summary_mode=payload.summary_mode,
+        language=payload.language,
+        rate_limit_delay_ms=payload.rate_limit_delay_ms,
+        status="pending",
+        created_at=created_at,
+        finished_at=None,
+        entries=entries,
+        aggregate_metrics={},
+    )
 
-    result = await runs.insert_one(document)
+    result = await runs.insert_one(document.model_dump())
     run_id = str(result.inserted_id)
 
     background_tasks.add_task(run_evaluation_batch, run_id)

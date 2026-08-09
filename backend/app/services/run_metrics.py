@@ -92,11 +92,15 @@ async def compute_pairwise_cross_deepeval_metrics(
     golden_summary: str,
     ai_summary: str,
 ) -> list[dict[str, Any]]:
+    """actual_output=ai_summary, expected_output=golden_summary, so "score" here means
+
+    "how much better is the AI summary than the golden one" — higher score favors AI.
+    """
     return await evaluate_pairwise_cross_deepeval(
         settings=settings,
         source_text=source_text,
-        summary_a=golden_summary,
-        summary_b=ai_summary,
+        summary_actual=ai_summary,
+        summary_expected=golden_summary,
     )
 
 

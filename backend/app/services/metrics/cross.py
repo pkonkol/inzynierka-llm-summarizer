@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
-from typing import Literal
 
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -14,7 +13,6 @@ from app.core.config import Settings
 from .deepeval import build_deepeval_model, run_metric
 
 _ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
-PAIRWISE_TIE_MARGIN = 0.05
 
 
 def compute_cross_metrics(reference_text: str, summary_text: str) -> dict[str, float]:
@@ -71,29 +69,28 @@ def _pairwise_metric_without_input(settings: Settings) -> GEval:
     )
 
 
-def _winner_from_score(score_a: float) -> Literal["A", "B", "tie"]:
-    if score_a > 0.5 + PAIRWISE_TIE_MARGIN:
-        return "A"
-    if score_a < 0.5 - PAIRWISE_TIE_MARGIN:
-        return "B"
-    return "tie"
-
-
 async def evaluate_pairwise_cross_deepeval(
     settings: Settings,
     source_text: str,
-    summary_a: str,
-    summary_b: str,
+    summary_actual: str,
+    summary_expected: str,
 ) -> list[dict[str, Any]]:
+    """Generic actual-vs-expected pairwise GEval — deliberately unaware of golden/AI.
+
+    The GEval prompt only ever sees "Summary A (actual_output)" / "Summary B (expected_output)"
+    to avoid biasing the judge toward either side. Callers decide which summary goes into
+    actual_output vs expected_output, and are responsible for mapping the resulting
+    "actual"/"expected" winner back to their own domain labels (e.g. golden/AI).
+    """
     with_input_case = LLMTestCase(
         input=source_text,
-        actual_output=summary_a,
-        expected_output=summary_b,
+        actual_output=summary_actual,
+        expected_output=summary_expected,
     )
     without_input_case = LLMTestCase(
         input="",
-        actual_output=summary_a,
-        expected_output=summary_b,
+        actual_output=summary_actual,
+        expected_output=summary_expected,
     )
     with_input_metric = _pairwise_metric_with_input(settings)
     without_input_metric = _pairwise_metric_without_input(settings)
@@ -108,16 +105,12 @@ async def evaluate_pairwise_cross_deepeval(
     return [
         {
             "name": "pairwise_with_input",
-            "winner": _winner_from_score(with_input_score),
-            "score_A": with_input_score,
-            "score_B": round(1 - with_input_score, 4),
+            "score": with_input_score,
             "reason": with_input_result.reason,
         },
         {
             "name": "pairwise_without_input",
-            "winner": _winner_from_score(without_input_score),
-            "score_A": without_input_score,
-            "score_B": round(1 - without_input_score, 4),
+            "score": without_input_score,
             "reason": without_input_result.reason,
         },
     ]

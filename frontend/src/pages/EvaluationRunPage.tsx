@@ -14,6 +14,14 @@ import type { EvaluationRunEntry, EvaluationRunMeta, SummaryDeterministicMetrics
 
 type EntryCollapsibleKey = "input" | "metrics";
 
+const PAIRWISE_TIE_MARGIN = 0.05;
+
+function pairwiseWinnerLabel(score: number): "golden" | "ai" | "tie" {
+    if (score > 0.5 + PAIRWISE_TIE_MARGIN) return "ai";
+    if (score < 0.5 - PAIRWISE_TIE_MARGIN) return "golden";
+    return "tie";
+}
+
 function formatLabel(key: string): string {
     return key.replace(/_/g, " ");
 }
@@ -118,7 +126,7 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
                                     {item.name}
                                 </span>
                                 <span className="font-mono text-[0.75rem] text-muted">
-                                    winner: {item.winner} · A: {item.score_A} · B: {item.score_B}
+                                    winner: {pairwiseWinnerLabel(item.score)} · score: {item.score}
                                 </span>
                             </div>
                             <p className="mt-2 m-0 text-[0.82rem] leading-[1.55] text-muted">{item.reason}</p>

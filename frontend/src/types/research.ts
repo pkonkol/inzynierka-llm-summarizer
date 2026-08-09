@@ -1,15 +1,13 @@
 export type DeepevalItem = {
   name: string;
-  score: number | null;
-  passed: boolean | null;
-  reason: string | null;
+  score: number;
+  passed: boolean;
+  reason: string;
 };
 
 export type PairwiseDeepevalItem = {
   name: string;
-  winner: "A" | "B" | "tie";
-  score_A: number;
-  score_B: number;
+  score: number; // raw GEval score, higher favors AI over golden
   reason: string;
 };
 
@@ -52,10 +50,10 @@ export type AiMetrics = {
 };
 
 export type CrossMetrics = {
-  rouge1: number | null;
-  rouge2: number | null;
-  rougeL: number | null;
-  meteor: number | null;
+  rouge1: number;
+  rouge2: number;
+  rougeL: number;
+  meteor: number;
   deepeval: PairwiseDeepevalItem[];
 };
 

@@ -36,8 +36,13 @@ class EvaluationSetImportRequest(BaseModel):
     language: str = "en"
     entries: list[EvaluationSetEntryImport]
 
-class EvaluationSetEntryResponse(EvaluationSetEntryImport):
-    pass
+class EvaluationSetEntryResponse(BaseModel):
+    """input_text is deliberately excluded — fetched separately via the input-text endpoint."""
+    entry_id: str
+    golden_summary: str
+    title: str
+    url: str
+    golden_metrics: GoldenMetrics | None = None
 
 class EvaluationSetEntryInputTextResponse(BaseModel):
     entry_id: str

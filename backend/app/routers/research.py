@@ -185,7 +185,8 @@ async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
     updated_count = 0
 
     for entry in entries:
-        if entry.get("golden_metrics") is not None:
+        golden_metrics = entry.get("golden_metrics")
+        if golden_metrics is not None and "char_count" in golden_metrics.get("source", {}):
             continue
 
         entry["golden_metrics"] = await build_golden_metrics(

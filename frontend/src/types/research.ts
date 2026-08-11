@@ -11,40 +11,32 @@ export type PairwiseDeepevalItem = {
   reason: string;
 };
 
-export type SummaryDeterministicMetrics = {
-  word_count: number;
-  sentence_count: number;
-  avg_sentence_length: number;
-  type_token_ratio: number;
-  lexical_density: number | null;
-  flesch_reading_ease: number;
+export type SourceMetrics = {
+  char_count: number;
   flesch_kincaid_grade: number;
-  gunning_fog: number;
-  smog_index: number;
-  coleman_liau_index: number;
-  automated_readability_index: number;
   text_standard: number;
-  source_word_count: number;
-  word_ratio: number;
-  char_ratio: number;
+};
+
+export type SummaryStatisticalMetrics = {
+  char_count: number;
+  flesch_kincaid_grade: number;
+  text_standard: number;
+  length_ratio: number; // summary chars / source chars
 };
 
 export type KeyTakeawaysMetrics = {
   bullet_count: number;
-  total_lines: number;
-  word_count: number;
-  unique_word_count: number;
-  type_token_ratio: number | null;
-  avg_bullet_word_count: number | null;
+  char_count: number;
 };
 
 export type GoldenMetrics = {
-  summary: SummaryDeterministicMetrics;
+  source: SourceMetrics;
+  summary: SummaryStatisticalMetrics;
   deepeval: DeepevalItem[];
 };
 
 export type AiMetrics = {
-  summary: SummaryDeterministicMetrics;
+  summary: SummaryStatisticalMetrics;
   key_takeaways: KeyTakeawaysMetrics;
   deepeval: DeepevalItem[] | null;
 };

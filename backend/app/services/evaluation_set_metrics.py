@@ -8,7 +8,7 @@ from app.services.metrics.deepeval import (
     evaluate_summary_input_metrics,
     evaluate_summary_metrics,
 )
-from app.services.metrics.deterministic import summary_metrics
+from app.services.metrics.statistical import source_metrics, summary_metrics
 
 
 async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str, Any]:
@@ -20,6 +20,7 @@ async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str
     )
 
     return {
+        "source": source_metrics(input_text),
         "summary": summary_metrics(golden_summary, input_text),
         "deepeval": [asdict(x) for x in (*summary_results, *summary_input_results)],
     }

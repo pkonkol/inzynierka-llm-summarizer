@@ -16,7 +16,7 @@ from ..services.metrics.deepeval import (
     evaluate_takeaways_input_metrics,
     evaluate_takeaways_metrics,
 )
-from ..services.metrics.deterministic import (
+from ..services.metrics.statistical import (
     key_takeaways_metrics,
     source_metrics,
     summary_metrics,
@@ -40,7 +40,7 @@ async def compute_source_metrics(text: str) -> dict:
     return await asyncio.to_thread(source_metrics, text)
 
 
-async def compute_deterministic_metrics(
+async def compute_statistical_metrics(
     summary_text: str,
     takeaways_text: str,
     source_text: str,
@@ -110,13 +110,13 @@ async def store_source_metrics_for_job(job_id: str, text: str) -> None:
     logger.debug("[job=%s] source metrics stored", job_id)
 
 
-async def store_deterministic_metrics_for_job(
+async def store_statistical_metrics_for_job(
     job_id: str,
     summary_text: str,
     takeaways_text: str,
     source_text: str,
 ) -> None:
-    metrics = await compute_deterministic_metrics(summary_text, takeaways_text, source_text)
+    metrics = await compute_statistical_metrics(summary_text, takeaways_text, source_text)
     await store_job_metrics(
         job_id,
         {
@@ -124,7 +124,7 @@ async def store_deterministic_metrics_for_job(
             "metrics.key_takeaways": metrics["key_takeaways"],
         },
     )
-    logger.debug("[job=%s] summary/takeaways metrics stored (compression folded into summary)", job_id)
+    logger.debug("[job=%s] summary/takeaways metrics stored", job_id)
 
 
 async def store_deepeval_metrics_for_job(

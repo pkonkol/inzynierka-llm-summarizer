@@ -9,7 +9,6 @@ langchain-google-genai
 langchain-openai
 langchain-ollama
 textstat
-spacy
 deepeval
 rouge-score
 nltk

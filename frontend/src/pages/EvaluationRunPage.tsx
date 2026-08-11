@@ -10,7 +10,7 @@ import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { PreBlock } from "../components/PreBlock";
 import { navigateTo } from "../utils/researchRouting";
-import type { EvaluationRunEntry, EvaluationRunMeta, SummaryDeterministicMetrics } from "../types/research";
+import type { EvaluationRunEntry, EvaluationRunMeta, SummaryStatisticalMetrics } from "../types/research";
 
 type EntryCollapsibleKey = "input" | "metrics";
 
@@ -44,13 +44,13 @@ function ColumnsHeader() {
     );
 }
 
-function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
-    const goldenSummary: Partial<SummaryDeterministicMetrics> = entry.golden_metrics?.summary ?? {};
-    const aiSummary: Partial<SummaryDeterministicMetrics> = entry.ai_metrics?.summary ?? {};
+function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
+    const goldenSummary: Partial<SummaryStatisticalMetrics> = entry.golden_metrics?.summary ?? {};
+    const aiSummary: Partial<SummaryStatisticalMetrics> = entry.ai_metrics?.summary ?? {};
 
     const allLabels = Array.from(
         new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]),
-    ) as (keyof SummaryDeterministicMetrics)[];
+    ) as (keyof SummaryStatisticalMetrics)[];
 
     return (
         <div className="space-y-2">
@@ -73,11 +73,7 @@ function DeterministicMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
                     </h6>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         <InfoRow label="Bullet count" value={entry.ai_metrics.key_takeaways.bullet_count} />
-                        <InfoRow label="Total lines" value={entry.ai_metrics.key_takeaways.total_lines} />
-                        <InfoRow label="Word count" value={entry.ai_metrics.key_takeaways.word_count} />
-                        <InfoRow label="Unique word count" value={entry.ai_metrics.key_takeaways.unique_word_count} />
-                        <InfoRow label="Type token ratio" value={entry.ai_metrics.key_takeaways.type_token_ratio} />
-                        <InfoRow label="Avg bullet word count" value={entry.ai_metrics.key_takeaways.avg_bullet_word_count} />
+                        <InfoRow label="Char count" value={entry.ai_metrics.key_takeaways.char_count} />
                     </div>
                 </div>
             ) : null}
@@ -146,7 +142,7 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
                 <CrossMetricsSection entry={entry} />
             </div>
             <div className="border-t border-divider pt-3">
-                <DeterministicMetricsColumns entry={entry} />
+                <StatisticalMetricsColumns entry={entry} />
                 <DeepevalMetricsColumns entry={entry} />
             </div>
         </div>

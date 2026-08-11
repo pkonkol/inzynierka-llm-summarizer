@@ -7,7 +7,7 @@ from .deepeval import (
     evaluate_takeaways_input_metrics,
     evaluate_takeaways_metrics,
 )
-from .deterministic import (
+from .statistical import (
     key_takeaways_metrics,
     source_metrics,
     summary_metrics,

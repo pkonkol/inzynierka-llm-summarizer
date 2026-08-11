@@ -44,7 +44,6 @@ export interface JobMetrics {
     source: Record<string, number | null>;
     summary: Record<string, number | null>;
     key_takeaways: Record<string, number | null>;
-    compression: Record<string, number | null>;
 }
 
 export interface DeepevalMetricItem {

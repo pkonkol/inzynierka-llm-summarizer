@@ -41,3 +41,4 @@ pnpm-debug.log*
 # Reference-only generated frontend (do not commit)
 frontend/MVP Frontend for Summaries/
 .aider*
+evaluation_set_curation_full.json

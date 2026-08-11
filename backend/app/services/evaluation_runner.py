@@ -8,7 +8,7 @@ from bson import ObjectId
 
 from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from app.services.llm import generate_summary
-from ..services.run_metrics import compute_cross_metrics, compute_deterministic_metrics, join_takeaways
+from ..services.run_metrics import compute_cross_metrics, compute_statistical_metrics, join_takeaways
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ async def run_evaluation_batch(run_id: str) -> None:
 
             update["ai_summary"] = summary_text
             update["ai_key_takeaways"] = takeaways
-            update["ai_metrics"] = await compute_deterministic_metrics(
+            update["ai_metrics"] = await compute_statistical_metrics(
                 summary_text=summary_text,
                 takeaways_text=join_takeaways(takeaways),
                 source_text=source_entry["input_text"],

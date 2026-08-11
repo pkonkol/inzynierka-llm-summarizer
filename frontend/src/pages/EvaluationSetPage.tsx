@@ -11,10 +11,29 @@ import {
 } from "../api/research";
 import { getSupportedModels, getSupportedModes } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { DeepevalItems } from "../components/DeepevalItems";
+import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { navigateTo } from "../utils/researchRouting";
 import { splitProviderModel } from "../utils/utils";
 import type { EvaluationRunListItem, EvaluationSetDetail, EvaluationSetEntry } from "../types/research";
+
+function formatLabel(key: string): string {
+    return key.replace(/_/g, " ");
+}
+
+function MetricsSection({ title, data }: { title: string; data: Record<string, number | null> }) {
+    return (
+        <div className="space-y-2">
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">{title}</h6>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                {Object.entries(data).map(([key, value]) => (
+                    <InfoRow key={key} label={formatLabel(key)} value={value} />
+                ))}
+            </div>
+        </div>
+    );
+}
 
 function downloadJson(filename: string, data: unknown) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -62,7 +81,7 @@ function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSe
                     onClick={() => toggleSection("metrics")}
                     className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
                 >
-                    <span>Golden metrics</span>
+                    <span>Metrics</span>
                     <span>{openSection === "metrics" ? "▼" : "▶"}</span>
                 </button>
             </div>
@@ -73,12 +92,21 @@ function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSe
                 </div>
             ) : null}
 
-            {openSection === "metrics" ? (
-                <div className="border border-t-0 border-panel-border">
-                    <pre className="m-0 overflow-x-auto whitespace-pre-wrap bg-subtle p-3 font-mono text-[0.82rem] leading-normal text-muted">
-{JSON.stringify(entry.golden_metrics, null, 2)}
-                    </pre>
+            {openSection === "metrics" && entry.golden_metrics ? (
+                <div className="border border-t-0 border-panel-border space-y-3 p-3">
+                    <MetricsSection title="Source" data={entry.golden_metrics.source} />
+                    <MetricsSection title="Summary" data={entry.golden_metrics.summary} />
+                    {entry.golden_metrics.deepeval.length > 0 ? (
+                        <div className="space-y-2 border-t border-divider pt-3">
+                            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Deepeval</h6>
+                            <DeepevalItems items={entry.golden_metrics.deepeval} />
+                        </div>
+                    ) : null}
                 </div>
+            ) : openSection === "metrics" ? (
+                <p className="m-0 border border-t-0 border-panel-border p-3 text-[0.78rem] italic text-muted">
+                    Metrics not computed yet.
+                </p>
             ) : null}
         </article>
     );

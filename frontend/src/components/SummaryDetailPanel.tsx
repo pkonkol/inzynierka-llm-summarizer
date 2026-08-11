@@ -22,7 +22,6 @@ const METRIC_SECTIONS = [
     { key: "source", label: "Source", field: "source" as const },
     { key: "summary", label: "Summary", field: "summary" as const },
     { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
-    { key: "compression", label: "Summary / Source", field: "compression" as const },
 ] as const;
 
 const DEEPEVAL_SECTIONS = [

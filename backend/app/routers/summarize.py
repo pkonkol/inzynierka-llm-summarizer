@@ -18,7 +18,7 @@ from ..schemas.schemas import (
 )
 from ..services.run_metrics import (
     store_deepeval_metrics_for_job,
-    store_deterministic_metrics_for_job,
+    store_statistical_metrics_for_job,
     store_source_metrics_for_job,
     join_takeaways,
 )
@@ -88,7 +88,7 @@ async def run_summarization_job(
         )
 
         if summary_text or takeaways_text:
-            asyncio.create_task(store_deterministic_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
+            asyncio.create_task(store_statistical_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
         if run_deepeval and (summary_text or takeaways_text):
             asyncio.create_task(store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
 
@@ -145,7 +145,7 @@ async def create_summarize_job(
                 "summary_mode": payload.summary_mode,
                 "status": "pending",
                 "summary_data": None,
-                "metrics": {"source": {}, "summary": {}, "key_takeaways": {}, "compression": {}},
+                "metrics": {"source": {}, "summary": {}, "key_takeaways": {}},
                 "deepeval_metrics": {
                     "summary": [],
                     "summary_input": [],

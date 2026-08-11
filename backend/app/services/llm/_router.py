@@ -1,12 +1,11 @@
 """Public entry point — routes to the appropriate summarization strategy."""
 import logging
-from typing import Any, Literal
 
+from ...schemas.job_api import SummaryMode
+from ...schemas.summary import LlmSummaryResult
 from . import summary_cascade, summary_sequential, summary_simple
 
 logger = logging.getLogger(__name__)
-
-SummaryMode = Literal["simple", "sequential", "cascade"]
 
 
 async def generate_summary(
@@ -16,7 +15,7 @@ async def generate_summary(
     model_provider: str,
     language: str,
     mode: SummaryMode = "simple",
-) -> dict[str, Any]:
+) -> LlmSummaryResult:
     """
     Router — delegates to the requested summarization strategy.
 

@@ -9,13 +9,15 @@ from pymongo.errors import DuplicateKeyError
 from ..core.auth import require_auth
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
-from ..schemas.schemas import (
+from ..schemas.job_api import (
     JobCreateRequest,
     JobListItemResponse,
     JobStatusResponse,
     SummaryMode,
     UrlSummaryListItem,
 )
+from ..schemas.job_db import JobDocument
+from ..schemas.summary import SummaryResponse
 from ..services.run_metrics import (
     store_deepeval_metrics_for_job,
     store_statistical_metrics_for_job,
@@ -24,19 +26,12 @@ from ..services.run_metrics import (
 )
 
 from ..services.llm import generate_summary
+from ..services.llm._base import LlmOutputError
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
 
-_SUMMARY_TOP_LEVEL_KEYS = {
-    "usage",
-    "raw_metadata",
-    "raw_output",
-    "input_text",
-    "prompt_template",
-    "prompt_params",
-}
 
 async def run_summarization_job(
     job_id: str,
@@ -57,27 +52,25 @@ async def run_summarization_job(
         summary = await generate_summary(data, url, model_name, model_provider, language, summary_mode)
 
         finished_at = datetime.now(timezone.utc)
-
-        summary_data = {k: v for k, v in summary.items() if k not in _SUMMARY_TOP_LEVEL_KEYS}
-        summary_text = summary["summary"]
-        takeaways_text = join_takeaways(summary["key_takeaways"])
+        takeaways_text = join_takeaways(summary.key_takeaways)
 
         await jobs_collection.update_one(
             {"job_id": job_id},
             {
                 "$set": {
-                    "source_url": url,
-                    "model_provider": model_provider,
-                    "model_name": model_name,
-                    "summary_mode": summary_mode,
                     "status": "completed",
-                    "summary_data": summary_data,
-                    "usage": summary["usage"],
-                    "raw_metadata": summary["raw_metadata"],
-                    "raw_output": summary["raw_output"],
-                    "input_text": summary["input_text"],
-                    "prompt_template": summary["prompt_template"],
-                    "prompt_params": summary["prompt_params"],
+                    "summary_data": SummaryResponse(
+                        title=summary.title,
+                        summary=summary.summary,
+                        key_takeaways=summary.key_takeaways,
+                        source_url=summary.source_url,
+                    ).model_dump(),
+                    "usage": summary.usage.model_dump(),
+                    "raw_metadata": summary.raw_metadata,
+                    "raw_output": summary.raw_output,
+                    "input_text": summary.input_text,
+                    "prompt_template": summary.prompt_template,
+                    "prompt_params": summary.prompt_params,
                     "started_at": started_at,
                     "finished_at": finished_at,
                     "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
@@ -87,10 +80,10 @@ async def run_summarization_job(
             },
         )
 
-        if summary_text or takeaways_text:
-            asyncio.create_task(store_statistical_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
-        if run_deepeval and (summary_text or takeaways_text):
-            asyncio.create_task(store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"]))
+        if summary.summary or takeaways_text:
+            asyncio.create_task(store_statistical_metrics_for_job(job_id, summary.summary, takeaways_text, data["text"]))
+        if run_deepeval and (summary.summary or takeaways_text):
+            asyncio.create_task(store_deepeval_metrics_for_job(job_id, summary.summary, takeaways_text, data["text"]))
 
     except Exception as exc:
         finished_at = datetime.now(timezone.utc)
@@ -100,18 +93,10 @@ async def run_summarization_job(
             {"job_id": job_id},
             {
                 "$set": {
-                    "source_url": url,
-                    "model_provider": model_provider,
-                    "model_name": model_name,
-                    "summary_mode": summary_mode,
                     "status": "failed",
                     "summary_data": None,
-                    "usage": {},
-                    "raw_metadata": {},
-                    "raw_output": getattr(exc, "raw_output", ""),
-                    "input_text": "",
-                    "prompt_template": [],
-                    "prompt_params": {},
+                    # only an LLM parse failure carries the model's raw text
+                    "raw_output": exc.raw_output if isinstance(exc, LlmOutputError) else "",
                     "started_at": started_at,
                     "finished_at": finished_at,
                     "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
@@ -135,38 +120,19 @@ async def create_summarize_job(
 
     logger.debug("[job=%s] queued url=%s mode=%s", job_id, payload.url, payload.summary_mode)
 
+    document = JobDocument(
+        job_id=job_id,
+        source_url=payload.url,
+        model_provider=payload.model_provider,
+        model_name=payload.model_name,
+        summary_mode=payload.summary_mode,
+        status="pending",
+        created_at=now,
+        updated_at=now,
+    )
+
     try:
-        await jobs_collection.insert_one(
-            {
-                "job_id": job_id,
-                "source_url": payload.url,
-                "model_provider": payload.model_provider,
-                "model_name": payload.model_name,
-                "summary_mode": payload.summary_mode,
-                "status": "pending",
-                "summary_data": None,
-                "metrics": {"source": {}, "summary": {}, "key_takeaways": {}},
-                "deepeval_metrics": {
-                    "summary": [],
-                    "summary_input": [],
-                    "takeaways": [],
-                    "takeaways_input": [],
-                    "summary_takeaways": [],
-                },
-                "usage": {},
-                "raw_metadata": {},
-                "raw_output": "",
-                "input_text": "",
-                "prompt_template": [],
-                "prompt_params": {},
-                "created_at": now,
-                "started_at": None,
-                "finished_at": None,
-                "duration_ms": 0,
-                "error": None,
-                "updated_at": now,
-            }
-        )
+        await jobs_collection.insert_one(document.model_dump())
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
@@ -197,23 +163,23 @@ async def list_summarized_urls(
                 "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
                 "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
                 "latest_updated_at": {"$first": "$updated_at"},
-                "latest_title": {"$first": "$summary_data.title"},
+                # null for failed jobs, which have no summary_data
+                "latest_title": {"$first": {"$ifNull": ["$summary_data.title", ""]}},
             }
         },
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
-    results = [
+    return [
         UrlSummaryListItem(
             source_url=doc["_id"],
             completed_count=doc["completed_count"],
             failed_count=doc["failed_count"],
-            latest_title=doc.get("latest_title") or "",
-            latest_updated_at=doc.get("latest_updated_at"),
+            latest_title=doc["latest_title"],
+            latest_updated_at=doc["latest_updated_at"],
         )
         async for doc in jobs_collection.aggregate(pipeline)
     ]
-    return results
 
 
 @router.get("/list", response_model=list[JobListItemResponse], summary="List all jobs flat (/jobs page)")
@@ -239,18 +205,19 @@ async def list_all_jobs_flat(
 
     results = []
     async for doc in cursor:
-        sd = doc.get("summary_data") or {}
+        # summary_data is None until the summary completes (and stays None on failure)
+        summary_data = doc["summary_data"]
         results.append(
             JobListItemResponse(
-                job_id=str(doc.get("job_id", "")),
-                source_url=str(doc.get("source_url", "")),
-                status=doc.get("status", "pending"),
-                title=str(sd.get("title", "")),
-                summary=str(sd.get("summary", "")),
-                model_provider=str(doc.get("model_provider", "")),
-                model_name=str(doc.get("model_name", "")),
-                summary_mode=doc.get("summary_mode") or "simple",
-                updated_at=doc.get("updated_at"),
+                job_id=doc["job_id"],
+                source_url=doc["source_url"],
+                status=doc["status"],
+                title=summary_data["title"] if summary_data else "",
+                summary=summary_data["summary"] if summary_data else "",
+                model_provider=doc["model_provider"],
+                model_name=doc["model_name"],
+                summary_mode=doc["summary_mode"],
+                updated_at=doc["updated_at"],
             )
         )
     return results
@@ -274,7 +241,7 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     job_data = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
     if not job_data:
         raise HTTPException(status_code=404, detail="Job not found")
-    logger.debug("[job=%s] status check -> %s", job_id, job_data.get("status"))
+    logger.debug("[job=%s] status check -> %s", job_id, job_data["status"])
     return JobStatusResponse.model_validate(job_data)
 
 
@@ -287,12 +254,16 @@ async def delete_job(job_id: str) -> dict[str, str]:
 
 
 def _verify_model_availability(model_provider: str, model_name: str) -> None:
-    if model_provider.lower() not in settings.supported_models:
-        raise ValueError(f"Unsupported model provider: {model_provider}")
-    if model_name.lower() not in [m.lower() for m in settings.supported_models.get(model_provider.lower(), [])]:
-        raise ValueError(f"Unsupported model: {model_name} for provider {model_provider}")
+    provider = model_provider.lower()
+    if provider not in settings.supported_models:
+        raise HTTPException(status_code=400, detail=f"Unsupported model provider: {model_provider}")
+    if model_name.lower() not in [m.lower() for m in settings.supported_models[provider]]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported model: {model_name} for provider {model_provider}",
+        )
 
 
 def _verify_mode(mode: str) -> None:
     if mode not in settings.supported_summary_modes:
-        raise ValueError(f"Unsupported summary mode: {mode}")
+        raise HTTPException(status_code=400, detail=f"Unsupported summary mode: {mode}")

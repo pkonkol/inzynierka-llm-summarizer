@@ -1,3 +1,10 @@
+import type {
+    DeepevalItem,
+    KeyTakeawaysMetrics,
+    SourceMetrics,
+    SummaryStatisticalMetrics,
+} from "./research";
+
 export type JobStatusValue = "pending" | "completed" | "failed";
 export type SummaryMode = "simple" | "sequential" | "cascade";
 
@@ -35,30 +42,13 @@ export interface UsageMetadata {
     total_tokens: number;
 }
 
-export interface PromptMessage {
-    role: string;
-    content: string;
-}
+/** Backend emits [role, template] pairs, not objects. */
+export type PromptMessage = [string, string];
 
 export interface JobMetrics {
-    source: Record<string, number | null>;
-    summary: Record<string, number | null>;
-    key_takeaways: Record<string, number | null>;
-}
-
-export interface DeepevalMetricItem {
-    name: string;
-    passed?: boolean | null;
-    score?: number | null;
-    reason?: string | null;
-}
-
-export interface DeepevalMetrics {
-    summary: DeepevalMetricItem[];
-    summary_input: DeepevalMetricItem[];
-    takeaways: DeepevalMetricItem[];
-    takeaways_input: DeepevalMetricItem[];
-    summary_takeaways: DeepevalMetricItem[];
+    source: SourceMetrics | null;
+    summary: SummaryStatisticalMetrics | null;
+    key_takeaways: KeyTakeawaysMetrics | null;
 }
 
 export interface JobStatus {
@@ -70,7 +60,7 @@ export interface JobStatus {
     status: JobStatusValue;
     summary_data: SummaryData | null;
     metrics: JobMetrics;
-    deepeval_metrics: DeepevalMetrics;
+    deepeval_metrics: DeepevalItem[];
     usage: UsageMetadata;
     raw_metadata: Record<string, unknown>;
     raw_output: string;

@@ -12,8 +12,9 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
-from ...schemas.summary import SummaryResponse
+from ...schemas.summary import LlmSummaryResult
 from ._base import (
+    LlmOutputError,
     build_generic_detail_guidance,
     build_structured_llm,
     build_summary_detail_guidance,
@@ -67,14 +68,14 @@ async def run(
 
     takeaways_detail_guidance = "\n".join(
         [
-            build_generic_detail_guidance(text),
-            build_takeaway_detail_guidance(text),
+            build_generic_detail_guidance(),
+            build_takeaway_detail_guidance(),
         ]
     )
     summary_detail_guidance = "\n".join(
         [
-            build_generic_detail_guidance(text),
-            build_summary_detail_guidance(text),
+            build_generic_detail_guidance(),
+            build_summary_detail_guidance(),
         ]
     )
     params_1 = {
@@ -92,11 +93,11 @@ async def run(
     raw_str_tk = raw_output_str(raw_tk)
     parsed_tk: _TakeawaysOnly | None = raw_tk.get("parsed")
     if parsed_tk is None:
-        err = ValueError("[cascade] model returned unparseable takeaways response")
-        s = raw_str_tk
-        err.raw_output = s # type: ignore[attr-defined]
-        logger.error("raw_output: %s", s)
-        raise err
+        logger.error("raw_output: %s", raw_str_tk)
+        raise LlmOutputError(
+            "[cascade] model returned unparseable takeaways response",
+            raw_output=raw_str_tk,
+        )
 
     # --- call 2: synthesise from takeaways only ---
     params_2 = {
@@ -110,49 +111,38 @@ async def run(
         raw_sm = raw_sm.model_dump()
 
     raw_str_sm = raw_output_str(raw_sm)
+    raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
+
     parsed_sm: _SummaryOnly | None = raw_sm.get("parsed")
     if parsed_sm is None:
-        err = ValueError("[cascade] model returned unparseable synthesis response")
-        s = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
-        err.raw_output = s # type: ignore[attr-defined]
-        logger.error("raw_output: %s", s)
-        raise err
+        logger.error("raw_output: %s", raw_output_combined)
+        raise LlmOutputError(
+            "[cascade] model returned unparseable synthesis response",
+            raw_output=raw_output_combined,
+        )
 
     usage_tk, meta_tk = extract_usage(raw_tk.get("raw"))
     usage_sm, meta_sm = extract_usage(raw_sm.get("raw"))
 
-    combined_usage = {
-        "input_tokens":    usage_tk.input_tokens   + usage_sm.input_tokens,
-        "output_tokens":   usage_tk.output_tokens  + usage_sm.output_tokens,
-        "thinking_tokens": usage_tk.thinking_tokens + usage_sm.thinking_tokens,
-        "total_tokens":    usage_tk.total_tokens   + usage_sm.total_tokens,
-    }
-    raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- synthesis ---\n{raw_str_sm}"
-
-    result = SummaryResponse(
+    return LlmSummaryResult(
         title=input["title"],
         summary=parsed_sm.summary,
         key_takeaways=parsed_tk.key_takeaways,
         source_url=source_url,
-    ).model_dump()
-
-    result["author"] = input.get("author", "") # TODO handler for datasets with no author?
-    result["title"] = input["title"]
-    result["source_url"] = source_url
-    result["usage"]           = combined_usage
-    result["raw_metadata"]    = {"takeaways": meta_tk, "synthesis": meta_sm}
-    result["raw_output"]      = raw_output_combined
-    result["input_text"]      = text.strip()
-    result["prompt_template"] = [
-        ("[takeaways] system",  _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-        ("[takeaways] human",   _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-        ("[synthesis] system",  _PROMPT_SYNTHESIS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-        ("[synthesis] human",   _PROMPT_SYNTHESIS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-    ]
-    result["prompt_params"] = {
-        "language": language,
-        "source_url": source_url,
-        "takeaways_detail_guidance": takeaways_detail_guidance,
-        "summary_detail_guidance": summary_detail_guidance,
-    }
-    return result
+        usage=usage_tk + usage_sm,
+        raw_metadata={"takeaways": meta_tk, "synthesis": meta_sm},
+        raw_output=raw_output_combined,
+        input_text=text.strip(),
+        prompt_template=[
+            ("[takeaways] system",  _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] human",   _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+            ("[synthesis] system",  _PROMPT_SYNTHESIS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+            ("[synthesis] human",   _PROMPT_SYNTHESIS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+        ],
+        prompt_params={
+            "language": language,
+            "source_url": source_url,
+            "takeaways_detail_guidance": takeaways_detail_guidance,
+            "summary_detail_guidance": summary_detail_guidance,
+        },
+    )

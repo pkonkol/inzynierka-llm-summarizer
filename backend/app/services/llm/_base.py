@@ -9,9 +9,20 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from ...core.config import settings
-from ...schemas.schemas import UsageMetadata
+from ...schemas.summary import UsageMetadata
 
 logger = logging.getLogger(__name__)
+
+
+class LlmOutputError(ValueError):
+    """Raised when the model returns an empty/unparseable response.
+
+    Carries the raw text so the job record can store what the model actually produced.
+    """
+
+    def __init__(self, message: str, raw_output: str) -> None:
+        super().__init__(message)
+        self.raw_output = raw_output
 
 
 def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
@@ -55,7 +66,7 @@ def build_structured_llm(structure: type, model_provider: str, model_name: str):
         include_raw=True,
     )
 
-def build_generic_detail_guidance(text: str) -> str:
+def build_generic_detail_guidance() -> str:
     return (
         "Return only valid JSON matching the requested schema. "
         "Do not wrap the response in markdown code fences. "
@@ -63,7 +74,7 @@ def build_generic_detail_guidance(text: str) -> str:
     )
 
 
-def build_summary_detail_guidance(text: str) -> str:
+def build_summary_detail_guidance() -> str:
     return (
         "Write a fluent prose summary that stays coherent and easy to read. "
         "Include all important facts from the source without introducing information that is not present. "
@@ -71,7 +82,7 @@ def build_summary_detail_guidance(text: str) -> str:
     )
 
 
-def build_takeaway_detail_guidance(text: str) -> str:
+def build_takeaway_detail_guidance() -> str:
     return (
         "Write key_takeaways as a JSON array of strings (list[str]), one concise takeaway per array item. "
         "Do not return markdown bullets or numbered lists. "
@@ -102,15 +113,21 @@ def extract_text_from_content(content: Any) -> str:
     return str(content)
 
 
+def _token_count(usage_meta: dict[str, Any], key: str) -> int:
+    """Providers may omit a key or report it as null — both mean 'no tokens counted'."""
+    value = usage_meta.get(key)
+    return value if isinstance(value, int) else 0
+
+
 def extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     usage_meta = as_dict(getattr(ai_message, "usage_metadata", None) or {})
     response_meta = as_dict(getattr(ai_message, "response_metadata", None) or {})
 
     usage = UsageMetadata(
-        input_tokens=usage_meta.get("input_tokens", 0),
-        output_tokens=usage_meta.get("output_tokens", 0),
-        thinking_tokens=usage_meta.get("input_token_details", {}).get("thinking", 0),
-        total_tokens=usage_meta.get("total_tokens", 0),
+        input_tokens=_token_count(usage_meta, "input_tokens"),
+        output_tokens=_token_count(usage_meta, "output_tokens"),
+        thinking_tokens=_token_count(as_dict(usage_meta.get("input_token_details")), "thinking"),
+        total_tokens=_token_count(usage_meta, "total_tokens"),
     )
     if usage.total_tokens == 0 and (usage.input_tokens or usage.output_tokens):
         usage = usage.model_copy(update={"total_tokens": usage.input_tokens + usage.output_tokens})

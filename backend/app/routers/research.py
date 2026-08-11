@@ -9,26 +9,24 @@ from fastapi.responses import JSONResponse
 
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..core.auth import require_auth
-from ..schemas.evaluation_set import (
+from ..schemas.evaluation_set_api import (
     EvaluationSetCreateResponse,
     EvaluationSetDetailResponse,
-    EvaluationSetDocument,
-    EvaluationSetEntryDocument,
     EvaluationSetEntryInputTextResponse,
     EvaluationSetEntryResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
 )
-from ..schemas.evaluation_run import (
+from ..schemas.evaluation_set_db import EvaluationSetDocument, EvaluationSetEntryDocument
+from ..schemas.evaluation_run_api import (
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
-    EvaluationRunDocument,
     EvaluationRunEntriesResponse,
-    EvaluationRunEntryDocument,
     EvaluationRunEntryResponse,
     EvaluationRunListItemResponse,
     EvaluationRunResponse,
 )
+from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
 from ..services.evaluation_runner import run_evaluation_batch
 
 from ..services.evaluation_set_metrics import build_golden_metrics

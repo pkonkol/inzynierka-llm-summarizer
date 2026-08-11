@@ -71,8 +71,10 @@ def get_evaluation_runs_collection() -> AsyncIOMotorCollection:
 
 
 async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
+    await collection.create_index("job_id", unique=True)
     await collection.create_index("source_url")
     await collection.create_index([("created_at", -1)])
+    await collection.create_index([("updated_at", -1)])
 
 
 async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> None:

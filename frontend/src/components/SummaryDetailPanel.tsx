@@ -8,6 +8,7 @@ import { InfoRow } from "./InfoRow";
 import { PreBlock } from "./PreBlock";
 import { formatDateMinute, formatDuration } from "../utils/format";
 import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
+import type { DeepevalItem } from "../types/research";
 
 interface JobDetailPanelProps {
     sourceUrl: string | null;
@@ -24,38 +25,12 @@ const METRIC_SECTIONS = [
     { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
 ] as const;
 
-const DEEPEVAL_SECTIONS = [
-    { key: "summary", label: "summary", field: "summary" as const },
-    { key: "summary_input", label: "summary_input", field: "summary_input" as const },
-    { key: "takeaways", label: "takeaways", field: "takeaways" as const },
-    { key: "takeaways_input", label: "takeaways_input", field: "takeaways_input" as const },
-    { key: "summary_takeaways", label: "summary_takeaways", field: "summary_takeaways" as const },
-] as const;
-
-function DeepevalSections({ metrics }: { metrics: NonNullable<JobStatus["deepeval_metrics"]> }) {
-    const renderedSections = DEEPEVAL_SECTIONS.map(section => {
-        const items = metrics[section.field];
-        if (!items || items.length === 0) return null;
-
-        return (
-            <div key={section.key} className="space-y-2">
-                <h6 className="m-0 font-display text-[0.72rem] font-semibold uppercase tracking-wider text-ink">
-                    {section.label}
-                </h6>
-                <DeepevalItems items={items} />
-            </div>
-        );
-    });
-
-    return <div className="space-y-3">{renderedSections}</div>;
-}
-
 function MetricsSection({
     metrics,
     deepevalMetrics,
 }: {
     metrics: JobMetrics;
-    deepevalMetrics: NonNullable<JobStatus["deepeval_metrics"]>;
+    deepevalMetrics: DeepevalItem[];
 }) {
     const defaultMetricsBlocks = METRIC_SECTIONS.map(section => {
         const data = metrics[section.field];
@@ -77,12 +52,12 @@ function MetricsSection({
         );
     });
 
-    const deepevalBlock = deepevalMetrics ? (
+    const deepevalBlock = deepevalMetrics.length > 0 ? (
         <div className="space-y-3 border-t border-divider pt-3">
             <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
                 Deepeval
             </h6>
-            <DeepevalSections metrics={deepevalMetrics} />
+            <DeepevalItems items={deepevalMetrics} />
         </div>
     ) : null;
 
@@ -101,22 +76,18 @@ function PromptSection({
     params,
     inputText,
 }: {
-    template: PromptMessage[] | [string, string][];
+    template: PromptMessage[];
     params: Record<string, string>;
     inputText: string;
 }) {
-    if ((!template || template.length === 0) && !inputText) return null;
+    if (template.length === 0 && !inputText) return null;
 
     let templateBlock = null;
-    if (template && template.length > 0) {
-        const messages = template.map((m) =>
-            Array.isArray(m) ? { role: m[0], content: m[1] } : m
-        );
-        
-        const renderedMessages = messages.map((msg, i) => (
+    if (template.length > 0) {
+        const renderedMessages = template.map(([role, content], i) => (
             <div key={i} className="mb-2 min-w-0">
-                <span className="font-mono text-[0.72rem] uppercase text-muted">{msg.role}: </span>
-                <PreBlock>{msg.content}</PreBlock>
+                <span className="font-mono text-[0.72rem] uppercase text-muted">{role}: </span>
+                <PreBlock>{content}</PreBlock>
             </div>
         ));
 

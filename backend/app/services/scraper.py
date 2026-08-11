@@ -3,9 +3,6 @@ import asyncio
 
 import trafilatura
 
-from ..core.config import settings
-
-
 logger = logging.getLogger(__name__)
 
 

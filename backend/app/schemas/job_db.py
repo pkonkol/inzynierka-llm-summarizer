@@ -1,0 +1,45 @@
+# schemas/job_db.py — stored shape of the jobs collection
+
+from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+from .shared_metrics import (
+    DeepevalItem,
+    KeyTakeawaysMetrics,
+    SourceMetrics,
+    SummaryStatisticalMetrics,
+)
+from .summary import SummaryResponse, UsageMetadata
+
+
+class JobMetrics(BaseModel):
+    """All None at insert time — metrics are computed asynchronously after the job starts."""
+    source: SourceMetrics | None = None
+    summary: SummaryStatisticalMetrics | None = None
+    key_takeaways: KeyTakeawaysMetrics | None = None
+
+
+class JobDocument(BaseModel):
+    job_id: str
+    source_url: str
+    model_provider: str
+    model_name: str
+    summary_mode: Literal["simple", "sequential", "cascade"]
+    status: Literal["pending", "completed", "failed"]
+    summary_data: SummaryResponse | None = None
+    metrics: JobMetrics = Field(default_factory=JobMetrics)
+    deepeval_metrics: list[DeepevalItem] = Field(default_factory=list)
+    usage: UsageMetadata = Field(default_factory=UsageMetadata)
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)
+    raw_output: str = ""
+    input_text: str = ""
+    prompt_template: list[tuple[str, str]] = Field(default_factory=list)
+    prompt_params: dict[str, str] = Field(default_factory=dict)
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    duration_ms: int = 0
+    error: str | None = None
+    updated_at: datetime

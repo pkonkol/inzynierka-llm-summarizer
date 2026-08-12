@@ -7,6 +7,12 @@ locals {
   env_vars = {
     MONGODB_DB_NAME         = "test-inzynierka-db"
     MONGODB_JOBS_COLLECTION = "jobs"
+    AUTH_ENABLED            = "true"
+    LOG_FORMAT              = "json"
+    CORS_ALLOWED_ORIGINS = jsonencode([
+      "https://${var.project_id}.web.app",
+      "https://${var.project_id}.firebaseapp.com",
+    ])
   }
 }
 

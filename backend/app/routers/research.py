@@ -217,8 +217,6 @@ async def create_evaluation_run(
     sets = get_evaluation_sets_collection()
     runs = get_evaluation_runs_collection()
 
-    print(payload)
-
     set_document = await sets.find_one({"_id": ObjectId(set_id)})
     if set_document is None:
         raise HTTPException(status_code=404, detail="Evaluation set not found")

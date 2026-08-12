@@ -1,6 +1,9 @@
 import type { CreateJobResponse, JobListItem, JobStatus, JobStatusValue, SummaryUrlListItem } from "../types/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+if (!API_BASE_URL) {
+    throw new Error("VITE_API_URL is not set — copy example.env to .env for local development");
+}
 const TOKEN_KEY = "auth_token";
 
 export function getToken(): string | null { return localStorage.getItem(TOKEN_KEY); }

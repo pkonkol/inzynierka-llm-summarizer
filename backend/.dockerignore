@@ -1,4 +1,21 @@
+# Secrets — must never reach the build context
+.env
+.env.*
+
+# Virtualenvs and caches (also keeps the context from being ~100 MB)
+venv/
+.venv/
 __pycache__/
 **/__pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
+# Runtime-generated data — the image downloads its own copy on first start
+nltk_data/
+.deepeval/
+
+# Not needed at runtime
+*.md
+tests/

@@ -1,6 +1,9 @@
+import json
 import logging
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 # ANSI colors
 _RESET = "\033[0m"
@@ -71,6 +74,31 @@ class _AppFormatter(logging.Formatter):
         return f"{ts_str} {level_str} {name_str} {msg}"
 
 
+class _CloudLoggingFormatter(logging.Formatter):
+    """One JSON object per line, using the field names GCP Cloud Logging understands.
+
+    `severity` is what makes log entries filterable by level in the Cloud Logging console;
+    plain-text ANSI output leaves everything as untyped DEFAULT-severity text.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        message = record.getMessage()
+        if record.exc_info:
+            message += "\n" + self.formatException(record.exc_info)
+
+        entry = {
+            "severity": record.levelname,
+            "message": message,
+            "logger": record.name,
+            "logging.googleapis.com/sourceLocation": {
+                "file": record.pathname,
+                "line": str(record.lineno),
+                "function": record.funcName,
+            },
+        }
+        return json.dumps(entry)
+
+
 # Noisy third-party loggers to suppress at DEBUG level
 _QUIET_IN_DEBUG = [
     "pymongo",
@@ -93,7 +121,12 @@ def setup_logging() -> None:
 
     handler = logging.StreamHandler()
     handler.setLevel(level)
-    handler.setFormatter(_AppFormatter(datefmt="%Y-%m-%d %H:%M:%S,%f"[:-3]))
+    if settings.log_format == "json":
+        handler.setFormatter(_CloudLoggingFormatter())
+    else:
+        # No datefmt: logging's default appends milliseconds ("2026-08-12 14:23:45,123").
+        # strftime has no %f, so spelling it out in a datefmt string silently drops them.
+        handler.setFormatter(_AppFormatter())
     root.addHandler(handler)
 
     # silence noisy libs when debug is on
@@ -101,4 +134,8 @@ def setup_logging() -> None:
         for name in _QUIET_IN_DEBUG:
             logging.getLogger(name).setLevel(logging.WARNING)
 
-    print(f"Logging initialized — level: {'DEBUG' if settings.debug else 'INFO'}")
+    logger.info(
+        "Logging initialized — level: %s, format: %s",
+        "DEBUG" if settings.debug else "INFO",
+        settings.log_format,
+    )

@@ -21,7 +21,7 @@ class DeepEvalMetricResult:
     passed: bool
 
 
-def build_deepeval_model(settings: Settings):
+def build_deepeval_model(settings: Settings) -> GeminiModel:
     provider = settings.deepeval_provider.lower()
     model_name = settings.deepeval_model
 

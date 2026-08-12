@@ -12,7 +12,10 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository" = "assertion.repository"
     "attribute.ref"        = "assertion.ref"
   }
-  attribute_condition = "assertion.repository == 'pkonkol/inzynierka-llm-summarizer'"
+  # Repo-scoped AND branch-scoped: without the ref check, a workflow on any branch of the repo
+  # could assume the deployer SA. Note this makes workflow_dispatch from a non-master branch
+  # fail authentication, which is intended.
+  attribute_condition = "assertion.repository == 'pkonkol/inzynierka-llm-summarizer' && assertion.ref == 'refs/heads/master'"
 }
 
 resource "google_service_account" "github_actions" {
@@ -27,6 +30,8 @@ resource "google_project_iam_member" "github_actions_roles" {
     "roles/iam.serviceAccountUser",
     "roles/secretmanager.viewer",
     "roles/secretmanager.secretAccessor",
+    "roles/firebasehosting.admin",                # Deploy the frontend via ADC instead of a long-lived FIREBASE_TOKEN.
+    "roles/containeranalysis.occurrences.viewer", # Read vulnerability scan results for the pushed image.
     #"roles/storage.admin", # prostsza wersja zeby dzialal backend gcs
   ])
   project = var.project_id

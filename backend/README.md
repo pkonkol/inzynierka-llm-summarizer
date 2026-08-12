@@ -15,6 +15,32 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Dependencies
+
+Two files, on purpose:
+
+- **`requirements.in`** — the ~14 direct dependencies, edited by hand, pinned with `~=` so patch
+  releases are allowed.
+- **`requirements.txt`** — the generated lock: every transitive dependency at an exact version.
+  This is what `pip install` and the Docker build use, so a given commit always builds the same
+  image.
+
+Never edit `requirements.txt` by hand. After changing `requirements.in`, or to pick up patch
+releases, recompile it with [uv](https://docs.astral.sh/uv/) (dev-machine tool only — it is not
+used in the image or in CI):
+
+```bash
+uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14
+
+uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 --upgrade
+uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 \
+    --upgrade-package fastapi
+```
+
+`uv pip compile` keeps existing pins unless you pass `--upgrade`/`--upgrade-package`, so versions
+never move on their own. `--universal` makes the single lock file valid on both Linux (the image)
+and macOS (this venv).
+
 ## Environment Variables
 Preferred: keep API keys in `backend/.env`:
 
@@ -27,6 +53,11 @@ MONGODB_JOBS_COLLECTION=jobs
 ```
 
 The app loads `backend/.env` automatically via Pydantic Settings, regardless of where you start Uvicorn.
+See `.env.template` for the full list, including `AUTH_ENABLED`, `LOG_FORMAT` and
+`CORS_ALLOWED_ORIGINS`.
+
+Auth is off unless `AUTH_ENABLED=true`; when it is on, both `AUTH_SECRET` and `JWT_SECRET` must be
+set or the app refuses to start.
 
 Optional summary tuning variables:
 
@@ -110,7 +141,7 @@ Optional `limit` query param:
 curl -X 'GET' 'http://localhost:8000/api/v1/jobs?limit=100'
 ```
 
-`summary_data` now also contains `source_url` (original link).
+`summary_data` contains `source_url` (the original link).
 
 Expected statuses:
 - `pending`: background task still running
@@ -123,5 +154,5 @@ To stop local MongoDB:
 ./dev.sh down
 ```
 
-## Why the previous import error happened
-`No module named 'app'` appears when Python is started from a directory where `app` is not importable as a top-level module. Use one of the commands above to run with the correct module path.
+## Module path
+`No module named 'app'` means Python was started from a directory where `app` is not importable as a top-level module. Use one of the commands above to run with the correct module path.

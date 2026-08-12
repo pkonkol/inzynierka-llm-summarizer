@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -51,7 +52,10 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
 
     raise NotImplementedError(f"Provider {model_provider} is not implemented yet")
 
-def build_structured_llm(structure: type, model_provider: str, model_name: str):
+
+def build_structured_llm(
+    structure: type, model_provider: str, model_name: str
+) -> Runnable[Any, dict[str, Any]]:
     llm = build_llm(model_provider, model_name)
 
     if model_provider.lower() == "openrouter":

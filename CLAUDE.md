@@ -35,3 +35,63 @@ Folder-specific rules: [backend/CLAUDE.md](backend/CLAUDE.md), [frontend/CLAUDE.
 - **Reviewable batches.** Prefer several small, reviewable steps over one large diff.
 - **Architecture pushback.** If a requested approach isn't the best option, say so in the reply and propose the alternative — don't silently comply or silently deviate.
 - **Naming: verbose first, narrow later.** Prefer long, self-explanatory names over short ones, especially for state, function, and variable names that aren't obviously scoped by their immediate context. A name should let a reader understand its purpose without re-reading the surrounding module. Don't abbreviate to save keystrokes (`client` → `firestoreClient` if there are multiple clients in scope; `runModel` → `newRunSelectedModel` if "run" is ambiguous between "existing run" and "the run being created"). It's fine to shorten a name later once its scope is small and unambiguous (e.g. a loop variable `i` is fine) — but don't start short and hope to remember to rename it later; that rarely happens.
+
+## Docs describe the present, not the change — FORBIDDEN patterns
+
+READMEs and docs state only how the system works *now*. They are not a changelog: git history covers that. The same rule as the code — no fallbacks, no leftovers.
+
+- Sentences whose meaning depends on knowing a previous version: "no longer", "now also", "used to", "previously", "as of the recent refactor", "the old way was".
+- Sections explaining a bug that was already fixed, or why an earlier approach was abandoned.
+
+```markdown
+<!-- BAD — only parseable if you remember the version before -->
+Auth is off unless `AUTH_ENABLED=true`. Setting only the secrets no longer enables auth.
+`summary_data` now also contains `source_url`.
+## Why the previous import error happened
+
+<!-- GOOD — describes the current contract, complete on its own -->
+Auth is off unless `AUTH_ENABLED=true`; when on, both `AUTH_SECRET` and `JWT_SECRET` must be set or the app refuses to start.
+`summary_data` contains `source_url` (original link).
+## Running from the repository root
+```
+
+The one exception is a **deliberate in-flight migration**, where developers need to know both states. Mark those with a greppable prefix and delete them once the team has migrated:
+
+```markdown
+MIGRATION: until 2026-09, both AUTH_SECRET and legacy TOKEN are read. Remove TOKEN support after all envs are cut over.
+```
+
+Longer-form writing has its own home, so it does not leak into READMEs:
+
+- `docs/adr/` — why a decision was made, when the code alone can't show it (e.g. public read endpoints, auth as an explicit flag).
+- `docs/postmortem/` — what broke, why, and what changed as a result.
+
+## Comments — FORBIDDEN patterns
+
+These rules govern **comments you write**. They do not apply to the author's own scratch notes (see below).
+
+Every comment you add is in **English**, addressed to a co-developer or downstream client-developer reading this repo cold. Never Polish, never a note to self.
+
+- Restating what the line already says. If the code makes it obvious, delete the comment.
+- Explaining *what* instead of the non-obvious *why*.
+
+```hcl
+# BAD — the code already says this
+# Browser origins allowed to call the API. Both hosting domains are derived from the project id.
+CORS_ALLOWED_ORIGINS = jsonencode(["https://${var.project_id}.web.app"])
+
+# GOOD — the why, which is not visible anywhere in the code
+"roles/firebasehosting.admin", # Deploy the frontend via ADC instead of a long-lived FIREBASE_TOKEN.
+```
+
+Formatting:
+
+- **Prefer a trailing comment on the same line** over a comment line above it, when it fits the idea.
+- **Line-length limits do not apply to comments.** 200 characters on one comment line is fine — do not wrap a comment just to satisfy a formatter.
+
+### Scratch notes are the author's — do not touch
+
+Markers like `TODO:`, `FIXME:`, `WIP:`, `REMOVE:`, `TMP:` are a deliberate mechanism: a greppable place to park something that has nowhere better to live yet, meant to be deleted later. They are exempt from every rule above — they may be terse, messy, or in Polish.
+
+- Never delete, reword, or "clean up" a marked note written by the author. Answer it if you can, and say so — the author decides whether it goes.
+- When you add one yourself, use English and say what would resolve it.

@@ -1,3 +1,4 @@
+import hmac
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -23,15 +24,15 @@ class AuthStatusResponse(BaseModel):
 
 @router.get("/status", response_model=AuthStatusResponse)
 def get_auth_status() -> AuthStatusResponse:
-    return AuthStatusResponse(enabled=bool(settings.auth_secret))
+    return AuthStatusResponse(enabled=settings.auth_enabled)
 
 
 @router.post("/token", response_model=TokenResponse)
 def get_token(payload: TokenRequest) -> TokenResponse:
-    if not settings.auth_secret:
+    if not settings.auth_enabled:
         raise HTTPException(status_code=404, detail="Authentication is disabled")
-    if payload.password != settings.auth_secret:
+    if not hmac.compare_digest(payload.password, settings.auth_secret.get_secret_value()):
         raise HTTPException(status_code=401, detail="Invalid password")
     exp = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expire_hours)
-    token = jwt.encode({"exp": exp}, settings.jwt_secret, algorithm="HS256")
+    token = jwt.encode({"exp": exp}, settings.jwt_secret.get_secret_value(), algorithm="HS256")
     return TokenResponse(token=token)

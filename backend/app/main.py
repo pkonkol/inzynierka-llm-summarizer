@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .core.config import settings
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .core.nltk_data import ensure_wordnet_resources
-from .core.config import settings
-from .routers import auth, health, meta, summarize, research
+from .routers import auth, health, meta, research, summarize
 
 setup_logging()
 

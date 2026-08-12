@@ -1,0 +1,24 @@
+# Runs the quality gates on every push, on every branch.
+#
+# Deliberately not `pull_request`: this is a solo repo where work happens on `work` and
+# lands on `master` by a manual squash merge, so there is often no PR to hang checks on.
+# Pushing is the event that matters here.
+
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the previous run irrelevant. Cancelling it keeps
+# the private-repo Actions minute budget from being spent on results nobody will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml

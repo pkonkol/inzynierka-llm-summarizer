@@ -1,12 +1,13 @@
 """Shared LLM utilities: model factory, prompt helpers, output parsers."""
+
 import logging
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from ...core.config import settings
@@ -69,6 +70,7 @@ def build_structured_llm(
         structure,
         include_raw=True,
     )
+
 
 def build_generic_detail_guidance() -> str:
     return (

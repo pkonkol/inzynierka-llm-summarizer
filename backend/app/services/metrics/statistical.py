@@ -6,6 +6,7 @@ Contrasts with the GEval/deepeval metrics, which require an LLM judge and a budg
 Length is measured in characters throughout. Readability uses Flesch-Kincaid grade
 (the best empirically validated formula) plus text_standard as a consensus sanity check.
 """
+
 from typing import Any
 
 import textstat
@@ -41,8 +42,10 @@ def summary_metrics(text: str, source_text: str) -> dict[str, Any]:
 def key_takeaways_metrics(text: str) -> dict[str, Any]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     bullet_lines = [
-        line for line in lines
-        if line.startswith(("- ", "* ", "• ")) or (len(line) > 2 and line[0].isdigit() and line[1] in ".)")
+        line
+        for line in lines
+        if line.startswith(("- ", "* ", "• "))
+        or (len(line) > 2 and line[0].isdigit() and line[1] in ".)")
     ]
     return {
         "bullet_count": len(bullet_lines),

@@ -23,6 +23,7 @@ class EvaluationSetImportRequest(BaseModel):
 
 class EvaluationSetEntryResponse(BaseModel):
     """input_text is deliberately excluded — fetched separately via the input-text endpoint."""
+
     entry_id: str
     golden_summary: str
     title: str

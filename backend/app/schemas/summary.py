@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class SummaryResponse(BaseModel):
     """Structured output the LLM is asked to produce."""
+
     title: str
     summary: str
     key_takeaways: list[str]
@@ -19,7 +20,7 @@ class UsageMetadata(BaseModel):
     thinking_tokens: int = 0
     total_tokens: int = 0
 
-    def __add__(self, other: "UsageMetadata") -> "UsageMetadata":
+    def __add__(self, other: UsageMetadata) -> UsageMetadata:
         """Multi-call modes (sequential, cascade) sum the usage of each call."""
         return UsageMetadata(
             input_tokens=self.input_tokens + other.input_tokens,
@@ -31,6 +32,7 @@ class UsageMetadata(BaseModel):
 
 class LlmSummaryResult(BaseModel):
     """Full result of a summarization run — the summary plus call metadata."""
+
     title: str
     summary: str
     key_takeaways: list[str]

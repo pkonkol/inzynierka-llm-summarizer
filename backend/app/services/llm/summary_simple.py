@@ -1,4 +1,5 @@
 """Single-prompt summarization (extractor + abstractor in one call)."""
+
 import logging
 from typing import Any
 
@@ -18,17 +19,23 @@ from ._base import (
 
 logger = logging.getLogger(__name__)
 
+
 class _SummaryPromptResponse(BaseModel):
     summary: str
     key_takeaways: list[str]
 
+
 _PROMPT_MESSAGES = [
-    ("system",
-     "You are an expert summarizer. Write the entire output in language code: {language}. "
-     "Return only valid JSON matching the requested schema."),
-    ("human",
-    "Generate summary and key_takeaways from the content. {detail_guidance}\n\n"
-     "Content:\n{text}"),
+    (
+        "system",
+        "You are an expert summarizer. Write the entire output in language code: {language}. "
+        "Return only valid JSON matching the requested schema.",
+    ),
+    (
+        "human",
+        "Generate summary and key_takeaways from the content. {detail_guidance}\n\n"
+        "Content:\n{text}",
+    ),
 ]
 
 _PROMPT = ChatPromptTemplate.from_messages(_PROMPT_MESSAGES)

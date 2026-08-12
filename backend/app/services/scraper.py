@@ -1,10 +1,9 @@
-import logging
 import asyncio
+import logging
 
 import trafilatura
 
 logger = logging.getLogger(__name__)
-
 
 
 async def extract_text_from_url(url: str) -> dict:

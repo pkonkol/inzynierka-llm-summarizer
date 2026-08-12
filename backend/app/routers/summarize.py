@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -18,19 +18,30 @@ from ..schemas.job_api import (
 )
 from ..schemas.job_db import JobDocument
 from ..schemas.summary import SummaryResponse
-from ..services.run_metrics import (
-    store_deepeval_metrics_for_job,
-    store_statistical_metrics_for_job,
-    store_source_metrics_for_job,
-    join_takeaways,
-)
-
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
+from ..services.run_metrics import (
+    join_takeaways,
+    store_deepeval_metrics_for_job,
+    store_source_metrics_for_job,
+    store_statistical_metrics_for_job,
+)
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 logger = logging.getLogger(__name__)
+
+# asyncio only keeps a weak reference to a running task, so a fire-and-forget
+# `create_task(...)` whose result nobody holds can be garbage-collected mid-flight —
+# the coroutine silently stops, with no error anywhere. Metrics writes are exactly
+# that shape, so keep a strong reference until each one finishes.
+_metrics_tasks: set[asyncio.Task] = set()
+
+
+def spawn_metrics_task(coro) -> None:
+    task = asyncio.create_task(coro)
+    _metrics_tasks.add(task)
+    task.add_done_callback(_metrics_tasks.discard)
 
 
 async def run_summarization_job(
@@ -43,15 +54,17 @@ async def run_summarization_job(
     run_deepeval: bool,
 ) -> None:
     jobs_collection = get_jobs_collection()
-    started_at = datetime.now(timezone.utc)
+    started_at = datetime.now(UTC)
 
     try:
         data = await extract_text_from_url(url)
-        asyncio.create_task(store_source_metrics_for_job(job_id, data["text"]))
+        spawn_metrics_task(store_source_metrics_for_job(job_id, data["text"]))
 
-        summary = await generate_summary(data, url, model_name, model_provider, language, summary_mode)
+        summary = await generate_summary(
+            data, url, model_name, model_provider, language, summary_mode
+        )
 
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
         takeaways_text = join_takeaways(summary.key_takeaways)
 
         await jobs_collection.update_one(
@@ -81,12 +94,20 @@ async def run_summarization_job(
         )
 
         if summary.summary or takeaways_text:
-            asyncio.create_task(store_statistical_metrics_for_job(job_id, summary.summary, takeaways_text, data["text"]))
+            spawn_metrics_task(
+                store_statistical_metrics_for_job(
+                    job_id, summary.summary, takeaways_text, data["text"]
+                )
+            )
         if run_deepeval and (summary.summary or takeaways_text):
-            asyncio.create_task(store_deepeval_metrics_for_job(job_id, summary.summary, takeaways_text, data["text"]))
+            spawn_metrics_task(
+                store_deepeval_metrics_for_job(
+                    job_id, summary.summary, takeaways_text, data["text"]
+                )
+            )
 
     except Exception as exc:
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
         logger.exception("[job=%s] failed: %s", job_id, exc)
 
         await jobs_collection.update_one(
@@ -106,6 +127,7 @@ async def run_summarization_job(
             },
         )
 
+
 @router.post("/summarize", summary="Create summarize job", dependencies=[Depends(require_auth)])
 async def create_summarize_job(
     payload: JobCreateRequest,
@@ -116,7 +138,7 @@ async def create_summarize_job(
 
     jobs_collection = get_jobs_collection()
     job_id = str(uuid4())
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     logger.debug("[job=%s] queued url=%s mode=%s", job_id, payload.url, payload.summary_mode)
 
@@ -149,7 +171,9 @@ async def create_summarize_job(
     return {"job_id": job_id}
 
 
-@router.get("", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped, home page)")
+@router.get(
+    "", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped, home page)"
+)
 async def list_summarized_urls(
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[UrlSummaryListItem]:
@@ -182,7 +206,9 @@ async def list_summarized_urls(
     ]
 
 
-@router.get("/list", response_model=list[JobListItemResponse], summary="List all jobs flat (/jobs page)")
+@router.get(
+    "/list", response_model=list[JobListItemResponse], summary="List all jobs flat (/jobs page)"
+)
 async def list_all_jobs_flat(
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[JobListItemResponse]:

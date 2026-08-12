@@ -8,7 +8,12 @@ from bson import ObjectId
 
 from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from app.services.llm import generate_summary
-from ..services.run_metrics import compute_cross_metrics, compute_statistical_metrics, join_takeaways
+
+from ..services.run_metrics import (
+    compute_cross_metrics,
+    compute_statistical_metrics,
+    join_takeaways,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -6,6 +6,7 @@ Call 2: write title + summary using ONLY the takeaways (not the full text).
 The idea: the second call synthesises from the already-distilled points,
 potentially producing a more coherent and focused summary.
 """
+
 import logging
 from typing import Any
 
@@ -34,23 +35,30 @@ class _SummaryOnly(BaseModel):
     summary: str
 
 
-_PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are an expert analyst. Write the entire output in language code: {language}. "
-     "Return only valid JSON matching the requested schema."),
-    ("human",
-    "Generate key_takeaways from the content. {detail_guidance}\n\n"
-     "Content:\n{text}"),
-])
+_PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert analyst. Write the entire output in language code: {language}. "
+            "Return only valid JSON matching the requested schema.",
+        ),
+        ("human", "Generate key_takeaways from the content. {detail_guidance}\n\nContent:\n{text}"),
+    ]
+)
 
-_PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are an expert editor. Write the entire output in language code: {language}. "
-     "Return only valid JSON matching the requested schema."),
-    ("human",
-    "Generate summary from the key points. {detail_guidance}\n\n"
-     "Key points:\n{takeaways}"),
-])
+_PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert editor. Write the entire output in language code: {language}. "
+            "Return only valid JSON matching the requested schema.",
+        ),
+        (
+            "human",
+            "Generate summary from the key points. {detail_guidance}\n\nKey points:\n{takeaways}",
+        ),
+    ]
+)
 
 
 async def run(
@@ -134,10 +142,10 @@ async def run(
         raw_output=raw_output_combined,
         input_text=text.strip(),
         prompt_template=[
-            ("[takeaways] system",  _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[takeaways] human",   _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[synthesis] system",  _PROMPT_SYNTHESIS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[synthesis] human",   _PROMPT_SYNTHESIS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[synthesis] system", _PROMPT_SYNTHESIS.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[synthesis] human", _PROMPT_SYNTHESIS.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
         ],
         prompt_params={
             "language": language,

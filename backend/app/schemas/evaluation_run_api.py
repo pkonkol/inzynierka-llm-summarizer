@@ -13,6 +13,7 @@ EntryStatus = Literal["pending", "completed", "failed"]
 
 class EvaluationRunEntryResponse(BaseModel):
     """API-facing shape — includes title/url/golden_metrics joined from the parent set."""
+
     entry_id: str
     title: str
     url: str

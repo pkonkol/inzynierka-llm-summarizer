@@ -16,6 +16,7 @@ from .summary import SummaryResponse, UsageMetadata
 
 class JobMetrics(BaseModel):
     """All None at insert time — metrics are computed asynchronously after the job starts."""
+
     source: SourceMetrics | None = None
     summary: SummaryStatisticalMetrics | None = None
     key_takeaways: KeyTakeawaysMetrics | None = None

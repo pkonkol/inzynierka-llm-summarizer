@@ -5,6 +5,7 @@ Call 2: write title + summary from raw text (independently).
 
 Both calls run concurrently (asyncio.gather). The two usages are summed.
 """
+
 import asyncio
 import logging
 
@@ -33,23 +34,27 @@ class _SummaryOnly(BaseModel):
     summary: str
 
 
-_PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are an expert analyst. Write the entire output in language code: {language}. "
-     "Return only valid JSON matching the requested schema."),
-    ("human",
-    "Generate key_takeaways from the content. {detail_guidance}\n\n"
-     "Content:\n{text}"),
-])
+_PROMPT_TAKEAWAYS = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert analyst. Write the entire output in language code: {language}. "
+            "Return only valid JSON matching the requested schema.",
+        ),
+        ("human", "Generate key_takeaways from the content. {detail_guidance}\n\nContent:\n{text}"),
+    ]
+)
 
-_PROMPT_SUMMARY = ChatPromptTemplate.from_messages([
-    ("system",
-     "You are an expert summarizer. Write the entire output in language code: {language}. "
-     "Return only valid JSON matching the requested schema."),
-    ("human",
-    "Generate summary from the content. {detail_guidance}\n\n"
-     "Content:\n{text}"),
-])
+_PROMPT_SUMMARY = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert summarizer. Write the entire output in language code: {language}. "
+            "Return only valid JSON matching the requested schema.",
+        ),
+        ("human", "Generate summary from the content. {detail_guidance}\n\nContent:\n{text}"),
+    ]
+)
 
 
 async def run(
@@ -59,7 +64,7 @@ async def run(
     takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
     summary_llm = build_structured_llm(_SummaryOnly, model_provider, model_name)
     chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
-    chain_summary   = _PROMPT_SUMMARY   | summary_llm
+    chain_summary = _PROMPT_SUMMARY | summary_llm
 
     text = input["text"]
 
@@ -92,7 +97,7 @@ async def run(
     raw_str_sm = raw_output_str(raw_sm)
 
     parsed_tk: _TakeawaysOnly | None = raw_tk.get("parsed")
-    parsed_sm: _SummaryOnly   | None = raw_sm.get("parsed")
+    parsed_sm: _SummaryOnly | None = raw_sm.get("parsed")
 
     raw_output_combined = f"--- takeaways ---\n{raw_str_tk}\n--- summary ---\n{raw_str_sm}"
 
@@ -117,10 +122,10 @@ async def run(
         raw_output=raw_output_combined,
         input_text=text.strip(),
         prompt_template=[
-            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[takeaways] human",  _PROMPT_TAKEAWAYS.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[summary] system",   _PROMPT_SUMMARY.messages[0].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
-            ("[summary] human",    _PROMPT_SUMMARY.messages[1].prompt.template), # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[summary] system", _PROMPT_SUMMARY.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[summary] human", _PROMPT_SUMMARY.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
         ],
         prompt_params={
             "language": language,

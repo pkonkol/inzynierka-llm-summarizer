@@ -1,4 +1,5 @@
 """Public entry point — routes to the appropriate summarization strategy."""
+
 import logging
 
 from ...schemas.job_api import SummaryMode

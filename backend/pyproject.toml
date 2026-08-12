@@ -1,0 +1,77 @@
+# Tooling configuration only.
+#
+# Runtime dependencies deliberately do NOT live here — they stay in requirements.in
+# (hand-edited, ~= pins) compiled to requirements.txt (exact lock). See backend/README.md.
+# This file exists because ruff and mypy read their settings from pyproject.toml and
+# there was nowhere to put them.
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+# ruff formats Python code blocks inside Markdown too. The BAD/GOOD example pairs in
+# CLAUDE.md are hand-written teaching material where the spacing is the point, so keep
+# the formatter out of the docs.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes — undefined names, unused imports
+    "I",   # isort — import grouping and ordering
+    "UP",  # pyupgrade — modern syntax for the target version
+    "B",   # flake8-bugbear — likely bugs
+    "S",   # flake8-bandit — security (this is ruff's Bandit, not a separate tool)
+    "T20", # flake8-print — no print() in application code
+    "G",   # flake8-logging-format
+    "RUF", # ruff-specific rules
+]
+
+# Deliberate omissions, so nobody "helpfully" turns them on later:
+#
+#   D    (pydocstyle)  — this codebase documents sparsely on purpose. Enabling D would
+#                        produce several hundred findings against a deliberate convention.
+#   ANN  (annotations) — 24 functions still lack return annotations. Turn on after mypy,
+#                        not before, or the two tools fight over the same fixes.
+#   TID252             — enforces ABSOLUTE imports. This project standardises on relative
+#                        imports inside app/ (38 of 39 modules already do), so the rule
+#                        would flag exactly what we want to keep.
+
+[tool.ruff.lint.pycodestyle]
+# Two different limits, on purpose:
+#
+#   line-length = 100      `ruff format` wraps CODE here. It is the number that actually
+#                          shapes the codebase, and it is enforced automatically.
+#   max-line-length = 200  E501 only fires past here. Since the formatter already
+#                          guarantees code is wrapped, the only lines that survive to
+#                          200+ are prose the formatter cannot break: LLM prompts,
+#                          error messages, docstrings, URLs. Breaking those mid-sentence
+#                          costs more readability than the overflow does.
+#
+# Net effect: code sits at ~100, comments and strings may run long, and E501 still
+# catches a genuinely runaway line instead of being disabled outright.
+max-line-length = 200
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency injection is expressed as calls in argument defaults
+# (`x = Depends(...)`). B008 exists to catch mutable defaults evaluated once at
+# import time — which is exactly what FastAPI wants here, so these are exempt.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Security",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test suites assert; that is the point.
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+docstring-code-format = true

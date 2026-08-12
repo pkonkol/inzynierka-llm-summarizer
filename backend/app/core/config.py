@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -34,14 +33,18 @@ class Settings(BaseSettings):
     supported_summary_languages: list[str] = ["en", "pl"]
     supported_models: dict[str, list[str]] = {
         "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
-        "openrouter": ["openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free", "google/gemma-4-31b-it:free"],
+        "openrouter": [
+            "openai/gpt-oss-120b:free",
+            "openai/gpt-oss-20b:free",
+            "google/gemma-4-31b-it:free",
+        ],
         "ollama": ["gemma4:31b-cloud"],
     }
     # mode -> human-readable label
     supported_summary_modes: dict[str, str] = {
-        "simple":     "Simple — single prompt (extractor + abstractor)",
+        "simple": "Simple — single prompt (extractor + abstractor)",
         "sequential": "Sequential — two independent prompts (takeaways first, then summary)",
-        "cascade":    "Cascade — takeaways first, summary derived from takeaways",
+        "cascade": "Cascade — takeaways first, summary derived from takeaways",
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",
@@ -57,7 +60,7 @@ class Settings(BaseSettings):
     deepeval_model: str = "gemini-flash-lite-latest"
 
     @model_validator(mode="after")
-    def _require_secrets_when_auth_enabled(self) -> "Settings":
+    def _require_secrets_when_auth_enabled(self) -> Settings:
         if self.auth_enabled and not (self.auth_secret and self.jwt_secret):
             raise ValueError("AUTH_ENABLED=true requires both AUTH_SECRET and JWT_SECRET")
         return self

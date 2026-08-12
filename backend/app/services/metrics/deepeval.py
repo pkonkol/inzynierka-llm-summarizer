@@ -36,7 +36,9 @@ def build_deepeval_model(settings: Settings) -> GeminiModel:
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
     return DeepEvalMetricResult(
-        name=getattr(metric, "name", None) or getattr(metric, "__name__", None) or type(metric).__name__,
+        name=getattr(metric, "name", None)
+        or getattr(metric, "__name__", None)
+        or type(metric).__name__,
         score=metric.score,
         reason=metric.reason,
         passed=metric.success,
@@ -147,7 +149,9 @@ def build_summary_takeaways_metrics(settings: Settings) -> list[Any]:
 async def evaluate_summary_metrics(settings: Settings, summary: str) -> list[DeepEvalMetricResult]:
     test_case = LLMTestCase(input="", actual_output=summary)
     metrics = build_summary_metrics(settings)
-    return await asyncio.gather(*(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics))
+    return await asyncio.gather(
+        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    )
 
 
 async def evaluate_summary_input_metrics(
@@ -157,13 +161,19 @@ async def evaluate_summary_input_metrics(
 ) -> list[DeepEvalMetricResult]:
     test_case = LLMTestCase(input=article_text, actual_output=summary)
     metrics = build_summary_input_metrics(settings)
-    return await asyncio.gather(*(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics))
+    return await asyncio.gather(
+        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    )
 
 
-async def evaluate_takeaways_metrics(settings: Settings, takeaways_text: str) -> list[DeepEvalMetricResult]:
+async def evaluate_takeaways_metrics(
+    settings: Settings, takeaways_text: str
+) -> list[DeepEvalMetricResult]:
     test_case = LLMTestCase(input="", actual_output=takeaways_text)
     metrics = build_takeaways_metrics(settings)
-    return await asyncio.gather(*(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics))
+    return await asyncio.gather(
+        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    )
 
 
 async def evaluate_takeaways_input_metrics(
@@ -173,7 +183,9 @@ async def evaluate_takeaways_input_metrics(
 ) -> list[DeepEvalMetricResult]:
     test_case = LLMTestCase(input=article_text, actual_output=takeaways_text)
     metrics = build_takeaways_input_metrics(settings)
-    return await asyncio.gather(*(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics))
+    return await asyncio.gather(
+        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    )
 
 
 async def evaluate_summary_takeaways_metrics(
@@ -188,4 +200,6 @@ async def evaluate_summary_takeaways_metrics(
         expected_output=takeaways_text,
     )
     metrics = build_summary_takeaways_metrics(settings)
-    return await asyncio.gather(*(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics))
+    return await asyncio.gather(
+        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    )

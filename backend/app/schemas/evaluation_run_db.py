@@ -15,6 +15,7 @@ class EvaluationRunEntryDocument(BaseModel):
     duplicated because it's load-bearing (used as the cross-metric reference text during
     the run itself, not just for display).
     """
+
     entry_id: str
     golden_summary: str
     ai_summary: str | None = None

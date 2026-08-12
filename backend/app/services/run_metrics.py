@@ -7,6 +7,8 @@ from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..services.metrics.cross import (
     compute_cross_metrics as compute_cross_metrics_sync,
+)
+from ..services.metrics.cross import (
     evaluate_pairwise_cross_deepeval,
 )
 from ..services.metrics.deepeval import (

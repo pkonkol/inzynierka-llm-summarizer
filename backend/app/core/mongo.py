@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
@@ -96,14 +96,14 @@ async def ensure_evaluation_runs_indexes(collection: AsyncIOMotorCollection) -> 
 
 async def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:
     jobs_collection = get_jobs_collection()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=max_age_hours)
     result = await jobs_collection.update_many(
         {"status": "pending", "created_at": {"$lt": cutoff}},
         {
             "$set": {
                 "status": "failed",
                 "error": "Job killed before completion (server restart)",
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(UTC),
             }
         },
     )
@@ -112,13 +112,13 @@ async def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:
 
 async def cleanup_stale_evaluation_runs(max_age_hours: int = 2) -> int:
     runs_collection = get_evaluation_runs_collection()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=max_age_hours)
     result = await runs_collection.update_many(
         {"status": {"$in": ["pending", "running"]}, "created_at": {"$lt": cutoff}},
         {
             "$set": {
                 "status": "failed",
-                "finished_at": datetime.now(timezone.utc),
+                "finished_at": datetime.now(UTC),
                 "aggregate_metrics.error": "Evaluation run killed before completion (server restart)",
             }
         },

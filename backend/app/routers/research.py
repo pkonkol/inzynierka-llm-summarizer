@@ -1,23 +1,13 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pymongo import DESCENDING
 from fastapi.responses import JSONResponse
+from pymongo import DESCENDING
 
-
-from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..core.auth import require_auth
-from ..schemas.evaluation_set_api import (
-    EvaluationSetCreateResponse,
-    EvaluationSetDetailResponse,
-    EvaluationSetEntryInputTextResponse,
-    EvaluationSetEntryResponse,
-    EvaluationSetImportRequest,
-    EvaluationSetListItemResponse,
-)
-from ..schemas.evaluation_set_db import EvaluationSetDocument, EvaluationSetEntryDocument
+from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..schemas.evaluation_run_api import (
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
@@ -27,15 +17,27 @@ from ..schemas.evaluation_run_api import (
     EvaluationRunResponse,
 )
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
-from ..services.evaluation_runner import run_evaluation_batch
-
-from ..services.evaluation_set_metrics import build_golden_metrics
+from ..schemas.evaluation_set_api import (
+    EvaluationSetCreateResponse,
+    EvaluationSetDetailResponse,
+    EvaluationSetEntryInputTextResponse,
+    EvaluationSetEntryResponse,
+    EvaluationSetImportRequest,
+    EvaluationSetListItemResponse,
+)
+from ..schemas.evaluation_set_db import EvaluationSetDocument, EvaluationSetEntryDocument
 from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
+from ..services.evaluation_runner import run_evaluation_batch
+from ..services.evaluation_set_metrics import build_golden_metrics
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
 
-@router.post("/evaluation-sets", response_model=EvaluationSetCreateResponse, dependencies=[Depends(require_auth)])
+@router.post(
+    "/evaluation-sets",
+    response_model=EvaluationSetCreateResponse,
+    dependencies=[Depends(require_auth)],
+)
 async def create_evaluation_set(
     payload: EvaluationSetImportRequest,
 ) -> EvaluationSetCreateResponse:
@@ -127,6 +129,7 @@ async def get_evaluation_set(set_id: str) -> EvaluationSetDetailResponse:
         ],
     )
 
+
 @router.get("/evaluation-sets/{set_id}/export")
 async def export_evaluation_set(set_id: str) -> JSONResponse:
     collection = get_evaluation_sets_collection()
@@ -152,11 +155,14 @@ async def export_evaluation_set(set_id: str) -> JSONResponse:
 
     return JSONResponse(content=payload)
 
+
 @router.get(
     "/evaluation-sets/{set_id}/entries/{entry_id}/input-text",
     response_model=EvaluationSetEntryInputTextResponse,
 )
-async def get_evaluation_set_entry_input_text(set_id: str, entry_id: str) -> EvaluationSetEntryInputTextResponse:
+async def get_evaluation_set_entry_input_text(
+    set_id: str, entry_id: str
+) -> EvaluationSetEntryInputTextResponse:
     collection = get_evaluation_sets_collection()
     document = await collection.find_one(
         {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
@@ -170,6 +176,7 @@ async def get_evaluation_set_entry_input_text(set_id: str, entry_id: str) -> Eva
         entry_id=entry_id,
         input_text=document["entries"][0]["input_text"],
     )
+
 
 @router.post("/evaluation-sets/{set_id}/golden-metrics", dependencies=[Depends(require_auth)])
 async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
@@ -203,6 +210,7 @@ async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
         "updated_entries": updated_count,
         "total_entries": len(entries),
     }
+
 
 @router.post(
     "/evaluation-sets/{set_id}/runs",
@@ -257,6 +265,7 @@ async def create_evaluation_run(
         created_at=created_at,
     )
 
+
 @router.get(
     "/evaluation-sets/{set_id}/runs",
     response_model=list[EvaluationRunListItemResponse],
@@ -264,24 +273,26 @@ async def create_evaluation_run(
 async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemResponse]:
     runs = get_evaluation_runs_collection()
 
-    documents = await runs.aggregate([
-        {"$match": {"evaluation_set_id": set_id}},
-        {"$sort": {"created_at": DESCENDING}},
-        {
-            "$project": {
-                "evaluation_set_id": 1,
-                "evaluation_set_name": 1,
-                "model_provider": 1,
-                "model_name": 1,
-                "summary_mode": 1,
-                "language": 1,
-                "status": 1,
-                "created_at": 1,
-                "finished_at": 1,
-                "entry_count": {"$size": "$entries"},
-            }
-        },
-    ]).to_list(length=1000)
+    documents = await runs.aggregate(
+        [
+            {"$match": {"evaluation_set_id": set_id}},
+            {"$sort": {"created_at": DESCENDING}},
+            {
+                "$project": {
+                    "evaluation_set_id": 1,
+                    "evaluation_set_name": 1,
+                    "model_provider": 1,
+                    "model_name": 1,
+                    "summary_mode": 1,
+                    "language": 1,
+                    "status": 1,
+                    "created_at": 1,
+                    "finished_at": 1,
+                    "entry_count": {"$size": "$entries"},
+                }
+            },
+        ]
+    ).to_list(length=1000)
 
     return [
         EvaluationRunListItemResponse(
@@ -299,6 +310,7 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
         )
         for doc in documents
     ]
+
 
 @router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
 async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
@@ -413,7 +425,11 @@ async def delete_evaluation_set(set_id: str) -> dict[str, str | int]:
         raise HTTPException(status_code=404, detail="Evaluation set not found")
 
     deleted_runs = await runs.delete_many({"evaluation_set_id": set_id})
-    return {"status": "deleted", "evaluation_set_id": set_id, "deleted_runs": deleted_runs.deleted_count}
+    return {
+        "status": "deleted",
+        "evaluation_set_id": set_id,
+        "deleted_runs": deleted_runs.deleted_count,
+    }
 
 
 @router.delete("/runs/{run_id}", dependencies=[Depends(require_auth)])

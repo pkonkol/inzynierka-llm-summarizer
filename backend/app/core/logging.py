@@ -50,7 +50,7 @@ def _colorize_json(text: str) -> str:
 class _AppFormatter(logging.Formatter):
     """Colored formatter with line numbers for app.* loggers."""
 
-    def format(self, record: logging.LogRecord) -> str:  # noqa: A003
+    def format(self, record: logging.LogRecord) -> str:
         level_color = _LEVEL_COLORS.get(record.levelname, "")
         level_str = f"{level_color}{record.levelname:<8}{_RESET}"
 

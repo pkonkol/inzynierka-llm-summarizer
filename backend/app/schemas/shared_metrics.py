@@ -12,6 +12,7 @@ class DeepevalItem(BaseModel):
 
 class PairwiseDeepevalItem(BaseModel):
     """score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."""
+
     name: str
     score: float
     reason: str

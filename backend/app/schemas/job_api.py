@@ -47,6 +47,7 @@ class JobStatusResponse(BaseModel):
 
 class JobListItemResponse(BaseModel):
     """Flat per-job entry used by GET /api/v1/jobs/list."""
+
     job_id: str
     source_url: str
     status: JobStatusValue
@@ -60,6 +61,7 @@ class JobListItemResponse(BaseModel):
 
 class UrlSummaryListItem(BaseModel):
     """One entry per unique source_url for the home page list."""
+
     source_url: str
     completed_count: int
     failed_count: int

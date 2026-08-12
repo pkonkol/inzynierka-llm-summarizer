@@ -1,5 +1,7 @@
-from fastapi import APIRouter
 import logging
+
+from fastapi import APIRouter
+
 from ..core.config import settings
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])

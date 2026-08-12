@@ -46,7 +46,11 @@ def _pairwise_metric_with_input(settings: Settings) -> GEval:
             "Decide whether Summary A is better overall than Summary B.",
             "Assign higher score when Summary A is better, lower score when Summary B is better.",
         ],
-        evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+        evaluation_params=[
+            LLMTestCaseParams.INPUT,
+            LLMTestCaseParams.ACTUAL_OUTPUT,
+            LLMTestCaseParams.EXPECTED_OUTPUT,
+        ],  # pyright: ignore[reportAttributeAccessIssue]
     )
 
 

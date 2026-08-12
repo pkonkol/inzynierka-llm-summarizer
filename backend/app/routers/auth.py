@@ -1,5 +1,5 @@
 import hmac
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import APIRouter, HTTPException
@@ -33,6 +33,6 @@ def get_token(payload: TokenRequest) -> TokenResponse:
         raise HTTPException(status_code=404, detail="Authentication is disabled")
     if not hmac.compare_digest(payload.password, settings.auth_secret.get_secret_value()):
         raise HTTPException(status_code=401, detail="Invalid password")
-    exp = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expire_hours)
+    exp = datetime.now(UTC) + timedelta(hours=settings.jwt_expire_hours)
     token = jwt.encode({"exp": exp}, settings.jwt_secret.get_secret_value(), algorithm="HS256")
     return TokenResponse(token=token)

@@ -1,4 +1,10 @@
-import type { CreateJobResponse, JobListItem, JobStatus, JobStatusValue, SummaryUrlListItem } from "../types/api";
+import type {
+    CreateJobResponse,
+    JobListItem,
+    JobStatus,
+    JobStatusValue,
+    SummaryUrlListItem,
+} from "../types/api";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 if (!API_BASE_URL) {
@@ -6,9 +12,15 @@ if (!API_BASE_URL) {
 }
 const TOKEN_KEY = "auth_token";
 
-export function getToken(): string | null { return localStorage.getItem(TOKEN_KEY); }
-export function setToken(token: string): void { localStorage.setItem(TOKEN_KEY, token); }
-export function clearToken(): void { localStorage.removeItem(TOKEN_KEY); }
+export function getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
+}
+export function setToken(token: string): void {
+    localStorage.setItem(TOKEN_KEY, token);
+}
+export function clearToken(): void {
+    localStorage.removeItem(TOKEN_KEY);
+}
 
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const token = getToken();
@@ -33,7 +45,10 @@ export const getAuthStatus = (): Promise<{ enabled: boolean }> =>
     request<{ enabled: boolean }>("/auth/status");
 
 export const login = (password: string): Promise<{ token: string }> =>
-    request<{ token: string }>("/auth/token", { method: "POST", body: JSON.stringify({ password }) });
+    request<{ token: string }>("/auth/token", {
+        method: "POST",
+        body: JSON.stringify({ password }),
+    });
 
 export const createSummaryJob = (
     url: string,
@@ -62,7 +77,9 @@ export const listAllJobsFlat = (limit = 100): Promise<JobListItem[]> =>
     request<JobListItem[]>(`/api/v1/jobs/list?limit=${limit}`);
 
 export const getJobsForUrl = (sourceUrl: string, status: JobStatusValue): Promise<JobStatus[]> =>
-    request<JobStatus[]>(`/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}&status=${status}`);
+    request<JobStatus[]>(
+        `/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}&status=${status}`,
+    );
 
 export const getJobStatus = (jobId: string): Promise<JobStatus> =>
     request<JobStatus>(`/api/v1/jobs/${jobId}`);

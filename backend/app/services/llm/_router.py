@@ -1,12 +1,12 @@
 """Public entry point — routes to the appropriate summarization strategy."""
 
-import logging
+import structlog
 
 from ...schemas.job_api import SummaryMode
 from ...schemas.summary import LlmSummaryResult
 from . import summary_cascade, summary_sequential, summary_simple
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 async def generate_summary(
@@ -25,7 +25,7 @@ async def generate_summary(
         sequential — two independent prompts: takeaways first, then summary
         cascade    — takeaways first, summary derived from takeaways
     """
-    logger.info("generate_summary mode=%s model=%s:%s", mode, model_provider, model_name)
+    log.info("generating summary", mode=mode, provider=model_provider, model=model_name)
 
     if mode == "simple":
         return await summary_simple.run(input, source_url, model_name, model_provider, language)

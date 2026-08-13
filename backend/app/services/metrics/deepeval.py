@@ -8,7 +8,7 @@ from deepeval.metrics import GEval, SummarizationMetric
 from deepeval.models import GeminiModel
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from app.core.config import Settings
+from ...core.config import Settings
 
 DEEPEVAL_THRESHOLD = 0.5
 

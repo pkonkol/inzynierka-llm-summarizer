@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { getAuthStatus, getToken } from "./api/client";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
+import { EvaluationRunPage } from "./pages/EvaluationRunPage";
+import { EvaluationSetPage } from "./pages/EvaluationSetPage";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
-import { EvaluationSetPage } from "./pages/EvaluationSetPage";
-import { EvaluationRunPage } from "./pages/EvaluationRunPage";
 import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRouting";
 
 type Route = "home" | "jobs" | "research";

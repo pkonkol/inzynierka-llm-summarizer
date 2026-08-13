@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from app.core.config import settings
-from app.services.metrics.deepeval import (
+from ..core.config import settings
+from .metrics.deepeval import (
     evaluate_summary_input_metrics,
     evaluate_summary_metrics,
 )
-from app.services.metrics.statistical import source_metrics, summary_metrics
+from .metrics.statistical import source_metrics, summary_metrics
 
 
 async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str, Any]:

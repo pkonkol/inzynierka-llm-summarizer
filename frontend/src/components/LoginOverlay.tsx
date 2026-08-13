@@ -1,5 +1,5 @@
-import { useState } from "react";
 import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { login, setToken } from "../api/client";
 
@@ -13,6 +13,13 @@ export function LoginOverlay({ isOpen, onSuccess, onClose }: LoginOverlayProps) 
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const passwordInputRef = useRef<HTMLInputElement>(null);
+
+    // Focus on open rather than via autoFocus: the attribute only fires on first mount, so
+    // it does nothing when this overlay is re-opened without unmounting.
+    useEffect(() => {
+        if (isOpen) passwordInputRef.current?.focus();
+    }, [isOpen]);
 
     if (!isOpen) {
         return null;
@@ -46,7 +53,7 @@ export function LoginOverlay({ isOpen, onSuccess, onClose }: LoginOverlayProps) 
                     Zaloguj się, aby uruchomić nowe podsumowanie.
                 </p>
                 <input
-                    autoFocus
+                    ref={passwordInputRef}
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

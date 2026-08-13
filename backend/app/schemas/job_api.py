@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 from .job_db import JobMetrics
 from .shared_metrics import DeepevalItem
@@ -16,7 +16,7 @@ JobStatusValue = Literal["pending", "completed", "failed"]
 class JobCreateRequest(BaseModel):
     model_name: str
     model_provider: str
-    url: str
+    url: HttpUrl
     language: str = "en"
     summary_mode: SummaryMode = "simple"
     run_deepeval: bool = False

@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 
-import {
-    evaluateRunDeepeval,
-    getEvaluationRun,
-    getEvaluationRunEntries,
-} from "../api/research";
-import { DeepevalItems, type DeepevalDisplayItem } from "../components/DeepevalItems";
+import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
+import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { PreBlock } from "../components/PreBlock";
+import type {
+    EvaluationRunEntry,
+    EvaluationRunMeta,
+    SummaryStatisticalMetrics,
+} from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
-import type { EvaluationRunEntry, EvaluationRunMeta, SummaryStatisticalMetrics } from "../types/research";
 
 type EntryCollapsibleKey = "input" | "metrics";
 
@@ -26,7 +26,15 @@ function formatLabel(key: string): string {
     return key.replace(/_/g, " ");
 }
 
-function MetricRow({ label, golden, ai }: { label: string; golden: number | null | undefined; ai: number | null | undefined }) {
+function MetricRow({
+    label,
+    golden,
+    ai,
+}: {
+    label: string;
+    golden: number | null | undefined;
+    ai: number | null | undefined;
+}) {
     return (
         <div className="grid grid-cols-2 gap-3">
             <InfoRow label={label} value={golden} />
@@ -38,8 +46,12 @@ function MetricRow({ label, golden, ai }: { label: string; golden: number | null
 function ColumnsHeader() {
     return (
         <div className="grid grid-cols-2 gap-3">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Golden</h6>
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">AI</h6>
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                Golden
+            </h6>
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                AI
+            </h6>
         </div>
     );
 }
@@ -58,10 +70,17 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
                 <>
                     <ColumnsHeader />
                     {!entry.golden_metrics ? (
-                        <p className="m-0 text-[0.78rem] italic text-muted">Golden metrics not computed for this entry.</p>
+                        <p className="m-0 text-[0.78rem] italic text-muted">
+                            Golden metrics not computed for this entry.
+                        </p>
                     ) : null}
                     {allLabels.map((label) => (
-                        <MetricRow key={label} label={formatLabel(label)} golden={goldenSummary[label]} ai={aiSummary[label]} />
+                        <MetricRow
+                            key={label}
+                            label={formatLabel(label)}
+                            golden={goldenSummary[label]}
+                            ai={aiSummary[label]}
+                        />
                     ))}
                 </>
             ) : null}
@@ -72,8 +91,14 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
                         AI key takeaways
                     </h6>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <InfoRow label="Bullet count" value={entry.ai_metrics.key_takeaways.bullet_count} />
-                        <InfoRow label="Char count" value={entry.ai_metrics.key_takeaways.char_count} />
+                        <InfoRow
+                            label="Bullet count"
+                            value={entry.ai_metrics.key_takeaways.bullet_count}
+                        />
+                        <InfoRow
+                            label="Char count"
+                            value={entry.ai_metrics.key_takeaways.char_count}
+                        />
                     </div>
                 </div>
             ) : null}
@@ -89,10 +114,24 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
 
     return (
         <div className="space-y-2 border-t border-divider pt-3">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Deepeval</h6>
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                Deepeval
+            </h6>
             <div className="grid grid-cols-2 gap-3">
-                <div>{goldenItems.length > 0 ? <DeepevalItems items={goldenItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
-                <div>{aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="m-0 text-[0.78rem] italic text-muted">—</p>}</div>
+                <div>
+                    {goldenItems.length > 0 ? (
+                        <DeepevalItems items={goldenItems} />
+                    ) : (
+                        <p className="m-0 text-[0.78rem] italic text-muted">—</p>
+                    )}
+                </div>
+                <div>
+                    {aiItems.length > 0 ? (
+                        <DeepevalItems items={aiItems} />
+                    ) : (
+                        <p className="m-0 text-[0.78rem] italic text-muted">—</p>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -116,7 +155,10 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
             {deepeval.length > 0 ? (
                 <div className="space-y-2 border-t border-divider pt-3">
                     {deepeval.map((item) => (
-                        <div key={item.name} className="border border-panel-border bg-panel-bg px-3 py-2">
+                        <div
+                            key={item.name}
+                            className="border border-panel-border bg-panel-bg px-3 py-2"
+                        >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
                                     {item.name}
@@ -125,7 +167,9 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
                                     winner: {pairwiseWinnerLabel(item.score)} · score: {item.score}
                                 </span>
                             </div>
-                            <p className="mt-2 m-0 text-[0.82rem] leading-[1.55] text-muted">{item.reason}</p>
+                            <p className="mt-2 m-0 text-[0.82rem] leading-[1.55] text-muted">
+                                {item.reason}
+                            </p>
                         </div>
                     ))}
                 </div>
@@ -138,7 +182,9 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
     return (
         <div className="space-y-4 p-3">
             <div>
-                <h6 className="m-0 mb-2 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Cross metrics</h6>
+                <h6 className="m-0 mb-2 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                    Cross metrics
+                </h6>
                 <CrossMetricsSection entry={entry} />
             </div>
             <div className="border-t border-divider pt-3">
@@ -149,11 +195,19 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
     );
 }
 
-function RunEntryCard({ index, entry, evaluationSetId }: { index: number; entry: EvaluationRunEntry; evaluationSetId: string }) {
+function RunEntryCard({
+    index,
+    entry,
+    evaluationSetId,
+}: {
+    index: number;
+    entry: EvaluationRunEntry;
+    evaluationSetId: string;
+}) {
     const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
 
     const toggleSection = (key: EntryCollapsibleKey) => {
-        setOpenSection(current => (current === key ? null : key));
+        setOpenSection((current) => (current === key ? null : key));
     };
 
     return (
@@ -163,7 +217,9 @@ function RunEntryCard({ index, entry, evaluationSetId }: { index: number; entry:
                 {" · "}
                 <span>{entry.status}</span>
                 {" · "}
-                <span className="lowercase text-muted">{entry.title} · {entry.url}</span>
+                <span className="lowercase text-muted">
+                    {entry.title} · {entry.url}
+                </span>
             </p>
 
             {entry.error ? (
@@ -194,8 +250,8 @@ function RunEntryCard({ index, entry, evaluationSetId }: { index: number; entry:
                                 AI key takeaways
                             </p>
                             <ul className="m-0 mt-1 list-disc pl-5 text-[0.9rem] text-ink">
-                                {entry.ai_key_takeaways.map((item, i) => (
-                                    <li key={i}>{item}</li>
+                                {entry.ai_key_takeaways.map((item) => (
+                                    <li key={item}>{item}</li>
                                 ))}
                             </ul>
                         </div>
@@ -331,7 +387,12 @@ export function EvaluationRunPage({ runId }: Props) {
                         <button
                             type="button"
                             onClick={() => void handleDeepeval()}
-                            disabled={!run || run.status === "pending" || run.status === "running" || isEvaluatingDeepeval}
+                            disabled={
+                                !run ||
+                                run.status === "pending" ||
+                                run.status === "running" ||
+                                isEvaluatingDeepeval
+                            }
                             className="border border-panel-border bg-accent-500 px-3 py-2 text-[0.85rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {isEvaluatingDeepeval ? "Running..." : "Run GEVal"}
@@ -371,7 +432,10 @@ export function EvaluationRunPage({ runId }: Props) {
                         <div className="flex flex-wrap gap-x-4 gap-y-1">
                             <span>Status: {run.status}</span>
                             <span>Created: {new Date(run.created_at).toLocaleString()}</span>
-                            <span>Finished: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}</span>
+                            <span>
+                                Finished:{" "}
+                                {run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}
+                            </span>
                         </div>
                         <div className="mt-1 text-[0.82rem] text-muted">
                             <PreBlock>{JSON.stringify(run.aggregate_metrics, null, 2)}</PreBlock>

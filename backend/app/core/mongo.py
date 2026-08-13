@@ -1,6 +1,6 @@
-import logging
 from datetime import UTC, datetime, timedelta
 
+import structlog
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
@@ -9,7 +9,7 @@ from motor.motor_asyncio import (
 
 from .config import settings
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _mongo_client: AsyncIOMotorClient | None = None
 
@@ -40,10 +40,10 @@ async def init_mongo() -> None:
 
     count = await cleanup_stale_pending_jobs(max_age_hours=2)
     run_count = await cleanup_stale_evaluation_runs(max_age_hours=2)
-    logger.info(
-        "MongoDB initialized. Cleaned up %d stale pending jobs, %d stale evaluation runs.",
-        count,
-        run_count,
+    log.info(
+        "mongodb initialised",
+        stale_jobs_cleaned=count,
+        stale_runs_cleaned=run_count,
     )
 
 

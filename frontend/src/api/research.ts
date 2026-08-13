@@ -1,16 +1,16 @@
-import { request } from "./client";
 import type {
-    EvaluationSetCreateResponse,
-    EvaluationSetDetail,
-    EvaluationSetEntryInputText,
-    EvaluationSetImportPayload,
-    EvaluationSetListItem,
     EvaluationRunCreatePayload,
     EvaluationRunCreateResponse,
     EvaluationRunEntry,
     EvaluationRunListItem,
     EvaluationRunMeta,
+    EvaluationSetCreateResponse,
+    EvaluationSetDetail,
+    EvaluationSetEntryInputText,
+    EvaluationSetImportPayload,
+    EvaluationSetListItem,
 } from "../types/research";
+import { request } from "./client";
 
 export const listEvaluationSets = (): Promise<EvaluationSetListItem[]> =>
     request<EvaluationSetListItem[]>("/api/v1/research/evaluation-sets");
@@ -78,17 +78,19 @@ export const createEvaluationRun = (
 export const getEvaluationRun = (runId: string): Promise<EvaluationRunMeta> =>
     request<EvaluationRunMeta>(`/api/v1/research/runs/${runId}`);
 
-export const getEvaluationRunEntries = (runId: string): Promise<{ entries: EvaluationRunEntry[] }> =>
+export const getEvaluationRunEntries = (
+    runId: string,
+): Promise<{ entries: EvaluationRunEntry[] }> =>
     request<{ entries: EvaluationRunEntry[] }>(`/api/v1/research/runs/${runId}/entries`);
 
-export const evaluateRunDeepeval = (
-    runId: string,
-): Promise<{ status: string; run_id: string }> =>
+export const evaluateRunDeepeval = (runId: string): Promise<{ status: string; run_id: string }> =>
     request<{ status: string; run_id: string }>(`/api/v1/research/runs/${runId}/deepeval`, {
         method: "POST",
     });
 
-export const deleteEvaluationRun = (runId: string): Promise<{ status: string; evaluation_run_id: string }> =>
+export const deleteEvaluationRun = (
+    runId: string,
+): Promise<{ status: string; evaluation_run_id: string }> =>
     request<{ status: string; evaluation_run_id: string }>(`/api/v1/research/runs/${runId}`, {
         method: "DELETE",
     });

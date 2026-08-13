@@ -6,9 +6,8 @@ on:
     branches: [master]
   workflow_dispatch:
 
-# Least privilege at the top; jobs that need more opt in individually below. `id-token:
-# write` mints a GCP-federated OIDC token, so granting it workflow-wide would hand it to
-# every job whether or not it talks to GCP.
+# Least privilege at the top; jobs opt into more below. `id-token: write` mints a
+# GCP-federated token, so it should not be workflow-wide.
 permissions:
   contents: read
 
@@ -18,8 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The quality gates, defined once in checks.yml and shared with ci.yml. Nothing ships
-  # without them passing.
+  # Same gates as ci.yml, defined once. Nothing ships without them.
   checks:
     uses: ./.github/workflows/checks.yml
 
@@ -33,6 +31,8 @@ jobs:
       PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       REGION: ${{ vars.GCP_REGION }}
       IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/app/backend
+      # Must match google_cloud_run_v2_service.backend in infra/terraform/main/cloudrun.tf
+      SERVICE: llm-summarizer-backend
     outputs:
       vite_api_url: ${{ steps.tf_apply.outputs.vite_api_url }}
 
@@ -58,6 +58,14 @@ jobs:
           docker build -t "$IMAGE:$SHA" ./backend
           docker tag "$IMAGE:$SHA" "$IMAGE:latest"
           docker tag "$IMAGE:$SHA" "$IMAGE:latest-github-actions"
+
+      # Between build and push on purpose: a vulnerable image should never reach the
+      # registry, where it becomes something that can be deployed by accident.
+      - uses: extractions/setup-just@v3
+      - name: Scan image
+        env:
+          SHA: ${{ github.sha }}
+        run: just scan-image "$IMAGE:$SHA"
 
       - name: Push
         env:
@@ -91,6 +99,16 @@ jobs:
             -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="prefix=$TF_STATE_PREFIX"
 
+      # Captured before the apply so a failed deploy has somewhere to go back to. Cloud Run
+      # keeps old revisions, so rolling back is a traffic switch, not a rebuild.
+      - name: Record current revision
+        id: previous
+        run: |
+          REVISION=$(gcloud run services describe "$SERVICE" --region "$REGION" \
+            --format='value(status.traffic[0].revisionName)' 2>/dev/null || true)
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          echo "Serving revision before deploy: ${REVISION:-<none, first deploy>}"
+
       - name: Terraform Apply
         id: tf_apply
         working-directory: infra/terraform/main
@@ -101,6 +119,26 @@ jobs:
           terraform apply tfplan
           URL=$(terraform output -raw backend_url)
           echo "vite_api_url=$URL" >> "$GITHUB_OUTPUT"
+
+      # `terraform apply` succeeding only means Cloud Run accepted the revision. Whether the
+      # app actually starts is a different question, and the one users care about.
+      - name: Smoke test
+        id: smoke
+        env:
+          URL: ${{ steps.tf_apply.outputs.vite_api_url }}
+        run: |
+          curl --fail --silent --show-error \
+               --retry 6 --retry-delay 5 --retry-all-errors \
+               --max-time 15 "$URL/health"
+
+      - name: Roll back on failed smoke test
+        if: failure() && steps.smoke.outcome == 'failure' && steps.previous.outputs.revision != ''
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.revision }}
+        run: |
+          echo "::error::Smoke test failed — returning all traffic to $PREVIOUS"
+          gcloud run services update-traffic "$SERVICE" --region "$REGION" \
+            --to-revisions="$PREVIOUS=100"
 
   deploy-frontend:
     runs-on: ubuntu-latest
@@ -126,9 +164,8 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      # `${{ }}` is substituted into the script text before the shell ever sees it, so a
-      # value containing shell metacharacters becomes code rather than data. Passing it
-      # through `env:` hands the shell a variable instead, which it cannot re-interpret.
+      # `${{ }}` is substituted into the script text before the shell sees it, so a value
+      # with metacharacters becomes code. `env:` hands over a variable instead.
       - name: Build
         working-directory: frontend
         env:

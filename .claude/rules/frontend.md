@@ -1,3 +1,8 @@
+---
+paths:
+  - "frontend/src/**/*.{ts,tsx}"
+---
+
 # Frontend rules (React / TypeScript)
 
 ## Parse, don't validate
@@ -58,3 +63,33 @@ A malformed or incomplete API response should throw where it's parsed, not degra
 
 - React + TypeScript, Vite, Tailwind.
 - Keep components focused on rendering — no data validation logic mixed into JSX.
+
+## Imports
+
+React first, blank line, then local modules, `import type` last. Biome's
+`organizeImports` enforces it — run `just fix-frontend` rather than sorting by hand.
+
+## Logging
+
+Everything goes through `src/utils/logger.ts`. Biome's `noConsole` blocks direct
+`console.*` everywhere else.
+
+- Same shape as the backend: a constant message plus named fields, never values
+  interpolated into the string.
+- `debug`/`info` are dropped from production builds; `warn`/`error` stay.
+- The wrapper exists so telemetry can be added in one file instead of at every call site.
+- Never log a JWT, an `Authorization` header, or a raw API response body.
+
+```tsx
+// BAD
+console.log(`failed to load job ${jobId}`);
+
+// GOOD
+logger.error("failed to load job", { jobId });
+```
+
+## Empty catch blocks
+
+Still banned, as above. `catch { setError("...") }` is fine — the failure surfaces to the
+user. `catch {}` and `.catch(() => "")` are not: they turn a failure into a silent wrong
+answer.

@@ -26,7 +26,23 @@ You are an expert Python/React developer assisting a Senior Platform Engineer on
 - **Infra:** Terraform, Docker Compose.
 - **Evaluation:** deepeval, rouge-score, nltk, spacy, textstat.
 
-Folder-specific rules: [backend/CLAUDE.md](backend/CLAUDE.md), [frontend/CLAUDE.md](frontend/CLAUDE.md), [infra/CLAUDE.md](infra/CLAUDE.md).
+Folder-specific rules live in `.claude/rules/` and load only when the matching files are
+opened: [backend](.claude/rules/backend.md), [frontend](.claude/rules/frontend.md),
+[infra](.claude/rules/infra.md).
+
+## Running checks
+
+`just` is the only entry point; CI runs these exact recipes, so nothing can drift.
+
+```
+just              # list recipes
+just lint         # ruff, biome, tsc, pytest — seconds, no containers
+just fix          # apply formatting and safe fixes
+just security     # gitleaks, trivy, hadolint, actionlint, zizmor — needs Docker
+just ci           # everything CI runs
+```
+
+@docs/adr/README.md
 
 ## Universal rules
 
@@ -64,7 +80,34 @@ MIGRATION: until 2026-09, both AUTH_SECRET and legacy TOKEN are read. Remove TOK
 Longer-form writing has its own home, so it does not leak into READMEs:
 
 - `docs/adr/` — why a decision was made, when the code alone can't show it (e.g. public read endpoints, auth as an explicit flag).
-- `docs/postmortem/` — what broke, why, and what changed as a result.
+- `docs/security/` — a vulnerability, why it worked, and what changed as a result.
+
+## README size and scope
+
+The failure mode is a thousand generated lines nobody reads, drifting from the code. A line
+budget is the only thing that reliably prevents it.
+
+- Root README **≤ 60 lines**, per-directory README **≤ 100**. Over budget means removing or
+  relocating something, not appending.
+- No duplication: if it belongs in `backend/README.md`, the root **links** to it.
+- First sentence states the scope of that file.
+- Commands only if they are actually run. Bullet points and short sentences, no prose.
+- No `Introduction`, `Overview`, `Features`, `Contributing`, `License` unless real.
+- No directory-structure listing — it goes stale in a week and `ls` is faster.
+- Facts must be verifiable against the code. A Python version in a README has to match the
+  Dockerfile, or not be stated at all.
+
+## Commits
+
+Conventional Commits 1.0.0: `type(scope): imperative summary, lowercase, no full stop`.
+
+Types: `feat` `fix` `docs` `refactor` `perf` `test` `build` `ci` `chore` `revert` `style`.
+Scopes: `backend` `frontend` `infra` `ci` `eval` `llm` `docs` `deps`.
+
+- No `wip:` — squash before it reaches `master`.
+- Breaking change: `feat(backend)!:` or a `BREAKING CHANGE:` footer.
+- Header ≤ 72 characters. The body answers **why**, not what — the diff shows what.
+- `style:` should be rare now that formatters run; that is the point of having them.
 
 ## Comments — FORBIDDEN patterns
 

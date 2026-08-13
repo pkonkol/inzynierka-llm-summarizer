@@ -1,8 +1,8 @@
 """Single-prompt summarization (extractor + abstractor in one call)."""
 
-import logging
 from typing import Any
 
+import structlog
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ from ._base import (
     raw_output_str,
 )
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class _SummaryPromptResponse(BaseModel):
@@ -69,7 +69,7 @@ async def run(
         raw_invoke_output = raw_invoke_output.model_dump()
 
     raw_content_str = raw_output_str(raw_invoke_output)
-    logger.debug("[simple] raw output:\n%s", raw_content_str)
+    log.debug("llm raw output", mode="simple", raw_output=raw_content_str)
 
     parsed: _SummaryPromptResponse | None = raw_invoke_output.get("parsed")
     if parsed is None:

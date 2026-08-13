@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from datetime import UTC, datetime
 
+import structlog
 from bson import ObjectId
 
-from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
-from app.services.llm import generate_summary
-
+from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
     join_takeaways,
 )
+from .llm import generate_summary
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 async def run_evaluation_batch(run_id: str) -> None:
@@ -81,7 +80,7 @@ async def run_evaluation_batch(run_id: str) -> None:
         except Exception as exc:
             update["status"] = "failed"
             update["error"] = str(exc)
-            logger.error("Failed entry %s for run %s: %s", entry_id, run_id, exc)
+            log.exception("evaluation entry failed", entry_id=entry_id, run_id=run_id)
 
         statuses.append(update["status"])
 

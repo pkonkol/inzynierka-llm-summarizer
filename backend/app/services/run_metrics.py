@@ -1,7 +1,8 @@
 import asyncio
-import logging
 from dataclasses import asdict
 from typing import Any
+
+import structlog
 
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
@@ -24,7 +25,7 @@ from ..services.metrics.statistical import (
     summary_metrics,
 )
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 def join_takeaways(takeaways: list[str]) -> str:
@@ -35,7 +36,7 @@ async def store_job_metrics(job_id: str, update: dict) -> None:
     try:
         await get_jobs_collection().update_one({"job_id": job_id}, {"$set": update})
     except Exception:
-        logger.exception("[job=%s] metrics store failed", job_id)
+        log.exception("metrics store failed")
 
 
 async def compute_source_metrics(text: str) -> dict:
@@ -109,7 +110,7 @@ async def compute_pairwise_cross_deepeval_metrics(
 async def store_source_metrics_for_job(job_id: str, text: str) -> None:
     metrics = await compute_source_metrics(text)
     await store_job_metrics(job_id, {"metrics.source": metrics})
-    logger.debug("[job=%s] source metrics stored", job_id)
+    log.debug("source metrics stored")
 
 
 async def store_statistical_metrics_for_job(
@@ -126,7 +127,7 @@ async def store_statistical_metrics_for_job(
             "metrics.key_takeaways": metrics["key_takeaways"],
         },
     )
-    logger.debug("[job=%s] summary/takeaways metrics stored", job_id)
+    log.debug("statistical metrics stored")
 
 
 async def store_deepeval_metrics_for_job(
@@ -137,4 +138,4 @@ async def store_deepeval_metrics_for_job(
 ) -> None:
     metrics = await compute_deepeval_metrics(summary_text, takeaways_text, source_text)
     await store_job_metrics(job_id, {"deepeval_metrics": metrics})
-    logger.debug("[job=%s] deepeval metrics stored", job_id)
+    log.debug("deepeval metrics stored")

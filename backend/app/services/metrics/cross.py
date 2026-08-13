@@ -8,8 +8,7 @@ from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
 
-from app.core.config import Settings
-
+from ...core.config import Settings
 from .deepeval import build_deepeval_model, run_metric
 
 _ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)

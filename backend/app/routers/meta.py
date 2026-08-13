@@ -1,11 +1,10 @@
-import logging
-
+import structlog
 from fastapi import APIRouter
 
 from ..core.config import settings
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 @router.get("/models", summary="Get supported models")

@@ -1,11 +1,7 @@
-# Reusable workflow holding every quality gate in one place.
+# Every quality gate, in one place. Called by ci.yml (every push) and deploy.yaml (as the
+# release gate) — a copy in each would be exactly the drift this exists to prevent.
 #
-# Two callers use it: ci.yml (on every push) and deploy.yaml (as the gate before a
-# release). Defining it once is the point — a copy in each workflow would be exactly
-# the drift this setup exists to prevent.
-#
-# Note what is NOT here: tool invocations. Every step is `just <recipe>`, so the flags
-# live in the justfile and a local run executes the same thing this does.
+# Note what is NOT here: tool invocations. Every step is `just <recipe>`.
 
 name: Checks
 
@@ -16,8 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  # Skip work for areas a push did not touch. A skipped job still satisfies `needs:`,
-  # so callers can depend on all of these unconditionally.
+  # Skip areas a push did not touch. A skipped job still satisfies `needs:`.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -56,6 +51,7 @@ jobs:
       - uses: extractions/setup-just@v3
       - uses: astral-sh/setup-uv@v6
       - run: just lint-backend
+      - run: just venv deps-sync test-backend
 
   frontend:
     needs: changes
@@ -73,6 +69,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: just install-frontend
       - run: just lint-frontend
+      - run: just audit-frontend
 
   # Secrets are scanned on every push regardless of paths: a leak can arrive in any file.
   secrets:
@@ -98,10 +95,9 @@ jobs:
       - run: just scan-infra
       - run: just scan-deps
 
-      # The gate above only fails on HIGH/CRITICAL. Everything below that is still worth
-      # seeing, so publish it to the run summary rather than dropping it. On a private
-      # repo without GitHub Code Security there is no Code Scanning tab to upload SARIF
-      # to, and the step summary is the free equivalent.
+      # The gate only fails on HIGH/CRITICAL; the rest still deserves to be visible. On a
+      # private repo there is no Code Scanning tab for SARIF, so the summary is the
+      # free equivalent.
       - name: Report findings below the gate
         if: always()
         run: |

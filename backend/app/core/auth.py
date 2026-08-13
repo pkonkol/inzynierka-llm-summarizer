@@ -15,6 +15,5 @@ def require_auth(creds: HTTPAuthorizationCredentials | None = Security(_bearer))
     try:
         jwt.decode(creds.credentials, settings.jwt_secret.get_secret_value(), algorithms=["HS256"])
     except jwt.PyJWTError:
-        # `from None` on purpose: why the token failed to decode is not the caller's
-        # business, and chaining the JWT internals into the 401 leaks detail.
+        # `from None`: why the token failed is not the caller's business.
         raise HTTPException(status_code=401, detail="Invalid or expired token") from None

@@ -7,9 +7,9 @@ The idea: the second call synthesises from the already-distilled points,
 potentially producing a more coherent and focused summary.
 """
 
-import logging
 from typing import Any
 
+import structlog
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ from ._base import (
     raw_output_str,
 )
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class _TakeawaysOnly(BaseModel):
@@ -70,7 +70,7 @@ async def run(
     chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
     chain_synthesis = _PROMPT_SYNTHESIS | summary_llm
 
-    logger.debug("Running cascade summary with input: %s", input)
+    log.debug("running cascade summary", mode="cascade", input_text=input)
 
     text = input["text"]
 
@@ -101,7 +101,9 @@ async def run(
     raw_str_tk = raw_output_str(raw_tk)
     parsed_tk: _TakeawaysOnly | None = raw_tk.get("parsed")
     if parsed_tk is None:
-        logger.error("raw_output: %s", raw_str_tk)
+        log.error(
+            "llm output unparseable", mode="cascade", stage="takeaways", raw_output=raw_str_tk
+        )
         raise LlmOutputError(
             "[cascade] model returned unparseable takeaways response",
             raw_output=raw_str_tk,
@@ -123,7 +125,12 @@ async def run(
 
     parsed_sm: _SummaryOnly | None = raw_sm.get("parsed")
     if parsed_sm is None:
-        logger.error("raw_output: %s", raw_output_combined)
+        log.error(
+            "llm output unparseable",
+            mode="cascade",
+            stage="synthesis",
+            raw_output=raw_output_combined,
+        )
         raise LlmOutputError(
             "[cascade] model returned unparseable synthesis response",
             raw_output=raw_output_combined,

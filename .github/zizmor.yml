@@ -1,18 +1,9 @@
-# zizmor policy for this repo.
+# `unpinned-uses` defaults to requiring a full commit SHA on every `uses:`. That is the
+# right end state — a tag like @v4 is mutable, so whoever controls the account controls
+# what it points at — but hash pins rot without Dependabot's github-actions ecosystem to
+# bump them, so both land together or neither does.
 #
-# The one rule we relax, and why:
-#
-# `unpinned-uses` defaults to a blanket hash-pin policy — every `uses:` must name a full
-# commit SHA, not a tag. That is the right end state (a tag like @v4 is mutable, so the
-# maintainer, or anyone who steals their account, can change what it points at; this is
-# the lesson of the 2025-2026 supply-chain wave). It is deferred rather than dismissed:
-# hash pinning is only maintainable with Dependabot's `github-actions` ecosystem enabled
-# to bump the pins, otherwise the pins rot and you end up on a two-year-old action.
-#
-# Until both land together, require `ref-pin`: every action must at least name a tag,
-# never a bare branch. That still blocks the worst case (`@main`, which changes under you
-# with no signal at all) while keeping the gate honest about what it does enforce.
-#
+# Until then: ref-pin, meaning every action must at least name a tag, never a bare branch.
 # Flip "*" to hash-pin in the same change that adds .github/dependabot.yml.
 
 rules:

@@ -1,5 +1,5 @@
-import { formatDateMinute } from "../utils/format";
 import type { SummaryUrlListItem } from "../types/api";
+import { formatDateMinute } from "../utils/format";
 
 interface CompletedJobsListProps {
     urls: SummaryUrlListItem[];
@@ -38,7 +38,9 @@ export function CompletedJobsList({
                     <li key={item.source_url} className="min-w-0">
                         <button
                             type="button"
-                            className={selectedUrl === item.source_url ? selectedClass : defaultClass}
+                            className={
+                                selectedUrl === item.source_url ? selectedClass : defaultClass
+                            }
                             onClick={() => onSelectUrl(item.source_url)}
                         >
                             {/* URL — primary, full width, wrap */}

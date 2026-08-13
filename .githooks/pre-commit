@@ -1,0 +1,8 @@
+#!/bin/sh
+# The only hook in this repo, and deliberately so.
+#
+# A leaked secret is the one mistake here that cannot be undone by a follow-up commit — it
+# is in the history and it is burned. Everything else a linter would catch is caught by CI
+# a minute later. Keeping this to one ~50ms check is what stops `--no-verify` from becoming
+# a habit, because a habit of skipping hooks skips this one too.
+exec just scan-secrets-staged

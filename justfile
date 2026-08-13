@@ -1,8 +1,5 @@
-# Single source of truth for every check in this repo.
-#
-# CI runs these exact recipes — .github/workflows/ contains no tool commands of its
-# own, only `just <recipe>`. That is deliberate: there is one place to change a flag,
-# so local and CI cannot drift apart.
+# Single source of truth for every check in this repo. CI runs these exact recipes and
+# contains no tool commands of its own, so local and CI cannot drift apart.
 #
 # Setup:  brew install just uv
 # Usage:  just            (list recipes)
@@ -12,16 +9,15 @@
 # Pinned so a local run and a CI run use the same binary.
 ruff := "ruff@0.16.2"
 
-# Scanners run as pinned container images rather than installed binaries: it is the
-# only way to guarantee the CI runner and this laptop execute identical versions.
+# Container images, not installed binaries — the only way CI and this laptop are
+# guaranteed to run the same version.
 gitleaks := "zricethezav/gitleaks:v8.30.1"
 hadolint := "hadolint/hadolint:v2.15.1-alpine"
 trivy := "aquasec/trivy:0.73.0"
 actionlint := "rhysd/actionlint:1.7.7"
 zizmor := "ghcr.io/zizmorcore/zizmor:1.29.0"
 
-# Findings at or above this level fail a scan. Everything below is reported, not gated —
-# see `just report-infra` for the full picture.
+# At or above this level fails a scan; below it is reported only (see report-* recipes).
 gate := "HIGH,CRITICAL"
 
 root := justfile_directory()
@@ -30,21 +26,29 @@ root := justfile_directory()
 default:
     @just --list --unsorted
 
+# core.hooksPath is per-clone config, so it cannot be committed with the hook itself.
+
+# One-time setup after a fresh clone: activate the repo's git hooks
+[group('meta')]
+setup-hooks:
+    git config core.hooksPath .githooks
+    @echo "pre-commit hook active: gitleaks on staged changes"
+
 # Everything CI runs. Keep this as the single entry point.
 [group('meta')]
 ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend lint-frontend
+lint: lint-backend lint-frontend test-backend
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
-security: scan-secrets scan-dockerfile scan-infra scan-deps lint-workflows
+security: scan-secrets scan-dockerfile scan-infra scan-deps audit-frontend lint-workflows
 
 # Auto-fix formatting and the mechanical lint findings
 [group('meta')]
-fix:
+fix: fix-frontend
     uvx {{ruff}} check --fix backend/
     uvx {{ruff}} format backend/
 
@@ -64,22 +68,34 @@ smoke-backend:
 [working-directory('backend')]
 deps-compile *args:
     uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 {{args}}
+    uv pip compile requirements-dev.in -o requirements-dev.txt --universal --python-version 3.14 {{args}}
 
-# Long-form: local dev must run the same versions the image builds (12-factor X,
-# dev/prod parity). Run this after deps-compile.
+# Create backend/venv from scratch. Local dev already has one; CI does not.
+[group('backend')]
+[working-directory('backend')]
+venv:
+    uv venv --python 3.14 venv
 
-# Backend: install the lock into ./venv
+# Run after deps-compile, so local dev matches the image (12-factor X).
+
+# Backend: install both locks into ./venv
 [group('backend')]
 [working-directory('backend')]
 deps-sync:
     uv pip install --python ./venv/bin/python -r requirements.txt
+    uv pip install --python ./venv/bin/python -r requirements-dev.txt
+
+# Backend: pytest
+[group('backend')]
+[working-directory('backend')]
+test-backend:
+    ./venv/bin/python -m pytest -q
 
 # Frontend: lint + typecheck
 [group('frontend')]
 lint-frontend: lint-frontend-style typecheck-frontend
 
-# Here rather than inline in CI so the flag stays in one place. `ci` not `install`, so a
-# stale lockfile fails the build instead of being silently rewritten.
+# `ci` not `install`: a stale lockfile should fail, not be silently rewritten.
 
 # Frontend: install from the lockfile
 [group('frontend')]
@@ -87,11 +103,11 @@ lint-frontend: lint-frontend-style typecheck-frontend
 install-frontend:
     npm ci
 
-# Frontend: lint only, no typecheck
+# Frontend: biome — lint, format check and import order in one pass
 [group('frontend')]
 [working-directory('frontend')]
 lint-frontend-style:
-    npm run lint
+    npx biome check .
 
 # Frontend: typecheck without emitting — faster feedback than a full build
 [group('frontend')]
@@ -99,7 +115,22 @@ lint-frontend-style:
 typecheck-frontend:
     npx tsc --noEmit
 
-# A secret that was committed and later removed is still in the history, and still burned.
+# Frontend: apply biome's formatting and safe fixes
+[group('frontend')]
+[working-directory('frontend')]
+fix-frontend:
+    npx biome check --write .
+
+# Kept alongside trivy, not instead of it: trivy reported 0 on this same lockfile while
+# npm audit found 5 highs in vite/postcss. Different advisory sources, different blind spots.
+
+# Frontend: npm advisories for the dependency tree
+[group('frontend')]
+[working-directory('frontend')]
+audit-frontend:
+    npm audit --audit-level=high
+
+# Removing a secret from the working tree does not un-burn it; the history still has it.
 
 # Secrets across the whole git history
 [group('security')]
@@ -124,7 +155,7 @@ scan-infra:
     docker run --rm -v "{{root}}:/repo" {{trivy}} config /repo/infra \
         --severity {{gate}} --exit-code 1 --quiet
 
-# --db-repository is explicit because trivy's default mirror (mirror.gcr.io) intermittently
+# --db-repository is explicit: trivy's default mirror intermittently 404s on the DB layer.
 
 # CVEs in the locked dependency sets
 [group('security')]
@@ -135,15 +166,8 @@ scan-deps:
         --skip-dirs frontend/node_modules --skip-dirs backend/venv \
         --skip-dirs frontend/.firebase
 
-# The CI pipeline checks itself. Two tools, two different failure modes:
-#   actionlint — correctness: bad expressions, wrong action inputs, shellcheck on `run:`.
-#                Catches the workflow that dies eight minutes in.
-#   zizmor     — security: template injection, credential leakage, cache poisoning.
-#                Catches the workflow that runs fine and gets you owned.
-#
-# Gated at `medium`: the workflow surface is three files that hold the OIDC token, so it
-# is worth being stricter here than on application dependencies. `just report-workflows`
-# shows everything below the gate.
+# actionlint catches the workflow that dies eight minutes in; zizmor catches the one that
+# runs fine and gets you owned. Gated at medium — these files hold the OIDC token.
 
 # The CI pipeline checks itself: actionlint (correctness) + zizmor (security)
 [group('security')]
@@ -152,10 +176,8 @@ lint-workflows:
     docker run --rm -v "{{root}}:/repo" -w /repo {{zizmor}} --no-progress \
         --min-severity=medium .github/workflows/
 
-# CVEs in a BUILT image. Deliberately separate from `scan-deps`, which reads the
-# lockfiles: an image also contains the base OS and whatever the base image ships, so the
-# two scans genuinely find different things. Not part of `just security` because it needs
-# an image to exist first — CI runs it after the build, before the push.
+# Separate from scan-deps because an image also carries the base OS and whatever it
+# ships. Not in `just security`: it needs an image to exist first.
 
 # CVEs in a built image (base OS included, unlike scan-deps)
 [group('security')]

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
 
 import { getSupportedLanguages, getSupportedModels, getSupportedModes } from "../api/client";
 
@@ -68,18 +68,12 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
 
         const [provider, ...modelParts] = selectedModel.split(":");
         const model = modelParts.join(":");
-        await onSubmit(
-            url.trim(),
-            provider,
-            model,
-            selectedLanguage,
-            selectedMode,
-            runDeepeval,
-        );
+        await onSubmit(url.trim(), provider, model, selectedLanguage, selectedMode, runDeepeval);
         setUrl("");
     };
 
-    const selectClass = "w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65";
+    const selectClass =
+        "w-full border border-input-border bg-panel-solid px-4.5 py-3 text-base text-ink transition-[border-color,box-shadow] duration-200 focus:border-input-focus focus:outline-none focus:ring-[2px] focus:ring-accent-500/20 disabled:opacity-65";
 
     return (
         <section className="animate-[riseIn_.55s_ease_both]">
@@ -93,7 +87,10 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                 className="mt-5.5 border border-panel-border bg-panel-bg p-6 shadow-panel"
                 onSubmit={handleSubmit}
             >
-                <label htmlFor="article-url" className="mb-3 block text-[0.95rem] font-semibold text-muted">
+                <label
+                    htmlFor="article-url"
+                    className="mb-3 block text-[0.95rem] font-semibold text-muted"
+                >
                     Adres do analizy
                 </label>
                 <div className="grid grid-cols-[1fr_auto] gap-3 max-[980px]:grid-cols-1">
@@ -118,7 +115,12 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
 
                 <div className="mt-3.5 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     <div>
-                        <label htmlFor="model-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">Model</label>
+                        <label
+                            htmlFor="model-select"
+                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                        >
+                            Model
+                        </label>
                         <select
                             id="model-select"
                             value={selectedModel}
@@ -128,16 +130,24 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                         >
                             {Object.entries(models).map(([provider, modelList]) =>
                                 modelList.map((model) => (
-                                    <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
+                                    <option
+                                        key={`${provider}:${model}`}
+                                        value={`${provider}:${model}`}
+                                    >
                                         {provider} – {model}
                                     </option>
-                                ))
+                                )),
                             )}
                         </select>
                     </div>
 
                     <div>
-                        <label htmlFor="language-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">Język podsumowania</label>
+                        <label
+                            htmlFor="language-select"
+                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                        >
+                            Język podsumowania
+                        </label>
                         <select
                             id="language-select"
                             value={selectedLanguage}
@@ -146,13 +156,20 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                             className={selectClass}
                         >
                             {languages.map((lang) => (
-                                <option key={lang} value={lang}>{lang.toUpperCase()}</option>
+                                <option key={lang} value={lang}>
+                                    {lang.toUpperCase()}
+                                </option>
                             ))}
                         </select>
                     </div>
 
                     <div>
-                        <label htmlFor="mode-select" className="mb-2 block text-[0.95rem] font-semibold text-muted">Tryb podsumowania</label>
+                        <label
+                            htmlFor="mode-select"
+                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                        >
+                            Tryb podsumowania
+                        </label>
                         <select
                             id="mode-select"
                             value={selectedMode}
@@ -161,7 +178,9 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                             className={selectClass}
                         >
                             {Object.entries(modes).map(([key, label]) => (
-                                <option key={key} value={key}>{key} — {label.split(" — ")[1] ?? label}</option>
+                                <option key={key} value={key}>
+                                    {key} — {label.split(" — ")[1] ?? label}
+                                </option>
                             ))}
                         </select>
                     </div>

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import logging
 from datetime import UTC, datetime
 
+import structlog
 from bson import ObjectId
 
-from app.core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
-from app.services.run_metrics import (
+from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from .run_metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
     compute_pairwise_cross_deepeval_metrics,
     join_takeaways,
 )
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 async def compute_run_deepeval_metrics(run_id: str) -> None:
@@ -93,7 +93,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             )
             updated_entries += 1
     except Exception as exc:
-        logger.exception("DEEPEVAL failed for run %s", run_id)
+        log.exception("deepeval failed", run_id=run_id)
         aggregate_metrics["deepeval"] = {
             "status": "failed",
             "error": str(exc),

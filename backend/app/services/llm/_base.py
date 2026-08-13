@@ -1,8 +1,8 @@
 """Shared LLM utilities: model factory, prompt helpers, output parsers."""
 
-import logging
 from typing import Any
 
+import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from ...core.config import settings
 from ...schemas.summary import UsageMetadata
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class LlmOutputError(ValueError):

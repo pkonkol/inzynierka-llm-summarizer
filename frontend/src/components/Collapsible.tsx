@@ -16,7 +16,7 @@ export function Collapsible({ label, children, open: controlledOpen, onToggle }:
         if (isControlled) {
             onToggle?.();
         } else {
-            setUncontrolledOpen(value => !value);
+            setUncontrolledOpen((value) => !value);
         }
     };
 
@@ -30,7 +30,11 @@ export function Collapsible({ label, children, open: controlledOpen, onToggle }:
                 <span>{label}</span>
                 <span>{open ? "▼" : "▶"}</span>
             </button>
-            {open && <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>}
+            {open && (
+                <div className="border-t border-panel-border min-w-0 overflow-hidden">
+                    {children}
+                </div>
+            )}
         </div>
     );
 }

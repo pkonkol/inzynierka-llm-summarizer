@@ -7,7 +7,14 @@ interface ConfirmDialogProps {
     isConfirming?: boolean;
 }
 
-export function ConfirmDialog({ isOpen, title, message, onConfirm, onClose, isConfirming = false }: ConfirmDialogProps) {
+export function ConfirmDialog({
+    isOpen,
+    title,
+    message,
+    onConfirm,
+    onClose,
+    isConfirming = false,
+}: ConfirmDialogProps) {
     if (!isOpen) {
         return null;
     }

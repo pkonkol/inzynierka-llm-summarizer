@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { getSupportedModels, getSupportedModes } from "../api/client";
 import {
     createEvaluationRun,
     deleteEvaluationRun,
@@ -9,14 +9,17 @@ import {
     getEvaluationSet,
     listEvaluationRuns,
 } from "../api/research";
-import { getSupportedModels, getSupportedModes } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
+import type {
+    EvaluationRunListItem,
+    EvaluationSetDetail,
+    EvaluationSetEntry,
+} from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
 import { splitProviderModel } from "../utils/utils";
-import type { EvaluationRunListItem, EvaluationSetDetail, EvaluationSetEntry } from "../types/research";
 
 function formatLabel(key: string): string {
     return key.replace(/_/g, " ");
@@ -25,7 +28,9 @@ function formatLabel(key: string): string {
 function MetricsSection({ title, data }: { title: string; data: Record<string, number | null> }) {
     return (
         <div className="space-y-2">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">{title}</h6>
+            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                {title}
+            </h6>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
                 {Object.entries(data).map(([key, value]) => (
                     <InfoRow key={key} label={formatLabel(key)} value={value} />
@@ -47,11 +52,19 @@ function downloadJson(filename: string, data: unknown) {
 
 type EntryCollapsibleKey = "input" | "metrics";
 
-function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSetEntry; setId: string }) {
+function EntryCard({
+    index,
+    entry,
+    setId,
+}: {
+    index: number;
+    entry: EvaluationSetEntry;
+    setId: string;
+}) {
     const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
 
     const toggleSection = (key: EntryCollapsibleKey) => {
-        setOpenSection(current => (current === key ? null : key));
+        setOpenSection((current) => (current === key ? null : key));
     };
 
     return (
@@ -59,7 +72,9 @@ function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSe
             <p className="m-0 text-[0.82rem] text-ink">
                 <span className="font-medium">{index + 1}</span>
                 {" · "}
-                <span className="lowercase text-muted">{entry.title} · {entry.url}</span>
+                <span className="lowercase text-muted">
+                    {entry.title} · {entry.url}
+                </span>
             </p>
 
             <p className="m-0 mt-2 whitespace-pre-wrap text-[0.95rem] text-ink">
@@ -98,7 +113,9 @@ function EntryCard({ index, entry, setId }: { index: number; entry: EvaluationSe
                     <MetricsSection title="Summary" data={entry.golden_metrics.summary} />
                     {entry.golden_metrics.deepeval.length > 0 ? (
                         <div className="space-y-2 border-t border-divider pt-3">
-                            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">Deepeval</h6>
+                            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
+                                Deepeval
+                            </h6>
                             <DeepevalItems items={entry.golden_metrics.deepeval} />
                         </div>
                     ) : null}
@@ -128,7 +145,9 @@ export function EvaluationSetPage({ setId }: Props) {
     const [isLoadingExistingRuns, setIsLoadingExistingRuns] = useState(false);
     const [isSubmittingNewRun, setIsSubmittingNewRun] = useState(false);
 
-    const [newRunAvailableModels, setNewRunAvailableModels] = useState<Record<string, string[]>>({});
+    const [newRunAvailableModels, setNewRunAvailableModels] = useState<Record<string, string[]>>(
+        {},
+    );
     const [newRunAvailableModes, setNewRunAvailableModes] = useState<Record<string, string>>({});
     const [newRunSelectedModel, setNewRunSelectedModel] = useState("");
     const [newRunSummaryMode, setNewRunSummaryMode] = useState("simple");
@@ -368,7 +387,8 @@ export function EvaluationSetPage({ setId }: Props) {
                                 New evaluation run
                             </p>
                             <p className="helper-copy mt-1">
-                                Naiwny runner generuje tylko AI summary i podstawowe metryki tekstowe. Bez GEval.
+                                Naiwny runner generuje tylko AI summary i podstawowe metryki
+                                tekstowe. Bez GEval.
                             </p>
                         </div>
 
@@ -381,12 +401,16 @@ export function EvaluationSetPage({ setId }: Props) {
                                     disabled={isSubmittingNewRun || isLoadingNewRunOptions}
                                     className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    {Object.entries(newRunAvailableModels).map(([provider, modelList]) =>
-                                        modelList.map((model) => (
-                                            <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
-                                                {provider} – {model}
-                                            </option>
-                                        ))
+                                    {Object.entries(newRunAvailableModels).map(
+                                        ([provider, modelList]) =>
+                                            modelList.map((model) => (
+                                                <option
+                                                    key={`${provider}:${model}`}
+                                                    value={`${provider}:${model}`}
+                                                >
+                                                    {provider} – {model}
+                                                </option>
+                                            )),
                                     )}
                                 </select>
                             </label>
@@ -399,22 +423,28 @@ export function EvaluationSetPage({ setId }: Props) {
                                     disabled={isSubmittingNewRun || isLoadingNewRunOptions}
                                     className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    {Object.entries(newRunAvailableModes).map(([modeKey, modeLabel]) => (
-                                        <option key={modeKey} value={modeKey}>
-                                            {modeLabel}
-                                        </option>
-                                    ))}
+                                    {Object.entries(newRunAvailableModes).map(
+                                        ([modeKey, modeLabel]) => (
+                                            <option key={modeKey} value={modeKey}>
+                                                {modeLabel}
+                                            </option>
+                                        ),
+                                    )}
                                 </select>
                             </label>
 
                             <label className="grid gap-1.5">
-                                <span className="text-[0.9rem] text-label">Delay between entries (ms)</span>
+                                <span className="text-[0.9rem] text-label">
+                                    Delay between entries (ms)
+                                </span>
                                 <input
                                     type="number"
                                     min={0}
                                     step={100}
                                     value={newRunDelayMs}
-                                    onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
+                                    onChange={(event) =>
+                                        setNewRunDelayMs(Number(event.target.value))
+                                    }
                                     className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus"
                                 />
                             </label>
@@ -424,7 +454,11 @@ export function EvaluationSetPage({ setId }: Props) {
                             <button
                                 type="button"
                                 onClick={() => void handleSubmitNewRun()}
-                                disabled={isSubmittingNewRun || isLoadingNewRunOptions || !newRunSelectedModel}
+                                disabled={
+                                    isSubmittingNewRun ||
+                                    isLoadingNewRunOptions ||
+                                    !newRunSelectedModel
+                                }
                                 className="border border-panel-border bg-accent-500 px-3.5 py-2 text-[0.94rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSubmittingNewRun ? "Creating..." : "Create evaluation run"}
@@ -455,12 +489,17 @@ export function EvaluationSetPage({ setId }: Props) {
                                         <th className="px-2.5 py-2 font-medium">Status</th>
                                         <th className="px-2.5 py-2 font-medium">Entries</th>
                                         <th className="px-2.5 py-2 font-medium">Created</th>
-                                        <th className="px-2.5 py-2 font-medium text-right">Action</th>
+                                        <th className="px-2.5 py-2 font-medium text-right">
+                                            Action
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {existingRuns.map((run) => (
-                                        <tr key={run.evaluation_run_id} className="border-b border-divider">
+                                        <tr
+                                            key={run.evaluation_run_id}
+                                            className="border-b border-divider"
+                                        >
                                             <td className="px-2.5 py-2.5">{run.model_provider}</td>
                                             <td className="px-2.5 py-2.5">{run.model_name}</td>
                                             <td className="px-2.5 py-2.5">{run.summary_mode}</td>
@@ -473,7 +512,11 @@ export function EvaluationSetPage({ setId }: Props) {
                                                 <div className="flex justify-end gap-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigateTo(`/research/runs/${run.evaluation_run_id}`)}
+                                                        onClick={() =>
+                                                            navigateTo(
+                                                                `/research/runs/${run.evaluation_run_id}`,
+                                                            )
+                                                        }
                                                         className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
                                                     >
                                                         Open
@@ -529,7 +572,11 @@ export function EvaluationSetPage({ setId }: Props) {
             <ConfirmDialog
                 isOpen={Boolean(runPendingDelete)}
                 title="Usunąć evaluation run?"
-                message={runPendingDelete ? `Usunąć run ${runPendingDelete.model_provider}:${runPendingDelete.model_name} (${runPendingDelete.evaluation_run_id})?` : ""}
+                message={
+                    runPendingDelete
+                        ? `Usunąć run ${runPendingDelete.model_provider}:${runPendingDelete.model_name} (${runPendingDelete.evaluation_run_id})?`
+                        : ""
+                }
                 isConfirming={isDeletingRun}
                 onConfirm={() => void handleConfirmDeleteRun()}
                 onClose={() => setRunPendingDelete(null)}

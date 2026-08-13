@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 
-import {
-    createSummaryJob,
-    getJobsForUrl,
-    getJobStatus,
-    listSummarizedUrls,
-} from "../api/client";
+import { createSummaryJob, getJobStatus, getJobsForUrl, listSummarizedUrls } from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
-import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
+import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
 
 const LIST_REFRESH_MS = 20_000;
@@ -81,12 +76,20 @@ export function HomePage() {
             }
         };
         void initialize();
-        const interval = setInterval(() => { void loadUrlList(); }, LIST_REFRESH_MS);
-        return () => { isMounted = false; clearInterval(interval); };
+        const interval = setInterval(() => {
+            void loadUrlList();
+        }, LIST_REFRESH_MS);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
     }, []);
 
     useEffect(() => {
-        if (!selectedUrl) { setDetailJobs([]); return; }
+        if (!selectedUrl) {
+            setDetailJobs([]);
+            return;
+        }
         void loadDetailForUrl(selectedUrl);
     }, [selectedUrl]);
 
@@ -109,7 +112,9 @@ export function HomePage() {
                 setActiveJobId(null);
             }
         };
-        const interval = setInterval(() => { void poll(); }, POLLING_MS);
+        const interval = setInterval(() => {
+            void poll();
+        }, POLLING_MS);
         void poll();
         return () => clearInterval(interval);
     }, [activeJobId]);
@@ -121,16 +126,20 @@ export function HomePage() {
     }, [flashMessage]);
 
     return (
-        <main className={
-            hasDetailOpen
-                ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
-                : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
-        }>
-            <section className={
+        <main
+            className={
                 hasDetailOpen
-                    ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
-                    : "min-w-0"
-            }>
+                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
+                    : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+            }
+        >
+            <section
+                className={
+                    hasDetailOpen
+                        ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
+                        : "min-w-0"
+                }
+            >
                 {!hasDetailOpen ? (
                     <UrlSubmitCard onSubmit={submitSummary} isSubmitting={isSubmitting} />
                 ) : null}

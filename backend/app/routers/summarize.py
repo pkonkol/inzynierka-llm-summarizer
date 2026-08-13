@@ -1,8 +1,8 @@
 import asyncio
-import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
@@ -29,12 +29,10 @@ from ..services.run_metrics import (
 from ..services.scraper import extract_text_from_url
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
-# asyncio only keeps a weak reference to a running task, so a fire-and-forget
-# `create_task(...)` whose result nobody holds can be garbage-collected mid-flight —
-# the coroutine silently stops, with no error anywhere. Metrics writes are exactly
-# that shape, so keep a strong reference until each one finishes.
+# asyncio only weakly references running tasks, so a fire-and-forget create_task can be
+# garbage-collected mid-flight and stop silently. Hold a reference until it finishes.
 _metrics_tasks: set[asyncio.Task] = set()
 
 
@@ -53,6 +51,10 @@ async def run_summarization_job(
     summary_mode: SummaryMode,
     run_deepeval: bool,
 ) -> None:
+    # Bind once here and every log line below this point carries job_id and mode, including
+    # ones emitted deep in the scraper, the LLM layer and the metrics writers.
+    structlog.contextvars.bind_contextvars(job_id=job_id, mode=summary_mode)
+
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(UTC)
 
@@ -108,7 +110,7 @@ async def run_summarization_job(
 
     except Exception as exc:
         finished_at = datetime.now(UTC)
-        logger.exception("[job=%s] failed: %s", job_id, exc)
+        log.exception("summarization job failed")
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -126,6 +128,8 @@ async def run_summarization_job(
                 }
             },
         )
+    finally:
+        structlog.contextvars.unbind_contextvars("job_id", "mode")
 
 
 @router.post("/summarize", summary="Create summarize job", dependencies=[Depends(require_auth)])
@@ -140,11 +144,12 @@ async def create_summarize_job(
     job_id = str(uuid4())
     now = datetime.now(UTC)
 
-    logger.debug("[job=%s] queued url=%s mode=%s", job_id, payload.url, payload.summary_mode)
+    source_url = str(payload.url)
+    log.debug("job queued", job_id=job_id, url=source_url, mode=payload.summary_mode)
 
     document = JobDocument(
         job_id=job_id,
-        source_url=payload.url,
+        source_url=source_url,
         model_provider=payload.model_provider,
         model_name=payload.model_name,
         summary_mode=payload.summary_mode,
@@ -161,7 +166,7 @@ async def create_summarize_job(
     background_tasks.add_task(
         run_summarization_job,
         job_id,
-        payload.url,
+        source_url,
         payload.model_name,
         payload.model_provider,
         payload.language,
@@ -267,7 +272,7 @@ async def get_job_status(job_id: str) -> JobStatusResponse:
     job_data = await jobs_collection.find_one({"job_id": job_id}, {"_id": 0})
     if not job_data:
         raise HTTPException(status_code=404, detail="Job not found")
-    logger.debug("[job=%s] status check -> %s", job_id, job_data["status"])
+    log.debug("job status checked", job_id=job_id, status=job_data["status"])
     return JobStatusResponse.model_validate(job_data)
 
 

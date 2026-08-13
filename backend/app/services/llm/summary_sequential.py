@@ -7,8 +7,8 @@ Both calls run concurrently (asyncio.gather). The two usages are summed.
 """
 
 import asyncio
-import logging
 
+import structlog
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ from ._base import (
     raw_output_str,
 )
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class _TakeawaysOnly(BaseModel):
@@ -103,7 +103,7 @@ async def run(
 
     if parsed_tk is None or parsed_sm is None:
         missing = "takeaways" if parsed_tk is None else "summary"
-        logger.error("raw_output: %s", raw_output_combined)
+        log.error("llm output unparseable", mode="sequential", raw_output=raw_output_combined)
         raise LlmOutputError(
             f"[sequential] model returned unparseable {missing} response",
             raw_output=raw_output_combined,

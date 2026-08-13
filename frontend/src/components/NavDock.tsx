@@ -14,7 +14,13 @@ const NAV_ITEMS: { route: Route; label: string }[] = [
     { route: "research", label: "Research" },
 ];
 
-export function NavDock({ active, onNavigate, isAuthEnabled, isLoggedIn, onOpenLogin }: NavDockProps) {
+export function NavDock({
+    active,
+    onNavigate,
+    isAuthEnabled,
+    isLoggedIn,
+    onOpenLogin,
+}: NavDockProps) {
     const navItems = NAV_ITEMS.map(({ route, label }) => (
         <button
             key={route}

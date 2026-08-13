@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
-import { navigateTo } from "../utils/researchRouting";
 import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
+import { navigateTo } from "../utils/researchRouting";
 
 const PRETTY_EXAMPLE = `{
   "name": "cnn-sample1",
@@ -65,7 +65,9 @@ export function ResearchPage() {
         setIsImporting(true);
         try {
             const created = await createEvaluationSet(payload);
-            setFlashMessage(`Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`);
+            setFlashMessage(
+                `Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`,
+            );
             await loadSets();
         } catch (error) {
             setErrorMessage(`Import nie powiódł się: ${String(error)}`);
@@ -125,7 +127,8 @@ export function ResearchPage() {
                     Evaluation set import
                 </h1>
                 <p className="helper-copy mt-2">
-                    Importuj małe curated datasety JSON. To jest osobny moduł badawczy, niezależny od zwykłych jobs.
+                    Importuj małe curated datasety JSON. To jest osobny moduł badawczy, niezależny
+                    od zwykłych jobs.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2.5">
@@ -160,7 +163,9 @@ export function ResearchPage() {
 
                     <div className="grid gap-1 border border-panel-border bg-panel-solid px-3 py-2.5 text-[0.9rem]">
                         <div className="flex flex-wrap gap-x-4 gap-y-1">
-                            <span>Status: {parsedPreview.isValid ? "valid JSON" : "invalid JSON"}</span>
+                            <span>
+                                Status: {parsedPreview.isValid ? "valid JSON" : "invalid JSON"}
+                            </span>
                             <span>Name: {parsedPreview.name ?? "—"}</span>
                             <span>Language: {parsedPreview.language ?? "—"}</span>
                             <span>Entries: {parsedPreview.entryCount}</span>
@@ -212,7 +217,9 @@ export function ResearchPage() {
                 {isLoading ? (
                     <p className="helper-copy mt-4">Ładowanie listy EvaluationSet...</p>
                 ) : sets.length === 0 ? (
-                    <p className="helper-copy mt-4">Brak EvaluationSetów. Zaimportuj pierwszy dataset.</p>
+                    <p className="helper-copy mt-4">
+                        Brak EvaluationSetów. Zaimportuj pierwszy dataset.
+                    </p>
                 ) : (
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full border-collapse text-left text-[0.94rem]">
@@ -227,7 +234,10 @@ export function ResearchPage() {
                             </thead>
                             <tbody>
                                 {sets.map((set) => (
-                                    <tr key={set.evaluation_set_id} className="border-b border-divider">
+                                    <tr
+                                        key={set.evaluation_set_id}
+                                        className="border-b border-divider"
+                                    >
                                         <td className="px-2.5 py-2.5">{set.name}</td>
                                         <td className="px-2.5 py-2.5">{set.language}</td>
                                         <td className="px-2.5 py-2.5">{set.entry_count}</td>
@@ -237,7 +247,9 @@ export function ResearchPage() {
                                         <td className="px-2.5 py-2.5 text-right">
                                             <button
                                                 type="button"
-                                                onClick={() => navigateTo(`/research/${set.evaluation_set_id}`)}
+                                                onClick={() =>
+                                                    navigateTo(`/research/${set.evaluation_set_id}`)
+                                                }
                                                 className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
                                             >
                                                 Open

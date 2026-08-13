@@ -1,8 +1,7 @@
-# Runs the quality gates on every push, on every branch.
+# Quality gates on every push, every branch.
 #
-# Deliberately not `pull_request`: this is a solo repo where work happens on `work` and
-# lands on `master` by a manual squash merge, so there is often no PR to hang checks on.
-# Pushing is the event that matters here.
+# Deliberately not `pull_request`: work lands on master by manual squash merge, so there
+# is often no PR to hang checks on. Pushing is the event that matters here.
 
 name: CI
 
@@ -13,8 +12,7 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same branch makes the previous run irrelevant. Cancelling it keeps
-# the private-repo Actions minute budget from being spent on results nobody will read.
+# A newer push makes the previous run irrelevant; cancelling saves Actions minutes.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

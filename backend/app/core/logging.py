@@ -17,15 +17,12 @@ _QUIET_IN_DEBUG = [
     "trafilatura",
 ]
 
+
 # Cloud Logging keys off `severity` for the level and `message` for the summary line;
 # every other key lands in jsonPayload and becomes filterable.
-_GCP_LEVELS = {"warning": "WARNING", "error": "ERROR", "critical": "CRITICAL"}
-
-
 def _rename_for_cloud_logging(_logger, _name, event_dict):
-    level = event_dict.pop("level", "info")
-    event_dict["severity"] = _GCP_LEVELS.get(level, level.upper())
-    event_dict["message"] = event_dict.pop("event", "")
+    event_dict["severity"] = event_dict.pop("level").upper()
+    event_dict["message"] = event_dict.pop("event")
     return event_dict
 
 

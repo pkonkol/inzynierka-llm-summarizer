@@ -66,8 +66,10 @@ owned.
 
 ## Gates
 
-Trivy and the image scan fail on `HIGH,CRITICAL`. pyrefly runs on its `basic` preset, which reports 0 today; `default` reports 36 and `strict` 68, mostly one real `dict` vs `LlmSummaryResult` mismatch in the LLM layer. zizmor fails on `medium`, because the
-workflow surface is three files that hold the OIDC token and is worth being stricter about.
+Trivy and the image scan fail on `HIGH,CRITICAL`. pyrefly gates on its `basic` preset, with
+the reasoning recorded next to the setting in `backend/pyproject.toml`. zizmor fails on
+`medium`, because the workflow surface is three files that hold the OIDC token and is worth
+being stricter about.
 Everything below a gate is reported rather than dropped — `just report-infra` and
 `just report-workflows` show the full picture.
 

@@ -30,9 +30,6 @@
         "useExhaustiveDependencies": "warn",
         "useHookAtTopLevel": "error"
       },
-      "style": {
-        "noNonNullAssertion": "off"
-      },
       "suspicious": {
         "noExplicitAny": "error",
         "noConsole": "error"
@@ -45,8 +42,8 @@
   },
   "overrides": [
     {
-      "includes": ["src/utils/logger.ts"],
-      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+      "includes": ["src/main.tsx"],
+      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
     }
   ]
 }

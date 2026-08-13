@@ -11,12 +11,11 @@
     "python-envs.defaultEnvManager": "ms-python.python:venv",
     // "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/activate",
 
-    // Pylance is pyright. Type checking is pyrefly's job now (see justfile), and running
-    // both means two sets of suppression comments for the same code. Pylance keeps doing
-    // completion, hover and go-to-definition.
+    // Pylance is pyright; type checking belongs to pyrefly (see justfile). Running both would
+    // mean two suppression syntaxes for the same code. Pylance keeps completion and hover.
     "python.analysis.typeCheckingMode": "off",
 
-    // Formatters, so the editor stops guessing — this is what made Prettier look broken.
+    // Pinned per language so the editor never has to guess which formatter owns a file.
     "editor.formatOnSave": true,
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",

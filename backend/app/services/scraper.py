@@ -9,7 +9,8 @@ import trafilatura
 
 log = structlog.get_logger(__name__)
 
-# Enough for an article, small enough that a hostile server cannot stream us out of memory.
+# Checked after the body is buffered, so this bounds what reaches the extractor and the LLM,
+# not peak memory — the 15 s timeout is what limits how much a hostile server can send.
 _MAX_BYTES = 10 * 1024 * 1024
 _MAX_REDIRECTS = 5
 _TIMEOUT = httpx.Timeout(15.0, connect=5.0)

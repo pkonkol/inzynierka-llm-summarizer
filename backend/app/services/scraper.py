@@ -6,11 +6,11 @@ from urllib.parse import urlsplit
 import httpx
 import structlog
 import trafilatura
+from trafilatura.settings import Document
 
 log = structlog.get_logger(__name__)
 
-# Checked after the body is buffered, so this bounds what reaches the extractor and the LLM,
-# not peak memory — the 15 s timeout is what limits how much a hostile server can send.
+# Bounds what reaches the extractor and the LLM, not peak memory: the body is already buffered.
 _MAX_BYTES = 10 * 1024 * 1024
 _MAX_REDIRECTS = 5
 _TIMEOUT = httpx.Timeout(15.0, connect=5.0)
@@ -70,7 +70,10 @@ def _fetch_html(url: str) -> str:
             response = client.get(url, headers={"User-Agent": "inzynierka-summarizer/1.0"})
 
             if response.is_redirect:
-                url = str(response.next_request.url)
+                next_request = response.next_request
+                if next_request is None:
+                    raise ValueError(f"Redirect from {url} has no Location header")
+                url = str(next_request.url)
                 _assert_fetchable(url)
                 log.debug("scraper following redirect", url=url)
                 continue
@@ -108,6 +111,8 @@ async def extract_text_from_url(url: str) -> dict:
 
     try:
         data = await asyncio.to_thread(trafilatura.bare_extraction, downloaded, with_metadata=True)
+        if not isinstance(data, Document):
+            raise ValueError(f"Extraction returned {type(data).__name__}, expected a Document")
         d = data.as_dict()
     except Exception as exc:
         log.exception("scraper extraction failed", url=url)

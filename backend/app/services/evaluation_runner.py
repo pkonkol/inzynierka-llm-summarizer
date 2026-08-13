@@ -61,8 +61,8 @@ async def run_evaluation_batch(run_id: str) -> None:
                 mode=run_doc["summary_mode"],
             )
 
-            summary_text = summary["summary"]
-            takeaways = summary["key_takeaways"]
+            summary_text = summary.summary
+            takeaways = summary.key_takeaways
 
             update["ai_summary"] = summary_text
             update["ai_key_takeaways"] = takeaways

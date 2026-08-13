@@ -7,7 +7,7 @@ Monorepo for the B.Sc. Engineering Thesis project: system for summarization of w
 ```text
 backend/   FastAPI API, scraping, summarization pipeline, async job flow
 frontend/  React + TypeScript client app (UI)
-infra/     Infrastructure assets (Docker, Kubernetes manifests, scripts)
+infra/     Docker Compose for local MongoDB, Terraform for GCP, model catalogues
 ```
 
 ## Quick Start

@@ -30,6 +30,9 @@ Folder-specific rules live in `.claude/rules/` and load only when the matching f
 opened: [backend](.claude/rules/backend.md), [frontend](.claude/rules/frontend.md),
 [infra](.claude/rules/infra.md).
 
+Implementation plans are archived to `.scratch/claude_plans/` — gitignored, kept because the
+research in them (tool comparisons, measured numbers, rejected options) outlives the task.
+
 ## Running checks
 
 `just` is the only entry point; CI runs these exact recipes, so nothing can drift.
@@ -147,6 +150,32 @@ CORS_ALLOWED_ORIGINS = jsonencode(["https://${var.project_id}.web.app"])
 # GOOD — the why, which is not visible anywhere in the code
 "roles/firebasehosting.admin", # Deploy the frontend via ADC instead of a long-lived FIREBASE_TOKEN.
 ```
+
+### Justifying the change belongs in chat, never in the file
+
+The worst offender, because it reads like a real comment. A comment defending *the edit you just made* is addressed to someone holding a diff. Nobody reading the file later has that diff, or cares what the alternative was. Say it in the chat reply, the commit body, or an ADR — then delete it from the code.
+
+Tells: naming the option not taken (`rather than`, `instead of`, `on purpose`, `deliberately`), pointing at your own reasoning (`hence the cast`, `that is why`, `which is what makes`), or asserting a fact the reader can check themselves (`matches Dockerfile`).
+
+```python
+# BAD — three comments arguing with a reviewer
+# Empty rather than None so the type carries no optionality downstream; the validator
+# below is what guarantees a real value whenever auth is actually on.
+auth_secret: SecretStr = SecretStr("")
+
+# Widened on purpose: the stored document mixes scalar scores with deepeval's list.
+cross_metrics: dict[str, Any] = dict(await compute_cross_metrics(...))
+
+# `include_raw=True` makes the output a dict, but LangChain's signature widens it — hence the cast.
+return cast(Runnable[Any, dict[str, Any]], llm.with_structured_output(structure, include_raw=True))
+
+# GOOD — the annotations and the cast already say all of it
+auth_secret: SecretStr = SecretStr("")
+cross_metrics: dict[str, Any] = dict(await compute_cross_metrics(...))
+return cast(Runnable[Any, dict[str, Any]], llm.with_structured_output(structure, include_raw=True))
+```
+
+The test: if the sentence would only occur to someone comparing this version against the previous one, it is not a comment.
 
 Formatting:
 

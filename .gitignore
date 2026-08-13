@@ -15,6 +15,7 @@ terraform.tfstate.backup
 NOTES.md
 logs.md
 .env*
+!.env.example
 CLAUDE.local.md
 .scratch/
 

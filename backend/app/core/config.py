@@ -50,11 +50,9 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-2.5-flash-lite",
     }
-    # Auth is off unless explicitly switched on, so it can never be disabled by an accidentally
-    # blank secret. Production sets AUTH_ENABLED=true via Terraform.
     auth_enabled: bool = False
-    auth_secret: SecretStr | None = None
-    jwt_secret: SecretStr | None = None
+    auth_secret: SecretStr = SecretStr("")
+    jwt_secret: SecretStr = SecretStr("")
     jwt_expire_hours: int = 168
     deepeval_provider: str = "google"
     deepeval_model: str = "gemini-flash-lite-latest"

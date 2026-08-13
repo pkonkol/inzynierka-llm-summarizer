@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from bson import ObjectId
@@ -71,9 +72,11 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             ai_metrics = entry["ai_metrics"]
             ai_metrics["deepeval"] = deepeval_metrics
 
-            cross_metrics = await compute_cross_metrics(
-                reference_text=entry["golden_summary"],
-                summary_text=summary_text,
+            cross_metrics: dict[str, Any] = dict(
+                await compute_cross_metrics(
+                    reference_text=entry["golden_summary"],
+                    summary_text=summary_text,
+                )
             )
             pairwise = await compute_pairwise_cross_deepeval_metrics(
                 source_text=source_text,

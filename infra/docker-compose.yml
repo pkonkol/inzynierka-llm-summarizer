@@ -4,6 +4,8 @@ services:
     container_name: inzynierka-mongo
     restart: unless-stopped
     ports:
+      # No auth and published on the host: local development only. Anything reachable from
+      # outside the machine needs MONGO_INITDB_ROOT_* and a bind to 127.0.0.1 first.
       - "27017:27017"
     volumes:
       - mongo_data:/data/db

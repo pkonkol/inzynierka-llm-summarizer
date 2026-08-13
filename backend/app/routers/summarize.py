@@ -1,5 +1,7 @@
 import asyncio
+from collections.abc import Coroutine
 from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 import structlog
@@ -36,7 +38,7 @@ log = structlog.get_logger(__name__)
 _metrics_tasks: set[asyncio.Task] = set()
 
 
-def spawn_metrics_task(coro) -> None:
+def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
     task = asyncio.create_task(coro)
     _metrics_tasks.add(task)
     task.add_done_callback(_metrics_tasks.discard)

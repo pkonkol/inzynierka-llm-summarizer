@@ -1,9 +1,10 @@
 """Shared LLM utilities: model factory, prompt helpers, output parsers."""
 
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from langchain_core.language_models import BaseChatModel
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
@@ -60,16 +61,24 @@ def build_structured_llm(
     llm = build_llm(model_provider, model_name)
 
     if model_provider.lower() == "openrouter":
-        return llm.with_structured_output(
-            structure,
-            include_raw=True,
-            method="json_mode",
+        return cast(
+            Runnable[Any, dict[str, Any]],
+            llm.with_structured_output(structure, include_raw=True, method="json_mode"),
         )
 
-    return llm.with_structured_output(
-        structure,
-        include_raw=True,
+    return cast(
+        Runnable[Any, dict[str, Any]],
+        llm.with_structured_output(structure, include_raw=True),
     )
+
+
+def prompt_texts(prompt: ChatPromptTemplate, label: str) -> list[tuple[str, str]]:
+    """The (role, template text) pairs behind a prompt, recorded on every LlmSummaryResult."""
+    system, human = prompt.messages
+    return [
+        (f"[{label}] system", cast(Any, system).prompt.template),
+        (f"[{label}] human", cast(Any, human).prompt.template),
+    ]
 
 
 def build_generic_detail_guidance() -> str:
@@ -98,10 +107,13 @@ def build_takeaway_detail_guidance() -> str:
 
 
 def as_dict(obj: Any) -> dict[str, Any]:
+    if obj is None:
+        return {}
     if isinstance(obj, BaseModel):
         return obj.model_dump()
     if isinstance(obj, dict):
         return obj
+    log.warning("llm metadata has an unexpected shape", shape=type(obj).__name__)
     return {}
 
 
@@ -116,6 +128,7 @@ def extract_text_from_content(content: Any) -> str:
             elif isinstance(block, str):
                 parts.append(block)
         return "".join(parts)
+    log.warning("llm content is neither str nor block list", shape=type(content).__name__)
     return str(content)
 
 
@@ -132,9 +145,11 @@ def extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     usage = UsageMetadata(
         input_tokens=_token_count(usage_meta, "input_tokens"),
         output_tokens=_token_count(usage_meta, "output_tokens"),
-        thinking_tokens=_token_count(as_dict(usage_meta.get("input_token_details")), "thinking"),
+        # langchain_core.messages.ai.OutputTokenDetails — the key every provider maps into.
+        thinking_tokens=_token_count(as_dict(usage_meta.get("output_token_details")), "reasoning"),
         total_tokens=_token_count(usage_meta, "total_tokens"),
     )
+    log.debug("extracting token usage from ai_message", ai_message=ai_message, usage=usage, usage_meta=usage_meta)
     if usage.total_tokens == 0 and (usage.input_tokens or usage.output_tokens):
         usage = usage.model_copy(update={"total_tokens": usage.input_tokens + usage.output_tokens})
 
@@ -153,5 +168,6 @@ def raw_output_str(raw_invoke_output: Any) -> str:
     raw_msg = raw_invoke_output.get("raw")
     content = getattr(raw_msg, "content", None)
     if content is None:
+        log.warning("llm returned no content", shape=type(raw_msg).__name__)
         return ""
     return extract_text_from_content(content)

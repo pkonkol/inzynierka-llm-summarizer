@@ -21,6 +21,7 @@ from ._base import (
     build_summary_detail_guidance,
     build_takeaway_detail_guidance,
     extract_usage,
+    prompt_texts,
     raw_output_str,
 )
 
@@ -63,8 +64,8 @@ _PROMPT_SYNTHESIS = ChatPromptTemplate.from_messages(
 
 async def run(
     input: dict, source_url: str, model_name: str, model_provider: str, language: str
-) -> dict[str, Any]:
-    """Two sequential calls: takeaways → synthesis. Returns full result dict."""
+) -> LlmSummaryResult:
+    """Two sequential calls: takeaways → synthesis."""
     takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
     summary_llm = build_structured_llm(_SummaryOnly, model_provider, model_name)
     chain_takeaways = _PROMPT_TAKEAWAYS | takeaway_llm
@@ -149,10 +150,8 @@ async def run(
         raw_output=raw_output_combined,
         input_text=text.strip(),
         prompt_template=[
-            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),
-            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),
-            ("[synthesis] system", _PROMPT_SYNTHESIS.messages[0].prompt.template),
-            ("[synthesis] human", _PROMPT_SYNTHESIS.messages[1].prompt.template),
+            *prompt_texts(_PROMPT_TAKEAWAYS, "takeaways"),
+            *prompt_texts(_PROMPT_SYNTHESIS, "synthesis"),
         ],
         prompt_params={
             "language": language,

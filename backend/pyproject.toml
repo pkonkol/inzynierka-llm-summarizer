@@ -19,12 +19,12 @@ select = [
     "S",   # flake8-bandit — security (this is ruff's Bandit, not a separate tool)
     "T20", # flake8-print — no print() in application code
     "G",   # flake8-logging-format
+    "ANN", # flake8-annotations — signatures carry types
     "RUF", # ruff-specific rules
 ]
 
 # Deliberately off, so nobody turns them on "helpfully":
 #   D      — docstrings are sparse on purpose; this would fire hundreds of times
-#   ANN    — enable after a type checker, not before
 #   TID252 — enforces absolute imports; app/ standardises on relative
 
 [tool.ruff.lint.pycodestyle]
@@ -50,16 +50,19 @@ extend-immutable-calls = [
 [tool.ruff.lint.per-file-ignores]
 # Test suites assert; that is the point.
 "tests/**" = ["S101"]
+# The boundary where untyped LangChain and deepeval output is narrowed with isinstance/getattr.
+"app/services/llm/_base.py" = ["ANN401"]
+"app/services/metrics/deepeval.py" = ["ANN401"]
 
 [tool.ruff.format]
 docstring-code-format = true
 
 [tool.pyrefly]
 project-includes = ["app"]
-# `basic` is a weak gate but a true one: 0 errors today, so it only ever fails on a
-# regression. `default` currently reports 36 and `strict` 68 — mostly a real dict vs
-# LlmSummaryResult mismatch in the LLM layer. Raising the preset is its own task.
-preset = "basic"
+preset = "default"
+# deepeval re-exports LLMTestCaseParams as MultiTurnParams, dropping INPUT/ACTUAL_OUTPUT;
+# textstat ships no stubs.
+replace-imports-with-any = ["deepeval.*", "textstat"]
 
 [tool.pytest.ini_options]
 # rootdir is backend/, so `app` imports resolve without installing the package.

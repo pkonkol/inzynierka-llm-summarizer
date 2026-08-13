@@ -1,6 +1,7 @@
 import logging
 
 import structlog
+from structlog.typing import EventDict, WrappedLogger
 
 from .config import settings
 
@@ -20,7 +21,9 @@ _QUIET_IN_DEBUG = [
 
 # Cloud Logging keys off `severity` for the level and `message` for the summary line;
 # every other key lands in jsonPayload and becomes filterable.
-def _rename_for_cloud_logging(_logger, _name, event_dict):
+def _rename_for_cloud_logging(
+    _logger: WrappedLogger, _name: str, event_dict: EventDict
+) -> EventDict:
     event_dict["severity"] = event_dict.pop("level").upper()
     event_dict["message"] = event_dict.pop("event")
     return event_dict

@@ -4,7 +4,7 @@
 Backend API for web content summarization jobs.
 
 ## Requirements
-- Python 3.11+
+- Python 3.14
 
 ## Install
 From the `backend` directory:
@@ -53,7 +53,7 @@ MONGODB_JOBS_COLLECTION=jobs
 ```
 
 The app loads `backend/.env` automatically via Pydantic Settings, regardless of where you start Uvicorn.
-See `.env.template` for the full list, including `AUTH_ENABLED`, `LOG_FORMAT` and
+See `.env.example` for the full list, including `AUTH_ENABLED`, `LOG_FORMAT` and
 `CORS_ALLOWED_ORIGINS`.
 
 Auth is off unless `AUTH_ENABLED=true`; when it is on, both `AUTH_SECRET` and `JWT_SECRET` must be

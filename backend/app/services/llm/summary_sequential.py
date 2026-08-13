@@ -20,6 +20,7 @@ from ._base import (
     build_summary_detail_guidance,
     build_takeaway_detail_guidance,
     extract_usage,
+    prompt_texts,
     raw_output_str,
 )
 
@@ -122,10 +123,8 @@ async def run(
         raw_output=raw_output_combined,
         input_text=text.strip(),
         prompt_template=[
-            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),
-            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),
-            ("[summary] system", _PROMPT_SUMMARY.messages[0].prompt.template),
-            ("[summary] human", _PROMPT_SUMMARY.messages[1].prompt.template),
+            *prompt_texts(_PROMPT_TAKEAWAYS, "takeaways"),
+            *prompt_texts(_PROMPT_SUMMARY, "summary"),
         ],
         prompt_params={
             "language": language,

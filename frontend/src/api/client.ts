@@ -5,6 +5,7 @@ import type {
     JobStatusValue,
     SummaryUrlListItem,
 } from "../types/api";
+import { logger } from "../utils/logger";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 if (!API_BASE_URL) {
@@ -35,7 +36,8 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
 
     if (!response.ok) {
         if (response.status === 401 && !path.startsWith("/auth/")) clearToken();
-        const message = await response.text().catch(() => "");
+        const message = await response.text();
+        logger.error("api request failed", { path, status: response.status });
         throw new Error(message || `Request failed with status ${response.status}`);
     }
     return (await response.json()) as T;

@@ -23,9 +23,15 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "a11y": {
+        "noAutofocus": "off"
+      },
       "correctness": {
         "useExhaustiveDependencies": "warn",
         "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
       },
       "suspicious": {
         "noExplicitAny": "error",

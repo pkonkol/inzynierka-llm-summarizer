@@ -122,10 +122,10 @@ async def run(
         raw_output=raw_output_combined,
         input_text=text.strip(),
         prompt_template=[
-            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
-            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
-            ("[summary] system", _PROMPT_SUMMARY.messages[0].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
-            ("[summary] human", _PROMPT_SUMMARY.messages[1].prompt.template),  # pyright: ignore[reportAttributeAccessIssue]
+            ("[takeaways] system", _PROMPT_TAKEAWAYS.messages[0].prompt.template),
+            ("[takeaways] human", _PROMPT_TAKEAWAYS.messages[1].prompt.template),
+            ("[summary] system", _PROMPT_SUMMARY.messages[0].prompt.template),
+            ("[summary] human", _PROMPT_SUMMARY.messages[1].prompt.template),
         ],
         prompt_params={
             "language": language,

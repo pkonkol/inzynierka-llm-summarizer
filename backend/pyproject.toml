@@ -54,6 +54,13 @@ extend-immutable-calls = [
 [tool.ruff.format]
 docstring-code-format = true
 
+[tool.pyrefly]
+project-includes = ["app"]
+# `basic` is a weak gate but a true one: 0 errors today, so it only ever fails on a
+# regression. `default` currently reports 36 and `strict` 68 — mostly a real dict vs
+# LlmSummaryResult mismatch in the LLM layer. Raising the preset is its own task.
+preset = "basic"
+
 [tool.pytest.ini_options]
 # rootdir is backend/, so `app` imports resolve without installing the package.
 pythonpath = ["."]

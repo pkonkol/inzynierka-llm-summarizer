@@ -52,6 +52,27 @@ just ci           # everything CI runs
 - **Architecture pushback.** If a requested approach isn't the best option, say so in the reply and propose the alternative — don't silently comply or silently deviate.
 - **Naming: verbose first, narrow later.** Prefer long, self-explanatory names over short ones, especially for state, function, and variable names that aren't obviously scoped by their immediate context. A name should let a reader understand its purpose without re-reading the surrounding module. Don't abbreviate to save keystrokes (`client` → `firestoreClient` if there are multiple clients in scope; `runModel` → `newRunSelectedModel` if "run" is ambiguous between "existing run" and "the run being created"). It's fine to shorten a name later once its scope is small and unambiguous (e.g. a loop variable `i` is fine) — but don't start short and hope to remember to rename it later; that rarely happens.
 
+## Choosing a library or tool
+
+Never recommend one without numbers. Before proposing anything, gather and **show**:
+
+- GitHub stars, and how long it took to get them — the slope matters more than the total
+- downloads per month (PyPI) or per week (npm)
+- last release and open-issue count — is it maintained
+- **the cost of adopting it**: bundle size for the frontend, install time, transitive deps
+
+Two shapes are acceptable, and they are opposite ends of the same axis:
+
+- **New and clearly rising** — `uv`, `ruff`, `ty`, `pyrefly`. Rust is a plus, not a tiebreaker.
+- **Thoroughly established** — huge userbase, deep support, tutorials for every problem.
+
+The middle is the bad place: niche, flat, and you are on your own. `tslog` was that — it
+did exactly what was wanted and cost 21 kB gzip against `loglevel`'s 1.3 kB for the same
+browser behaviour. A new dependency is fine; an expensive or unmaintained one is not.
+
+Weigh supply-chain risk too: transitive dependency count, release cadence, and whether the
+maintainer is one person.
+
 ## Docs describe the present, not the change — FORBIDDEN patterns
 
 READMEs and docs state only how the system works *now*. They are not a changelog: git history covers that. The same rule as the code — no fallbacks, no leftovers.

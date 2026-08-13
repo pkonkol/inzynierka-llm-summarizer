@@ -71,13 +71,14 @@ React first, blank line, then local modules, `import type` last. Biome's
 
 ## Logging
 
-Everything goes through `src/utils/logger.ts`. Biome's `noConsole` blocks direct
+`loglevel`, re-exported from `src/utils/logger.ts`. Biome's `noConsole` blocks direct
 `console.*` everywhere else.
 
 - Same shape as the backend: a constant message plus named fields, never values
   interpolated into the string.
-- `debug`/`info` are dropped from production builds; `warn`/`error` stay.
-- The wrapper exists so telemetry can be added in one file instead of at every call site.
+- `debug`/`info` are filtered out in production; `warn`/`error` stay.
+- Level persists in localStorage, so `log.setLevel("debug")` in devtools raises verbosity
+  on a deployed build without a rebuild.
 - Never log a JWT, an `Authorization` header, or a raw API response body.
 
 ```tsx
@@ -93,3 +94,8 @@ logger.error("failed to load job", { jobId });
 Still banned, as above. `catch { setError("...") }` is fine — the failure surfaces to the
 user. `catch {}` and `.catch(() => "")` are not: they turn a failure into a silent wrong
 answer.
+
+## File layout
+
+A helper with one caller lives next to that caller, not in its own module. Split only when
+a second consumer appears.

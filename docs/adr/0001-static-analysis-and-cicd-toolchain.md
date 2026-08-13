@@ -24,6 +24,8 @@ by manual squash merge rather than through pull requests.
 ## Decision Drivers
 
 * Cost — free or a few PLN/month; the repository being private rules out several free tiers
+* Trajectory — either clearly rising (`ruff`, `uv`, `pyrefly`) or thoroughly established
+  (`pytest`); never niche and flat, where there is no community to fall back on
 * One source of truth — local and CI must not be able to drift apart
 * Signal over coverage — a tool that produces noise gets disabled within a fortnight
 * Comprehensibility — every tool has to be explainable, which rules out meta-linters
@@ -32,7 +34,7 @@ by manual squash merge rather than through pull requests.
 ## Considered Options
 
 * Python: **ruff** · pylint · flake8 + isort + black + bandit
-* Type checking: mypy · **pyright** · ty
+* Type checking: **pyrefly** · mypy · pyright · ty
 * TypeScript: **Biome** · ESLint + Prettier · oxlint
 * Security: **Trivy + hadolint + Checkov** · osv-scanner · Snyk · CodeQL · SonarQube Cloud
 * Secrets: **gitleaks** · TruffleHog · GitHub Secret Protection
@@ -51,10 +53,16 @@ The anti-drift property is the load-bearing part. Every workflow step is `run: j
 container images rather than installed binaries, so CI and a laptop execute the same
 version rather than whatever each happened to install.
 
-Type checking is deferred: the codebase already carries 16 `# pyright: ignore` suppressions
-for genuine gaps in deepeval's and langchain's type information, which means adopting mypy
-would produce a second, parallel set of suppressions in the same 16 places. Pyright is the
-better fit precisely because the editor already reports it, but that is a separate decision.
+Type checking is **pyrefly**, and pyright is out — including in the editor, where Pylance's
+type checking is switched off so there is one tool and one suppression syntax. The 16
+`# pyright: ignore` comments were deleted rather than translated: pyrefly does not report
+the underlying accesses at all, so they suppressed nothing.
+
+It runs on the `basic` preset, which reports 0 errors. That is a weak gate but a true one —
+it can only fail on a regression. `default` reports 36 and `strict` 68, largely one real
+defect: `_router.py` declares it returns `LlmSummaryResult` while returning a `dict`, and
+`evaluation_runner.py` indexes the result as if it were one. Raising the preset means
+fixing that, which is its own change.
 
 ### Consequences
 
@@ -71,7 +79,13 @@ better fit precisely because the editor already reports it, but that is a separa
   relies on the author reading the result.
 * **Bad** — Biome does not fully cover `rules-of-hooks`, and its CSS parser does not
   understand Tailwind 4's at-rules, so CSS is excluded from linting entirely.
+* **Bad** — pyrefly is 15 months old. It is 1.0 and runs at Instagram, PyTorch and JAX
+  scale, but it has neither mypy's decade of edge cases nor pyright's 97.8% conformance.
 * Neutral — roughly 250 files were reformatted mechanically on adoption.
+* Neutral — TypeScript `strict` was expected to be the one unknown quantity. It turned out
+  to be **zero errors**: no `any`, explicit prop interfaces and `noUnusedLocals` had already
+  done the work, so the migration was a single flag. Worth remembering as an argument that
+  discipline turns migrations into switches.
 
 ## Pros and Cons of the Options
 
@@ -121,6 +135,32 @@ better fit precisely because the editor already reports it, but that is a separa
 * `−` One slow hook leads to `--no-verify`, and then no hook runs at all
 * Kept: a single `pre-commit` hook running `gitleaks protect --staged` (~50 ms), because a
   leaked secret is the only item on this list that cannot be undone after a push
+
+### pyrefly over mypy, pyright and ty
+
+Numbers from the GitHub and PyPI APIs, August 2026.
+
+| | mypy | pyright | pyrefly | ty |
+|---|---|---|---|---|
+| Author | PSF | Microsoft | Meta | Astral |
+| First release | 2012 | 2019 | 02.2025 | 05.2025 |
+| GitHub stars | 20,591 | 15,583 | 6,878 | 19,457 |
+| PyPI / month | ~60M | 40.2M | 7.5M | 41.5M |
+| Typing-spec conformance | 58.3% | 97.8% | 87.8% | 53.2% |
+| Speed (pandas) | minutes | 144s | 1.9s | ~2s |
+| Stability | mature | mature | 1.0, May 2026 | 0.0.x |
+
+* `+` Only one of the three that is simultaneously stable, materially more conformant than
+  mypy (87.8% vs 58.3%), and fast
+* `+` Ships a `legacy` preset for codebases migrating off mypy
+* `−` Youngest of the mature options; smallest community
+* Rejected pyright because it is out by decision, and because keeping it would have meant
+  the editor and CI disagreeing once a second checker was added
+
+`ty` is the most interesting number here: 19,457 stars and 41.5M downloads a month in
+fifteen months, essentially matching mypy on stars. That is the ruff and uv effect — people
+trust Astral on sight. But 53.2% conformance and a `0.0.x` version mean the trust is running
+ahead of readiness. Revisit at 1.0.
 
 ### Rejected: `ty` (Astral)
 

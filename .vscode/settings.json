@@ -10,4 +10,23 @@
     "python.envFile": "${workspaceFolder}/backend/.env",
     "python-envs.defaultEnvManager": "ms-python.python:venv",
     // "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/activate",
+
+    // Pylance is pyright. Type checking is pyrefly's job now (see justfile), and running
+    // both means two sets of suppression comments for the same code. Pylance keeps doing
+    // completion, hover and go-to-definition.
+    "python.analysis.typeCheckingMode": "off",
+
+    // Formatters, so the editor stops guessing — this is what made Prettier look broken.
+    "editor.formatOnSave": true,
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+        }
+    },
+    "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+    "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+    "[json]": { "editor.defaultFormatter": "biomejs.biome" },
+    "[jsonc]": { "editor.defaultFormatter": "biomejs.biome" }
 }

@@ -8,6 +8,7 @@
 
 # Pinned so a local run and a CI run use the same binary.
 ruff := "ruff@0.16.2"
+pyrefly := "pyrefly@1.2.0"
 
 # Container images, not installed binaries — the only way CI and this laptop are
 # guaranteed to run the same version.
@@ -40,7 +41,7 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend lint-frontend test-backend
+lint: lint-backend typecheck-backend lint-frontend test-backend
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
@@ -57,6 +58,12 @@ fix: fix-frontend
 lint-backend:
     uvx {{ruff}} check backend/
     uvx {{ruff}} format --check backend/
+
+# Backend: type check
+[group('backend')]
+[working-directory('backend')]
+typecheck-backend:
+    uvx {{pyrefly}} check
 
 # Backend: does the app still import and wire up its routes?
 [group('backend')]

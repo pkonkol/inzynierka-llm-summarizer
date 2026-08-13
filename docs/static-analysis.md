@@ -40,8 +40,9 @@ is all it takes for `--no-verify` to become habit, and then no hook runs at all.
 |---|---|---|
 | **ruff** | lint + format | Python style, bugs, unsorted imports, `print()`, and Bandit's security rules via `S` |
 | **Biome** | lint + format | TypeScript/JSX/JSON, React hook rules, import order. Replaces ESLint and Prettier |
-| **tsc** | types | type errors, as a separate step from the build for faster feedback |
-| **pytest** | tests | currently the SSRF guard regression suite |
+| **tsc** | types | TypeScript in `strict` mode, as a separate step from the build |
+| **pyrefly** | types | Python types. `basic` preset — a true gate at 0 errors, not an aspirational one |
+| **pytest** | tests | currently the scraper's SSRF guard |
 | **gitleaks** | secrets | secrets across the whole git history, not just the working tree |
 | **Trivy** | SCA + IaC + image | dependency CVEs, Terraform misconfiguration, CVEs in a built image |
 | **hadolint** | lint | Dockerfile practices — missing `USER`, unpinned installs |
@@ -65,7 +66,7 @@ owned.
 
 ## Gates
 
-Trivy and the image scan fail on `HIGH,CRITICAL`. zizmor fails on `medium`, because the
+Trivy and the image scan fail on `HIGH,CRITICAL`. pyrefly runs on its `basic` preset, which reports 0 today; `default` reports 36 and `strict` 68, mostly one real `dict` vs `LlmSummaryResult` mismatch in the LLM layer. zizmor fails on `medium`, because the
 workflow surface is three files that hold the OIDC token and is worth being stricter about.
 Everything below a gate is reported rather than dropped — `just report-infra` and
 `just report-workflows` show the full picture.
@@ -81,7 +82,7 @@ Categories worth being able to name, with the tool used here in bold:
 
 1. **Formatting** — ruff format, **Biome**, `terraform fmt`
 2. **Linting** — **ruff**, **Biome**, oxlint, tflint, **hadolint**
-3. **Type checking** — mypy, pyright, ty, **tsc**
+3. **Type checking** — **pyrefly**, mypy, pyright, ty, **tsc**
 4. **SAST** — Semgrep, CodeQL, Bandit (**as ruff `S`**), SonarQube
 5. **SCA** — **Trivy**, **npm audit**, pip-audit, osv-scanner, Dependabot
 6. **Secret scanning** — **gitleaks**, TruffleHog, GitHub Push Protection

@@ -1,105 +1,12 @@
-import json
 import logging
+
+import structlog
 
 from .config import settings
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
-# ANSI colors
-_RESET = "\033[0m"
-_BOLD = "\033[1m"
-_DIM = "\033[2m"
-_RED = "\033[31m"
-_YELLOW = "\033[33m"
-_CYAN = "\033[36m"
-_GREEN = "\033[32m"
-_MAGENTA = "\033[35m"
-_BLUE = "\033[34m"
-_WHITE = "\033[37m"
-
-_LEVEL_COLORS = {
-    "DEBUG": _CYAN,
-    "INFO": _GREEN,
-    "WARNING": _YELLOW,
-    "ERROR": _RED + _BOLD,
-    "CRITICAL": _MAGENTA + _BOLD,
-}
-
-# JSON bracket rainbow — highlights nesting depth mod 4
-_JSON_COLORS = [_CYAN, _YELLOW, _GREEN, _MAGENTA]
-
-
-def _colorize_json(text: str) -> str:
-    """Rainbow-color JSON brackets by nesting depth."""
-    result = []
-    depth = 0
-    for ch in text:
-        if ch in "{[":
-            color = _JSON_COLORS[depth % len(_JSON_COLORS)]
-            result.append(f"{color}{ch}{_RESET}")
-            depth += 1
-        elif ch in "}]":
-            depth = max(0, depth - 1)
-            color = _JSON_COLORS[depth % len(_JSON_COLORS)]
-            result.append(f"{color}{ch}{_RESET}")
-        else:
-            result.append(ch)
-    return "".join(result)
-
-
-class _AppFormatter(logging.Formatter):
-    """Colored formatter with line numbers for app.* loggers."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        level_color = _LEVEL_COLORS.get(record.levelname, "")
-        level_str = f"{level_color}{record.levelname:<8}{_RESET}"
-
-        name_str = f"{_DIM}[{record.name}"
-        # add :lineno only for our own code
-        if record.name.startswith("app."):
-            name_str += f":{record.lineno}"
-        name_str += f"]{_RESET}"
-
-        ts = self.formatTime(record, self.datefmt)
-        ts_str = f"{_DIM}{ts}{_RESET}"
-
-        msg = record.getMessage()
-        if record.exc_info:
-            msg += "\n" + self.formatException(record.exc_info)
-
-        # pretty-print JSON blobs inside the message
-        if "{" in msg or "[" in msg:
-            msg = _colorize_json(msg)
-
-        return f"{ts_str} {level_str} {name_str} {msg}"
-
-
-class _CloudLoggingFormatter(logging.Formatter):
-    """One JSON object per line, using the field names GCP Cloud Logging understands.
-
-    `severity` is what makes log entries filterable by level in the Cloud Logging console;
-    plain-text ANSI output leaves everything as untyped DEFAULT-severity text.
-    """
-
-    def format(self, record: logging.LogRecord) -> str:
-        message = record.getMessage()
-        if record.exc_info:
-            message += "\n" + self.formatException(record.exc_info)
-
-        entry = {
-            "severity": record.levelname,
-            "message": message,
-            "logger": record.name,
-            "logging.googleapis.com/sourceLocation": {
-                "file": record.pathname,
-                "line": str(record.lineno),
-                "function": record.funcName,
-            },
-        }
-        return json.dumps(entry)
-
-
-# Noisy third-party loggers to suppress at DEBUG level
+# Third-party loggers that drown out our own output at DEBUG.
 _QUIET_IN_DEBUG = [
     "pymongo",
     "httpcore",
@@ -107,35 +14,120 @@ _QUIET_IN_DEBUG = [
     "openai._base_client",
     "urllib3",
     "asyncio",
+    "trafilatura",
 ]
+
+# Cloud Logging keys off `severity` for the level and `message` for the summary line;
+# every other key lands in jsonPayload and becomes filterable.
+_GCP_LEVELS = {"warning": "WARNING", "error": "ERROR", "critical": "CRITICAL"}
+
+
+def _rename_for_cloud_logging(_logger, _name, event_dict):
+    level = event_dict.pop("level", "info")
+    event_dict["severity"] = _GCP_LEVELS.get(level, level.upper())
+    event_dict["message"] = event_dict.pop("event", "")
+    return event_dict
+
+
+# Colour carries meaning in dev output: correlation keys, identity of the model call, and
+# measurements each get their own hue, so a line is scannable without reading the keys.
+_FIELD_COLOURS = {
+    "job_id": structlog.dev.MAGENTA,
+    "request_id": structlog.dev.MAGENTA,
+    "url": structlog.dev.BLUE,
+    "provider": structlog.dev.CYAN,
+    "model": structlog.dev.CYAN,
+    "mode": structlog.dev.CYAN,
+    "duration_ms": structlog.dev.YELLOW,
+    "token_usage": structlog.dev.YELLOW,
+    "status": structlog.dev.GREEN,
+}
+
+
+def _console_renderer() -> structlog.dev.ConsoleRenderer:
+    # structlog ships debug and info in the same green, and error and critical in the same
+    # red, which defeats the point of colouring the level at all.
+    levels = structlog.dev.ConsoleRenderer.get_default_level_styles()
+    levels["debug"] = structlog.dev.CYAN
+    levels["critical"] = structlog.dev.MAGENTA
+
+    renderer = structlog.dev.ConsoleRenderer(level_styles=levels)
+
+    named = [
+        structlog.dev.Column(
+            key,
+            structlog.dev.KeyValueColumnFormatter(
+                key_style=structlog.dev.DIM,
+                value_style=colour,
+                reset_style=structlog.dev.RESET_ALL,
+                value_repr=str,
+            ),
+        )
+        for key, colour in _FIELD_COLOURS.items()
+    ]
+
+    # The column with an empty key is structlog's catch-all and has to stay last. Building
+    # on top of renderer.columns rather than rebuilding the default layout by hand keeps
+    # timestamp/level/event rendering owned by structlog.
+    catch_all = [c for c in renderer.columns if c.key == ""]
+    keyed = [c for c in renderer.columns if c.key != ""]
+    renderer.columns = [*keyed, *named, *catch_all]
+    return renderer
 
 
 def setup_logging() -> None:
     level = logging.DEBUG if settings.debug else logging.INFO
+    to_json = settings.log_format == "json"
 
-    root = logging.getLogger()
-    root.setLevel(level)
+    # Applied to structlog calls and to stdlib records from third-party libraries alike,
+    # so uvicorn and pymongo end up in the same format as our own events.
+    shared = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        structlog.processors.StackInfoRenderer(),
+    ]
 
-    # remove any handlers basicConfig may have added
-    root.handlers.clear()
+    structlog.configure(
+        processors=[*shared, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.make_filtering_bound_logger(level),
+        cache_logger_on_first_use=True,
+    )
+
+    if to_json:
+        render = [
+            structlog.processors.format_exc_info,
+            _rename_for_cloud_logging,
+            structlog.processors.JSONRenderer(),
+        ]
+    else:
+        render = [_console_renderer()]
 
     handler = logging.StreamHandler()
-    handler.setLevel(level)
-    if settings.log_format == "json":
-        handler.setFormatter(_CloudLoggingFormatter())
-    else:
-        # No datefmt: logging's default appends milliseconds ("2026-08-12 14:23:45,123").
-        # strftime has no %f, so spelling it out in a datefmt string silently drops them.
-        handler.setFormatter(_AppFormatter())
-    root.addHandler(handler)
+    handler.setFormatter(
+        structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=shared,
+            processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, *render],
+        )
+    )
 
-    # silence noisy libs when debug is on
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(level)
+
+    # uvicorn installs its own handlers and sets propagate=False, so without this its
+    # startup and access lines bypass everything above and reach Cloud Logging as
+    # unstructured text with no severity — while ours arrive as JSON.
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        uvicorn_logger = logging.getLogger(name)
+        uvicorn_logger.handlers.clear()
+        uvicorn_logger.propagate = True
+
     if settings.debug:
         for name in _QUIET_IN_DEBUG:
             logging.getLogger(name).setLevel(logging.WARNING)
 
-    logger.info(
-        "Logging initialized — level: %s, format: %s",
-        "DEBUG" if settings.debug else "INFO",
-        settings.log_format,
-    )
+    log.info("logging initialised", level=logging.getLevelName(level), format=settings.log_format)

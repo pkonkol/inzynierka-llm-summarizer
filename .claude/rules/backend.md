@@ -106,5 +106,18 @@ self-explanatory functions just to have them.
 
 ## Fetching user-supplied URLs
 
-Anything that fetches an address a user chose goes through `core/url_guard.py`. See
-`docs/security/0001-ssrf-scraper.md` for why the short version of that check does not work.
+Anything that fetches an address a user chose goes through `_assert_fetchable` in
+`services/scraper.py`. See `docs/security/0001-ssrf-scraper.md` for why the short version
+of that check does not work.
+
+## Types
+
+`pyrefly`, configured in `pyproject.toml`. Suppress with `# pyrefly: ignore`, never
+`# pyright: ignore` — Pylance's type checking is off precisely so there is one tool and one
+suppression syntax.
+
+## File layout
+
+One module, one test file: `app/services/x.py` ↔ `tests/test_x.py`. Do not split a helper
+into its own module just because it is a distinct concern — a helper with one caller lives
+next to that caller.

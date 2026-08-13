@@ -8,6 +8,7 @@ import { EvaluationSetPage } from "./pages/EvaluationSetPage";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
+import { logger } from "./utils/logger";
 import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRouting";
 
 type Route = "home" | "jobs" | "research";
@@ -58,6 +59,9 @@ function App() {
                 setIsAuthEnabled(authStatus.enabled);
             } catch {
                 if (!isMounted) return;
+                // Fails open: the UI hides the login prompt. The backend still rejects
+                // unauthenticated writes, so this only affects what is rendered.
+                logger.warn("auth status unavailable, assuming auth disabled");
                 setIsAuthEnabled(false);
             }
         };

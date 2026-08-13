@@ -1,6 +1,6 @@
 # SSRF w scraperze — analiza i poprawka
 
-**Status:** naprawione (`backend/app/core/url_guard.py`, `backend/app/services/scraper.py`)
+**Status:** naprawione (`backend/app/services/scraper.py`)
 **Klasa:** OWASP Top 10 A10:2021 — Server-Side Request Forgery, OWASP API Security API7:2023
 **Znalezione:** sierpień 2026, podczas wdrażania statycznej analizy kodu
 
@@ -90,8 +90,8 @@ Warstwowo, od granicy API w głąb.
 realizacja zasady „parse, don't validate": typ niesie gwarancję, kod niżej jej nie sprawdza
 ponownie.
 
-**2. Weryfikacja rozwiązanych adresów** — `core/url_guard.py`. Rozwiązuje nazwę i sprawdza
-**każdy** zwrócony adres:
+**2. Weryfikacja rozwiązanych adresów** — `_assert_fetchable` w `services/scraper.py`, obok
+jedynego miejsca, które jej używa. Rozwiązuje nazwę i sprawdza **każdy** zwrócony adres:
 
 ```python
 ip.is_private or ip.is_loopback or ip.is_link_local
@@ -127,10 +127,10 @@ w dojrzałej architekturze — obrona w aplikacji jest pierwszą warstwą, nie j
 
 ## 7. Wykrywanie i regresja
 
-- **Test regresyjny:** `backend/tests/test_url_guard.py` — 15 form obejścia z sekcji 5,
-  każda jako osobny przypadek. Uruchamiany przez `just test-backend`, czyli w CI przy każdym
-  pushu. Guard, który tylko dopasowuje napis `"localhost"`, przechodzi review i wywala
-  większość tej listy.
+- **Test regresyjny:** `backend/tests/test_scraper.py` — po jednym przypadku na *klasę*
+  obejścia z sekcji 5 (zapis dziesiętny, IPv6 mapowany, link-local, zły schemat, RFC1918),
+  nie po jednym na każdą pisownię. Uruchamiany przez `just test-backend`, czyli w CI przy
+  każdym pushu.
 - **Semgrep** (Tier 1): reguła taint mode, source = pola requestu FastAPI, sink = warstwa
   HTTP. Wychwyci, gdy ktoś w przyszłości doda drugą ścieżkę pobierania z pominięciem guarda.
 - **Log:** odrzucenie to `log.warning("scraper url rejected", url=...)`. Powtarzające się

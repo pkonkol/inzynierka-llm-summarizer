@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "charliermarsh.ruff",
+        "meta.pyrefly",
+        "biomejs.biome",
+        "hashicorp.terraform",
+        "exiasr.hadolint"
+    ]
+}

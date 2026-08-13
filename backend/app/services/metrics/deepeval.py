@@ -58,7 +58,7 @@ def build_summary_metrics(settings: Settings) -> list[Any]:
                 "for its length. A single-sentence summary can score highly if it presents one clear, unified idea "
                 "without contradictions, abrupt shifts, or confusing structure."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
         GEval(
             name="summary_fluency",
@@ -68,7 +68,7 @@ def build_summary_metrics(settings: Settings) -> list[Any]:
                 "Assess whether the summary is fluent, grammatically correct, natural-sounding, "
                 "and easy to read. Penalize awkward wording, grammar mistakes, and unnatural phrasing."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
     ]
 
@@ -89,7 +89,7 @@ def build_summary_input_metrics(settings: Settings) -> list[Any]:
                 "Assess whether the summary preserves the key information from the input text "
                 "without omitting major facts, claims, or conclusions."
             ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
     ]
 
@@ -106,7 +106,7 @@ def build_takeaways_metrics(settings: Settings) -> list[Any]:
                 "Assess whether the key takeaways are non-redundant. Penalize repeated ideas, "
                 "near-duplicate bullets, and multiple points that express the same fact."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
     ]
 
@@ -123,7 +123,7 @@ def build_takeaways_input_metrics(settings: Settings) -> list[Any]:
                 "Assess whether the key takeaways cover the most important facts and ideas from the input text. "
                 "Penalize missing major points and overemphasis on minor details."
             ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
     ]
 
@@ -141,7 +141,7 @@ def build_summary_takeaways_metrics(settings: Settings) -> list[Any]:
                 "Penalize omission of major takeaway points, contradictions, and summaries that are "
                 "too generic relative to the takeaways."
             ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
         ),
     ]
 

@@ -49,7 +49,7 @@ def _pairwise_metric_with_input(settings: Settings) -> GEval:
             LLMTestCaseParams.INPUT,
             LLMTestCaseParams.ACTUAL_OUTPUT,
             LLMTestCaseParams.EXPECTED_OUTPUT,
-        ],  # pyright: ignore[reportAttributeAccessIssue]
+        ],
     )
 
 
@@ -68,7 +68,7 @@ def _pairwise_metric_without_input(settings: Settings) -> GEval:
             "Compare quality and informativeness.",
             "Assign higher score when Summary A is better, lower score when Summary B is better.",
         ],
-        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],  # pyright: ignore[reportAttributeAccessIssue]
+        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.EXPECTED_OUTPUT],
     )
 
 

@@ -1,0 +1,2348 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Piotr Konkol - Praca in\u017cynierska - Podsumowania z u\u017cyciem LLM",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Auth Status",
+        "operationId": "get_auth_status_auth_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Token",
+        "operationId": "get_token_auth_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/summarize": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Create summarize job",
+        "operationId": "create_summarize_job_api_v1_jobs_summarize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Create Summarize Job Api V1 Jobs Summarize Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List summarized URLs (grouped, home page)",
+        "operationId": "list_summarized_urls_api_v1_jobs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UrlSummaryListItem"
+                  },
+                  "title": "Response List Summarized Urls Api V1 Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/list": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List all jobs flat (/jobs page)",
+        "operationId": "list_all_jobs_flat_api_v1_jobs_list_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobListItemResponse"
+                  },
+                  "title": "Response List All Jobs Flat Api V1 Jobs List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/by-url": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get all jobs for a URL",
+        "operationId": "get_jobs_for_url_api_v1_jobs_by_url_get",
+        "parameters": [
+          {
+            "name": "source_url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Exact source URL",
+              "title": "Source Url"
+            },
+            "description": "Exact source URL"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "One of supported statuses",
+              "title": "Status"
+            },
+            "description": "One of supported statuses"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobStatusResponse"
+                  },
+                  "title": "Response Get Jobs For Url Api V1 Jobs By Url Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get job status (polling)",
+        "operationId": "get_job_status_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Delete Job",
+        "operationId": "delete_job_api_v1_jobs__job_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Job Api V1 Jobs  Job Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/models": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get supported models",
+        "operationId": "get_supported_models_api_v1_meta_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "type": "object",
+                  "title": "Response Get Supported Models Api V1 Meta Models Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/languages": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get supported languages",
+        "operationId": "get_supported_languages_api_v1_meta_languages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Get Supported Languages Api V1 Meta Languages Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/modes": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get supported summary modes",
+        "description": "Returns {mode_key: human_readable_label}.",
+        "operationId": "get_supported_modes_api_v1_meta_modes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Get Supported Modes Api V1 Meta Modes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/evaluation-sets": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "List Evaluation Sets",
+        "operationId": "list_evaluation_sets_api_v1_research_evaluation_sets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationSetListItemResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Evaluation Sets Api V1 Research Evaluation Sets Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Create Evaluation Set",
+        "operationId": "create_evaluation_set_api_v1_research_evaluation_sets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationSetImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationSetCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/research/evaluation-sets/{set_id}": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Evaluation Set",
+        "operationId": "get_evaluation_set_api_v1_research_evaluation_sets__set_id__get",
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationSetDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Delete Evaluation Set",
+        "operationId": "delete_evaluation_set_api_v1_research_evaluation_sets__set_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "title": "Response Delete Evaluation Set Api V1 Research Evaluation Sets  Set Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/evaluation-sets/{set_id}/export": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Export Evaluation Set",
+        "operationId": "export_evaluation_set_api_v1_research_evaluation_sets__set_id__export_get",
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/evaluation-sets/{set_id}/entries/{entry_id}/input-text": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Evaluation Set Entry Input Text",
+        "operationId": "get_evaluation_set_entry_input_text_api_v1_research_evaluation_sets__set_id__entries__entry_id__input_text_get",
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          },
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationSetEntryInputTextResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/evaluation-sets/{set_id}/golden-metrics": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Evaluate Missing Golden Metrics",
+        "operationId": "evaluate_missing_golden_metrics_api_v1_research_evaluation_sets__set_id__golden_metrics_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "title": "Response Evaluate Missing Golden Metrics Api V1 Research Evaluation Sets  Set Id  Golden Metrics Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/evaluation-sets/{set_id}/runs": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Create Evaluation Run",
+        "operationId": "create_evaluation_run_api_v1_research_evaluation_sets__set_id__runs_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationRunCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRunCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "List Evaluation Runs",
+        "operationId": "list_evaluation_runs_api_v1_research_evaluation_sets__set_id__runs_get",
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationRunListItemResponse"
+                  },
+                  "title": "Response List Evaluation Runs Api V1 Research Evaluation Sets  Set Id  Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Evaluation Run",
+        "operationId": "get_evaluation_run_api_v1_research_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Delete Evaluation Run",
+        "operationId": "delete_evaluation_run_api_v1_research_runs__run_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Evaluation Run Api V1 Research Runs  Run Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/runs/{run_id}/entries": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Evaluation Run Entries",
+        "operationId": "get_evaluation_run_entries_api_v1_research_runs__run_id__entries_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRunEntriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/runs/{run_id}/deepeval": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Evaluate Run Deepeval",
+        "operationId": "evaluate_run_deepeval_api_v1_research_runs__run_id__deepeval_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Evaluate Run Deepeval Api V1 Research Runs  Run Id  Deepeval Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AiMetrics": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/SummaryStatisticalMetrics"
+          },
+          "key_takeaways": {
+            "$ref": "#/components/schemas/KeyTakeawaysMetrics"
+          },
+          "deepeval": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DeepevalItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deepeval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "key_takeaways"
+        ],
+        "title": "AiMetrics"
+      },
+      "AuthStatusResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "AuthStatusResponse"
+      },
+      "CrossMetrics": {
+        "properties": {
+          "rouge1": {
+            "type": "number",
+            "title": "Rouge1"
+          },
+          "rouge2": {
+            "type": "number",
+            "title": "Rouge2"
+          },
+          "rougeL": {
+            "type": "number",
+            "title": "Rougel"
+          },
+          "meteor": {
+            "type": "number",
+            "title": "Meteor"
+          },
+          "deepeval": {
+            "items": {
+              "$ref": "#/components/schemas/PairwiseDeepevalItem"
+            },
+            "type": "array",
+            "title": "Deepeval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rouge1",
+          "rouge2",
+          "rougeL",
+          "meteor"
+        ],
+        "title": "CrossMetrics"
+      },
+      "DeepevalItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "score",
+          "passed",
+          "reason"
+        ],
+        "title": "DeepevalItem"
+      },
+      "EvaluationRunCreateRequest": {
+        "properties": {
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "summary_mode": {
+            "type": "string",
+            "title": "Summary Mode",
+            "default": "simple"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "rate_limit_delay_ms": {
+            "type": "integer",
+            "title": "Rate Limit Delay Ms",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_provider",
+          "model_name"
+        ],
+        "title": "EvaluationRunCreateRequest"
+      },
+      "EvaluationRunCreateResponse": {
+        "properties": {
+          "evaluation_run_id": {
+            "type": "string",
+            "title": "Evaluation Run Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_run_id",
+          "status",
+          "created_at"
+        ],
+        "title": "EvaluationRunCreateResponse"
+      },
+      "EvaluationRunEntriesResponse": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationRunEntryResponse"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "title": "EvaluationRunEntriesResponse"
+      },
+      "EvaluationRunEntryResponse": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "golden_summary": {
+            "type": "string",
+            "title": "Golden Summary"
+          },
+          "golden_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ai_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Summary"
+          },
+          "ai_key_takeaways": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ai Key Takeaways"
+          },
+          "ai_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cross_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CrossMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "default": "pending"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_id",
+          "title",
+          "url",
+          "golden_summary"
+        ],
+        "title": "EvaluationRunEntryResponse",
+        "description": "API-facing shape \u2014 includes title/url/golden_metrics joined from the parent set."
+      },
+      "EvaluationRunListItemResponse": {
+        "properties": {
+          "evaluation_run_id": {
+            "type": "string",
+            "title": "Evaluation Run Id"
+          },
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "evaluation_set_name": {
+            "type": "string",
+            "title": "Evaluation Set Name"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "summary_mode": {
+            "type": "string",
+            "title": "Summary Mode"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "entry_count": {
+            "type": "integer",
+            "title": "Entry Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_run_id",
+          "evaluation_set_id",
+          "evaluation_set_name",
+          "model_provider",
+          "model_name",
+          "summary_mode",
+          "language",
+          "status",
+          "created_at",
+          "entry_count"
+        ],
+        "title": "EvaluationRunListItemResponse"
+      },
+      "EvaluationRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "evaluation_set_name": {
+            "type": "string",
+            "title": "Evaluation Set Name"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "summary_mode": {
+            "type": "string",
+            "title": "Summary Mode"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "entry_count": {
+            "type": "integer",
+            "title": "Entry Count"
+          },
+          "aggregate_metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Aggregate Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "evaluation_set_id",
+          "evaluation_set_name",
+          "model_provider",
+          "model_name",
+          "summary_mode",
+          "language",
+          "status",
+          "created_at",
+          "entry_count"
+        ],
+        "title": "EvaluationRunResponse"
+      },
+      "EvaluationSetCreateResponse": {
+        "properties": {
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "entry_count": {
+            "type": "integer",
+            "title": "Entry Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_set_id",
+          "name",
+          "language",
+          "entry_count",
+          "created_at"
+        ],
+        "title": "EvaluationSetCreateResponse"
+      },
+      "EvaluationSetDetailResponse": {
+        "properties": {
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationSetEntryResponse"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_set_id",
+          "name",
+          "language",
+          "created_at",
+          "entries"
+        ],
+        "title": "EvaluationSetDetailResponse"
+      },
+      "EvaluationSetEntryImport": {
+        "properties": {
+          "input_text": {
+            "type": "string",
+            "title": "Input Text"
+          },
+          "golden_summary": {
+            "type": "string",
+            "title": "Golden Summary"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "golden_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_text",
+          "golden_summary",
+          "title",
+          "url"
+        ],
+        "title": "EvaluationSetEntryImport"
+      },
+      "EvaluationSetEntryInputTextResponse": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "input_text": {
+            "type": "string",
+            "title": "Input Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_id",
+          "input_text"
+        ],
+        "title": "EvaluationSetEntryInputTextResponse"
+      },
+      "EvaluationSetEntryResponse": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "golden_summary": {
+            "type": "string",
+            "title": "Golden Summary"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "golden_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_id",
+          "golden_summary",
+          "title",
+          "url"
+        ],
+        "title": "EvaluationSetEntryResponse",
+        "description": "input_text is deliberately excluded \u2014 fetched separately via the input-text endpoint."
+      },
+      "EvaluationSetImportRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationSetEntryImport"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "entries"
+        ],
+        "title": "EvaluationSetImportRequest"
+      },
+      "EvaluationSetListItemResponse": {
+        "properties": {
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "entry_count": {
+            "type": "integer",
+            "title": "Entry Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluation_set_id",
+          "name",
+          "language",
+          "entry_count",
+          "created_at"
+        ],
+        "title": "EvaluationSetListItemResponse"
+      },
+      "GoldenMetrics": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceMetrics"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryStatisticalMetrics"
+          },
+          "deepeval": {
+            "items": {
+              "$ref": "#/components/schemas/DeepevalItem"
+            },
+            "type": "array",
+            "title": "Deepeval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "summary",
+          "deepeval"
+        ],
+        "title": "GoldenMetrics"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobCreateRequest": {
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "summary_mode": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "sequential",
+              "cascade"
+            ],
+            "title": "Summary Mode",
+            "default": "simple"
+          },
+          "run_deepeval": {
+            "type": "boolean",
+            "title": "Run Deepeval",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_name",
+          "model_provider",
+          "url"
+        ],
+        "title": "JobCreateRequest"
+      },
+      "JobListItemResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "summary_mode": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "sequential",
+              "cascade"
+            ],
+            "title": "Summary Mode"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "source_url",
+          "status",
+          "title",
+          "summary",
+          "model_provider",
+          "model_name",
+          "summary_mode",
+          "updated_at"
+        ],
+        "title": "JobListItemResponse",
+        "description": "Flat per-job entry used by GET /api/v1/jobs/list."
+      },
+      "JobMetrics": {
+        "properties": {
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummaryStatisticalMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key_takeaways": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KeyTakeawaysMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "JobMetrics",
+        "description": "All None at insert time \u2014 metrics are computed asynchronously after the job starts."
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "summary_mode": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "sequential",
+              "cascade"
+            ],
+            "title": "Summary Mode"
+          },
+          "summary_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummaryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/JobMetrics"
+          },
+          "deepeval_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/DeepevalItem"
+            },
+            "type": "array",
+            "title": "Deepeval Metrics"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
+          },
+          "raw_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Metadata"
+          },
+          "raw_output": {
+            "type": "string",
+            "title": "Raw Output"
+          },
+          "input_text": {
+            "type": "string",
+            "title": "Input Text"
+          },
+          "prompt_template": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Prompt Template"
+          },
+          "prompt_params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Prompt Params"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "source_url",
+          "status",
+          "model_provider",
+          "model_name",
+          "summary_mode",
+          "metrics",
+          "deepeval_metrics",
+          "usage",
+          "raw_metadata",
+          "raw_output",
+          "input_text",
+          "prompt_template",
+          "prompt_params",
+          "created_at",
+          "duration_ms"
+        ],
+        "title": "JobStatusResponse"
+      },
+      "KeyTakeawaysMetrics": {
+        "properties": {
+          "bullet_count": {
+            "type": "integer",
+            "title": "Bullet Count"
+          },
+          "char_count": {
+            "type": "integer",
+            "title": "Char Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bullet_count",
+          "char_count"
+        ],
+        "title": "KeyTakeawaysMetrics"
+      },
+      "PairwiseDeepevalItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "score",
+          "reason"
+        ],
+        "title": "PairwiseDeepevalItem",
+        "description": "score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."
+      },
+      "SourceMetrics": {
+        "properties": {
+          "char_count": {
+            "type": "integer",
+            "title": "Char Count"
+          },
+          "flesch_kincaid_grade": {
+            "type": "number",
+            "title": "Flesch Kincaid Grade"
+          },
+          "text_standard": {
+            "type": "number",
+            "title": "Text Standard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "char_count",
+          "flesch_kincaid_grade",
+          "text_standard"
+        ],
+        "title": "SourceMetrics"
+      },
+      "SummaryResponse": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "key_takeaways": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Takeaways"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "summary",
+          "key_takeaways",
+          "source_url"
+        ],
+        "title": "SummaryResponse",
+        "description": "Structured output the LLM is asked to produce."
+      },
+      "SummaryStatisticalMetrics": {
+        "properties": {
+          "char_count": {
+            "type": "integer",
+            "title": "Char Count"
+          },
+          "flesch_kincaid_grade": {
+            "type": "number",
+            "title": "Flesch Kincaid Grade"
+          },
+          "text_standard": {
+            "type": "number",
+            "title": "Text Standard"
+          },
+          "length_ratio": {
+            "type": "number",
+            "title": "Length Ratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "char_count",
+          "flesch_kincaid_grade",
+          "text_standard",
+          "length_ratio"
+        ],
+        "title": "SummaryStatisticalMetrics"
+      },
+      "TokenRequest": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "TokenRequest"
+      },
+      "TokenResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UrlSummaryListItem": {
+        "properties": {
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "completed_count": {
+            "type": "integer",
+            "title": "Completed Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "latest_title": {
+            "type": "string",
+            "title": "Latest Title"
+          },
+          "latest_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Latest Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_url",
+          "completed_count",
+          "failed_count",
+          "latest_title",
+          "latest_updated_at"
+        ],
+        "title": "UrlSummaryListItem",
+        "description": "One entry per unique source_url for the home page list."
+      },
+      "UsageMetadata": {
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens",
+            "default": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "title": "Output Tokens",
+            "default": 0
+          },
+          "thinking_tokens": {
+            "type": "integer",
+            "title": "Thinking Tokens",
+            "default": 0
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "UsageMetadata"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -15,98 +15,98 @@ import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRo
 type Route = "home" | "jobs" | "research";
 
 function getRoute(): Route {
-    const path = window.location.pathname;
-    if (path.startsWith("/jobs")) return "jobs";
-    if (path.startsWith("/research")) return "research";
-    return "home";
+  const path = window.location.pathname;
+  if (path.startsWith("/jobs")) return "jobs";
+  if (path.startsWith("/research")) return "research";
+  return "home";
 }
 
 function ResearchRouter() {
-    const [pathname, setPathname] = useState(window.location.pathname);
+  const [pathname, setPathname] = useState(window.location.pathname);
 
-    useEffect(() => {
-        const onPop = () => setPathname(window.location.pathname);
-        window.addEventListener("popstate", onPop);
-        return () => window.removeEventListener("popstate", onPop);
-    }, []);
+  useEffect(() => {
+    const onPop = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
-    const runId = getRunIdFromPath(pathname);
-    if (runId) return <EvaluationRunPage runId={runId} />;
+  const runId = getRunIdFromPath(pathname);
+  if (runId) return <EvaluationRunPage runId={runId} />;
 
-    const setId = getEvaluationSetIdFromPath(pathname);
-    if (setId) return <EvaluationSetPage setId={setId} />;
+  const setId = getEvaluationSetIdFromPath(pathname);
+  if (setId) return <EvaluationSetPage setId={setId} />;
 
-    return <ResearchPage />;
+  return <ResearchPage />;
 }
 
 function App() {
-    const [route, setRoute] = useState<Route>(getRoute);
-    const [isAuthEnabled, setIsAuthEnabled] = useState(false);
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
+  const [route, setRoute] = useState<Route>(getRoute);
+  const [isAuthEnabled, setIsAuthEnabled] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
 
-    useEffect(() => {
-        const onPop = () => setRoute(getRoute());
-        window.addEventListener("popstate", onPop);
-        return () => window.removeEventListener("popstate", onPop);
-    }, []);
+  useEffect(() => {
+    const onPop = () => setRoute(getRoute());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
-    useEffect(() => {
-        let isMounted = true;
-        const loadAuthStatus = async () => {
-            try {
-                const authStatus = await getAuthStatus();
-                if (!isMounted) return;
-                setIsAuthEnabled(authStatus.enabled);
-            } catch {
-                if (!isMounted) return;
-                // Fails open: the UI hides the login prompt. The backend still rejects
-                // unauthenticated writes, so this only affects what is rendered.
-                logger.warn("auth status unavailable, assuming auth disabled");
-                setIsAuthEnabled(false);
-            }
-        };
-        void loadAuthStatus();
-        return () => {
-            isMounted = false;
-        };
-    }, []);
+  useEffect(() => {
+    let isMounted = true;
+    const loadAuthStatus = async () => {
+      try {
+        const authStatus = await getAuthStatus();
+        if (!isMounted) return;
+        setIsAuthEnabled(authStatus.enabled);
+      } catch {
+        if (!isMounted) return;
+        // Fails open: the UI hides the login prompt. The backend still rejects
+        // unauthenticated writes, so this only affects what is rendered.
+        logger.warn("auth status unavailable, assuming auth disabled");
+        setIsAuthEnabled(false);
+      }
+    };
+    void loadAuthStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-    function navigate(next: Route) {
-        const path = next === "home" ? "/" : `/${next}`;
-        window.history.pushState({}, "", path);
-        setRoute(next);
-    }
+  function navigate(next: Route) {
+    const path = next === "home" ? "/" : `/${next}`;
+    window.history.pushState({}, "", path);
+    setRoute(next);
+  }
 
-    function handleLoginSuccess() {
-        setIsLoggedIn(true);
-        setIsLoginOpen(false);
-    }
+  function handleLoginSuccess() {
+    setIsLoggedIn(true);
+    setIsLoginOpen(false);
+  }
 
-    // Reference gallery for the design system; deliberately outside the app chrome.
-    if (window.location.pathname.startsWith("/design")) {
-        return <DesignPage />;
-    }
+  // Reference gallery for the design system; deliberately outside the app chrome.
+  if (window.location.pathname.startsWith("/design")) {
+    return <DesignPage />;
+  }
 
-    return (
-        <div className="relative min-h-screen overflow-x-hidden">
-            <NavDock
-                active={route}
-                onNavigate={navigate}
-                isAuthEnabled={isAuthEnabled}
-                isLoggedIn={isLoggedIn}
-                onOpenLogin={() => setIsLoginOpen(true)}
-            />
-            <LoginOverlay
-                isOpen={isLoginOpen}
-                onSuccess={handleLoginSuccess}
-                onClose={() => setIsLoginOpen(false)}
-            />
-            {route === "home" && <HomePage />}
-            {route === "jobs" && <JobsPage />}
-            {route === "research" && <ResearchRouter />}
-        </div>
-    );
+  return (
+    <div className="relative min-h-screen overflow-x-hidden">
+      <NavDock
+        active={route}
+        onNavigate={navigate}
+        isAuthEnabled={isAuthEnabled}
+        isLoggedIn={isLoggedIn}
+        onOpenLogin={() => setIsLoginOpen(true)}
+      />
+      <LoginOverlay
+        isOpen={isLoginOpen}
+        onSuccess={handleLoginSuccess}
+        onClose={() => setIsLoginOpen(false)}
+      />
+      {route === "home" && <HomePage />}
+      {route === "jobs" && <JobsPage />}
+      {route === "research" && <ResearchRouter />}
+    </div>
+  );
 }
 
 export default App;

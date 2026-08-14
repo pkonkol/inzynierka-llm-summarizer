@@ -59,6 +59,65 @@ The fix wasn't in the component — it was giving `source_meta` a real type (`So
 
 A malformed or incomplete API response should throw where it's parsed, not degrade silently into a half-rendered UI. Don't add `try { } catch { /* ignore */ }` around fetches.
 
+## Spacing
+
+Requirement levels are RFC 2119: **MUST** is a review blocker, **SHOULD** needs a reason in
+the reply, **MAY** is free choice.
+
+### Who owns the space — MUST
+
+The parent owns the space *between* children, the child owns the space *inside itself*.
+
+- A container with more than one child **MUST** set `grid gap-*` (or `flex gap-*`) instead of
+  letting children space themselves.
+- A child **MUST NOT** set an outer margin (`mt-*`, `mb-*`, `ml-*`, `mr-*`) to position itself
+  in its parent. Padding on itself is fine; margin is not.
+- A component **MUST NOT** carry a margin that only makes sense at one call site — that
+  spacing belongs to the caller's `gap`.
+
+Why: with `gap`, adding, reordering or conditionally hiding a child cannot leave a double or
+missing space, because no child knows about its siblings. With margins it always can.
+
+```tsx
+// BAD — the list positions itself, and hiding <Alert> leaves a hole
+<section>
+  <Alert className="mt-4">{flash}</Alert>
+  <JobsList className="mt-6" />
+</section>
+
+// GOOD — one number, in one place, and every child is position-agnostic
+<section className="grid gap-6">
+  <Alert>{flash}</Alert>
+  <JobsList />
+</section>
+```
+
+`space-y-*` is `gap` implemented as margins on the children; use `grid gap-*` instead.
+
+Inline spacing inside a line of text (`ml-2` on a status glyph after a label) is not layout
+and is exempt.
+
+### Which numbers — SHOULD
+
+`--spacing` is `0.25rem`, so every step is `N × 4px`. Eight steps cover the whole UI:
+
+| range | steps | px | for |
+|---|---|---|---|
+| micro | `1`, `2` | 4, 8 | label–value, icon–text |
+| base | `3`, `4`, `6` | 12, 16, 24 | ~90% of cases |
+| macro | `8`, `12`, `16` | 32, 48, 64 | between sections |
+
+- Spacing utilities **SHOULD** use one of these steps. `5` (20px) is deliberately absent —
+  it is the step people pick when hesitating between 16 and 24.
+- Half steps (`2.5`, `3.5`) and off-scale values (`4.5`, `5.5`) **SHOULD NOT** be used.
+- Arbitrary values (`min-h-[320px]`, `max-w-355`) **MUST NOT** be used for a value that a
+  scale step already expresses (`min-h-80` is the same 320px). A genuine design decision
+  **MUST** become a token in `@theme` (`--container-app`) or a named constant next to the
+  component (`SPLIT_COLUMNS` in `ui/PageShell.tsx`).
+
+Control heights are uniform: every input, select and full-height button is `h-11` (44px), so
+they line up in a row without per-call-site tuning. Rendered at `/design`.
+
 ## Stack notes
 
 - React + TypeScript, Vite, Tailwind.

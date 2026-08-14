@@ -4,38 +4,38 @@ import { getEvaluationSetEntryInputText } from "../api/research";
 import { PreBlock } from "./PreBlock";
 
 type Props = {
-    setId: string;
-    entryId: string;
+  setId: string;
+  entryId: string;
 };
 
 export function InputTextSection({ setId, entryId }: Props) {
-    const [inputText, setInputText] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inputText, setInputText] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-        getEvaluationSetEntryInputText(setId, entryId)
-            .then((data) => {
-                if (!isMounted) return;
-                setInputText(data.input_text);
-            })
-            .catch((error: unknown) => {
-                if (!isMounted) return;
-                setErrorMessage(`Nie udało się pobrać input text: ${String(error)}`);
-            })
-            .finally(() => {
-                if (isMounted) setIsLoading(false);
-            });
+    getEvaluationSetEntryInputText(setId, entryId)
+      .then((data) => {
+        if (!isMounted) return;
+        setInputText(data.input_text);
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+        setErrorMessage(`Nie udało się pobrać input text: ${String(error)}`);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
 
-        return () => {
-            isMounted = false;
-        };
-    }, [setId, entryId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [setId, entryId]);
 
-    if (isLoading) return <p className="m-0 p-3 text-sm text-muted">Ładowanie...</p>;
-    if (errorMessage) return <p className="m-0 p-3 text-sm text-danger">{errorMessage}</p>;
+  if (isLoading) return <p className="m-0 p-3 text-sm text-muted">Ładowanie...</p>;
+  if (errorMessage) return <p className="m-0 p-3 text-sm text-danger">{errorMessage}</p>;
 
-    return <PreBlock>{inputText ?? ""}</PreBlock>;
+  return <PreBlock>{inputText ?? ""}</PreBlock>;
 }

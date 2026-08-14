@@ -38,6 +38,9 @@
   --color-warning-border: #8a5a00;
   --color-link: #1a4f7a;
 
+  /* Widest the content ever gets; beyond it the two-column split stops being readable. */
+  --container-app: 88rem;
+
   /* Overrides Tailwind's own scale, so the utilities stay the familiar text-sm / text-base.
      Steps are ~0.05rem apart at the bottom because that is where this UI does its work. */
   --text-2xs: 0.7rem;
@@ -61,7 +64,7 @@
 }
 
 @utility panel-shell {
-  @apply min-w-0 overflow-hidden border border-panel-border bg-panel-solid p-4.5;
+  @apply min-w-0 overflow-hidden border border-panel-border bg-panel-solid p-4;
 }
 
 @utility helper-copy {
@@ -69,7 +72,7 @@
 }
 
 @utility section-kicker {
-  @apply m-0 mb-1.5 text-md uppercase tracking-wider text-label;
+  @apply m-0 text-md uppercase tracking-wider text-label;
 }
 
 @layer base {

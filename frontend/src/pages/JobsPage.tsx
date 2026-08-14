@@ -3,162 +3,142 @@ import { useEffect, useState } from "react";
 import { deleteJob, getJobStatus, listAllJobsFlat } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
-import { PageShell } from "../components/ui/PageShell";
+import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItem, JobStatus } from "../types/api";
 import { formatDateMinute } from "../utils/format";
 
 const STATUS_COLORS: Record<string, string> = {
-    completed: "text-success",
-    failed: "text-danger",
-    pending: "text-warning",
+  completed: "text-success",
+  failed: "text-danger",
+  pending: "text-warning",
 };
 
 export function JobsPage() {
-    const [jobs, setJobs] = useState<JobListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-    const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
-    const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-    const [jobPendingDelete, setJobPendingDelete] = useState<JobListItem | null>(null);
-    const [isDeletingJob, setIsDeletingJob] = useState(false);
+  const [jobs, setJobs] = useState<JobListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [jobPendingDelete, setJobPendingDelete] = useState<JobListItem | null>(null);
+  const [isDeletingJob, setIsDeletingJob] = useState(false);
 
-    const loadJobs = () => listAllJobsFlat(100).then(setJobs);
+  const loadJobs = () => listAllJobsFlat(100).then(setJobs);
 
-    useEffect(() => {
-        loadJobs().finally(() => setIsLoading(false));
-    }, []);
+  useEffect(() => {
+    loadJobs().finally(() => setIsLoading(false));
+  }, []);
 
-    const handleSelect = async (job: JobListItem) => {
-        setSelectedJobId(job.job_id);
+  const handleSelect = async (job: JobListItem) => {
+    setSelectedJobId(job.job_id);
+    setSelectedJob(null);
+    setIsLoadingDetail(true);
+    try {
+      setSelectedJob(await getJobStatus(job.job_id));
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!jobPendingDelete) return;
+    setIsDeletingJob(true);
+    try {
+      await deleteJob(jobPendingDelete.job_id);
+      if (selectedJobId === jobPendingDelete.job_id) {
+        setSelectedJobId(null);
         setSelectedJob(null);
-        setIsLoadingDetail(true);
-        try {
-            setSelectedJob(await getJobStatus(job.job_id));
-        } finally {
-            setIsLoadingDetail(false);
+      }
+      setJobPendingDelete(null);
+      await loadJobs();
+    } finally {
+      setIsDeletingJob(false);
+    }
+  };
+
+  const baseItem =
+    "grid w-full min-w-0 cursor-pointer gap-1 border px-3 py-3 text-left transition-[border-color,background-color] duration-200";
+  const selectedItem = `${baseItem} border-selected-border bg-selected-bg`;
+  const defaultItem = `${baseItem} border-panel-border bg-subtle hover:bg-subtle-hover`;
+
+  return (
+    <PageShell className={selectedJobId ? SPLIT_COLUMNS : undefined}>
+      <section className={selectedJobId ? STICKY_COLUMN : "min-w-0"}>
+        <div className="panel-shell grid gap-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="m-0 font-mono text-xl">Gotowe podsumowania</h2>
+            <span className="text-md text-muted">{jobs.length}</span>
+          </div>
+
+          {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
+          {!isLoading && jobs.length === 0 ? <p className="helper-copy">Brak wyników.</p> : null}
+
+          <ul className="m-0 grid min-w-0 list-none gap-2 p-0">
+            {jobs.map((job) => (
+              <li key={job.job_id} className="relative min-w-0">
+                <button
+                  type="button"
+                  className={selectedJobId === job.job_id ? selectedItem : defaultItem}
+                  onClick={() => {
+                    void handleSelect(job);
+                  }}
+                >
+                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-sm font-mono text-link">
+                    {job.source_url}
+                  </span>
+                  <span className="block text-md leading-snug text-ink line-clamp-1">
+                    {job.title}
+                  </span>
+                  <span className="flex gap-3 text-xs text-muted">
+                    <span className={STATUS_COLORS[job.status] ?? ""}>{job.status}</span>
+                    <span>
+                      {job.model_provider}:{job.model_name}
+                    </span>
+                    {job.updated_at && <span>{formatDateMinute(job.updated_at)}</span>}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setJobPendingDelete(job);
+                  }}
+                  className="absolute right-2 top-2 cursor-pointer border border-panel-border bg-panel-solid px-2 py-1 text-xs text-danger hover:bg-subtle-hover"
+                  aria-label="Usuń job"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <SummaryDetailPanel
+        isOpen={Boolean(selectedJobId)}
+        sourceUrl={selectedJob?.source_url ?? null}
+        jobs={selectedJob ? [selectedJob] : []}
+        isLoading={isLoadingDetail}
+        onClose={() => {
+          setSelectedJobId(null);
+          setSelectedJob(null);
+        }}
+        debugMode
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(jobPendingDelete)}
+        title="Usunąć job?"
+        message={
+          jobPendingDelete
+            ? `Usunąć "${jobPendingDelete.title}" (${jobPendingDelete.source_url})?`
+            : ""
         }
-    };
-
-    const handleConfirmDelete = async () => {
-        if (!jobPendingDelete) return;
-        setIsDeletingJob(true);
-        try {
-            await deleteJob(jobPendingDelete.job_id);
-            if (selectedJobId === jobPendingDelete.job_id) {
-                setSelectedJobId(null);
-                setSelectedJob(null);
-            }
-            setJobPendingDelete(null);
-            await loadJobs();
-        } finally {
-            setIsDeletingJob(false);
-        }
-    };
-
-    const baseItem =
-        "w-full min-w-0 cursor-pointer border px-3 py-[11px] text-left transition-[border-color,background-color] duration-200";
-    const selectedItem = `${baseItem} border-selected-border bg-selected-bg`;
-    const defaultItem = `${baseItem} border-panel-border bg-subtle hover:bg-subtle-hover`;
-
-    return (
-        <PageShell
-            className={
-                selectedJobId
-                    ? "lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
-                    : undefined
-            }
-        >
-            <section
-                className={
-                    selectedJobId
-                        ? "min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pr-1.5"
-                        : "min-w-0"
-                }
-            >
-                <div className="panel-shell">
-                    <div className="mb-3 flex items-baseline justify-between gap-2.5">
-                        <h2 className="m-0 font-mono text-xl">Gotowe podsumowania</h2>
-                        <span className="text-md text-muted">{jobs.length}</span>
-                    </div>
-
-                    {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
-                    {!isLoading && jobs.length === 0 ? (
-                        <p className="helper-copy">Brak wyników.</p>
-                    ) : null}
-
-                    <ul className="mt-3.5 grid min-w-0 list-none gap-2.25 p-0">
-                        {jobs.map((job) => (
-                            <li key={job.job_id} className="relative min-w-0">
-                                <button
-                                    type="button"
-                                    className={
-                                        selectedJobId === job.job_id ? selectedItem : defaultItem
-                                    }
-                                    onClick={() => {
-                                        void handleSelect(job);
-                                    }}
-                                >
-                                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-sm font-mono text-link">
-                                        {job.source_url}
-                                    </span>
-                                    <span className="mt-1 block text-md leading-snug text-ink line-clamp-1">
-                                        {job.title}
-                                    </span>
-                                    <span className="mt-1 flex gap-3 text-xs text-muted">
-                                        <span className={STATUS_COLORS[job.status] ?? ""}>
-                                            {job.status}
-                                        </span>
-                                        <span>
-                                            {job.model_provider}:{job.model_name}
-                                        </span>
-                                        {job.updated_at && (
-                                            <span>{formatDateMinute(job.updated_at)}</span>
-                                        )}
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setJobPendingDelete(job);
-                                    }}
-                                    className="absolute right-2.5 top-2.5 cursor-pointer border border-panel-border bg-panel-solid px-2 py-1 text-xs text-danger hover:bg-subtle-hover"
-                                    aria-label="Usuń job"
-                                >
-                                    ✕
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </section>
-
-            <SummaryDetailPanel
-                isOpen={Boolean(selectedJobId)}
-                sourceUrl={selectedJob?.source_url ?? null}
-                jobs={selectedJob ? [selectedJob] : []}
-                isLoading={isLoadingDetail}
-                onClose={() => {
-                    setSelectedJobId(null);
-                    setSelectedJob(null);
-                }}
-                debugMode
-            />
-
-            <ConfirmDialog
-                isOpen={Boolean(jobPendingDelete)}
-                title="Usunąć job?"
-                message={
-                    jobPendingDelete
-                        ? `Usunąć "${jobPendingDelete.title}" (${jobPendingDelete.source_url})?`
-                        : ""
-                }
-                isConfirming={isDeletingJob}
-                onConfirm={() => {
-                    void handleConfirmDelete();
-                }}
-                onClose={() => setJobPendingDelete(null)}
-            />
-        </PageShell>
-    );
+        isConfirming={isDeletingJob}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+        onClose={() => setJobPendingDelete(null)}
+      />
+    </PageShell>
+  );
 }

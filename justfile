@@ -41,7 +41,7 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend typecheck-backend lint-frontend test-backend
+lint: lint-backend typecheck-backend lint-frontend test-backend check-openapi
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
@@ -69,6 +69,18 @@ typecheck-backend:
 [group('backend')]
 smoke-backend:
     cd backend && ./venv/bin/python -c "from app.main import app; print(f'OK — {len(app.routes)} routes')"
+
+# Backend: regenerate the OpenAPI schema FastAPI derives from the route signatures
+[group('backend')]
+[working-directory('backend')]
+export-openapi:
+    ./venv/bin/python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
+
+# Backend: fail if the committed schema no longer matches the routes, so an API change shows up in review
+[group('backend')]
+[working-directory('backend')]
+check-openapi:
+    ./venv/bin/python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" | diff -u openapi.json - || (echo "openapi.json is stale — run: just export-openapi" && exit 1)
 
 # Backend: recompile requirements.txt from requirements.in
 [group('backend')]

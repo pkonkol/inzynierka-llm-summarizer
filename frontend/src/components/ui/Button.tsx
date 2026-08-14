@@ -1,46 +1,45 @@
 import { cn } from "./cn";
 
 const VARIANT = {
-    primary: "border-accent-700 bg-accent-700 text-accent-50 hover:enabled:opacity-90",
-    secondary: "border-panel-border bg-panel-solid text-ink hover:enabled:bg-subtle-hover",
-    danger: "border-danger bg-danger text-accent-50 hover:enabled:opacity-90",
-    dangerOutline: "border-danger bg-panel-solid text-danger hover:enabled:bg-subtle-hover",
-    ghost: "border-panel-border bg-subtle-hover text-ink hover:enabled:bg-subtle",
-    // Section toggles: full width, label left, chevron right.
-    disclosure:
-        "w-full justify-between border-panel-border text-left uppercase tracking-wider text-muted hover:enabled:bg-subtle",
+  primary: "border-accent-700 bg-accent-700 text-accent-50 hover:enabled:opacity-90",
+  secondary: "border-panel-border bg-panel-solid text-ink hover:enabled:bg-subtle-hover",
+  danger: "border-danger bg-danger text-accent-50 hover:enabled:opacity-90",
+  dangerOutline: "border-danger bg-panel-solid text-danger hover:enabled:bg-subtle-hover",
+  ghost: "border-panel-border bg-subtle-hover text-ink hover:enabled:bg-subtle",
+  // Section toggles: full width, label left, chevron right.
+  disclosure:
+    "w-full justify-between border-panel-border text-left uppercase tracking-wider text-muted hover:enabled:bg-subtle",
 } as const;
 
 const SIZE = {
-    xs: "px-3 py-2 text-xs",
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-3.5 py-2 text-base",
-    lg: "h-12 px-5 text-base",
-    xl: "h-14 px-5.5 text-base",
+  xs: "px-3 py-2 text-xs",
+  sm: "px-3 py-2 text-sm",
+  md: "px-3 py-2 text-base",
+  lg: "h-11 px-6 text-base",
 } as const;
 
 interface ButtonProps extends React.ComponentProps<"button"> {
-    variant?: keyof typeof VARIANT;
-    size?: keyof typeof SIZE;
+  variant?: keyof typeof VARIANT;
+  size?: keyof typeof SIZE;
 }
 
 export function Button({
-    variant = "secondary",
-    size = "md",
-    type = "button",
-    className,
-    ...props
+  variant = "secondary",
+  size = "md",
+  type = "button",
+  className,
+  ...props
 }: ButtonProps) {
-    return (
-        <button
-            type={type}
-            {...props}
-            className={cn(
-                "inline-flex cursor-pointer items-center justify-center border font-mono transition-[opacity,background-color] duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-                VARIANT[variant],
-                SIZE[size],
-                className,
-            )}
-        />
-    );
+  return (
+    <button
+      type={type}
+      {...props}
+      className={cn(
+        "inline-flex cursor-pointer items-center justify-center border font-mono transition-[opacity,background-color] duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+        VARIANT[variant],
+        SIZE[size],
+        className,
+      )}
+    />
+  );
 }

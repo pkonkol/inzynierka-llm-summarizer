@@ -11,331 +11,319 @@ import { InfoRow } from "./InfoRow";
 import { PreBlock } from "./PreBlock";
 
 interface JobDetailPanelProps {
-    sourceUrl: string | null;
-    jobs: JobStatus[];
-    isOpen: boolean;
-    isLoading: boolean;
-    onClose: () => void;
-    debugMode?: boolean;
+  sourceUrl: string | null;
+  jobs: JobStatus[];
+  isOpen: boolean;
+  isLoading: boolean;
+  onClose: () => void;
+  debugMode?: boolean;
 }
 
 const METRIC_SECTIONS = [
-    { key: "source", label: "Source", field: "source" as const },
-    { key: "summary", label: "Summary", field: "summary" as const },
-    { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
+  { key: "source", label: "Source", field: "source" as const },
+  { key: "summary", label: "Summary", field: "summary" as const },
+  { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
 ] as const;
 
 function MetricsSection({
-    metrics,
-    deepevalMetrics,
+  metrics,
+  deepevalMetrics,
 }: {
-    metrics: JobMetrics;
-    deepevalMetrics: DeepevalItem[];
+  metrics: JobMetrics;
+  deepevalMetrics: DeepevalItem[];
 }) {
-    const defaultMetricsBlocks = METRIC_SECTIONS.map((section) => {
-        const data = metrics[section.field];
-        if (!data) return null;
+  const defaultMetricsBlocks = METRIC_SECTIONS.map((section) => {
+    const data = metrics[section.field];
+    if (!data) return null;
 
-        const gridItems = Object.entries(data).map(([k, v]) => (
-            <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
-        ));
-
-        return (
-            <div key={section.key} className="space-y-2">
-                <SectionHeading>{section.label}</SectionHeading>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">{gridItems}</div>
-            </div>
-        );
-    });
-
-    const deepevalBlock =
-        deepevalMetrics.length > 0 ? (
-            <div className="space-y-3 border-t border-panel-border pt-3">
-                <SectionHeading>Deepeval</SectionHeading>
-                <DeepevalItems items={deepevalMetrics} />
-            </div>
-        ) : null;
+    const gridItems = Object.entries(data).map(([k, v]) => (
+      <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
+    ));
 
     return (
-        <Collapsible label="Metrics">
-            <div className="space-y-4 p-3">
-                {defaultMetricsBlocks}
-                {deepevalBlock}
-            </div>
-        </Collapsible>
+      <div key={section.key} className="grid gap-2">
+        <SectionHeading>{section.label}</SectionHeading>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">{gridItems}</div>
+      </div>
     );
+  });
+
+  const deepevalBlock =
+    deepevalMetrics.length > 0 ? (
+      <div className="grid gap-3 border-t border-panel-border pt-3">
+        <SectionHeading>Deepeval</SectionHeading>
+        <DeepevalItems items={deepevalMetrics} />
+      </div>
+    ) : null;
+
+  return (
+    <Collapsible label="Metrics">
+      <div className="grid gap-4 p-3">
+        {defaultMetricsBlocks}
+        {deepevalBlock}
+      </div>
+    </Collapsible>
+  );
 }
 
 function PromptSection({
-    template,
-    params,
-    inputText,
+  template,
+  params,
+  inputText,
 }: {
-    template: PromptMessage[];
-    params: Record<string, string>;
-    inputText: string;
+  template: PromptMessage[];
+  params: Record<string, string>;
+  inputText: string;
 }) {
-    if (template.length === 0 && !inputText) return null;
+  if (template.length === 0 && !inputText) return null;
 
-    let templateBlock = null;
-    if (template.length > 0) {
-        const renderedMessages = template.map(([role, content]) => (
-            <div key={role} className="mb-2 min-w-0">
-                <span className="font-mono text-2xs uppercase text-muted">{role}: </span>
-                <PreBlock>{content}</PreBlock>
-            </div>
-        ));
+  let templateBlock = null;
+  if (template.length > 0) {
+    const renderedMessages = template.map(([role, content]) => (
+      <div key={role} className="min-w-0">
+        <span className="font-mono text-2xs uppercase text-muted">{role}: </span>
+        <PreBlock>{content}</PreBlock>
+      </div>
+    ));
 
-        templateBlock = (
-            <div className="min-w-0">
-                <p className="mb-1 text-2xs uppercase tracking-wider text-muted">Template</p>
-                {renderedMessages}
-            </div>
-        );
-    }
-
-    let paramsBlock = null;
-    if (params && Object.keys(params).length > 0) {
-        paramsBlock = (
-            <div className="min-w-0">
-                <p className="mb-1 text-2xs uppercase tracking-wider text-muted">Parametry</p>
-                <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
-            </div>
-        );
-    }
-
-    let inputBlock = null;
-    if (inputText) {
-        inputBlock = (
-            <div className="min-w-0">
-                <p className="mb-1 text-2xs uppercase tracking-wider text-muted">Input text</p>
-                <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-xs leading-normal min-w-0">
-                    {inputText}
-                </pre>
-            </div>
-        );
-    }
-
-    return (
-        <Collapsible label="Prompt">
-            <div className="space-y-3 p-3 min-w-0">
-                {templateBlock}
-                {paramsBlock}
-                {inputBlock}
-            </div>
-        </Collapsible>
+    templateBlock = (
+      <div className="grid min-w-0 gap-2">
+        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Template</p>
+        {renderedMessages}
+      </div>
     );
+  }
+
+  let paramsBlock = null;
+  if (params && Object.keys(params).length > 0) {
+    paramsBlock = (
+      <div className="grid min-w-0 gap-1">
+        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Parametry</p>
+        <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
+      </div>
+    );
+  }
+
+  let inputBlock = null;
+  if (inputText) {
+    inputBlock = (
+      <div className="grid min-w-0 gap-1">
+        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Input text</p>
+        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-xs leading-normal min-w-0">
+          {inputText}
+        </pre>
+      </div>
+    );
+  }
+
+  return (
+    <Collapsible label="Prompt">
+      <div className="grid gap-3 p-3 min-w-0">
+        {templateBlock}
+        {paramsBlock}
+        {inputBlock}
+      </div>
+    </Collapsible>
+  );
 }
 
 function RawMetadata({ data }: { data: Record<string, unknown> }) {
-    if (!data || Object.keys(data).length === 0) return null;
+  if (!data || Object.keys(data).length === 0) return null;
 
-    const content = <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
+  const content = <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
 
-    return <Collapsible label="Raw metadata">{content}</Collapsible>;
+  return <Collapsible label="Raw metadata">{content}</Collapsible>;
 }
 
 function RawOutput({ text }: { text: string }) {
-    if (!text) return null;
+  if (!text) return null;
 
-    const content = <PreBlock>{text}</PreBlock>;
+  const content = <PreBlock>{text}</PreBlock>;
 
-    return <Collapsible label="Raw output">{content}</Collapsible>;
+  return <Collapsible label="Raw output">{content}</Collapsible>;
 }
 
 function statusBadge(status: JobStatusValue) {
-    if (status === "failed")
-        return <span className="ml-2 font-mono text-2xs uppercase text-danger">failed</span>;
-    if (status === "pending")
-        return <span className="ml-2 font-mono text-2xs uppercase text-warning">pending</span>;
-    return null;
+  if (status === "failed")
+    return <span className="ml-2 font-mono text-2xs uppercase text-danger">failed</span>;
+  if (status === "pending")
+    return <span className="ml-2 font-mono text-2xs uppercase text-warning">pending</span>;
+  return null;
 }
 
 function tokensPerSecond(outputTokens: number, durationMs: number): string {
-    if (!durationMs || !outputTokens) return "—";
-    return (outputTokens / (durationMs / 1000)).toFixed(1);
+  if (!durationMs || !outputTokens) return "—";
+  return (outputTokens / (durationMs / 1000)).toFixed(1);
 }
 
 function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: boolean }) {
-    const [open, setOpen] = useState(defaultOpen);
-    const modelLabel = job.model_name
-        ? `${job.model_provider}:${job.model_name}`
-        : job.model_provider;
+  const [open, setOpen] = useState(defaultOpen);
+  const modelLabel = job.model_name
+    ? `${job.model_provider}:${job.model_name}`
+    : job.model_provider;
 
-    const header = (
-        <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="flex w-full items-start justify-between px-4 py-3 text-left transition-colors hover:bg-subtle"
-        >
-            <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-mono text-sm font-semibold">
-                    {modelLabel}
-                    {statusBadge(job.status)}
-                </span>
-                <span className="text-xs text-muted">{formatDateMinute(job.created_at)}</span>
-            </span>
-            <span className="ml-3 mt-0.5 shrink-0 text-xs text-muted">{open ? "▼" : "▶"}</span>
-        </button>
-    );
+  const header = (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-subtle"
+    >
+      <span className="flex min-w-0 flex-col gap-1">
+        <span className="font-mono text-sm font-semibold">
+          {modelLabel}
+          {statusBadge(job.status)}
+        </span>
+        <span className="text-xs text-muted">{formatDateMinute(job.created_at)}</span>
+      </span>
+      <span className="shrink-0 pt-1 text-xs text-muted">{open ? "▼" : "▶"}</span>
+    </button>
+  );
 
-    const details = open && (
-        <div className="space-y-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-hidden">
-            {job.status === "failed" && job.error ? (
-                <section>
-                    <h5 className="section-kicker">Błąd</h5>
-                    <p className="m-0 text-lg leading-relaxed text-danger">{job.error}</p>
-                </section>
-            ) : (
-                <JobDetails job={job} />
-            )}
-        </div>
-    );
+  const details = open && (
+    <div className="grid gap-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-hidden">
+      {job.status === "failed" && job.error ? (
+        <section>
+          <h5 className="section-kicker">Błąd</h5>
+          <p className="m-0 text-lg leading-relaxed text-danger">{job.error}</p>
+        </section>
+      ) : (
+        <JobDetails job={job} />
+      )}
+    </div>
+  );
 
-    return (
-        <div className="mb-2 border border-panel-border min-w-0">
-            {header}
-            {details}
-        </div>
-    );
+  return (
+    <div className="border border-panel-border min-w-0">
+      {header}
+      {details}
+    </div>
+  );
 }
 
 function JobDetails({ job }: { job: JobStatus }) {
-    const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
-    if (!shouldRenderDetails) return null;
+  const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
+  if (!shouldRenderDetails) return null;
 
-    const takeawaysMarkdown = (job.summary_data?.key_takeaways ?? [])
-        .map((item) => `- ${item}`)
-        .join("\n");
+  const takeawaysMarkdown = (job.summary_data?.key_takeaways ?? [])
+    .map((item) => `- ${item}`)
+    .join("\n");
 
-    return (
-        <>
-            <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-sm">
-                <InfoRow
-                    label="Wywołano"
-                    value={formatDateMinute(job.created_at)}
-                    valueClassName="text-md"
-                />
-                <InfoRow
-                    label="Zakończono"
-                    value={formatDateMinute(job.finished_at)}
-                    valueClassName="text-md"
-                />
-                <InfoRow
-                    label="Czas generacji"
-                    value={formatDuration(job.duration_ms)}
-                    valueClassName="text-md"
-                />
-                <InfoRow
-                    label="Tokens / s"
-                    value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)}
-                    valueClassName="text-md"
-                />
-                <InfoRow
-                    label="Input tokens"
-                    value={job.usage.input_tokens}
-                    valueClassName="text-md"
-                />
-                <InfoRow
-                    label="Output tokens"
-                    value={job.usage.output_tokens}
-                    valueClassName="text-md"
-                />
-                {job.usage.thinking_tokens > 0 ? (
-                    <InfoRow
-                        label="Thinking tokens"
-                        value={job.usage.thinking_tokens}
-                        valueClassName="text-md"
-                    />
-                ) : null}
-                <InfoRow
-                    label="Total tokens"
-                    value={job.usage.total_tokens}
-                    valueClassName="text-md"
-                />
-                <InfoRow label="Summary mode" value={job.summary_mode} valueClassName="text-md" />
-            </div>
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-sm">
+        <InfoRow
+          label="Wywołano"
+          value={formatDateMinute(job.created_at)}
+          valueClassName="text-md"
+        />
+        <InfoRow
+          label="Zakończono"
+          value={formatDateMinute(job.finished_at)}
+          valueClassName="text-md"
+        />
+        <InfoRow
+          label="Czas generacji"
+          value={formatDuration(job.duration_ms)}
+          valueClassName="text-md"
+        />
+        <InfoRow
+          label="Tokens / s"
+          value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)}
+          valueClassName="text-md"
+        />
+        <InfoRow label="Input tokens" value={job.usage.input_tokens} valueClassName="text-md" />
+        <InfoRow label="Output tokens" value={job.usage.output_tokens} valueClassName="text-md" />
+        {job.usage.thinking_tokens > 0 ? (
+          <InfoRow
+            label="Thinking tokens"
+            value={job.usage.thinking_tokens}
+            valueClassName="text-md"
+          />
+        ) : null}
+        <InfoRow label="Total tokens" value={job.usage.total_tokens} valueClassName="text-md" />
+        <InfoRow label="Summary mode" value={job.summary_mode} valueClassName="text-md" />
+      </div>
 
-            <section>
-                <h5 className="section-kicker">Krótkie podsumowanie</h5>
-                <p className="m-0 text-lg leading-relaxed">{job.summary_data?.summary}</p>
-            </section>
+      <section>
+        <h5 className="section-kicker">Krótkie podsumowanie</h5>
+        <p className="m-0 text-lg leading-relaxed">{job.summary_data?.summary}</p>
+      </section>
 
-            <section>
-                <h5 className="section-kicker">Najważniejsze punkty</h5>
-                <div className="grid gap-3 text-lg leading-relaxed [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{takeawaysMarkdown}</ReactMarkdown>
-                </div>
-            </section>
+      <section>
+        <h5 className="section-kicker">Najważniejsze punkty</h5>
+        <div className="grid gap-3 text-lg leading-relaxed [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{takeawaysMarkdown}</ReactMarkdown>
+        </div>
+      </section>
 
-            <MetricsSection metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
-            <RawOutput text={job.raw_output} />
-            <PromptSection
-                template={job.prompt_template}
-                params={job.prompt_params}
-                inputText={job.input_text}
-            />
-            <RawMetadata data={job.raw_metadata} />
-        </>
-    );
+      <MetricsSection metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
+      <RawOutput text={job.raw_output} />
+      <PromptSection
+        template={job.prompt_template}
+        params={job.prompt_params}
+        inputText={job.input_text}
+      />
+      <RawMetadata data={job.raw_metadata} />
+    </>
+  );
 }
 
 export function SummaryDetailPanel({
-    sourceUrl,
-    jobs,
-    isOpen,
-    isLoading,
-    onClose,
-    debugMode = false,
+  sourceUrl,
+  jobs,
+  isOpen,
+  isLoading,
+  onClose,
+  debugMode = false,
 }: JobDetailPanelProps) {
-    if (!isOpen) return null;
-    if (isLoading) return <p className="m-0 text-base text-muted">Ładowanie wyników...</p>;
-    if (!sourceUrl) return null;
+  if (!isOpen) return null;
+  if (isLoading) return <p className="m-0 text-base text-muted">Ładowanie wyników...</p>;
+  if (!sourceUrl) return null;
 
-    const title = jobs[0]?.summary_data?.title || "";
-    const jobsFilteredSorted = debugMode ? jobs : jobs.filter((job) => job.status === "completed");
+  const title = jobs[0]?.summary_data?.title || "";
+  const jobsFilteredSorted = debugMode ? jobs : jobs.filter((job) => job.status === "completed");
 
-    const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
+  const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
 
-    return (
-        <aside className="fixed inset-x-0 bottom-0 z-30 h-[75vh] overflow-y-auto border-t border-panel-border bg-panel-solid p-5 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 xl:w-190">
-            <div className="mb-4.5 flex items-center justify-between border-b border-panel-border pb-3">
-                <h3 className="m-0 font-mono text-xl">Szczegóły</h3>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="h-9 cursor-pointer border border-panel-border bg-subtle-hover px-3 text-ink"
-                >
-                    Zamknij
-                </button>
-            </div>
+  return (
+    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 xl:w-190">
+      <div className="flex items-center justify-between border-b border-panel-border pb-3">
+        <h3 className="m-0 font-mono text-xl">Szczegóły</h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-9 cursor-pointer border border-panel-border bg-subtle-hover px-3 text-ink"
+        >
+          Zamknij
+        </button>
+      </div>
 
-            <article className="grid gap-4.5 min-w-0">
-                <h3 className="m-0 pb-3 font-mono text-lg leading-snug text-ink">{title}</h3>
+      <article className="grid gap-4 min-w-0">
+        <h3 className="m-0 font-mono text-lg leading-snug text-ink">{title}</h3>
 
-                <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="wrap-anywhere font-mono text-lg font-bold text-link no-underline leading-snug"
-                >
-                    {sourceUrl}
-                </a>
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="wrap-anywhere font-mono text-lg font-bold text-link no-underline leading-snug"
+        >
+          {sourceUrl}
+        </a>
 
-                <section className="border-t border-panel-border pt-4 min-w-0">
-                    <h5 className="m-0 mb-3 font-mono text-base font-semibold uppercase tracking-wider text-muted">
-                        {sectionTitle}
-                    </h5>
+        <section className="grid content-start gap-3 border-t border-panel-border pt-4 min-w-0">
+          <h5 className="m-0 font-mono text-base font-semibold uppercase tracking-wider text-muted">
+            {sectionTitle}
+          </h5>
 
-                    {jobsFilteredSorted.length === 0 ? (
-                        <p className="m-0 text-base text-muted">Brak wyników.</p>
-                    ) : (
-                        jobsFilteredSorted.map((job, index) => (
-                            <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
-                        ))
-                    )}
-                </section>
-            </article>
-        </aside>
-    );
+          {jobsFilteredSorted.length === 0 ? (
+            <p className="m-0 text-base text-muted">Brak wyników.</p>
+          ) : (
+            jobsFilteredSorted.map((job, index) => (
+              <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
+            ))
+          )}
+        </section>
+      </article>
+    </aside>
+  );
 }

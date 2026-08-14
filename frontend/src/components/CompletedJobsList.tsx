@@ -24,8 +24,8 @@ export function CompletedJobsList({
     return (
         <section className={isFocused ? "panel-shell" : "panel-shell mt-6"}>
             <div className="mb-3 flex items-baseline justify-between gap-2.5">
-                <h2 className="m-0 font-display text-[1.2rem]">Lista podsumowanych linków</h2>
-                <span className="text-[0.9rem] text-muted">{urls.length}</span>
+                <h2 className="m-0 font-mono text-xl">Lista podsumowanych linków</h2>
+                <span className="text-md text-muted">{urls.length}</span>
             </div>
 
             {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
@@ -44,22 +44,22 @@ export function CompletedJobsList({
                             onClick={() => onSelectUrl(item.source_url)}
                         >
                             {/* URL — primary, full width, wrap */}
-                            <span className="block font-mono text-[0.85rem] font-semibold text-link break-all leading-[1.4]">
+                            <span className="block font-mono text-sm font-semibold text-link break-all leading-snug">
                                 {item.source_url}
                             </span>
 
                             {/* Latest title from most recent completed job */}
                             {item.latest_title ? (
-                                <span className="mt-1 block text-[0.8rem] text-muted leading-[1.4] line-clamp-1">
+                                <span className="mt-1 block text-xs text-muted leading-snug line-clamp-1">
                                     {item.latest_title}
                                 </span>
                             ) : null}
 
                             {/* Counts + date */}
-                            <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.72rem] text-muted">
+                            <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-muted">
                                 <span>✓ {item.completed_count}</span>
                                 {item.failed_count > 0 && (
-                                    <span className="text-error">✗ {item.failed_count}</span>
+                                    <span className="text-danger">✗ {item.failed_count}</span>
                                 )}
                                 {item.latest_updated_at && (
                                     <span>{formatDateMinute(item.latest_updated_at)}</span>

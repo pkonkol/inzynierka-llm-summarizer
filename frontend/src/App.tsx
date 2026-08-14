@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAuthStatus, getToken } from "./api/client";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
+import { DesignPage } from "./pages/DesignPage";
 import { EvaluationRunPage } from "./pages/EvaluationRunPage";
 import { EvaluationSetPage } from "./pages/EvaluationSetPage";
 import { HomePage } from "./pages/HomePage";
@@ -80,6 +81,11 @@ function App() {
     function handleLoginSuccess() {
         setIsLoggedIn(true);
         setIsLoginOpen(false);
+    }
+
+    // Reference gallery for the design system; deliberately outside the app chrome.
+    if (window.location.pathname.startsWith("/design")) {
+        return <DesignPage />;
     }
 
     return (

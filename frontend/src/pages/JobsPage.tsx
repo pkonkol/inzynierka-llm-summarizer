@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { deleteJob, getJobStatus, listAllJobsFlat } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
+import { PageShell } from "../components/ui/PageShell";
 import type { JobListItem, JobStatus } from "../types/api";
 import { formatDateMinute } from "../utils/format";
 
 const STATUS_COLORS: Record<string, string> = {
     completed: "text-success",
-    failed: "text-error",
+    failed: "text-danger",
     pending: "text-warning",
 };
 
@@ -60,11 +61,11 @@ export function JobsPage() {
     const defaultItem = `${baseItem} border-panel-border bg-subtle hover:bg-subtle-hover`;
 
     return (
-        <div
+        <PageShell
             className={
                 selectedJobId
-                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
-                    : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+                    ? "lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
+                    : undefined
             }
         >
             <section
@@ -76,8 +77,8 @@ export function JobsPage() {
             >
                 <div className="panel-shell">
                     <div className="mb-3 flex items-baseline justify-between gap-2.5">
-                        <h2 className="m-0 font-display text-[1.2rem]">Gotowe podsumowania</h2>
-                        <span className="text-[0.9rem] text-muted">{jobs.length}</span>
+                        <h2 className="m-0 font-mono text-xl">Gotowe podsumowania</h2>
+                        <span className="text-md text-muted">{jobs.length}</span>
                     </div>
 
                     {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
@@ -97,13 +98,13 @@ export function JobsPage() {
                                         void handleSelect(job);
                                     }}
                                 >
-                                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-[0.82rem] font-mono text-link">
+                                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-sm font-mono text-link">
                                         {job.source_url}
                                     </span>
-                                    <span className="mt-1 block text-[0.88rem] leading-[1.4] text-ink line-clamp-1">
+                                    <span className="mt-1 block text-md leading-snug text-ink line-clamp-1">
                                         {job.title}
                                     </span>
-                                    <span className="mt-1 flex gap-3 text-[0.75rem] text-muted">
+                                    <span className="mt-1 flex gap-3 text-xs text-muted">
                                         <span className={STATUS_COLORS[job.status] ?? ""}>
                                             {job.status}
                                         </span>
@@ -121,7 +122,7 @@ export function JobsPage() {
                                         e.stopPropagation();
                                         setJobPendingDelete(job);
                                     }}
-                                    className="absolute right-2.5 top-2.5 cursor-pointer border border-panel-border bg-panel-solid px-2 py-1 text-[0.75rem] text-danger hover:bg-subtle-hover"
+                                    className="absolute right-2.5 top-2.5 cursor-pointer border border-panel-border bg-panel-solid px-2 py-1 text-xs text-danger hover:bg-subtle-hover"
                                     aria-label="Usuń job"
                                 >
                                     ✕
@@ -158,6 +159,6 @@ export function JobsPage() {
                 }}
                 onClose={() => setJobPendingDelete(null)}
             />
-        </div>
+        </PageShell>
     );
 }

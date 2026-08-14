@@ -149,7 +149,12 @@ def extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
         thinking_tokens=_token_count(as_dict(usage_meta.get("output_token_details")), "reasoning"),
         total_tokens=_token_count(usage_meta, "total_tokens"),
     )
-    log.debug("extracting token usage from ai_message", ai_message=ai_message, usage=usage, usage_meta=usage_meta)
+    log.debug(
+        "extracting token usage from ai_message",
+        ai_message=ai_message,
+        usage=usage,
+        usage_meta=usage_meta,
+    )
     if usage.total_tokens == 0 and (usage.input_tokens or usage.output_tokens):
         usage = usage.model_copy(update={"total_tokens": usage.input_tokens + usage.output_tokens})
 

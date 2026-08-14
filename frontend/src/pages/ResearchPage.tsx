@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { PageShell } from "../components/ui/PageShell";
 import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
 
@@ -120,10 +123,10 @@ export function ResearchPage() {
     }, [flashMessage]);
 
     return (
-        <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
+        <PageShell>
             <section className="panel-shell min-w-0">
                 <p className="section-kicker">Research</p>
-                <h1 className="m-0 font-display text-[1.1rem] uppercase tracking-[0.04em]">
+                <h1 className="m-0 font-mono text-xl uppercase tracking-wider">
                     Evaluation set import
                 </h1>
                 <p className="helper-copy mt-2">
@@ -132,7 +135,7 @@ export function ResearchPage() {
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2.5">
-                    <label className="inline-flex cursor-pointer items-center justify-center border border-panel-border bg-panel-solid px-3 py-2 text-[0.9rem] text-ink hover:bg-subtle-hover">
+                    <label className="inline-flex cursor-pointer items-center justify-center border border-panel-border bg-panel-solid px-3 py-2 text-md text-ink hover:bg-subtle-hover">
                         <input
                             type="file"
                             accept=".json,application/json"
@@ -141,27 +144,23 @@ export function ResearchPage() {
                         />
                         Wczytaj plik JSON
                     </label>
-                    <button
-                        type="button"
-                        onClick={() => setRawJson(PRETTY_EXAMPLE)}
-                        className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.9rem] text-ink hover:bg-subtle-hover"
-                    >
+                    <Button size="sm" onClick={() => setRawJson(PRETTY_EXAMPLE)}>
                         Wstaw przykład
-                    </button>
+                    </Button>
                 </div>
 
                 <div className="mt-4 grid gap-3">
                     <label className="grid gap-1.5">
-                        <span className="text-[0.9rem] text-label">Import JSON</span>
+                        <span className="text-md text-label">Import JSON</span>
                         <textarea
                             value={rawJson}
                             onChange={(event) => setRawJson(event.target.value)}
                             spellCheck={false}
-                            className="min-h-[320px] w-full border border-input-border bg-panel-solid px-3 py-2 font-mono text-[0.9rem] text-ink outline-none focus:border-input-focus"
+                            className="min-h-[320px] w-full border border-input-border bg-panel-solid px-3 py-2 font-mono text-md text-ink outline-none focus:border-input-focus"
                         />
                     </label>
 
-                    <div className="grid gap-1 border border-panel-border bg-panel-solid px-3 py-2.5 text-[0.9rem]">
+                    <div className="grid gap-1 border border-panel-border bg-panel-solid px-3 py-2.5 text-md">
                         <div className="flex flex-wrap gap-x-4 gap-y-1">
                             <span>
                                 Status: {parsedPreview.isValid ? "valid JSON" : "invalid JSON"}
@@ -173,27 +172,18 @@ export function ResearchPage() {
                     </div>
 
                     <div className="flex items-center gap-2.5">
-                        <button
-                            type="button"
+                        <Button
+                            variant="primary"
                             onClick={() => void handleImport()}
                             disabled={isImporting}
-                            className="border border-panel-border bg-accent-500 px-3.5 py-2 text-[0.94rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {isImporting ? "Importing..." : "Import evaluation set"}
-                        </button>
+                        </Button>
                     </div>
 
-                    {flashMessage ? (
-                        <div className="border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
-                            {flashMessage}
-                        </div>
-                    ) : null}
+                    {flashMessage ? <Alert>{flashMessage}</Alert> : null}
 
-                    {errorMessage ? (
-                        <div className="border border-danger bg-panel-solid px-3.5 py-2.5 text-[0.94rem] text-danger">
-                            {errorMessage}
-                        </div>
-                    ) : null}
+                    {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
                 </div>
             </section>
 
@@ -201,17 +191,13 @@ export function ResearchPage() {
                 <div className="flex items-end justify-between gap-3">
                     <div>
                         <p className="section-kicker">Evaluation sets</p>
-                        <h2 className="m-0 font-display text-[1.05rem] uppercase tracking-[0.04em]">
+                        <h2 className="m-0 font-mono text-lg uppercase tracking-wider">
                             Existing sets
                         </h2>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => void loadSets()}
-                        className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
-                    >
+                    <Button size="sm" onClick={() => void loadSets()}>
                         Refresh
-                    </button>
+                    </Button>
                 </div>
 
                 {isLoading ? (
@@ -222,9 +208,9 @@ export function ResearchPage() {
                     </p>
                 ) : (
                     <div className="mt-4 overflow-x-auto">
-                        <table className="w-full border-collapse text-left text-[0.94rem]">
+                        <table className="w-full border-collapse text-left text-base">
                             <thead>
-                                <tr className="border-b border-divider">
+                                <tr className="border-b border-panel-border">
                                     <th className="px-2.5 py-2 font-medium">Name</th>
                                     <th className="px-2.5 py-2 font-medium">Language</th>
                                     <th className="px-2.5 py-2 font-medium">Entries</th>
@@ -236,7 +222,7 @@ export function ResearchPage() {
                                 {sets.map((set) => (
                                     <tr
                                         key={set.evaluation_set_id}
-                                        className="border-b border-divider"
+                                        className="border-b border-panel-border"
                                     >
                                         <td className="px-2.5 py-2.5">{set.name}</td>
                                         <td className="px-2.5 py-2.5">{set.language}</td>
@@ -245,15 +231,14 @@ export function ResearchPage() {
                                             {new Date(set.created_at).toLocaleString()}
                                         </td>
                                         <td className="px-2.5 py-2.5 text-right">
-                                            <button
-                                                type="button"
+                                            <Button
+                                                size="sm"
                                                 onClick={() =>
                                                     navigateTo(`/research/${set.evaluation_set_id}`)
                                                 }
-                                                className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
                                             >
                                                 Open
-                                            </button>
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))}
@@ -262,6 +247,6 @@ export function ResearchPage() {
                     </div>
                 )}
             </section>
-        </main>
+        </PageShell>
     );
 }

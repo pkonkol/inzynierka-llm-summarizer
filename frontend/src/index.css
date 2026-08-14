@@ -3,59 +3,73 @@
 
 @theme {
   --font-sans: "IBM Plex Sans", "Helvetica Neue", sans-serif;
-  --font-display: "IBM Plex Mono", "Courier New", monospace;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
 
   --color-page: #ececec;
   --color-ink: #111111;
   --color-muted: #4a4a4a;
-  --color-panel-border: #2a2a2a;
-  --color-panel-bg: #f6f6f6;
+  --color-label: #2f2f2f;
+
+  /* Surfaces, lightest to darkest. Anything flatter than this needs a reason. */
   --color-panel-solid: #f9f9f9;
   --color-subtle: #f0f0f0;
   --color-subtle-hover: #e4e4e4;
   --color-selected-bg: #dcdcdc;
+  --color-panel-border: #2a2a2a;
   --color-selected-border: #111111;
-  --color-link: #111111;
-  --color-success-bg: #ededed;
-  --color-success-border: #252525;
-  --color-success-text: #111111;
+
   --color-input-border: #222222;
   --color-input-focus: #111111;
+
   --color-accent-500: #1b1b1b;
   --color-accent-700: #000000;
   --color-accent-50: #f7f7f7;
-  --color-danger: #111111;
-  --color-label: #2f2f2f;
-  --color-divider: #2a2a2a;
-  --color-close-bg: #e5e5e5;
 
-  --color-status-completed-bg: #e1e1e1;
-  --color-status-completed-text: #111111;
-  --color-status-failed-bg: #d7d7d7;
-  --color-status-failed-text: #111111;
-  --color-status-pending-bg: #ededed;
-  --color-status-pending-text: #111111;
+  /* Each semantic role is a triple: bare name is the foreground, plus -bg and -border.
+     Dark and desaturated so they read as signal against the greyscale, not as decoration. */
+  --color-success: #1f6b3a;
+  --color-success-bg: #eef4f0;
+  --color-success-border: #1f6b3a;
+  --color-danger: #a02020;
+  --color-danger-bg: #f8efef;
+  --color-danger-border: #a02020;
+  --color-warning: #8a5a00;
+  --color-warning-bg: #f8f3e9;
+  --color-warning-border: #8a5a00;
+  --color-link: #1a4f7a;
 
-  --shadow-panel: none;
-  --shadow-detail-mobile: none;
-  --shadow-detail-desktop: none;
-
-  --radius-panel: 0px;
-  --radius-card: 0px;
-  --radius-hero: 0px;
-  --radius-pill: 0px;
+  /* Overrides Tailwind's own scale, so the utilities stay the familiar text-sm / text-base.
+     Steps are ~0.05rem apart at the bottom because that is where this UI does its work. */
+  --text-2xs: 0.7rem;
+  --text-2xs--line-height: 1.4;
+  --text-xs: 0.78rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.85rem;
+  --text-sm--line-height: 1.5;
+  --text-md: 0.9rem;
+  --text-md--line-height: 1.55;
+  --text-base: 0.94rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.05rem;
+  --text-lg--line-height: 1.45;
+  --text-xl: 1.2rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.25;
+  --text-hero: clamp(2rem, 5vw, 3.7rem);
+  --text-hero--line-height: 1.05;
 }
 
 @utility panel-shell {
-  @apply min-w-0 overflow-hidden rounded-panel border border-panel-border bg-panel-bg p-4.5 shadow-panel;
+  @apply min-w-0 overflow-hidden border border-panel-border bg-panel-solid p-4.5;
 }
 
 @utility helper-copy {
-  @apply m-0 text-[0.94rem] text-muted;
+  @apply m-0 text-base text-muted;
 }
 
 @utility section-kicker {
-  @apply m-0 mb-1.5 text-[0.9rem] uppercase tracking-[0.04em] text-label;
+  @apply m-0 mb-1.5 text-md uppercase tracking-wider text-label;
 }
 
 @layer base {

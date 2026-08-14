@@ -13,6 +13,11 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { FieldLabel, Input, Select } from "../components/ui/Field";
+import { PageShell, SectionHeading } from "../components/ui/PageShell";
+import { Panel } from "../components/ui/Panel";
 import type {
     EvaluationRunListItem,
     EvaluationSetDetail,
@@ -28,9 +33,7 @@ function formatLabel(key: string): string {
 function MetricsSection({ title, data }: { title: string; data: Record<string, number | null> }) {
     return (
         <div className="space-y-2">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                {title}
-            </h6>
+            <SectionHeading>{title}</SectionHeading>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
                 {Object.entries(data).map(([key, value]) => (
                     <InfoRow key={key} label={formatLabel(key)} value={value} />
@@ -68,8 +71,8 @@ function EntryCard({
     };
 
     return (
-        <article className="border border-panel-border bg-panel-solid px-3.5 py-3">
-            <p className="m-0 text-[0.82rem] text-ink">
+        <Panel as="article" padding="sm">
+            <p className="m-0 text-sm text-ink">
                 <span className="font-medium">{index + 1}</span>
                 {" · "}
                 <span className="lowercase text-muted">
@@ -77,28 +80,20 @@ function EntryCard({
                 </span>
             </p>
 
-            <p className="m-0 mt-2 whitespace-pre-wrap text-[0.95rem] text-ink">
+            <p className="m-0 mt-2 whitespace-pre-wrap text-base text-ink">
                 {entry.golden_summary}
             </p>
 
             <div className="mt-3 grid grid-cols-2 gap-3">
-                <button
-                    type="button"
-                    onClick={() => toggleSection("input")}
-                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-                >
+                <Button variant="disclosure" size="xs" onClick={() => toggleSection("input")}>
                     <span>Input text</span>
                     <span>{openSection === "input" ? "▼" : "▶"}</span>
-                </button>
+                </Button>
 
-                <button
-                    type="button"
-                    onClick={() => toggleSection("metrics")}
-                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-                >
+                <Button variant="disclosure" size="xs" onClick={() => toggleSection("metrics")}>
                     <span>Metrics</span>
                     <span>{openSection === "metrics" ? "▼" : "▶"}</span>
-                </button>
+                </Button>
             </div>
 
             {openSection === "input" ? (
@@ -112,20 +107,18 @@ function EntryCard({
                     <MetricsSection title="Source" data={entry.golden_metrics.source} />
                     <MetricsSection title="Summary" data={entry.golden_metrics.summary} />
                     {entry.golden_metrics.deepeval.length > 0 ? (
-                        <div className="space-y-2 border-t border-divider pt-3">
-                            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                                Deepeval
-                            </h6>
+                        <div className="space-y-2 border-t border-panel-border pt-3">
+                            <SectionHeading>Deepeval</SectionHeading>
                             <DeepevalItems items={entry.golden_metrics.deepeval} />
                         </div>
                     ) : null}
                 </div>
             ) : openSection === "metrics" ? (
-                <p className="m-0 border border-t-0 border-panel-border p-3 text-[0.78rem] italic text-muted">
+                <p className="m-0 border border-t-0 border-panel-border p-3 text-xs italic text-muted">
                     Metrics not computed yet.
                 </p>
             ) : null}
-        </article>
+        </Panel>
     );
 }
 
@@ -320,12 +313,12 @@ export function EvaluationSetPage({ setId }: Props) {
     }, []);
 
     return (
-        <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
+        <PageShell>
             <section className="panel-shell min-w-0">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p className="section-kicker">Evaluation set</p>
-                        <h1 className="m-0 font-display text-[1.1rem] uppercase tracking-[0.04em]">
+                        <h1 className="m-0 font-mono text-xl uppercase tracking-wider">
                             {selectedSet?.name ?? "Loading..."}
                         </h1>
                         <p className="helper-copy mt-2">
@@ -335,55 +328,46 @@ export function EvaluationSetPage({ setId }: Props) {
                         </p>
                     </div>
 
-                    <button
-                        type="button"
+                    <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => void handleEvaluateMetrics()}
                         disabled={!selectedSet || isEvaluatingMetrics}
-                        className="border border-panel-border bg-accent-500 px-3 py-2 text-[0.85rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {isEvaluatingMetrics ? "Evaluating..." : "Evaluate metrics"}
-                    </button>
-                    <button
-                        type="button"
+                    </Button>
+                    <Button
+                        size="sm"
                         onClick={() => void handleExportSet()}
                         disabled={!selectedSet || isExporting}
-                        className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {isExporting ? "Exporting..." : "Export JSON"}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => navigateTo("/research")}
-                        className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
-                    >
+                    </Button>
+                    <Button size="sm" onClick={() => navigateTo("/research")}>
                         Back to sets
-                    </button>
-                    <button
-                        type="button"
+                    </Button>
+                    <Button
+                        variant="dangerOutline"
+                        size="sm"
                         onClick={() => setIsSetDeletePending(true)}
                         disabled={!selectedSet}
-                        className="border border-danger bg-panel-solid px-3 py-2 text-[0.85rem] text-danger hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         Delete set
-                    </button>
+                    </Button>
                 </div>
 
-                {flashMessage ? (
-                    <div className="mt-4 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
-                        {flashMessage}
-                    </div>
-                ) : null}
+                {flashMessage ? <Alert className="mt-4">{flashMessage}</Alert> : null}
 
                 {errorMessage ? (
-                    <div className="mt-4 border border-danger bg-panel-solid px-3.5 py-2.5 text-[0.94rem] text-danger">
+                    <Alert tone="danger" className="mt-4">
                         {errorMessage}
-                    </div>
+                    </Alert>
                 ) : null}
 
                 {selectedSet ? (
-                    <section className="mt-4 grid gap-3 border border-panel-border bg-panel-solid px-3.5 py-3">
+                    <Panel as="section" padding="sm" className="mt-4 grid gap-3">
                         <div>
-                            <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                            <p className="m-0 text-sm uppercase tracking-wider text-label">
                                 New evaluation run
                             </p>
                             <p className="helper-copy mt-1">
@@ -393,13 +377,13 @@ export function EvaluationSetPage({ setId }: Props) {
                         </div>
 
                         <div className="grid gap-3 md:grid-cols-2">
-                            <label className="grid gap-1.5 md:col-span-2">
-                                <span className="text-[0.9rem] text-label">Model</span>
-                                <select
+                            <div className="grid gap-1.5 md:col-span-2">
+                                <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
+                                <Select
+                                    id="new-run-model"
                                     value={newRunSelectedModel}
                                     onChange={(event) => setNewRunSelectedModel(event.target.value)}
                                     disabled={isSubmittingNewRun || isLoadingNewRunOptions}
-                                    className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {Object.entries(newRunAvailableModels).map(
                                         ([provider, modelList]) =>
@@ -412,16 +396,16 @@ export function EvaluationSetPage({ setId }: Props) {
                                                 </option>
                                             )),
                                     )}
-                                </select>
-                            </label>
+                                </Select>
+                            </div>
 
-                            <label className="grid gap-1.5">
-                                <span className="text-[0.9rem] text-label">Summary mode</span>
-                                <select
+                            <div className="grid gap-1.5">
+                                <FieldLabel htmlFor="new-run-mode">Summary mode</FieldLabel>
+                                <Select
+                                    id="new-run-mode"
                                     value={newRunSummaryMode}
                                     onChange={(event) => setNewRunSummaryMode(event.target.value)}
                                     disabled={isSubmittingNewRun || isLoadingNewRunOptions}
-                                    className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {Object.entries(newRunAvailableModes).map(
                                         ([modeKey, modeLabel]) => (
@@ -430,14 +414,15 @@ export function EvaluationSetPage({ setId }: Props) {
                                             </option>
                                         ),
                                     )}
-                                </select>
-                            </label>
+                                </Select>
+                            </div>
 
-                            <label className="grid gap-1.5">
-                                <span className="text-[0.9rem] text-label">
+                            <div className="grid gap-1.5">
+                                <FieldLabel htmlFor="new-run-delay">
                                     Delay between entries (ms)
-                                </span>
-                                <input
+                                </FieldLabel>
+                                <Input
+                                    id="new-run-delay"
                                     type="number"
                                     min={0}
                                     step={100}
@@ -445,31 +430,29 @@ export function EvaluationSetPage({ setId }: Props) {
                                     onChange={(event) =>
                                         setNewRunDelayMs(Number(event.target.value))
                                     }
-                                    className="h-11 border border-input-border bg-panel-solid px-3 text-ink outline-none focus:border-input-focus"
                                 />
-                            </label>
+                            </div>
                         </div>
 
                         <div className="flex items-center gap-2.5">
-                            <button
-                                type="button"
+                            <Button
+                                variant="primary"
                                 onClick={() => void handleSubmitNewRun()}
                                 disabled={
                                     isSubmittingNewRun ||
                                     isLoadingNewRunOptions ||
                                     !newRunSelectedModel
                                 }
-                                className="border border-panel-border bg-accent-500 px-3.5 py-2 text-[0.94rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSubmittingNewRun ? "Creating..." : "Create evaluation run"}
-                            </button>
+                            </Button>
                         </div>
-                    </section>
+                    </Panel>
                 ) : null}
 
-                <section className="mt-4 grid gap-3 border border-panel-border bg-panel-solid px-3.5 py-3">
+                <Panel as="section" padding="sm" className="mt-4 grid gap-3">
                     <div>
-                        <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                        <p className="m-0 text-sm uppercase tracking-wider text-label">
                             Evaluation runs
                         </p>
                     </div>
@@ -480,9 +463,9 @@ export function EvaluationSetPage({ setId }: Props) {
                         <p className="helper-copy">Brak EvaluationRunów dla tego seta.</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full border-collapse text-left text-[0.94rem]">
+                            <table className="w-full border-collapse text-left text-base">
                                 <thead>
-                                    <tr className="border-b border-divider">
+                                    <tr className="border-b border-panel-border">
                                         <th className="px-2.5 py-2 font-medium">Provider</th>
                                         <th className="px-2.5 py-2 font-medium">Model</th>
                                         <th className="px-2.5 py-2 font-medium">Mode</th>
@@ -498,7 +481,7 @@ export function EvaluationSetPage({ setId }: Props) {
                                     {existingRuns.map((run) => (
                                         <tr
                                             key={run.evaluation_run_id}
-                                            className="border-b border-divider"
+                                            className="border-b border-panel-border"
                                         >
                                             <td className="px-2.5 py-2.5">{run.model_provider}</td>
                                             <td className="px-2.5 py-2.5">{run.model_name}</td>
@@ -510,24 +493,23 @@ export function EvaluationSetPage({ setId }: Props) {
                                             </td>
                                             <td className="px-2.5 py-2.5 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <button
-                                                        type="button"
+                                                    <Button
+                                                        size="sm"
                                                         onClick={() =>
                                                             navigateTo(
                                                                 `/research/runs/${run.evaluation_run_id}`,
                                                             )
                                                         }
-                                                        className="border border-panel-border bg-panel-solid px-3 py-1.5 text-[0.85rem] text-ink hover:bg-subtle-hover"
                                                     >
                                                         Open
-                                                    </button>
-                                                    <button
-                                                        type="button"
+                                                    </Button>
+                                                    <Button
+                                                        variant="dangerOutline"
+                                                        size="sm"
                                                         onClick={() => setRunPendingDelete(run)}
-                                                        className="border border-danger bg-panel-solid px-3 py-1.5 text-[0.85rem] text-danger hover:bg-subtle-hover"
                                                     >
                                                         Delete
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -536,7 +518,7 @@ export function EvaluationSetPage({ setId }: Props) {
                             </table>
                         </div>
                     )}
-                </section>
+                </Panel>
 
                 {isLoadingDetail ? (
                     <p className="helper-copy mt-4">Ładowanie szczegółów EvaluationSet...</p>
@@ -581,6 +563,6 @@ export function EvaluationSetPage({ setId }: Props) {
                 onConfirm={() => void handleConfirmDeleteRun()}
                 onClose={() => setRunPendingDelete(null)}
             />
-        </main>
+        </PageShell>
     );
 }

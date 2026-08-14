@@ -4,6 +4,8 @@ import { createSummaryJob, getJobStatus, getJobsForUrl, listSummarizedUrls } fro
 import { CompletedJobsList } from "../components/CompletedJobsList";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
+import { Alert } from "../components/ui/Alert";
+import { PageShell } from "../components/ui/PageShell";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
 
 const LIST_REFRESH_MS = 20_000;
@@ -126,11 +128,11 @@ export function HomePage() {
     }, [flashMessage]);
 
     return (
-        <main
+        <PageShell
             className={
                 hasDetailOpen
-                    ? "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7 lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
-                    : "mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7"
+                    ? "lg:grid-cols-[minmax(460px,38%)_minmax(740px,62%)] lg:items-start"
+                    : undefined
             }
         >
             <section
@@ -144,11 +146,7 @@ export function HomePage() {
                     <UrlSubmitCard onSubmit={submitSummary} isSubmitting={isSubmitting} />
                 ) : null}
 
-                {flashMessage ? (
-                    <div className="mt-3.5 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
-                        {flashMessage}
-                    </div>
-                ) : null}
+                {flashMessage ? <Alert className="mt-3.5">{flashMessage}</Alert> : null}
 
                 <CompletedJobsList
                     urls={urlList}
@@ -166,6 +164,6 @@ export function HomePage() {
                 isLoading={isLoadingDetail}
                 onClose={() => setSelectedUrl(null)}
             />
-        </main>
+        </PageShell>
     );
 }

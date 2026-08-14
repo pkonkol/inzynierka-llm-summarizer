@@ -5,6 +5,10 @@ import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalI
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { PreBlock } from "../components/PreBlock";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { PageShell, SectionHeading } from "../components/ui/PageShell";
+import { Panel } from "../components/ui/Panel";
 import type {
     EvaluationRunEntry,
     EvaluationRunMeta,
@@ -46,12 +50,8 @@ function MetricRow({
 function ColumnsHeader() {
     return (
         <div className="grid grid-cols-2 gap-3">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                Golden
-            </h6>
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                AI
-            </h6>
+            <SectionHeading>Golden</SectionHeading>
+            <SectionHeading>AI</SectionHeading>
         </div>
     );
 }
@@ -70,7 +70,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
                 <>
                     <ColumnsHeader />
                     {!entry.golden_metrics ? (
-                        <p className="m-0 text-[0.78rem] italic text-muted">
+                        <p className="m-0 text-xs italic text-muted">
                             Golden metrics not computed for this entry.
                         </p>
                     ) : null}
@@ -86,10 +86,8 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
             ) : null}
 
             {entry.ai_metrics ? (
-                <div className="space-y-2 border-t border-divider pt-3">
-                    <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                        AI key takeaways
-                    </h6>
+                <div className="space-y-2 border-t border-panel-border pt-3">
+                    <SectionHeading>AI key takeaways</SectionHeading>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         <InfoRow
                             label="Bullet count"
@@ -113,23 +111,21 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
     if (goldenItems.length === 0 && aiItems.length === 0) return null;
 
     return (
-        <div className="space-y-2 border-t border-divider pt-3">
-            <h6 className="m-0 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                Deepeval
-            </h6>
+        <div className="space-y-2 border-t border-panel-border pt-3">
+            <SectionHeading>Deepeval</SectionHeading>
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     {goldenItems.length > 0 ? (
                         <DeepevalItems items={goldenItems} />
                     ) : (
-                        <p className="m-0 text-[0.78rem] italic text-muted">—</p>
+                        <p className="m-0 text-xs italic text-muted">—</p>
                     )}
                 </div>
                 <div>
                     {aiItems.length > 0 ? (
                         <DeepevalItems items={aiItems} />
                     ) : (
-                        <p className="m-0 text-[0.78rem] italic text-muted">—</p>
+                        <p className="m-0 text-xs italic text-muted">—</p>
                     )}
                 </div>
             </div>
@@ -139,7 +135,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
 
 function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
     if (!entry.cross_metrics) {
-        return <p className="m-0 p-3 text-[0.82rem] text-muted">Not computed yet.</p>;
+        return <p className="m-0 p-3 text-sm text-muted">Not computed yet.</p>;
     }
 
     const { rouge1, rouge2, rougeL, meteor, deepeval } = entry.cross_metrics;
@@ -153,21 +149,21 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
                 <InfoRow label="meteor" value={meteor} />
             </div>
             {deepeval.length > 0 ? (
-                <div className="space-y-2 border-t border-divider pt-3">
+                <div className="space-y-2 border-t border-panel-border pt-3">
                     {deepeval.map((item) => (
                         <div
                             key={item.name}
-                            className="border border-panel-border bg-panel-bg px-3 py-2"
+                            className="border border-panel-border bg-panel-solid px-3 py-2"
                         >
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-mono text-[0.82rem] font-semibold uppercase tracking-wider text-ink">
+                                <span className="font-mono text-sm font-semibold uppercase tracking-wider text-ink">
                                     {item.name}
                                 </span>
-                                <span className="font-mono text-[0.75rem] text-muted">
+                                <span className="font-mono text-xs text-muted">
                                     winner: {pairwiseWinnerLabel(item.score)} · score: {item.score}
                                 </span>
                             </div>
-                            <p className="mt-2 m-0 text-[0.82rem] leading-[1.55] text-muted">
+                            <p className="mt-2 m-0 text-sm leading-normal text-muted">
                                 {item.reason}
                             </p>
                         </div>
@@ -182,12 +178,10 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
     return (
         <div className="space-y-4 p-3">
             <div>
-                <h6 className="m-0 mb-2 font-display text-[0.78rem] font-semibold uppercase tracking-wider text-muted">
-                    Cross metrics
-                </h6>
+                <SectionHeading className="mb-2">Cross metrics</SectionHeading>
                 <CrossMetricsSection entry={entry} />
             </div>
-            <div className="border-t border-divider pt-3">
+            <div className="border-t border-panel-border pt-3">
                 <StatisticalMetricsColumns entry={entry} />
                 <DeepevalMetricsColumns entry={entry} />
             </div>
@@ -211,8 +205,8 @@ function RunEntryCard({
     };
 
     return (
-        <article className="border border-panel-border bg-panel-solid px-3.5 py-3">
-            <p className="m-0 text-[0.82rem] text-ink">
+        <Panel as="article" padding="sm">
+            <p className="m-0 text-sm text-ink">
                 <span className="font-medium">{index + 1}</span>
                 {" · "}
                 <span>{entry.status}</span>
@@ -222,34 +216,30 @@ function RunEntryCard({
                 </span>
             </p>
 
-            {entry.error ? (
-                <p className="m-0 mt-2 text-[0.9rem] text-danger">{entry.error}</p>
-            ) : null}
+            {entry.error ? <p className="m-0 mt-2 text-md text-danger">{entry.error}</p> : null}
 
             <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div>
-                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                    <p className="m-0 text-sm uppercase tracking-wider text-label">
                         Golden summary
                     </p>
-                    <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-base text-ink">
                         {entry.golden_summary}
                     </p>
                 </div>
 
                 <div>
-                    <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
-                        AI summary
-                    </p>
-                    <p className="m-0 mt-1 whitespace-pre-wrap text-[0.95rem] text-ink">
+                    <p className="m-0 text-sm uppercase tracking-wider text-label">AI summary</p>
+                    <p className="m-0 mt-1 whitespace-pre-wrap text-base text-ink">
                         {entry.ai_summary ?? "—"}
                     </p>
 
                     {entry.ai_key_takeaways.length > 0 ? (
                         <div className="mt-3">
-                            <p className="m-0 text-[0.82rem] uppercase tracking-[0.04em] text-label">
+                            <p className="m-0 text-sm uppercase tracking-wider text-label">
                                 AI key takeaways
                             </p>
-                            <ul className="m-0 mt-1 list-disc pl-5 text-[0.9rem] text-ink">
+                            <ul className="m-0 mt-1 list-disc pl-5 text-md text-ink">
                                 {entry.ai_key_takeaways.map((item) => (
                                     <li key={item}>{item}</li>
                                 ))}
@@ -260,23 +250,15 @@ function RunEntryCard({
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-3">
-                <button
-                    type="button"
-                    onClick={() => toggleSection("input")}
-                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-                >
+                <Button variant="disclosure" size="xs" onClick={() => toggleSection("input")}>
                     <span>Input text</span>
                     <span>{openSection === "input" ? "▼" : "▶"}</span>
-                </button>
+                </Button>
 
-                <button
-                    type="button"
-                    onClick={() => toggleSection("metrics")}
-                    className="flex items-center justify-between border border-panel-border px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
-                >
+                <Button variant="disclosure" size="xs" onClick={() => toggleSection("metrics")}>
                     <span>Metrics</span>
                     <span>{openSection === "metrics" ? "▼" : "▶"}</span>
-                </button>
+                </Button>
             </div>
 
             {openSection === "input" ? (
@@ -290,7 +272,7 @@ function RunEntryCard({
                     <EntryMetrics entry={entry} />
                 </div>
             ) : null}
-        </article>
+        </Panel>
     );
 }
 
@@ -368,12 +350,12 @@ export function EvaluationRunPage({ runId }: Props) {
     };
 
     return (
-        <main className="mx-auto grid w-full max-w-355 gap-4 px-3.5 py-7">
+        <PageShell>
             <section className="panel-shell min-w-0">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p className="section-kicker">Evaluation run</p>
-                        <h1 className="m-0 font-display text-[1.1rem] uppercase tracking-[0.04em]">
+                        <h1 className="m-0 font-mono text-xl uppercase tracking-wider">
                             {run ? `${run.model_provider} – ${run.model_name}` : "Loading..."}
                         </h1>
                         <p className="helper-copy mt-2">
@@ -384,8 +366,9 @@ export function EvaluationRunPage({ runId }: Props) {
                     </div>
 
                     <div className="flex gap-2.5">
-                        <button
-                            type="button"
+                        <Button
+                            variant="primary"
+                            size="sm"
                             onClick={() => void handleDeepeval()}
                             disabled={
                                 !run ||
@@ -393,42 +376,32 @@ export function EvaluationRunPage({ runId }: Props) {
                                 run.status === "running" ||
                                 isEvaluatingDeepeval
                             }
-                            className="border border-panel-border bg-accent-500 px-3 py-2 text-[0.85rem] text-white hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {isEvaluatingDeepeval ? "Running..." : "Run GEVal"}
-                        </button>
-                        <button
-                            type="button"
+                        </Button>
+                        <Button
+                            size="sm"
                             onClick={handleRefresh}
                             disabled={isLoading || isLoadingEntries}
-                            className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             Refresh
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleBack}
-                            className="border border-panel-border bg-panel-solid px-3 py-2 text-[0.85rem] text-ink hover:bg-subtle-hover"
-                        >
+                        </Button>
+                        <Button size="sm" onClick={handleBack}>
                             Back to set
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
-                {flashMessage ? (
-                    <div className="mt-4 border border-success-border bg-success-bg px-3.5 py-2.5 text-[0.94rem] text-success-text">
-                        {flashMessage}
-                    </div>
-                ) : null}
+                {flashMessage ? <Alert className="mt-4">{flashMessage}</Alert> : null}
 
                 {errorMessage ? (
-                    <div className="mt-4 border border-danger bg-panel-solid px-3.5 py-2.5 text-[0.94rem] text-danger">
+                    <Alert tone="danger" className="mt-4">
                         {errorMessage}
-                    </div>
+                    </Alert>
                 ) : null}
 
                 {run ? (
-                    <div className="mt-4 grid gap-1 border border-panel-border bg-panel-solid px-3.5 py-2.5 text-[0.9rem]">
+                    <Panel padding="none" className="mt-4 grid gap-1 px-3.5 py-2.5 text-md">
                         <div className="flex flex-wrap gap-x-4 gap-y-1">
                             <span>Status: {run.status}</span>
                             <span>Created: {new Date(run.created_at).toLocaleString()}</span>
@@ -437,10 +410,10 @@ export function EvaluationRunPage({ runId }: Props) {
                                 {run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}
                             </span>
                         </div>
-                        <div className="mt-1 text-[0.82rem] text-muted">
+                        <div className="mt-1 text-sm text-muted">
                             <PreBlock>{JSON.stringify(run.aggregate_metrics, null, 2)}</PreBlock>
                         </div>
-                    </div>
+                    </Panel>
                 ) : isLoading ? (
                     <p className="helper-copy mt-4">Ładowanie szczegółów runa...</p>
                 ) : null}
@@ -460,6 +433,6 @@ export function EvaluationRunPage({ runId }: Props) {
                     </div>
                 ) : null}
             </section>
-        </main>
+        </PageShell>
     );
 }

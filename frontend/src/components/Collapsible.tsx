@@ -25,7 +25,7 @@ export function Collapsible({ label, children, open: controlledOpen, onToggle }:
             <button
                 type="button"
                 onClick={handleToggle}
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-[0.75rem] uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-xs uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
             >
                 <span>{label}</span>
                 <span>{open ? "▼" : "▶"}</span>

@@ -120,7 +120,9 @@ lint-frontend-style:
 [group('frontend')]
 [working-directory('frontend')]
 typecheck-frontend:
-    npx tsc --noEmit
+    # `-b` and not `--noEmit`: the root tsconfig is a solution file holding only `references`,
+    # so a bare invocation type-checks nothing and always passes.
+    npx tsc -b --noEmit
 
 # Frontend: apply biome's formatting and safe fixes
 [group('frontend')]

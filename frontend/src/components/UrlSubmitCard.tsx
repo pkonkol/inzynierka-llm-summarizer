@@ -77,19 +77,19 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
 
     return (
         <section className="animate-[riseIn_.55s_ease_both]">
-            <h1 className="m-0 text-balance font-display text-[clamp(2rem,5vw,3.7rem)] tracking-[-0.04em]">
+            <h1 className="m-0 text-balance font-mono text-hero tracking-[-0.04em]">
                 Praca Inżynierska - Podsumowanie Artykułów z LLM
             </h1>
-            <p className="mt-3 max-w-170 text-[1.05rem] text-muted">
+            <p className="mt-3 max-w-170 text-lg text-muted">
                 Wklej link do artykułu, a system wygeneruje podsumowanie i zapisze wynik do listy.
             </p>
             <form
-                className="mt-5.5 border border-panel-border bg-panel-bg p-6 shadow-panel"
+                className="mt-5.5 border border-panel-border bg-panel-solid p-6"
                 onSubmit={handleSubmit}
             >
                 <label
                     htmlFor="article-url"
-                    className="mb-3 block text-[0.95rem] font-semibold text-muted"
+                    className="mb-3 block text-base font-semibold text-muted"
                 >
                     Adres do analizy
                 </label>
@@ -107,7 +107,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="h-14 cursor-pointer border border-accent-700 bg-accent-700 px-5.5 font-display text-[0.95rem] text-accent-50 transition-[opacity] duration-200 hover:enabled:opacity-90 disabled:cursor-wait disabled:opacity-65"
+                        className="h-14 cursor-pointer border border-accent-700 bg-accent-700 px-5.5 font-mono text-base text-accent-50 transition-[opacity] duration-200 hover:enabled:opacity-90 disabled:cursor-wait disabled:opacity-65"
                     >
                         {isSubmitting ? "Przetwarzanie..." : "Start"}
                     </button>
@@ -117,7 +117,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     <div>
                         <label
                             htmlFor="model-select"
-                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                            className="mb-2 block text-base font-semibold text-muted"
                         >
                             Model
                         </label>
@@ -144,7 +144,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     <div>
                         <label
                             htmlFor="language-select"
-                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                            className="mb-2 block text-base font-semibold text-muted"
                         >
                             Język podsumowania
                         </label>
@@ -166,7 +166,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     <div>
                         <label
                             htmlFor="mode-select"
-                            className="mb-2 block text-[0.95rem] font-semibold text-muted"
+                            className="mb-2 block text-base font-semibold text-muted"
                         >
                             Tryb podsumowania
                         </label>
@@ -185,7 +185,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                         </select>
                     </div>
 
-                    <label className="mt-4 flex items-center gap-2 text-[0.95rem] text-muted">
+                    <label className="mt-4 flex items-center gap-2 text-base text-muted">
                         <input
                             type="checkbox"
                             checked={runDeepeval}
@@ -197,7 +197,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
                     </label>
                 </div>
 
-                {error ? <p className="mt-2.5 text-[0.9rem] text-danger">{error}</p> : null}
+                {error ? <p className="mt-2.5 text-md text-danger">{error}</p> : null}
             </form>
         </section>
     );

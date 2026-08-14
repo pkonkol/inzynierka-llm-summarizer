@@ -115,8 +115,48 @@ and is exempt.
   **MUST** become a token in `@theme` (`--container-app`) or a named constant next to the
   component (`SPLIT_COLUMNS` in `ui/PageShell.tsx`).
 
-Control heights are uniform: every input, select and full-height button is `h-11` (44px), so
-they line up in a row without per-call-site tuning. Rendered at `/design`.
+### Sizing above the spacing ceiling — MUST
+
+The spacing scale stops at 64px. Anything larger is a layout decision, not a step, and
+**MUST** be a named token in `@theme` rather than a number at the call site:
+
+- `--container-*` for widths — `--container-app`, `--container-measure`, `--container-list`,
+  `--container-detail`. These generate `max-w-app`, `w-detail`, and can be referenced inside
+  an arbitrary value as `minmax(var(--container-list),38%)`.
+- `--spacing-*` for a named component size — `--spacing-control` (44px) gives `h-control`,
+  which every input, select and full-height button uses so a row of them lines up.
+
+Viewport-relative values (`h-[75vh]`, `calc(100vh-2rem)`) are not scale values and stay
+arbitrary. A repeated arbitrary value **SHOULD** become a token on its second use.
+
+### Do not restate Preflight — FORBIDDEN
+
+Tailwind's Preflight already sets `margin: 0`, `padding: 0` and `border: 0` on **every**
+element, and `list-style: none` on `ul`/`ol`/`menu`. So `m-0`, `p-0` and `list-none` are
+always dead weight. Check Preflight before adding a reset utility.
+
+## Accessibility
+
+The bar: the author and their supervisor must never have to guess where to click, and the
+whole app must work from the keyboard.
+
+- Focus **MUST** stay visible. `outline-none` without a replacement is forbidden; the global
+  `:focus-visible` rule in `index.css` covers everything, so components need no focus styling
+  of their own.
+- State **MUST NOT** be carried by colour alone (WCAG 1.4.1). A status needs its text label
+  or a glyph next to the colour; decorative glyphs get `aria-hidden="true"` so they are not
+  read aloud.
+- Anything that navigates **MUST** be an `<a href>`, not a `<button>` with an `onClick` —
+  otherwise the middle click, "open in new tab" and "copy link" all silently do nothing. Use
+  `ui/LinkButton.tsx`, which keeps client-side routing for plain clicks and lets every
+  modifier click through to the browser.
+- A toggle that shows or hides content **MUST** carry `aria-expanded` (`ui/DisclosureButton.tsx`).
+- A dialog **MUST** have `role="dialog"`, `aria-modal`, a label via `aria-labelledby`, close on
+  Escape and on a backdrop click, and **MUST** return focus to whatever opened it. `ui/Modal.tsx`
+  does all of it; do not hand-roll another overlay.
+- Text that appears in response to a background job **SHOULD** sit inside an always-mounted
+  `aria-live="polite"` container. A live region only announces what is inserted *after* it
+  exists, so conditionally rendering the region itself announces nothing.
 
 ## Stack notes
 

@@ -4,10 +4,10 @@ import { createEvaluationSet, listEvaluationSets } from "../api/research";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { FieldLabel, Textarea } from "../components/ui/Field";
+import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
 import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
-import { navigateTo } from "../utils/researchRouting";
 
 const PRETTY_EXAMPLE = `{
   "name": "cnn-sample1",
@@ -35,9 +35,9 @@ function SetsTable({ sets }: { sets: EvaluationSetListItem[] }) {
           <Td>{set.entry_count}</Td>
           <Td>{new Date(set.created_at).toLocaleString()}</Td>
           <Td className="text-right">
-            <Button size="sm" onClick={() => navigateTo(`/research/${set.evaluation_set_id}`)}>
+            <LinkButton size="sm" href={`/research/${set.evaluation_set_id}`}>
               Open
-            </Button>
+            </LinkButton>
           </Td>
         </Tr>
       ))}
@@ -158,7 +158,7 @@ export function ResearchPage() {
       <section className="panel-shell grid min-w-0 gap-4">
         <div className="grid gap-2">
           <p className="section-kicker">Research</p>
-          <h1 className="m-0 font-mono text-xl uppercase tracking-wider">Evaluation set import</h1>
+          <h1 className="font-mono text-xl uppercase tracking-wider">Evaluation set import</h1>
           <p className="helper-copy">
             Importuj małe curated datasety JSON. To jest osobny moduł badawczy, niezależny od
             zwykłych jobs.
@@ -219,7 +219,7 @@ export function ResearchPage() {
         <div className="flex items-end justify-between gap-3">
           <div className="grid gap-2">
             <p className="section-kicker">Evaluation sets</p>
-            <h2 className="m-0 font-mono text-lg uppercase tracking-wider">Existing sets</h2>
+            <h2 className="font-mono text-lg uppercase tracking-wider">Existing sets</h2>
           </div>
           <Button size="sm" onClick={() => void loadSets()}>
             Refresh

@@ -15,12 +15,24 @@ const SIZE = {
   xs: "px-3 py-2 text-xs",
   sm: "px-3 py-2 text-sm",
   md: "px-3 py-2 text-base",
-  lg: "h-11 px-6 text-base",
+  lg: "h-control px-6 text-base",
 } as const;
 
+export type ButtonVariant = keyof typeof VARIANT;
+export type ButtonSize = keyof typeof SIZE;
+
+export function buttonClasses(variant: ButtonVariant, size: ButtonSize, className?: string) {
+  return cn(
+    "inline-flex cursor-pointer items-center justify-center border font-mono transition-[opacity,background-color] duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+    VARIANT[variant],
+    SIZE[size],
+    className,
+  );
+}
+
 interface ButtonProps extends React.ComponentProps<"button"> {
-  variant?: keyof typeof VARIANT;
-  size?: keyof typeof SIZE;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
 export function Button({
@@ -30,16 +42,5 @@ export function Button({
   className,
   ...props
 }: ButtonProps) {
-  return (
-    <button
-      type={type}
-      {...props}
-      className={cn(
-        "inline-flex cursor-pointer items-center justify-center border font-mono transition-[opacity,background-color] duration-200 disabled:cursor-not-allowed disabled:opacity-60",
-        VARIANT[variant],
-        SIZE[size],
-        className,
-      )}
-    />
-  );
+  return <button type={type} {...props} className={buttonClasses(variant, size, className)} />;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
@@ -7,6 +7,7 @@ import { InputTextSection } from "../components/InputTextSection";
 import { PreBlock } from "../components/PreBlock";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import type {
@@ -70,9 +71,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
         <>
           <ColumnsHeader />
           {!entry.golden_metrics ? (
-            <p className="m-0 text-xs italic text-muted">
-              Golden metrics not computed for this entry.
-            </p>
+            <p className="text-xs italic text-muted">Golden metrics not computed for this entry.</p>
           ) : null}
           {allLabels.map((label) => (
             <MetricRow
@@ -112,14 +111,14 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
           {goldenItems.length > 0 ? (
             <DeepevalItems items={goldenItems} />
           ) : (
-            <p className="m-0 text-xs italic text-muted">—</p>
+            <p className="text-xs italic text-muted">—</p>
           )}
         </div>
         <div>
           {aiItems.length > 0 ? (
             <DeepevalItems items={aiItems} />
           ) : (
-            <p className="m-0 text-xs italic text-muted">—</p>
+            <p className="text-xs italic text-muted">—</p>
           )}
         </div>
       </div>
@@ -129,7 +128,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
 
 function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
   if (!entry.cross_metrics) {
-    return <p className="m-0 p-3 text-sm text-muted">Not computed yet.</p>;
+    return <p className="p-3 text-sm text-muted">Not computed yet.</p>;
   }
 
   const { rouge1, rouge2, rougeL, meteor, deepeval } = entry.cross_metrics;
@@ -157,7 +156,7 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
                   winner: {pairwiseWinnerLabel(item.score)} · score: {item.score}
                 </span>
               </div>
-              <p className="m-0 text-sm leading-normal text-muted">{item.reason}</p>
+              <p className="text-sm leading-normal text-muted">{item.reason}</p>
             </div>
           ))}
         </div>
@@ -198,7 +197,7 @@ function RunEntryCard({
 
   return (
     <Panel as="article" padding="sm" className="grid gap-3">
-      <p className="m-0 text-sm text-ink">
+      <p className="text-sm text-ink">
         <span className="font-medium">{index + 1}</span>
         {" · "}
         <span>{entry.status}</span>
@@ -208,22 +207,22 @@ function RunEntryCard({
         </span>
       </p>
 
-      {entry.error ? <p className="m-0 text-md text-danger">{entry.error}</p> : null}
+      {entry.error ? <p className="text-md text-danger">{entry.error}</p> : null}
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="grid content-start gap-1">
-          <p className="m-0 text-sm uppercase tracking-wider text-label">Golden summary</p>
-          <p className="m-0 whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
+          <p className="text-sm uppercase tracking-wider text-label">Golden summary</p>
+          <p className="whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
         </div>
 
         <div className="grid content-start gap-2">
-          <p className="m-0 text-sm uppercase tracking-wider text-label">AI summary</p>
-          <p className="m-0 whitespace-pre-wrap text-base text-ink">{entry.ai_summary ?? "—"}</p>
+          <p className="text-sm uppercase tracking-wider text-label">AI summary</p>
+          <p className="whitespace-pre-wrap text-base text-ink">{entry.ai_summary ?? "—"}</p>
 
           {entry.ai_key_takeaways.length > 0 ? (
             <div className="grid gap-1">
-              <p className="m-0 text-sm uppercase tracking-wider text-label">AI key takeaways</p>
-              <ul className="m-0 list-disc pl-5 text-md text-ink">
+              <p className="text-sm uppercase tracking-wider text-label">AI key takeaways</p>
+              <ul className="list-disc pl-5 text-md text-ink">
                 {entry.ai_key_takeaways.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -234,15 +233,17 @@ function RunEntryCard({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="disclosure" size="xs" onClick={() => toggleSection("input")}>
-          <span>Input text</span>
-          <span>{openSection === "input" ? "▼" : "▶"}</span>
-        </Button>
+        <DisclosureButton
+          label="Input text"
+          isOpen={openSection === "input"}
+          onToggle={() => toggleSection("input")}
+        />
 
-        <Button variant="disclosure" size="xs" onClick={() => toggleSection("metrics")}>
-          <span>Metrics</span>
-          <span>{openSection === "metrics" ? "▼" : "▶"}</span>
-        </Button>
+        <DisclosureButton
+          label="Metrics"
+          isOpen={openSection === "metrics"}
+          onToggle={() => toggleSection("metrics")}
+        />
       </div>
 
       {openSection === "input" ? (
@@ -264,6 +265,8 @@ type Props = {
   runId: string;
 };
 
+const RUN_POLL_MS = 3_000;
+
 export function EvaluationRunPage({ runId }: Props) {
   const [run, setRun] = useState<EvaluationRunMeta | null>(null);
   const [entries, setEntries] = useState<EvaluationRunEntry[] | null>(null);
@@ -272,6 +275,9 @@ export function EvaluationRunPage({ runId }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [flashMessage, setFlashMessage] = useState<string | null>(null);
   const [isEvaluatingDeepeval, setIsEvaluatingDeepeval] = useState(false);
+  const previousRunStatus = useRef<string | null>(null);
+
+  const isRunInProgress = run?.status === "pending" || run?.status === "running";
 
   const loadRun = async () => {
     try {
@@ -309,6 +315,23 @@ export function EvaluationRunPage({ runId }: Props) {
     const timeoutId = setTimeout(() => setFlashMessage(null), 4500);
     return () => clearTimeout(timeoutId);
   }, [flashMessage]);
+
+  // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
+  useEffect(() => {
+    if (!isRunInProgress) return;
+    const intervalId = setInterval(() => void loadRun(), RUN_POLL_MS);
+    return () => clearInterval(intervalId);
+  }, [isRunInProgress, runId]);
+
+  useEffect(() => {
+    if (!run) return;
+    const previousStatus = previousRunStatus.current;
+    previousRunStatus.current = run.status;
+    if (previousStatus && previousStatus !== run.status && !isRunInProgress) {
+      setFlashMessage(`Run zakończony ze statusem: ${run.status}.`);
+      void loadEntries();
+    }
+  }, [run, isRunInProgress]);
 
   const handleBack = () => {
     navigateTo(run ? `/research/${run.evaluation_set_id}` : "/research");
@@ -377,7 +400,7 @@ export function EvaluationRunPage({ runId }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-2">
             <p className="section-kicker">Evaluation run</p>
-            <h1 className="m-0 font-mono text-xl uppercase tracking-wider">
+            <h1 className="font-mono text-xl uppercase tracking-wider">
               {run ? `${run.model_provider} – ${run.model_name}` : "Loading..."}
             </h1>
             <p className="helper-copy">
@@ -392,9 +415,7 @@ export function EvaluationRunPage({ runId }: Props) {
               variant="primary"
               size="sm"
               onClick={() => void handleDeepeval()}
-              disabled={
-                !run || run.status === "pending" || run.status === "running" || isEvaluatingDeepeval
-              }
+              disabled={!run || isRunInProgress || isEvaluatingDeepeval}
             >
               {isEvaluatingDeepeval ? "Running..." : "Run GEVal"}
             </Button>
@@ -407,7 +428,13 @@ export function EvaluationRunPage({ runId }: Props) {
           </div>
         </div>
 
-        {flashMessage ? <Alert>{flashMessage}</Alert> : null}
+        {/* Always mounted: a live region only announces content inserted after it exists. */}
+        <div aria-live="polite" className="empty:hidden grid gap-4">
+          {isRunInProgress ? (
+            <Alert tone="warning">Run w toku — status odświeża się sam.</Alert>
+          ) : null}
+          {flashMessage ? <Alert>{flashMessage}</Alert> : null}
+        </div>
 
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 

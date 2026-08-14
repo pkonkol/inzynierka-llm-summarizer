@@ -7,10 +7,11 @@ import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageSh
 import type { JobListItem, JobStatus } from "../types/api";
 import { formatDateMinute } from "../utils/format";
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: "text-success",
-  failed: "text-danger",
-  pending: "text-warning",
+// Glyph as well as colour, so the state survives greyscale and colour-blind vision.
+const STATUS_STYLE: Record<string, { className: string; glyph: string }> = {
+  completed: { className: "text-success", glyph: "✓" },
+  failed: { className: "text-danger", glyph: "✗" },
+  pending: { className: "text-warning", glyph: "⋯" },
 };
 
 export function JobsPage() {
@@ -65,14 +66,14 @@ export function JobsPage() {
       <section className={selectedJobId ? STICKY_COLUMN : "min-w-0"}>
         <div className="panel-shell grid gap-3">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="m-0 font-mono text-xl">Gotowe podsumowania</h2>
+            <h2 className="font-mono text-xl">Gotowe podsumowania</h2>
             <span className="text-md text-muted">{jobs.length}</span>
           </div>
 
           {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
           {!isLoading && jobs.length === 0 ? <p className="helper-copy">Brak wyników.</p> : null}
 
-          <ul className="m-0 grid min-w-0 list-none gap-2 p-0">
+          <ul className="grid min-w-0 gap-2">
             {jobs.map((job) => (
               <li key={job.job_id} className="relative min-w-0">
                 <button
@@ -89,7 +90,10 @@ export function JobsPage() {
                     {job.title}
                   </span>
                   <span className="flex gap-3 text-xs text-muted">
-                    <span className={STATUS_COLORS[job.status] ?? ""}>{job.status}</span>
+                    <span className={STATUS_STYLE[job.status]?.className}>
+                      <span aria-hidden="true">{STATUS_STYLE[job.status]?.glyph} </span>
+                      {job.status}
+                    </span>
                     <span>
                       {job.model_provider}:{job.model_name}
                     </span>

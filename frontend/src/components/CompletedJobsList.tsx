@@ -22,7 +22,7 @@ export function CompletedJobsList({
   return (
     <section className="panel-shell grid gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="m-0 font-mono text-xl">Lista podsumowanych linków</h2>
+        <h2 className="font-mono text-xl">Lista podsumowanych linków</h2>
         <span className="text-md text-muted">{urls.length}</span>
       </div>
 
@@ -31,7 +31,7 @@ export function CompletedJobsList({
         <p className="helper-copy">Brak wyników. Dodaj pierwszy URL powyżej.</p>
       ) : null}
 
-      <ul className="m-0 grid min-w-0 list-none gap-2 p-0">
+      <ul className="grid min-w-0 gap-2">
         {urls.map((item) => (
           <li key={item.source_url} className="min-w-0">
             <button

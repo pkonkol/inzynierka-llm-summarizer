@@ -4,7 +4,9 @@ import { Collapsible } from "../components/Collapsible";
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { FieldLabel, Input, Textarea } from "../components/ui/Field";
+import { LinkButton } from "../components/ui/LinkButton";
 import { Modal } from "../components/ui/Modal";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
@@ -60,7 +62,7 @@ function Swatch({ token }: { token: string }) {
   return (
     <div className="border border-panel-border">
       <div className={`h-12 ${token}`} />
-      <p className="m-0 border-t border-panel-border px-2 py-1 font-mono text-2xs">{token}</p>
+      <p className="border-t border-panel-border px-2 py-1 font-mono text-2xs">{token}</p>
     </div>
   );
 }
@@ -103,11 +105,12 @@ function ButtonRow({ variant }: { variant: (typeof BUTTON_VARIANTS)[number] }) {
 
 export function DesignPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDisclosureOpen, setIsDisclosureOpen] = useState(false);
 
   return (
     <PageShell>
       <div className="grid gap-2">
-        <h1 className="m-0 font-mono text-xl uppercase tracking-wider">Design system</h1>
+        <h1 className="font-mono text-xl uppercase tracking-wider">Design system</h1>
         <p className="helper-copy">
           Every primitive and token, rendered from the same source the app uses.
         </p>
@@ -196,13 +199,34 @@ export function DesignPage() {
         </div>
       </Section>
 
+      <Section title="Links and disclosure">
+        <p className="helper-copy">
+          LinkButton renders an anchor, so it can be opened in a new tab. DisclosureButton carries
+          aria-expanded.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <LinkButton size="sm" href="/research">
+            LinkButton
+          </LinkButton>
+          <LinkButton size="sm" variant="primary" href="/jobs">
+            primary
+          </LinkButton>
+        </div>
+        <DisclosureButton
+          label="DisclosureButton"
+          isOpen={isDisclosureOpen}
+          onToggle={() => setIsDisclosureOpen((value) => !value)}
+        />
+        {isDisclosureOpen ? <p className="helper-copy">Revealed content.</p> : null}
+      </Section>
+
       <Section title="Overlays and disclosure">
         <div className="justify-self-start">
           <Button variant="primary" onClick={() => setIsModalOpen(true)}>
             Open modal
           </Button>
         </div>
-        <Modal isOpen={isModalOpen} title="Modal title">
+        <Modal isOpen={isModalOpen} title="Modal title" onClose={() => setIsModalOpen(false)}>
           <p className="helper-copy">Body of the dialog.</p>
           <Button onClick={() => setIsModalOpen(false)}>Close</Button>
         </Modal>

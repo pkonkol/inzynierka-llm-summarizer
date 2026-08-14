@@ -15,7 +15,9 @@ import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { FieldLabel, Input, Select } from "../components/ui/Field";
+import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Table, Td, Tr } from "../components/ui/Table";
@@ -73,7 +75,7 @@ function EntryCard({
 
   return (
     <Panel as="article" padding="sm" className="grid gap-3">
-      <p className="m-0 text-sm text-ink">
+      <p className="text-sm text-ink">
         <span className="font-medium">{index + 1}</span>
         {" · "}
         <span className="lowercase text-muted">
@@ -81,18 +83,20 @@ function EntryCard({
         </span>
       </p>
 
-      <p className="m-0 whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
+      <p className="whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
 
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="disclosure" size="xs" onClick={() => toggleSection("input")}>
-          <span>Input text</span>
-          <span>{openSection === "input" ? "▼" : "▶"}</span>
-        </Button>
+        <DisclosureButton
+          label="Input text"
+          isOpen={openSection === "input"}
+          onToggle={() => toggleSection("input")}
+        />
 
-        <Button variant="disclosure" size="xs" onClick={() => toggleSection("metrics")}>
-          <span>Metrics</span>
-          <span>{openSection === "metrics" ? "▼" : "▶"}</span>
-        </Button>
+        <DisclosureButton
+          label="Metrics"
+          isOpen={openSection === "metrics"}
+          onToggle={() => toggleSection("metrics")}
+        />
       </div>
 
       {openSection === "input" ? (
@@ -113,7 +117,7 @@ function EntryCard({
           ) : null}
         </div>
       ) : openSection === "metrics" ? (
-        <p className="m-0 border border-t-0 border-panel-border p-3 text-xs italic text-muted">
+        <p className="border border-t-0 border-panel-border p-3 text-xs italic text-muted">
           Metrics not computed yet.
         </p>
       ) : null}
@@ -125,11 +129,9 @@ const RUN_COLUMNS = ["Provider", "Model", "Mode", "Status", "Entries", "Created"
 
 function RunsTable({
   runs,
-  onOpen,
   onDelete,
 }: {
   runs: EvaluationRunListItem[];
-  onOpen: (run: EvaluationRunListItem) => void;
   onDelete: (run: EvaluationRunListItem) => void;
 }) {
   return (
@@ -144,9 +146,9 @@ function RunsTable({
           <Td>{new Date(run.created_at).toLocaleString()}</Td>
           <Td className="text-right">
             <div className="flex justify-end gap-2">
-              <Button size="sm" onClick={() => onOpen(run)}>
+              <LinkButton size="sm" href={`/research/runs/${run.evaluation_run_id}`}>
                 Open
-              </Button>
+              </LinkButton>
               <Button variant="dangerOutline" size="sm" onClick={() => onDelete(run)}>
                 Delete
               </Button>
@@ -360,13 +362,7 @@ export function EvaluationSetPage({ setId }: Props) {
   if (!isLoadingExistingRuns && existingRuns.length === 0) {
     runsSection = <p className="helper-copy">Brak EvaluationRunów dla tego seta.</p>;
   } else if (!isLoadingExistingRuns) {
-    runsSection = (
-      <RunsTable
-        runs={existingRuns}
-        onOpen={(run) => navigateTo(`/research/runs/${run.evaluation_run_id}`)}
-        onDelete={setRunPendingDelete}
-      />
-    );
+    runsSection = <RunsTable runs={existingRuns} onDelete={setRunPendingDelete} />;
   }
 
   return (
@@ -375,7 +371,7 @@ export function EvaluationSetPage({ setId }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="grid gap-2">
             <p className="section-kicker">Evaluation set</p>
-            <h1 className="m-0 font-mono text-xl uppercase tracking-wider">
+            <h1 className="font-mono text-xl uppercase tracking-wider">
               {selectedSet?.name ?? "Loading..."}
             </h1>
             <p className="helper-copy">
@@ -420,7 +416,7 @@ export function EvaluationSetPage({ setId }: Props) {
         {selectedSet ? (
           <Panel as="section" padding="sm" className="grid gap-3">
             <div className="grid gap-1">
-              <p className="m-0 text-sm uppercase tracking-wider text-label">New evaluation run</p>
+              <p className="text-sm uppercase tracking-wider text-label">New evaluation run</p>
               <p className="helper-copy">
                 Naiwny runner generuje tylko AI summary i podstawowe metryki tekstowe. Bez GEval.
               </p>
@@ -488,7 +484,7 @@ export function EvaluationSetPage({ setId }: Props) {
 
         <Panel as="section" padding="sm" className="grid gap-3">
           <div>
-            <p className="m-0 text-sm uppercase tracking-wider text-label">Evaluation runs</p>
+            <p className="text-sm uppercase tracking-wider text-label">Evaluation runs</p>
           </div>
 
           {runsSection}

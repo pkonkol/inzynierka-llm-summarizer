@@ -25,10 +25,11 @@ export function Collapsible({ label, children, open: controlledOpen, onToggle }:
       <button
         type="button"
         onClick={handleToggle}
+        aria-expanded={open}
         className="flex w-full items-center justify-between px-3 py-2 text-left text-xs uppercase tracking-wider text-muted transition-colors hover:bg-subtle"
       >
         <span>{label}</span>
-        <span>{open ? "▼" : "▶"}</span>
+        <span aria-hidden="true">{open ? "▼" : "▶"}</span>
       </button>
       {open && (
         <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>

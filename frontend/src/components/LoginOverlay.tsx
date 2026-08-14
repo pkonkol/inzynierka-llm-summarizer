@@ -35,8 +35,8 @@ export function LoginOverlay({ isOpen, onSuccess, onClose }: LoginOverlayProps) 
   };
 
   return (
-    <Modal isOpen={isOpen} title="Dostęp wymagany" onSubmit={handleSubmit}>
-      <p className="m-0 text-sm text-muted">Zaloguj się, aby uruchomić nowe podsumowanie.</p>
+    <Modal isOpen={isOpen} title="Dostęp wymagany" onClose={onClose} onSubmit={handleSubmit}>
+      <p className="text-sm text-muted">Zaloguj się, aby uruchomić nowe podsumowanie.</p>
       <Input
         autoFocus
         type="password"
@@ -59,7 +59,7 @@ export function LoginOverlay({ isOpen, onSuccess, onClose }: LoginOverlayProps) 
           {isLoading ? "..." : "Wejdź"}
         </Button>
       </div>
-      {error ? <p className="m-0 text-md text-danger">{error}</p> : null}
+      {error ? <p className="text-md text-danger">{error}</p> : null}
     </Modal>
   );
 }

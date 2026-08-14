@@ -77,10 +77,10 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
   return (
     <section className="grid animate-[riseIn_.55s_ease_both] gap-6">
       <div className="grid gap-3">
-        <h1 className="m-0 text-balance font-mono text-hero tracking-[-0.04em]">
+        <h1 className="text-balance font-mono text-hero tracking-[-0.04em]">
           Praca Inżynierska - Podsumowanie Artykułów z LLM
         </h1>
-        <p className="m-0 max-w-170 text-lg text-muted">
+        <p className="max-w-measure text-lg text-muted">
           Wklej link do artykułu, a system wygeneruje podsumowanie i zapisze wynik do listy.
         </p>
       </div>
@@ -158,7 +158,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
             </Select>
           </div>
 
-          <label className="flex items-center gap-2 self-end text-base text-muted sm:h-11">
+          <label className="flex items-center gap-2 self-end text-base text-muted sm:h-control">
             <input
               type="checkbox"
               checked={runDeepeval}
@@ -170,7 +170,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
           </label>
         </div>
 
-        {error ? <p className="m-0 text-md text-danger">{error}</p> : null}
+        {error ? <p className="text-md text-danger">{error}</p> : null}
       </form>
     </section>
   );

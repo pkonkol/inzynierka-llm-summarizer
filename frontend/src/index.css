@@ -1,9 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-sans: "IBM Plex Sans", "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", "Courier New", monospace;
+  /* Section labels only. Condensed reads as a different voice from body text without leaving the Plex family. */
+  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
 
   --color-page: #ececec;
   --color-ink: #111111;
@@ -38,8 +40,14 @@
   --color-warning-border: #8a5a00;
   --color-link: #1a4f7a;
 
-  /* Widest the content ever gets; beyond it the two-column split stops being readable. */
+  /* Layout widths. Anything above the 64px spacing ceiling is a named decision, not a scale step. */
   --container-app: 88rem;
+  --container-measure: 48rem;
+  --container-list: 32rem;
+  --container-detail: 48rem;
+
+  /* Every input, select and full-height button, so a row of them lines up without per-call tuning. */
+  --spacing-control: 3rem;
 
   /* Overrides Tailwind's own scale, so the utilities stay the familiar text-sm / text-base.
      Steps are ~0.05rem apart at the bottom because that is where this UI does its work. */
@@ -72,7 +80,7 @@
 }
 
 @utility section-kicker {
-  @apply m-0 text-md uppercase tracking-wider text-label;
+  @apply font-display text-lg font-semibold uppercase tracking-widest text-label;
 }
 
 @layer base {
@@ -85,5 +93,12 @@
 
   button {
     @apply transition-colors;
+  }
+
+  /* One visible focus ring for every interactive element. `:focus-visible` and not `:focus`,
+     so it appears for keyboard users without ringing every mouse click. */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
   }
 }

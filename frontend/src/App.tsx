@@ -84,7 +84,7 @@ function App() {
   }
 
   // Reference gallery for the design system; deliberately outside the app chrome.
-  if (window.location.pathname.startsWith("/design")) {
+  if (import.meta.env.DEV && window.location.pathname.startsWith("/design")) {
     return <DesignPage />;
   }
 

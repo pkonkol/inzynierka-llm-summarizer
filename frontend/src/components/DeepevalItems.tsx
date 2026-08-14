@@ -27,7 +27,7 @@ export function DeepevalItems({ items }: { items: DeepevalDisplayItem[] }) {
               )}
             </div>
             {item.reason ? (
-              <p className="m-0 text-sm leading-normal text-muted">{item.reason}</p>
+              <p className="text-sm leading-normal text-muted">{item.reason}</p>
             ) : null}
           </div>
         );

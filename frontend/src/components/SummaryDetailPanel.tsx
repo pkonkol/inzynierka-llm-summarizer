@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Button } from "../components/ui/Button";
 import { SectionHeading } from "../components/ui/PageShell";
 import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
 import type { DeepevalItem } from "../types/research";
@@ -88,7 +89,7 @@ function PromptSection({
 
     templateBlock = (
       <div className="grid min-w-0 gap-2">
-        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Template</p>
+        <p className="text-2xs uppercase tracking-wider text-muted">Template</p>
         {renderedMessages}
       </div>
     );
@@ -98,7 +99,7 @@ function PromptSection({
   if (params && Object.keys(params).length > 0) {
     paramsBlock = (
       <div className="grid min-w-0 gap-1">
-        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Parametry</p>
+        <p className="text-2xs uppercase tracking-wider text-muted">Parametry</p>
         <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
       </div>
     );
@@ -108,8 +109,8 @@ function PromptSection({
   if (inputText) {
     inputBlock = (
       <div className="grid min-w-0 gap-1">
-        <p className="m-0 text-2xs uppercase tracking-wider text-muted">Input text</p>
-        <pre className="m-0 max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-xs leading-normal min-w-0">
+        <p className="text-2xs uppercase tracking-wider text-muted">Input text</p>
+        <pre className="max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-xs leading-normal min-w-0">
           {inputText}
         </pre>
       </div>
@@ -184,7 +185,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: 
       {job.status === "failed" && job.error ? (
         <section>
           <h5 className="section-kicker">Błąd</h5>
-          <p className="m-0 text-lg leading-relaxed text-danger">{job.error}</p>
+          <p className="text-lg leading-relaxed text-danger">{job.error}</p>
         </section>
       ) : (
         <JobDetails job={job} />
@@ -246,12 +247,12 @@ function JobDetails({ job }: { job: JobStatus }) {
 
       <section>
         <h5 className="section-kicker">Krótkie podsumowanie</h5>
-        <p className="m-0 text-lg leading-relaxed">{job.summary_data?.summary}</p>
+        <p className="text-lg leading-relaxed">{job.summary_data?.summary}</p>
       </section>
 
       <section>
         <h5 className="section-kicker">Najważniejsze punkty</h5>
-        <div className="grid gap-3 text-lg leading-relaxed [&_ul]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:m-0 [&_p]:whitespace-pre-wrap [&_li>p]:m-0">
+        <div className="grid gap-3 text-lg leading-relaxed [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{takeawaysMarkdown}</ReactMarkdown>
         </div>
       </section>
@@ -277,7 +278,7 @@ export function SummaryDetailPanel({
   debugMode = false,
 }: JobDetailPanelProps) {
   if (!isOpen) return null;
-  if (isLoading) return <p className="m-0 text-base text-muted">Ładowanie wyników...</p>;
+  if (isLoading) return <p className="text-base text-muted">Ładowanie wyników...</p>;
   if (!sourceUrl) return null;
 
   const title = jobs[0]?.summary_data?.title || "";
@@ -286,20 +287,16 @@ export function SummaryDetailPanel({
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-32px)] lg:border lg:p-6 xl:w-190">
+    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-2rem)] lg:border lg:p-6 xl:w-detail">
       <div className="flex items-center justify-between border-b border-panel-border pb-3">
-        <h3 className="m-0 font-mono text-xl">Szczegóły</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-9 cursor-pointer border border-panel-border bg-subtle-hover px-3 text-ink"
-        >
+        <h3 className="font-mono text-xl">Szczegóły</h3>
+        <Button variant="ghost" onClick={onClose}>
           Zamknij
-        </button>
+        </Button>
       </div>
 
       <article className="grid gap-4 min-w-0">
-        <h3 className="m-0 font-mono text-lg leading-snug text-ink">{title}</h3>
+        <h3 className="font-mono text-lg leading-snug text-ink">{title}</h3>
 
         <a
           href={sourceUrl}
@@ -311,12 +308,12 @@ export function SummaryDetailPanel({
         </a>
 
         <section className="grid content-start gap-3 border-t border-panel-border pt-4 min-w-0">
-          <h5 className="m-0 font-mono text-base font-semibold uppercase tracking-wider text-muted">
+          <h5 className="font-mono text-base font-semibold uppercase tracking-wider text-muted">
             {sectionTitle}
           </h5>
 
           {jobsFilteredSorted.length === 0 ? (
-            <p className="m-0 text-base text-muted">Brak wyników.</p>
+            <p className="text-base text-muted">Brak wyników.</p>
           ) : (
             jobsFilteredSorted.map((job, index) => (
               <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />

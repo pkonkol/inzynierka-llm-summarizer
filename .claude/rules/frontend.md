@@ -123,7 +123,7 @@ The spacing scale stops at 64px. Anything larger is a layout decision, not a ste
 - `--container-*` for widths — `--container-app`, `--container-measure`, `--container-list`,
   `--container-detail`. These generate `max-w-app`, `w-detail`, and can be referenced inside
   an arbitrary value as `minmax(var(--container-list),38%)`.
-- `--spacing-*` for a named component size — `--spacing-control` (44px) gives `h-control`,
+- `--spacing-*` for a named component size — `--spacing-control` gives `h-control`,
   which every input, select and full-height button uses so a row of them lines up.
 
 Viewport-relative values (`h-[75vh]`, `calc(100vh-2rem)`) are not scale values and stay

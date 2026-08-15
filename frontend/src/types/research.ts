@@ -140,6 +140,21 @@ export type EvaluationRunEntry = {
   error: string | null;
 };
 
+// Empty on a freshly created run; the runner fills the counts, the GEval pass adds `deepeval`.
+export type EvaluationRunAggregateMetrics = {
+  entry_count?: number;
+  completed_entries?: number;
+  failed_entries?: number;
+  error?: string;
+  deepeval?: {
+    status: "running" | "completed" | "failed";
+    updated_entries?: number;
+    skipped_entries?: number;
+    finished_at?: string;
+    error?: string;
+  };
+};
+
 export type EvaluationRunMeta = {
   id: string;
   evaluation_set_id: string;
@@ -152,5 +167,5 @@ export type EvaluationRunMeta = {
   created_at: string;
   finished_at: string | null;
   entry_count: number;
-  aggregate_metrics: Record<string, unknown>;
+  aggregate_metrics: EvaluationRunAggregateMetrics;
 };

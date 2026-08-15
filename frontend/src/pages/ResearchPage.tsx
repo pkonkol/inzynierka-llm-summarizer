@@ -87,7 +87,7 @@ export function ResearchPage() {
     try {
       payload = JSON.parse(rawJson) as EvaluationSetImportPayload;
     } catch {
-      setErrorMessage("Niepoprawny JSON.");
+      showFlash("Niepoprawny JSON.", "danger");
       return;
     }
 
@@ -97,7 +97,7 @@ export function ResearchPage() {
       showFlash(`Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`);
       await loadSets();
     } catch (error) {
-      setErrorMessage(`Nie udało się zaimportować EvaluationSetu: ${errorText(error)}`);
+      showFlash(`Nie udało się zaimportować EvaluationSetu: ${errorText(error)}`, "danger");
     } finally {
       setIsImporting(false);
     }
@@ -112,7 +112,7 @@ export function ResearchPage() {
       setRawJson(text);
       setErrorMessage(null);
     } catch (error) {
-      setErrorMessage(`Nie udało się odczytać pliku: ${errorText(error)}`);
+      showFlash(`Nie udało się odczytać pliku: ${errorText(error)}`, "danger");
     }
 
     event.target.value = "";

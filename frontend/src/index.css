@@ -46,6 +46,10 @@
   --container-list: 32rem;
   --container-detail: 48rem;
 
+  /* Derived, not chosen: --container-list + --container-detail + the shell's gap and padding.
+     Below it the two-column split does not fit and the detail pane gets clipped. */
+  --breakpoint-split: 84rem;
+
   /* Every input, select and full-height button, so a row of them lines up without per-call tuning. */
   --spacing-control: 3rem;
 

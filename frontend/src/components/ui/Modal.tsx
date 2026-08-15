@@ -14,19 +14,21 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Read through a ref so the effect below depends on `isOpen` alone. Call sites pass an inline
-  // arrow, so depending on `onClose` would re-run this on every parent render — moving focus out
-  // of the dialog and back on each one.
+  // Via a ref so the effect depends on `isOpen` alone: call sites pass an inline arrow, and
+  // re-running the effect would bounce focus out of the dialog and back.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    // Focus the dialog itself, not its first control: a screen reader then reads the title
-    // before the field, and Tab from here walks the dialog in DOM order.
-    dialogRef.current?.focus();
+    // Runs after the children mounted, so a child with `autoFocus` already holds focus.
+    const active = document.activeElement as HTMLElement | null;
+    const focusStartedInside = Boolean(dialogRef.current?.contains(active));
+    const previouslyFocused = focusStartedInside ? null : active;
+
+    // The dialog, not its first control: a screen reader then reads the title before the field.
+    if (!focusStartedInside) dialogRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCloseRef.current();
@@ -35,7 +37,7 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      previouslyFocused?.focus();
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [isOpen]);
 

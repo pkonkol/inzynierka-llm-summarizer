@@ -24,30 +24,32 @@ interface ToastProps {
 export function Toast({ flash, onDismiss }: ToastProps) {
   const message = flash ? splitMessage(flash.text) : null;
 
+  const details = message?.details ? (
+    <Collapsible label="Szczegóły techniczne">
+      <PreBlock className="max-h-64 overflow-y-auto">{message.details}</PreBlock>
+    </Collapsible>
+  ) : null;
+
+  const notification =
+    flash && message ? (
+      <Alert tone={flash.tone} className="pointer-events-auto grid w-full max-w-sm gap-2 shadow-lg">
+        <div className="flex items-start justify-between gap-3">
+          <p>{message.summary}</p>
+          <Button size="xs" onClick={onDismiss} aria-label="Zamknij powiadomienie">
+            ✕
+          </Button>
+        </div>
+        {details}
+      </Alert>
+    ) : null;
+
   // The region is always mounted: a live region only announces what is inserted after it exists.
   return (
     <div
       aria-live="polite"
       className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-end sm:inset-x-auto sm:right-4"
     >
-      {flash && message ? (
-        <Alert
-          tone={flash.tone}
-          className="pointer-events-auto grid w-full max-w-sm gap-2 shadow-lg"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <p>{message.summary}</p>
-            <Button size="xs" onClick={onDismiss} aria-label="Zamknij powiadomienie">
-              ✕
-            </Button>
-          </div>
-          {message.details ? (
-            <Collapsible label="Szczegóły techniczne">
-              <PreBlock className="max-h-64 overflow-y-auto text-2xs">{message.details}</PreBlock>
-            </Collapsible>
-          ) : null}
-        </Alert>
-      ) : null}
+      {notification}
     </div>
   );
 }

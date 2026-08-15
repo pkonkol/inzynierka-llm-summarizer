@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { errorText } from "../api/client";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
-import { PreBlock } from "../components/PreBlock";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
@@ -182,6 +181,63 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
   );
 }
 
+const RUN_STATUS_STYLE: Record<string, string> = {
+  completed: "text-success",
+  failed: "text-danger",
+  running: "text-warning",
+  pending: "text-warning",
+};
+
+function RunSummary({ run }: { run: EvaluationRunMeta }) {
+  const { entry_count, completed_entries, failed_entries, error, deepeval } = run.aggregate_metrics;
+
+  return (
+    <Panel padding="sm" className="grid gap-3">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
+        <InfoRow
+          label="Status"
+          value={run.status}
+          valueClassName={`text-sm ${RUN_STATUS_STYLE[run.status] ?? ""}`}
+        />
+        <InfoRow label="Entries" value={entry_count} />
+        <InfoRow label="Completed" value={completed_entries} />
+        <InfoRow
+          label="Failed"
+          value={failed_entries}
+          valueClassName={failed_entries ? "text-sm text-danger" : "text-sm"}
+        />
+        <InfoRow label="Created" value={new Date(run.created_at).toLocaleString()} />
+        <InfoRow
+          label="Finished"
+          value={run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}
+        />
+      </div>
+
+      {deepeval ? (
+        <div className="grid gap-2 border-t border-panel-border pt-3">
+          <SectionHeading>GEval</SectionHeading>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+            <InfoRow
+              label="Status"
+              value={deepeval.status}
+              valueClassName={`text-sm ${RUN_STATUS_STYLE[deepeval.status] ?? ""}`}
+            />
+            <InfoRow label="Updated" value={deepeval.updated_entries} />
+            <InfoRow label="Skipped" value={deepeval.skipped_entries} />
+            <InfoRow
+              label="Finished"
+              value={deepeval.finished_at ? new Date(deepeval.finished_at).toLocaleString() : null}
+            />
+          </div>
+          {deepeval.error ? <p className="text-md text-danger">{deepeval.error}</p> : null}
+        </div>
+      ) : null}
+
+      {error ? <p className="text-md text-danger">{error}</p> : null}
+    </Panel>
+  );
+}
+
 function RunEntryCard({
   index,
   entry,
@@ -288,13 +344,7 @@ export function EvaluationRunPage({ runId }: Props) {
   const loadRun = async () => {
     try {
       const data = await getEvaluationRun(runId);
-      // Keep the previous object while only the poll timestamp would change, so a run with a
-      // hundred entries does not rebuild its whole entry list every three seconds.
-      setRun((previous) =>
-        previous?.status === data.status && previous.finished_at === data.finished_at
-          ? previous
-          : data,
-      );
+      setRun(data);
       setErrorMessage(null);
     } catch (error) {
       setErrorMessage(`Nie udało się pobrać runa: ${errorText(error)}`);
@@ -360,7 +410,7 @@ export function EvaluationRunPage({ runId }: Props) {
       await evaluateRunDeepeval(runId);
       showFlash("GEval queued. Refresh za chwilę aby zobaczyć wyniki.");
     } catch (error) {
-      setErrorMessage(`Nie udało się uruchomić GEval: ${errorText(error)}`);
+      showFlash(`Nie udało się uruchomić GEval: ${errorText(error)}`, "danger");
     } finally {
       setIsEvaluatingDeepeval(false);
     }
@@ -373,41 +423,34 @@ export function EvaluationRunPage({ runId }: Props) {
 
   let runSummary = null;
   if (run) {
-    runSummary = (
-      <Panel padding="none" className="grid gap-2 px-3 py-2 text-md">
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <span>Status: {run.status}</span>
-          <span>Created: {new Date(run.created_at).toLocaleString()}</span>
-          <span>
-            Finished: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "—"}
-          </span>
-        </div>
-        <div className="text-sm text-muted">
-          <PreBlock>{JSON.stringify(run.aggregate_metrics, null, 2)}</PreBlock>
-        </div>
-      </Panel>
-    );
+    runSummary = <RunSummary run={run} />;
   } else if (isLoading) {
     runSummary = <p className="helper-copy">Ładowanie szczegółów runa...</p>;
   }
 
-  let entriesSection = null;
-  if (isLoadingEntries) {
-    entriesSection = <p className="helper-copy">Ładowanie entries...</p>;
-  } else if (entries && run) {
-    entriesSection = (
+  // Polling replaces `run` every few seconds; the entry list does not depend on it.
+  const evaluationSetId = run?.evaluation_set_id;
+  const entryCards = useMemo(() => {
+    if (!entries || !evaluationSetId) return null;
+    return (
       <div className="grid gap-3">
         {entries.map((entry, index) => (
           <RunEntryCard
             key={entry.entry_id}
             index={index}
             entry={entry}
-            evaluationSetId={run.evaluation_set_id}
+            evaluationSetId={evaluationSetId}
           />
         ))}
       </div>
     );
-  }
+  }, [entries, evaluationSetId]);
+
+  const entriesSection = isLoadingEntries ? (
+    <p className="helper-copy">Ładowanie entries...</p>
+  ) : (
+    entryCards
+  );
 
   return (
     <PageShell>

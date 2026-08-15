@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { getAuthStatus, getToken } from "./api/client";
-import { FlashProvider } from "./components/FlashProvider";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
 import { DesignPage } from "./pages/DesignPage";
@@ -79,31 +78,27 @@ function App() {
   }
 
   // Reference gallery for the design system; deliberately outside the app chrome.
-  const isDesignGallery = import.meta.env.DEV && window.location.pathname.startsWith("/design");
+  if (import.meta.env.DEV && window.location.pathname.startsWith("/design")) {
+    return <DesignPage />;
+  }
 
   return (
-    <FlashProvider>
-      {isDesignGallery ? (
-        <DesignPage />
-      ) : (
-        <div className="relative min-h-screen overflow-x-hidden">
-          <NavDock
-            active={route}
-            isAuthEnabled={isAuthEnabled}
-            isLoggedIn={isLoggedIn}
-            onOpenLogin={() => setIsLoginOpen(true)}
-          />
-          <LoginOverlay
-            isOpen={isLoginOpen}
-            onSuccess={handleLoginSuccess}
-            onClose={() => setIsLoginOpen(false)}
-          />
-          {route === "home" && <HomePage />}
-          {route === "jobs" && <JobsPage />}
-          {route === "research" && <ResearchRouter />}
-        </div>
-      )}
-    </FlashProvider>
+    <div className="relative min-h-screen overflow-x-hidden">
+      <NavDock
+        active={route}
+        isAuthEnabled={isAuthEnabled}
+        isLoggedIn={isLoggedIn}
+        onOpenLogin={() => setIsLoginOpen(true)}
+      />
+      <LoginOverlay
+        isOpen={isLoginOpen}
+        onSuccess={handleLoginSuccess}
+        onClose={() => setIsLoginOpen(false)}
+      />
+      {route === "home" && <HomePage />}
+      {route === "jobs" && <JobsPage />}
+      {route === "research" && <ResearchRouter />}
+    </div>
   );
 }
 

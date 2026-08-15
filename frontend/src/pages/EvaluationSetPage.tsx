@@ -223,7 +223,7 @@ export function EvaluationSetPage({ setId }: Props) {
       downloadJson(`${selectedSet.name}.json`, data);
       showFlash(`Wyeksportowano EvaluationSet: ${selectedSet.name}.`);
     } catch (error) {
-      setErrorMessage(`Nie udało się wyeksportować EvaluationSetu: ${errorText(error)}`);
+      showFlash(`Nie udało się wyeksportować EvaluationSetu: ${errorText(error)}`, "danger");
     } finally {
       setIsExporting(false);
     }
@@ -240,7 +240,7 @@ export function EvaluationSetPage({ setId }: Props) {
       );
       await loadSetDetail();
     } catch (error) {
-      setErrorMessage(`Nie udało się policzyć golden metrics: ${errorText(error)}`);
+      showFlash(`Nie udało się policzyć golden metrics: ${errorText(error)}`, "danger");
     } finally {
       setIsEvaluatingMetrics(false);
     }
@@ -266,7 +266,7 @@ export function EvaluationSetPage({ setId }: Props) {
       showFlash(`EvaluationRun created: ${created.evaluation_run_id}`);
       await loadExistingRuns();
     } catch (error) {
-      setErrorMessage(`Nie udało się utworzyć runa: ${errorText(error)}`);
+      showFlash(`Nie udało się utworzyć runa: ${errorText(error)}`, "danger");
     } finally {
       setIsSubmittingNewRun(false);
     }
@@ -279,7 +279,7 @@ export function EvaluationSetPage({ setId }: Props) {
       showFlash(`Usunięto EvaluationSet: ${selectedSet?.name ?? setId}.`);
       navigateTo("/research");
     } catch (error) {
-      setErrorMessage(`Nie udało się usunąć EvaluationSetu: ${errorText(error)}`);
+      showFlash(`Nie udało się usunąć EvaluationSetu: ${errorText(error)}`, "danger");
       setIsDeletingSet(false);
       setIsSetDeletePending(false);
     }
@@ -293,7 +293,7 @@ export function EvaluationSetPage({ setId }: Props) {
       setRunPendingDelete(null);
       await loadExistingRuns();
     } catch (error) {
-      setErrorMessage(`Nie udało się usunąć runa: ${errorText(error)}`);
+      showFlash(`Nie udało się usunąć runa: ${errorText(error)}`, "danger");
     } finally {
       setIsDeletingRun(false);
     }

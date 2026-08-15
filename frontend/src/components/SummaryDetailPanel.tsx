@@ -290,7 +290,7 @@ export function SummaryDetailPanel({
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-2rem)] lg:border lg:p-6 xl:w-detail">
+    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
       <div className="flex items-center justify-between border-b border-panel-border pb-3">
         <h3 className="font-mono text-xl">Szczegóły</h3>
         <Button variant="ghost" onClick={onClose}>

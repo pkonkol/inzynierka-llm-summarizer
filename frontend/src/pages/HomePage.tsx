@@ -8,14 +8,13 @@ import {
   listSummarizedUrls,
 } from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
+import { useFlash } from "../components/FlashProvider";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import { Toast } from "../components/ui/Toast";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useFlashMessage } from "../utils/useFlashMessage";
 
 const LIST_REFRESH_MS = 20_000;
 const POLLING_MS = 2_500;
@@ -31,7 +30,7 @@ export function HomePage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const { flash, showFlash, dismissFlash } = useFlashMessage();
+  const showFlash = useFlash();
 
   const hasDetailOpen = Boolean(selectedUrl);
 
@@ -155,8 +154,6 @@ export function HomePage() {
         isLoading={isLoadingDetail}
         onClose={() => setSelectedUrl(null)}
       />
-
-      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

@@ -2,23 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { errorText } from "../api/client";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
+import { useFlash } from "../components/FlashProvider";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { PreBlock } from "../components/PreBlock";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
+import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
-import { Toast } from "../components/ui/Toast";
 import type {
   EvaluationRunEntry,
   EvaluationRunMeta,
   SummaryStatisticalMetrics,
 } from "../types/research";
-import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useFlashMessage } from "../utils/useFlashMessage";
 
 type EntryCollapsibleKey = "input" | "metrics";
 
@@ -276,7 +275,7 @@ export function EvaluationRunPage({ runId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEntries, setIsLoadingEntries] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { flash, showFlash, dismissFlash } = useFlashMessage();
+  const showFlash = useFlash();
   const [isEvaluatingDeepeval, setIsEvaluatingDeepeval] = useState(false);
   const previousRunStatus = useRef<string | null>(null);
 
@@ -289,7 +288,13 @@ export function EvaluationRunPage({ runId }: Props) {
   const loadRun = async () => {
     try {
       const data = await getEvaluationRun(runId);
-      setRun(data);
+      // Keep the previous object while only the poll timestamp would change, so a run with a
+      // hundred entries does not rebuild its whole entry list every three seconds.
+      setRun((previous) =>
+        previous?.status === data.status && previous.finished_at === data.finished_at
+          ? previous
+          : data,
+      );
       setErrorMessage(null);
     } catch (error) {
       setErrorMessage(`Nie udało się pobrać runa: ${errorText(error)}`);
@@ -318,10 +323,24 @@ export function EvaluationRunPage({ runId }: Props) {
   }, [runId]);
 
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
+  // Chained timeouts rather than an interval: a slow response must not let requests pile up.
   useEffect(() => {
     if (!isRunInProgress) return;
-    const intervalId = setInterval(() => void loadRun(), RUN_POLL_MS);
-    return () => clearInterval(intervalId);
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let isCancelled = false;
+
+    const pollUntilCancelled = async () => {
+      await loadRun();
+      if (isCancelled) return;
+      timeoutId = setTimeout(() => void pollUntilCancelled(), RUN_POLL_MS);
+    };
+
+    timeoutId = setTimeout(() => void pollUntilCancelled(), RUN_POLL_MS);
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeoutId);
+    };
   }, [isRunInProgress, runId]);
 
   useEffect(() => {
@@ -334,13 +353,8 @@ export function EvaluationRunPage({ runId }: Props) {
     }
   }, [run, isRunInProgress]);
 
-  const handleBack = () => {
-    navigateTo(run ? `/research/${run.evaluation_set_id}` : "/research");
-  };
-
   const handleDeepeval = async () => {
     setErrorMessage(null);
-    dismissFlash();
     setIsEvaluatingDeepeval(true);
     try {
       await evaluateRunDeepeval(runId);
@@ -423,14 +437,14 @@ export function EvaluationRunPage({ runId }: Props) {
             <Button size="sm" onClick={handleRefresh} disabled={isLoading || isLoadingEntries}>
               Refresh
             </Button>
-            <Button size="sm" onClick={handleBack}>
+            <LinkButton size="sm" href={run ? `/research/${run.evaluation_set_id}` : "/research"}>
               Back to set
-            </Button>
+            </LinkButton>
           </div>
         </div>
 
         {/* Always mounted: a live region only announces content inserted after it exists. */}
-        <div aria-live="polite" className="grid empty:hidden">
+        <div aria-live="polite">
           {isRunInProgress ? (
             <Alert tone="warning">Run w toku — status odświeża się sam.</Alert>
           ) : null}
@@ -442,8 +456,6 @@ export function EvaluationRunPage({ runId }: Props) {
 
         {entriesSection}
       </section>
-
-      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

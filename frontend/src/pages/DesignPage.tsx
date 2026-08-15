@@ -1,6 +1,6 @@
 import { useState } from "react";
-
 import { Collapsible } from "../components/Collapsible";
+import { useFlash } from "../components/FlashProvider";
 import { Alert } from "../components/ui/Alert";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -10,8 +10,6 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { Modal } from "../components/ui/Modal";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
-import { Toast } from "../components/ui/Toast";
-import { useFlashMessage } from "../utils/useFlashMessage";
 
 // Tailwind only emits classes it can find as literal strings, so every swatch is spelled out.
 const SWATCHES = [
@@ -111,7 +109,7 @@ function ButtonRow({ variant }: { variant: (typeof BUTTON_VARIANTS)[number] }) {
 export function DesignPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDisclosureOpen, setIsDisclosureOpen] = useState(false);
-  const { flash, showFlash, dismissFlash } = useFlashMessage();
+  const showFlash = useFlash();
 
   return (
     <PageShell>
@@ -259,8 +257,6 @@ export function DesignPage() {
           <p className="helper-copy p-3">Hidden content.</p>
         </Collapsible>
       </Section>
-
-      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

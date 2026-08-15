@@ -16,7 +16,7 @@ export function useFlashMessage() {
     setFlash({ text, tone });
   }, []);
 
-  const dismissFlash = useCallback(() => setFlash(null), []);
+  const dismissFlash = () => setFlash(null);
 
   // Failures stay until dismissed: a message explaining why a job died is worthless if it
   // disappears before it can be read.

@@ -167,6 +167,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: 
     <button
       type="button"
       onClick={() => setOpen((v) => !v)}
+      aria-expanded={open}
       className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-subtle"
     >
       <span className="flex min-w-0 flex-col gap-1">
@@ -176,7 +177,9 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: 
         </span>
         <span className="text-xs text-muted">{formatDateMinute(job.created_at)}</span>
       </span>
-      <span className="shrink-0 pt-1 text-xs text-muted">{open ? "▼" : "▶"}</span>
+      <span aria-hidden="true" className="shrink-0 pt-1 text-xs text-muted">
+        {open ? "▼" : "▶"}
+      </span>
     </button>
   );
 

@@ -14,6 +14,12 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  // Read through a ref so the effect below depends on `isOpen` alone. Call sites pass an inline
+  // arrow, so depending on `onClose` would re-run this on every parent render — moving focus out
+  // of the dialog and back on each one.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -23,7 +29,7 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
     dialogRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", handleKeyDown);
 
@@ -31,7 +37,7 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
       document.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;

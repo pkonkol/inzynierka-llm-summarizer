@@ -180,10 +180,11 @@ Two rules on top of that:
 
 ## API errors
 
-`request()` in `api/client.ts` throws `ApiError`, which unwraps FastAPI's `{"detail": "..."}`
-into a plain message. Components **MUST** render it with `errorText(error)` and never with
-`String(error)` — the latter produces `Error: {"detail":"Not Found"}` on screen. User-facing
-copy is Polish, in the form `Nie udało się <co>: <errorText>`.
+`request()` in `api/client.ts` unwraps FastAPI's `{"detail": "..."}` before throwing, so the
+raw response body never reaches the interface. Components **MUST** render the result with
+`errorText(error)` and never with `String(error)` — the latter puts
+`Error: {"detail":"Not Found"}` on screen. User-facing copy is Polish, in the form
+`Nie udało się <co>: <errorText>`.
 
 ## Stack notes
 

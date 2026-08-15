@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../api/client";
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
+import { useFlash } from "../components/FlashProvider";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { FieldLabel, Textarea } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
-import { Toast } from "../components/ui/Toast";
 import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useFlashMessage } from "../utils/useFlashMessage";
 
 const PRETTY_EXAMPLE = `{
   "name": "cnn-sample1",
@@ -54,7 +53,7 @@ export function ResearchPage() {
   const [sets, setSets] = useState<EvaluationSetListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
-  const { flash, showFlash, dismissFlash } = useFlashMessage();
+  const showFlash = useFlash();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const parsedPreview = useMemo(() => {
@@ -83,7 +82,6 @@ export function ResearchPage() {
 
   const handleImport = async () => {
     setErrorMessage(null);
-    dismissFlash();
 
     let payload: EvaluationSetImportPayload;
     try {
@@ -222,8 +220,6 @@ export function ResearchPage() {
 
         {setsSection}
       </section>
-
-      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

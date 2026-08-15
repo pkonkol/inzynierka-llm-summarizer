@@ -11,6 +11,7 @@ import {
 } from "../api/research";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
+import { useFlash } from "../components/FlashProvider";
 import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { Alert } from "../components/ui/Alert";
@@ -21,7 +22,6 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Table, Td, Tr } from "../components/ui/Table";
-import { Toast } from "../components/ui/Toast";
 import type {
   EvaluationRunListItem,
   EvaluationSetDetail,
@@ -29,7 +29,6 @@ import type {
 } from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useFlashMessage } from "../utils/useFlashMessage";
 import { splitProviderModel } from "../utils/utils";
 
 function formatLabel(key: string): string {
@@ -172,7 +171,7 @@ export function EvaluationSetPage({ setId }: Props) {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
-  const { flash, showFlash, dismissFlash } = useFlashMessage();
+  const showFlash = useFlash();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [existingRuns, setExistingRuns] = useState<EvaluationRunListItem[]>([]);
@@ -217,7 +216,6 @@ export function EvaluationSetPage({ setId }: Props) {
     if (!selectedSet) return;
 
     setErrorMessage(null);
-    dismissFlash();
     setIsExporting(true);
 
     try {
@@ -233,7 +231,6 @@ export function EvaluationSetPage({ setId }: Props) {
 
   const handleEvaluateMetrics = async () => {
     setErrorMessage(null);
-    dismissFlash();
     setIsEvaluatingMetrics(true);
 
     try {
@@ -253,7 +250,6 @@ export function EvaluationSetPage({ setId }: Props) {
     if (!selectedSet) return;
 
     setErrorMessage(null);
-    dismissFlash();
     setIsSubmittingNewRun(true);
 
     try {
@@ -280,6 +276,7 @@ export function EvaluationSetPage({ setId }: Props) {
     setIsDeletingSet(true);
     try {
       await deleteEvaluationSet(setId);
+      showFlash(`Usunięto EvaluationSet: ${selectedSet?.name ?? setId}.`);
       navigateTo("/research");
     } catch (error) {
       setErrorMessage(`Nie udało się usunąć EvaluationSetu: ${errorText(error)}`);
@@ -395,9 +392,9 @@ export function EvaluationSetPage({ setId }: Props) {
           >
             {isExporting ? "Exporting..." : "Export JSON"}
           </Button>
-          <Button size="sm" onClick={() => navigateTo("/research")}>
+          <LinkButton size="sm" href="/research">
             Back to sets
-          </Button>
+          </LinkButton>
           <Button
             variant="dangerOutline"
             size="sm"
@@ -515,8 +512,6 @@ export function EvaluationSetPage({ setId }: Props) {
         onConfirm={() => void handleConfirmDeleteRun()}
         onClose={() => setRunPendingDelete(null)}
       />
-
-      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getSupportedModels, getSupportedModes } from "../api/client";
+import { errorText, getSupportedModels, getSupportedModes } from "../api/client";
 import {
   createEvaluationRun,
   deleteEvaluationRun,
@@ -21,12 +21,15 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Table, Td, Tr } from "../components/ui/Table";
+import { Toast } from "../components/ui/Toast";
 import type {
   EvaluationRunListItem,
   EvaluationSetDetail,
   EvaluationSetEntry,
 } from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
+import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useFlashMessage } from "../utils/useFlashMessage";
 import { splitProviderModel } from "../utils/utils";
 
 function formatLabel(key: string): string {
@@ -169,7 +172,7 @@ export function EvaluationSetPage({ setId }: Props) {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const { flash, showFlash, dismissFlash } = useFlashMessage();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [existingRuns, setExistingRuns] = useState<EvaluationRunListItem[]>([]);
@@ -187,6 +190,8 @@ export function EvaluationSetPage({ setId }: Props) {
   const [isDeletingSet, setIsDeletingSet] = useState(false);
   const [runPendingDelete, setRunPendingDelete] = useState<EvaluationRunListItem | null>(null);
   const [isDeletingRun, setIsDeletingRun] = useState(false);
+
+  useDocumentTitle(selectedSet?.name ?? null);
 
   const loadSetDetail = async () => {
     setIsLoadingDetail(true);
@@ -212,15 +217,15 @@ export function EvaluationSetPage({ setId }: Props) {
     if (!selectedSet) return;
 
     setErrorMessage(null);
-    setFlashMessage(null);
+    dismissFlash();
     setIsExporting(true);
 
     try {
       const data = await exportEvaluationSet(setId);
       downloadJson(`${selectedSet.name}.json`, data);
-      setFlashMessage(`Wyeksportowano EvaluationSet: ${selectedSet.name}.`);
+      showFlash(`Wyeksportowano EvaluationSet: ${selectedSet.name}.`);
     } catch (error) {
-      setErrorMessage(`Export nie powiódł się: ${String(error)}`);
+      setErrorMessage(`Nie udało się wyeksportować EvaluationSetu: ${errorText(error)}`);
     } finally {
       setIsExporting(false);
     }
@@ -228,17 +233,17 @@ export function EvaluationSetPage({ setId }: Props) {
 
   const handleEvaluateMetrics = async () => {
     setErrorMessage(null);
-    setFlashMessage(null);
+    dismissFlash();
     setIsEvaluatingMetrics(true);
 
     try {
       const result = await evaluateMissingGoldenMetrics(setId);
-      setFlashMessage(
+      showFlash(
         `Golden metrics updated for ${result.updated_entries} of ${result.total_entries} entries.`,
       );
       await loadSetDetail();
     } catch (error) {
-      setErrorMessage(`Golden metrics evaluation failed: ${String(error)}`);
+      setErrorMessage(`Nie udało się policzyć golden metrics: ${errorText(error)}`);
     } finally {
       setIsEvaluatingMetrics(false);
     }
@@ -248,7 +253,7 @@ export function EvaluationSetPage({ setId }: Props) {
     if (!selectedSet) return;
 
     setErrorMessage(null);
-    setFlashMessage(null);
+    dismissFlash();
     setIsSubmittingNewRun(true);
 
     try {
@@ -262,10 +267,10 @@ export function EvaluationSetPage({ setId }: Props) {
         rate_limit_delay_ms: newRunDelayMs,
       });
 
-      setFlashMessage(`EvaluationRun created: ${created.evaluation_run_id}`);
+      showFlash(`EvaluationRun created: ${created.evaluation_run_id}`);
       await loadExistingRuns();
     } catch (error) {
-      setErrorMessage(`Create run failed: ${String(error)}`);
+      setErrorMessage(`Nie udało się utworzyć runa: ${errorText(error)}`);
     } finally {
       setIsSubmittingNewRun(false);
     }
@@ -277,7 +282,7 @@ export function EvaluationSetPage({ setId }: Props) {
       await deleteEvaluationSet(setId);
       navigateTo("/research");
     } catch (error) {
-      setErrorMessage(`Delete set failed: ${String(error)}`);
+      setErrorMessage(`Nie udało się usunąć EvaluationSetu: ${errorText(error)}`);
       setIsDeletingSet(false);
       setIsSetDeletePending(false);
     }
@@ -291,7 +296,7 @@ export function EvaluationSetPage({ setId }: Props) {
       setRunPendingDelete(null);
       await loadExistingRuns();
     } catch (error) {
-      setErrorMessage(`Delete run failed: ${String(error)}`);
+      setErrorMessage(`Nie udało się usunąć runa: ${errorText(error)}`);
     } finally {
       setIsDeletingRun(false);
     }
@@ -301,12 +306,6 @@ export function EvaluationSetPage({ setId }: Props) {
     void loadSetDetail();
     void loadExistingRuns();
   }, [setId]);
-
-  useEffect(() => {
-    if (!flashMessage) return;
-    const t = setTimeout(() => setFlashMessage(null), 4500);
-    return () => clearTimeout(t);
-  }, [flashMessage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -332,7 +331,7 @@ export function EvaluationSetPage({ setId }: Props) {
         }
       } catch (error) {
         if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać konfiguracji runa: ${String(error)}`);
+        setErrorMessage(`Nie udało się pobrać konfiguracji runa: ${errorText(error)}`);
       } finally {
         if (isMounted) setIsLoadingNewRunOptions(false);
       }
@@ -408,8 +407,6 @@ export function EvaluationSetPage({ setId }: Props) {
             Delete set
           </Button>
         </div>
-
-        {flashMessage ? <Alert>{flashMessage}</Alert> : null}
 
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 
@@ -518,6 +515,8 @@ export function EvaluationSetPage({ setId }: Props) {
         onConfirm={() => void handleConfirmDeleteRun()}
         onClose={() => setRunPendingDelete(null)}
       />
+
+      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

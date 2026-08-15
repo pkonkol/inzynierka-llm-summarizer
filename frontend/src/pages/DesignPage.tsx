@@ -10,6 +10,8 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { Modal } from "../components/ui/Modal";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
+import { Toast } from "../components/ui/Toast";
+import { useFlashMessage } from "../utils/useFlashMessage";
 
 // Tailwind only emits classes it can find as literal strings, so every swatch is spelled out.
 const SWATCHES = [
@@ -48,6 +50,9 @@ const BUTTON_VARIANTS = ["primary", "secondary", "danger", "dangerOutline", "gho
 const BUTTON_SIZES = ["xs", "sm", "md", "lg"] as const;
 const PANEL_PADDINGS = ["xs", "sm", "md", "lg", "xl"] as const;
 const TONES = ["success", "danger", "warning"] as const;
+
+const SAMPLE_PROVIDER_ERROR =
+  "Job zakończył się błędem: Error calling model 'gemini-flash-lite-latest' (INVALID_ARGUMENT): 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT'}}";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -106,6 +111,7 @@ function ButtonRow({ variant }: { variant: (typeof BUTTON_VARIANTS)[number] }) {
 export function DesignPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDisclosureOpen, setIsDisclosureOpen] = useState(false);
+  const { flash, showFlash, dismissFlash } = useFlashMessage();
 
   return (
     <PageShell>
@@ -199,6 +205,25 @@ export function DesignPage() {
         </div>
       </Section>
 
+      <Section title="Notifications">
+        <p className="helper-copy">
+          Transient events land in a Toast; page state stays in an Alert in the flow. A long message
+          keeps its first sentence and hides the rest.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => showFlash("Podsumowanie gotowe.")}>
+            success
+          </Button>
+          <Button
+            size="sm"
+            variant="dangerOutline"
+            onClick={() => showFlash(SAMPLE_PROVIDER_ERROR, "danger")}
+          >
+            danger, długi
+          </Button>
+        </div>
+      </Section>
+
       <Section title="Links and disclosure">
         <p className="helper-copy">
           LinkButton renders an anchor, so it can be opened in a new tab. DisclosureButton carries
@@ -234,6 +259,8 @@ export function DesignPage() {
           <p className="helper-copy p-3">Hidden content.</p>
         </Collapsible>
       </Section>
+
+      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

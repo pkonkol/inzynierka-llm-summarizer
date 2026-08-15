@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
 
-import { createSummaryJob, getJobStatus, getJobsForUrl, listSummarizedUrls } from "../api/client";
+import {
+  createSummaryJob,
+  errorText,
+  getJobStatus,
+  getJobsForUrl,
+  listSummarizedUrls,
+} from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
-import { Alert } from "../components/ui/Alert";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
+import { Toast } from "../components/ui/Toast";
 import type { JobStatus, SummaryUrlListItem } from "../types/api";
+import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useFlashMessage } from "../utils/useFlashMessage";
 
 const LIST_REFRESH_MS = 20_000;
 const POLLING_MS = 2_500;
 
 export function HomePage() {
+  useDocumentTitle("Podsumowania");
   const [urlList, setUrlList] = useState<SummaryUrlListItem[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,7 +31,7 @@ export function HomePage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const { flash, showFlash, dismissFlash } = useFlashMessage();
 
   const hasDetailOpen = Boolean(selectedUrl);
 
@@ -49,7 +58,7 @@ export function HomePage() {
     run_deepeval: boolean,
   ) => {
     setIsSubmitting(true);
-    setFlashMessage("Zadanie zostało utworzone. Trwa analiza artykułu...");
+    showFlash("Zadanie zostało utworzone. Trwa analiza artykułu...");
     try {
       const created = await createSummaryJob(
         url,
@@ -61,7 +70,7 @@ export function HomePage() {
       );
       setActiveJobId(created.job_id);
     } catch (error) {
-      setFlashMessage(`Nie udało się utworzyć joba: ${String(error)}`);
+      showFlash(`Nie udało się utworzyć joba: ${errorText(error)}`, "danger");
     } finally {
       setIsSubmitting(false);
     }
@@ -102,16 +111,16 @@ export function HomePage() {
       try {
         const status = await getJobStatus(activeJobId);
         if (status.status === "completed") {
-          setFlashMessage("Podsumowanie gotowe.");
+          showFlash("Podsumowanie gotowe.");
           setActiveJobId(null);
           await loadUrlList();
           setSelectedUrl(status.source_url);
         } else if (status.status === "failed") {
-          setFlashMessage(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`);
+          showFlash(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`, "danger");
           setActiveJobId(null);
         }
       } catch (error) {
-        setFlashMessage(`Błąd podczas odczytu statusu: ${String(error)}`);
+        showFlash(`Nie udało się odczytać statusu joba: ${errorText(error)}`, "danger");
         setActiveJobId(null);
       }
     };
@@ -122,12 +131,6 @@ export function HomePage() {
     return () => clearInterval(interval);
   }, [activeJobId]);
 
-  useEffect(() => {
-    if (!flashMessage) return;
-    const t = setTimeout(() => setFlashMessage(null), 4500);
-    return () => clearTimeout(t);
-  }, [flashMessage]);
-
   return (
     <PageShell className={hasDetailOpen ? SPLIT_COLUMNS : undefined}>
       <section
@@ -136,8 +139,6 @@ export function HomePage() {
         {!hasDetailOpen ? (
           <UrlSubmitCard onSubmit={submitSummary} isSubmitting={isSubmitting} />
         ) : null}
-
-        {flashMessage ? <Alert>{flashMessage}</Alert> : null}
 
         <CompletedJobsList
           urls={urlList}
@@ -154,6 +155,8 @@ export function HomePage() {
         isLoading={isLoadingDetail}
         onClose={() => setSelectedUrl(null)}
       />
+
+      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

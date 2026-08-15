@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { errorText } from "../api/client";
 import { getEvaluationSetEntryInputText } from "../api/research";
 import { PreBlock } from "./PreBlock";
 
@@ -23,7 +23,7 @@ export function InputTextSection({ setId, entryId }: Props) {
       })
       .catch((error: unknown) => {
         if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać input text: ${String(error)}`);
+        setErrorMessage(`Nie udało się pobrać input text: ${errorText(error)}`);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);

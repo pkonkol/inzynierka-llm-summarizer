@@ -1,7 +1,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
-import { getSupportedLanguages, getSupportedModels, getSupportedModes } from "../api/client";
+import {
+  errorText,
+  getSupportedLanguages,
+  getSupportedModels,
+  getSupportedModes,
+} from "../api/client";
 import { Button } from "./ui/Button";
 import { FieldLabel, Input, Select } from "./ui/Field";
 
@@ -46,7 +51,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
         const firstModel = data[firstProvider]?.[0];
         if (firstProvider && firstModel) setSelectedModel(`${firstProvider}:${firstModel}`);
       } catch (err) {
-        setError(`Nie udało się pobrać konfiguracji: ${String(err)}`);
+        setError(`Nie udało się pobrać konfiguracji: ${errorText(err)}`);
       } finally {
         setIsLoadingMeta(false);
       }

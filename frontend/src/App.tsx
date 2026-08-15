@@ -72,12 +72,6 @@ function App() {
     };
   }, []);
 
-  function navigate(next: Route) {
-    const path = next === "home" ? "/" : `/${next}`;
-    window.history.pushState({}, "", path);
-    setRoute(next);
-  }
-
   function handleLoginSuccess() {
     setIsLoggedIn(true);
     setIsLoginOpen(false);
@@ -92,7 +86,6 @@ function App() {
     <div className="relative min-h-screen overflow-x-hidden">
       <NavDock
         active={route}
-        onNavigate={navigate}
         isAuthEnabled={isAuthEnabled}
         isLoggedIn={isLoggedIn}
         onOpenLogin={() => setIsLoginOpen(true)}

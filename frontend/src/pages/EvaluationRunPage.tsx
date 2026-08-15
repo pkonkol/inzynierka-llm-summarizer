@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
+import { errorText } from "../api/client";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { InfoRow } from "../components/InfoRow";
@@ -10,12 +10,15 @@ import { Button } from "../components/ui/Button";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
+import { Toast } from "../components/ui/Toast";
 import type {
   EvaluationRunEntry,
   EvaluationRunMeta,
   SummaryStatisticalMetrics,
 } from "../types/research";
 import { navigateTo } from "../utils/researchRouting";
+import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useFlashMessage } from "../utils/useFlashMessage";
 
 type EntryCollapsibleKey = "input" | "metrics";
 
@@ -273,11 +276,15 @@ export function EvaluationRunPage({ runId }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEntries, setIsLoadingEntries] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const { flash, showFlash, dismissFlash } = useFlashMessage();
   const [isEvaluatingDeepeval, setIsEvaluatingDeepeval] = useState(false);
   const previousRunStatus = useRef<string | null>(null);
 
   const isRunInProgress = run?.status === "pending" || run?.status === "running";
+
+  useDocumentTitle(
+    run ? `${run.model_provider}:${run.model_name} · ${run.evaluation_set_name}` : null,
+  );
 
   const loadRun = async () => {
     try {
@@ -285,7 +292,7 @@ export function EvaluationRunPage({ runId }: Props) {
       setRun(data);
       setErrorMessage(null);
     } catch (error) {
-      setErrorMessage(`Nie udało się pobrać runa: ${String(error)}`);
+      setErrorMessage(`Nie udało się pobrać runa: ${errorText(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -297,7 +304,7 @@ export function EvaluationRunPage({ runId }: Props) {
       const data = await getEvaluationRunEntries(runId);
       setEntries(data.entries);
     } catch (error) {
-      setErrorMessage(`Nie udało się pobrać entries: ${String(error)}`);
+      setErrorMessage(`Nie udało się pobrać entries: ${errorText(error)}`);
     } finally {
       setIsLoadingEntries(false);
     }
@@ -309,12 +316,6 @@ export function EvaluationRunPage({ runId }: Props) {
     void loadRun();
     void loadEntries();
   }, [runId]);
-
-  useEffect(() => {
-    if (!flashMessage) return;
-    const timeoutId = setTimeout(() => setFlashMessage(null), 4500);
-    return () => clearTimeout(timeoutId);
-  }, [flashMessage]);
 
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
   useEffect(() => {
@@ -328,7 +329,7 @@ export function EvaluationRunPage({ runId }: Props) {
     const previousStatus = previousRunStatus.current;
     previousRunStatus.current = run.status;
     if (previousStatus && previousStatus !== run.status && !isRunInProgress) {
-      setFlashMessage(`Run zakończony ze statusem: ${run.status}.`);
+      showFlash(`Run zakończony ze statusem: ${run.status}.`);
       void loadEntries();
     }
   }, [run, isRunInProgress]);
@@ -339,13 +340,13 @@ export function EvaluationRunPage({ runId }: Props) {
 
   const handleDeepeval = async () => {
     setErrorMessage(null);
-    setFlashMessage(null);
+    dismissFlash();
     setIsEvaluatingDeepeval(true);
     try {
       await evaluateRunDeepeval(runId);
-      setFlashMessage("GEval queued. Refresh za chwilę aby zobaczyć wyniki.");
+      showFlash("GEval queued. Refresh za chwilę aby zobaczyć wyniki.");
     } catch (error) {
-      setErrorMessage(`GEval failed: ${String(error)}`);
+      setErrorMessage(`Nie udało się uruchomić GEval: ${errorText(error)}`);
     } finally {
       setIsEvaluatingDeepeval(false);
     }
@@ -429,11 +430,10 @@ export function EvaluationRunPage({ runId }: Props) {
         </div>
 
         {/* Always mounted: a live region only announces content inserted after it exists. */}
-        <div aria-live="polite" className="empty:hidden grid gap-4">
+        <div aria-live="polite" className="grid empty:hidden">
           {isRunInProgress ? (
             <Alert tone="warning">Run w toku — status odświeża się sam.</Alert>
           ) : null}
-          {flashMessage ? <Alert>{flashMessage}</Alert> : null}
         </div>
 
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
@@ -442,6 +442,8 @@ export function EvaluationRunPage({ runId }: Props) {
 
         {entriesSection}
       </section>
+
+      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

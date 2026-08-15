@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-
+import { errorText } from "../api/client";
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
@@ -7,7 +7,10 @@ import { FieldLabel, Textarea } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
+import { Toast } from "../components/ui/Toast";
 import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
+import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useFlashMessage } from "../utils/useFlashMessage";
 
 const PRETTY_EXAMPLE = `{
   "name": "cnn-sample1",
@@ -46,11 +49,12 @@ function SetsTable({ sets }: { sets: EvaluationSetListItem[] }) {
 }
 
 export function ResearchPage() {
+  useDocumentTitle("Research");
   const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
   const [sets, setSets] = useState<EvaluationSetListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
-  const [flashMessage, setFlashMessage] = useState<string | null>(null);
+  const { flash, showFlash, dismissFlash } = useFlashMessage();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const parsedPreview = useMemo(() => {
@@ -79,7 +83,7 @@ export function ResearchPage() {
 
   const handleImport = async () => {
     setErrorMessage(null);
-    setFlashMessage(null);
+    dismissFlash();
 
     let payload: EvaluationSetImportPayload;
     try {
@@ -92,12 +96,10 @@ export function ResearchPage() {
     setIsImporting(true);
     try {
       const created = await createEvaluationSet(payload);
-      setFlashMessage(
-        `Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`,
-      );
+      showFlash(`Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`);
       await loadSets();
     } catch (error) {
-      setErrorMessage(`Import nie powiódł się: ${String(error)}`);
+      setErrorMessage(`Nie udało się zaimportować EvaluationSetu: ${errorText(error)}`);
     } finally {
       setIsImporting(false);
     }
@@ -112,7 +114,7 @@ export function ResearchPage() {
       setRawJson(text);
       setErrorMessage(null);
     } catch (error) {
-      setErrorMessage(`Nie udało się odczytać pliku: ${String(error)}`);
+      setErrorMessage(`Nie udało się odczytać pliku: ${errorText(error)}`);
     }
 
     event.target.value = "";
@@ -128,7 +130,7 @@ export function ResearchPage() {
         setSets(data);
       } catch (error) {
         if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać EvaluationSetów: ${String(error)}`);
+        setErrorMessage(`Nie udało się pobrać EvaluationSetów: ${errorText(error)}`);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -139,12 +141,6 @@ export function ResearchPage() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!flashMessage) return;
-    const t = setTimeout(() => setFlashMessage(null), 4500);
-    return () => clearTimeout(t);
-  }, [flashMessage]);
 
   let setsSection = <p className="helper-copy">Ładowanie listy EvaluationSet...</p>;
   if (!isLoading && sets.length === 0) {
@@ -209,8 +205,6 @@ export function ResearchPage() {
             </Button>
           </div>
 
-          {flashMessage ? <Alert>{flashMessage}</Alert> : null}
-
           {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
         </div>
       </section>
@@ -228,6 +222,8 @@ export function ResearchPage() {
 
         {setsSection}
       </section>
+
+      <Toast flash={flash} onDismiss={dismissFlash} />
     </PageShell>
   );
 }

@@ -13,6 +13,35 @@ if (!API_BASE_URL) {
 }
 const TOKEN_KEY = "auth_token";
 
+// FastAPI reports failures as {"detail": "..."}. Unwrapping it here is what keeps the raw
+// response body out of the interface.
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, body: string) {
+    super(readDetail(body) ?? `Żądanie nie powiodło się (HTTP ${status})`);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+function readDetail(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed && typeof parsed === "object" && "detail" in parsed) {
+      const { detail } = parsed as { detail: unknown };
+      return typeof detail === "string" ? detail : JSON.stringify(detail);
+    }
+  } catch {
+    // Not JSON — a proxy or gateway error page. The raw text is the best available message.
+  }
+  return body || null;
+}
+
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -36,9 +65,8 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
 
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith("/auth/")) clearToken();
-    const message = await response.text();
     logger.error("api request failed", { path, status: response.status });
-    throw new Error(message || `Request failed with status ${response.status}`);
+    throw new ApiError(response.status, await response.text());
   }
   return (await response.json()) as T;
 }

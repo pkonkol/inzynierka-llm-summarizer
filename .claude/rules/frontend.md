@@ -158,6 +158,33 @@ whole app must work from the keyboard.
   `aria-live="polite"` container. A live region only announces what is inserted *after* it
   exists, so conditionally rendering the region itself announces nothing.
 
+## Feedback: event or state
+
+Two different things, two different components. Getting this wrong is what makes a page jump
+under the reader's eyes.
+
+- A **transient event** — "job created", "run finished", "delete failed" — **MUST** go through
+  `useFlashMessage` + `ui/Toast.tsx`. It is `fixed` in the corner, so it never moves the
+  content the reader is looking at.
+- **Page state** — "no results", "could not load this run", "run in progress" — **MUST** stay
+  in the document flow as `ui/Alert.tsx`. It describes what is on screen, so it belongs on
+  screen.
+
+Two rules on top of that:
+
+- A failure **MUST NOT** auto-dismiss. `useFlashMessage` runs its timer only for the success
+  tone; an error explaining why a job died is useless if it vanishes before it is read.
+- A long technical message **MUST NOT** be dumped into the notification whole. `Toast` shows
+  the first sentence and hides the rest behind `Collapsible`. Provider errors arrive as a
+  serialised object several hundred characters long (`evaluation_runner.py` stores `str(exc)`).
+
+## API errors
+
+`request()` in `api/client.ts` throws `ApiError`, which unwraps FastAPI's `{"detail": "..."}`
+into a plain message. Components **MUST** render it with `errorText(error)` and never with
+`String(error)` — the latter produces `Error: {"detail":"Not Found"}` on screen. User-facing
+copy is Polish, in the form `Nie udało się <co>: <errorText>`.
+
 ## Stack notes
 
 - React + TypeScript, Vite, Tailwind.

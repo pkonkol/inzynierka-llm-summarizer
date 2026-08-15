@@ -6,6 +6,7 @@ import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItem, JobStatus } from "../types/api";
 import { formatDateMinute } from "../utils/format";
+import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 // Glyph as well as colour, so the state survives greyscale and colour-blind vision.
 const STATUS_STYLE: Record<string, { className: string; glyph: string }> = {
@@ -15,6 +16,7 @@ const STATUS_STYLE: Record<string, { className: string; glyph: string }> = {
 };
 
 export function JobsPage() {
+  useDocumentTitle("Zadania");
   const [jobs, setJobs] = useState<JobListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);

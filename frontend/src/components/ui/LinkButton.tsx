@@ -1,4 +1,4 @@
-import { navigateTo } from "../../utils/researchRouting";
+import { navigateTo, shouldInterceptClick } from "../../utils/researchRouting";
 import { type ButtonSize, type ButtonVariant, buttonClasses } from "./Button";
 
 interface LinkButtonProps extends React.ComponentProps<"a"> {
@@ -25,8 +25,7 @@ export function LinkButton({
       className={buttonClasses(variant, size, className)}
       onClick={(event) => {
         onClick?.(event);
-        if (event.defaultPrevented) return;
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (!shouldInterceptClick(event)) return;
         event.preventDefault();
         navigateTo(href);
       }}

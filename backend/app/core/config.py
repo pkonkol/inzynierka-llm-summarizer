@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     supported_models: dict[str, list[str]] = {
         "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
         "openrouter": [
-            "openai/gpt-oss-120b:free",
             "openai/gpt-oss-20b:free",
             "google/gemma-4-31b-it:free",
         ],
@@ -54,8 +53,10 @@ class Settings(BaseSettings):
     auth_secret: SecretStr = SecretStr("")
     jwt_secret: SecretStr = SecretStr("")
     jwt_expire_hours: int = 168
-    deepeval_provider: str = "google"
-    deepeval_model: str = "gemini-flash-lite-latest"
+    deepeval_judge_model: dict[str, str] = {
+        "model_provider": "gemini",
+        "model_name": "gemini-flash-latest",
+    }
 
     @model_validator(mode="after")
     def _require_secrets_when_auth_enabled(self) -> Settings:

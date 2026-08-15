@@ -4,13 +4,44 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any
 
+import structlog
 from deepeval.metrics import GEval, SummarizationMetric
-from deepeval.models import GeminiModel
+from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from langchain_core.language_models import BaseChatModel
 
 from ...core.config import Settings
+from ..llm._base import build_llm, extract_text_from_content
+
+log = structlog.get_logger(__name__)
 
 DEEPEVAL_THRESHOLD = 0.5
+
+
+class _LangchainDeepEvalModel(DeepEvalBaseLLM):
+    def __init__(self, chat_model: BaseChatModel, model_name: str) -> None:
+        self._chat_model = chat_model
+        self._model_name = model_name
+
+    def load_model(self) -> BaseChatModel:
+        return self._chat_model
+
+    def generate(self, prompt: str) -> str:
+        log.debug("deepeval judge model generate", model=self._model_name)
+        response = self._chat_model.invoke(prompt)
+        text = extract_text_from_content(response.content)
+        log.debug("deepeval judge model response", model=self._model_name, response=text)
+        return text
+
+    async def a_generate(self, prompt: str) -> str:
+        log.debug("deepeval judge model a_generate", model=self._model_name)
+        response = await self._chat_model.ainvoke(prompt)
+        text = extract_text_from_content(response.content)
+        log.debug("deepeval judge model response", model=self._model_name, response=text)
+        return text
+
+    def get_model_name(self) -> str:
+        return self._model_name
 
 
 @dataclass(slots=True)
@@ -21,21 +52,17 @@ class DeepEvalMetricResult:
     passed: bool
 
 
-def build_deepeval_model(settings: Settings) -> GeminiModel:
-    provider = settings.deepeval_provider.lower()
-    model_name = settings.deepeval_model
-
-    if provider != "google":
-        raise ValueError(f"Unsupported DeepEval provider: {settings.deepeval_provider}")
-    if not settings.gemini_api_key:
-        raise ValueError("GOOGLE_API_KEY is required for DeepEval with Google provider")
-
-    return GeminiModel(api_key=settings.gemini_api_key.get_secret_value(), model=model_name)
+def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
+    model_provider = settings.deepeval_judge_model["model_provider"]
+    model_name = settings.deepeval_judge_model["model_name"]
+    log.info("building deepeval judge model", provider=model_provider, model=model_name)
+    chat_model = build_llm(model_provider, model_name)
+    return _LangchainDeepEvalModel(chat_model, model_name)
 
 
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
-    return DeepEvalMetricResult(
+    result = DeepEvalMetricResult(
         name=getattr(metric, "name", None)
         or getattr(metric, "__name__", None)
         or type(metric).__name__,
@@ -43,6 +70,14 @@ def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
         reason=metric.reason,
         passed=metric.success,
     )
+    log.info(
+        "deepeval metric measured",
+        metric=result.name,
+        model=getattr(metric, "evaluation_model", None),
+        score=result.score,
+        passed=result.passed,
+    )
+    return result
 
 
 def build_summary_metrics(settings: Settings) -> list[Any]:

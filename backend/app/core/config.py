@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # "pretty" — colored human-readable output for local dev.
     # "json" — one JSON object per line with a `severity` field, parsed by GCP Cloud Logging.
     log_format: str = "pretty"
+    # If set, logs are additionally written here (plain text, no ANSI colors) alongside stdout.
+    log_file: str = ""
     # Browser origins allowed to call this API. Defaults to the Vite dev server; production
     # origins (Firebase Hosting) are injected as JSON via the CORS_ALLOWED_ORIGINS env var.
     cors_allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
@@ -57,6 +59,7 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
     }
+    deepeval_timeout_seconds: int | None = None
 
     @model_validator(mode="after")
     def _require_secrets_when_auth_enabled(self) -> Settings:

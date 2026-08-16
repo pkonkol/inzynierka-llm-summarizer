@@ -38,10 +38,16 @@ log = structlog.get_logger(__name__)
 _metrics_tasks: set[asyncio.Task] = set()
 
 
+def _log_metrics_task_exception(task: asyncio.Task) -> None:
+    _metrics_tasks.discard(task)
+    if not task.cancelled() and (exc := task.exception()) is not None:
+        log.error("metrics task failed", exc_info=exc)
+
+
 def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
     task = asyncio.create_task(coro)
     _metrics_tasks.add(task)
-    task.add_done_callback(_metrics_tasks.discard)
+    task.add_done_callback(_log_metrics_task_exception)
 
 
 async def run_summarization_job(

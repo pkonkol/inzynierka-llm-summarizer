@@ -51,7 +51,13 @@ def _console_renderer() -> structlog.dev.ConsoleRenderer:
     levels["debug"] = structlog.dev.CYAN
     levels["critical"] = structlog.dev.MAGENTA
 
-    renderer = structlog.dev.ConsoleRenderer(level_styles=levels)
+    # rich is a transitive dep of deepeval; structlog auto-detects it and switches its
+    # exception pretty-printer to RichTracebackFormatter, which by default dumps every
+    # frame's full locals — unreadable for deep asyncio/threading stacks. Trim it down.
+    renderer = structlog.dev.ConsoleRenderer(
+        level_styles=levels,
+        exception_formatter=structlog.dev.RichTracebackFormatter(show_locals=False, max_frames=10),
+    )
 
     named = [
         structlog.dev.Column(
@@ -116,6 +122,22 @@ def setup_logging() -> None:
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
+
+    if settings.log_file:
+        # Plain-text, no ANSI colors and no Rich tracebacks — kept greppable/pasteable
+        # without needing to copy from the terminal.
+        file_handler = logging.FileHandler(settings.log_file)
+        file_handler.setFormatter(
+            structlog.stdlib.ProcessorFormatter(
+                foreign_pre_chain=shared,
+                processors=[
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    structlog.dev.ConsoleRenderer(colors=False),
+                ],
+            )
+        )
+        root.addHandler(file_handler)
+
     root.setLevel(level)
 
     # uvicorn installs its own handlers and sets propagate=False, so without this its
@@ -130,4 +152,9 @@ def setup_logging() -> None:
         for name in _QUIET_IN_DEBUG:
             logging.getLogger(name).setLevel(logging.WARNING)
 
-    log.info("logging initialised", level=logging.getLevelName(level), format=settings.log_format)
+    log.info(
+        "logging initialised",
+        level=logging.getLevelName(level),
+        format=settings.log_format,
+        log_file=settings.log_file or None,
+    )

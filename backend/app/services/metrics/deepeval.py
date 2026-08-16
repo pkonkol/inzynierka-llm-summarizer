@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from dataclasses import dataclass
 from typing import Any
 
 import structlog
+from deepeval.config.settings import get_settings as get_deepeval_settings
 from deepeval.metrics import GEval, SummarizationMetric
 from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -17,27 +19,47 @@ log = structlog.get_logger(__name__)
 
 DEEPEVAL_THRESHOLD = 0.5
 
+_OLLAMA_CONCURRENCY_LIMIT = threading.Semaphore(2)
+_LOGGED_RESPONSE_CHARS = 200
+
+
+def _truncated(text: str) -> str:
+    return text if len(text) <= _LOGGED_RESPONSE_CHARS else text[:_LOGGED_RESPONSE_CHARS] + "..."
+
 
 class _LangchainDeepEvalModel(DeepEvalBaseLLM):
-    def __init__(self, chat_model: BaseChatModel, model_name: str) -> None:
+    def __init__(self, chat_model: BaseChatModel, model_name: str, is_ollama: bool) -> None:
         self._chat_model = chat_model
         self._model_name = model_name
+        self._is_ollama = is_ollama
 
     def load_model(self) -> BaseChatModel:
         return self._chat_model
 
     def generate(self, prompt: str) -> str:
         log.debug("deepeval judge model generate", model=self._model_name)
-        response = self._chat_model.invoke(prompt)
+        if self._is_ollama:
+            with _OLLAMA_CONCURRENCY_LIMIT:
+                response = self._chat_model.invoke(prompt)
+        else:
+            response = self._chat_model.invoke(prompt)
         text = extract_text_from_content(response.content)
-        log.debug("deepeval judge model response", model=self._model_name, response=text)
+        log.debug(
+            "deepeval judge model response", model=self._model_name, response=_truncated(text)
+        )
         return text
 
     async def a_generate(self, prompt: str) -> str:
         log.debug("deepeval judge model a_generate", model=self._model_name)
-        response = await self._chat_model.ainvoke(prompt)
+        if self._is_ollama:
+            with _OLLAMA_CONCURRENCY_LIMIT:
+                response = await self._chat_model.ainvoke(prompt)
+        else:
+            response = await self._chat_model.ainvoke(prompt)
         text = extract_text_from_content(response.content)
-        log.debug("deepeval judge model response", model=self._model_name, response=text)
+        log.debug(
+            "deepeval judge model response", model=self._model_name, response=_truncated(text)
+        )
         return text
 
     def get_model_name(self) -> str:
@@ -52,12 +74,30 @@ class DeepEvalMetricResult:
     passed: bool
 
 
+_timeout_applied = False
+
+
+def _apply_deepeval_timeout_override(timeout_seconds: int) -> None:
+    global _timeout_applied
+    if _timeout_applied:
+        return
+    with get_deepeval_settings().edit(persist=False) as ctx:
+        ctx.s.DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE = timeout_seconds
+    _timeout_applied = True
+    log.info("deepeval per-task timeout overridden", timeout_seconds=timeout_seconds)
+
+
 def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
+    if settings.deepeval_timeout_seconds:
+        _apply_deepeval_timeout_override(settings.deepeval_timeout_seconds)
+
     model_provider = settings.deepeval_judge_model["model_provider"]
     model_name = settings.deepeval_judge_model["model_name"]
     log.info("building deepeval judge model", provider=model_provider, model=model_name)
     chat_model = build_llm(model_provider, model_name)
-    return _LangchainDeepEvalModel(chat_model, model_name)
+    return _LangchainDeepEvalModel(
+        chat_model, model_name, is_ollama=model_provider.lower() == "ollama"
+    )
 
 
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:

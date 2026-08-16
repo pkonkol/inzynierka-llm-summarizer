@@ -41,7 +41,7 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend typecheck-backend lint-frontend test-backend check-openapi
+lint: lint-backend typecheck-backend lint-frontend test-backend check-openapi check-generated-types
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
@@ -81,6 +81,13 @@ export-openapi:
 [working-directory('backend')]
 check-openapi:
     ./venv/bin/python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" | diff -u openapi.json - || (echo "openapi.json is stale — run: just export-openapi" && exit 1)
+
+# Frontend: fail if the generated TS types no longer match openapi.json, so a schema change shows up in review
+[group('frontend')]
+[working-directory('frontend')]
+check-generated-types:
+    npm run generate-types
+    git diff --exit-code src/types/api.generated.ts || (echo "api.generated.ts is stale — run: cd frontend && npm run generate-types" && exit 1)
 
 # Backend: recompile requirements.txt from requirements.in
 [group('backend')]

@@ -54,8 +54,11 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   });
 
   if (!response.ok) {
-    if (response.status === 401 && !path.startsWith("/auth/")) clearToken();
     logger.error("api request failed", { path, status: response.status });
+    if (response.status === 401 && !path.startsWith("/auth/")) {
+      clearToken();
+      throw new Error("Zaloguj się, aby wykonać tę akcję.");
+    }
     const detail = readDetail(await response.text());
     throw new Error(detail || `Żądanie nie powiodło się (HTTP ${response.status})`);
   }

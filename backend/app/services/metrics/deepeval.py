@@ -7,10 +7,11 @@ from typing import Any
 
 import structlog
 from deepeval.config.settings import get_settings as get_deepeval_settings
-from deepeval.metrics import GEval, SummarizationMetric
+from deepeval.metrics import GEval
 from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import Runnable
 
 from ...core.config import Settings
 from ..llm._base import build_llm, extract_text_from_content
@@ -28,12 +29,14 @@ def _truncated(text: str) -> str:
 
 
 class _LangchainDeepEvalModel(DeepEvalBaseLLM):
-    def __init__(self, chat_model: BaseChatModel, model_name: str, is_ollama: bool) -> None:
+    def __init__(
+        self, chat_model: BaseChatModel | Runnable[Any, Any], model_name: str, is_ollama: bool
+    ) -> None:
         self._chat_model = chat_model
         self._model_name = model_name
         self._is_ollama = is_ollama
 
-    def load_model(self) -> BaseChatModel:
+    def load_model(self) -> BaseChatModel | Runnable[Any, Any]:
         return self._chat_model
 
     def generate(self, prompt: str) -> str:
@@ -95,6 +98,8 @@ def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
     model_name = settings.deepeval_judge_model["model_name"]
     log.info("building deepeval judge model", provider=model_provider, model=model_name)
     chat_model = build_llm(model_provider, model_name)
+    if model_provider.lower() == "openrouter":
+        chat_model = chat_model.bind(response_format={"type": "json_object"})
     return _LangchainDeepEvalModel(
         chat_model, model_name, is_ollama=model_provider.lower() == "ollama"
     )
@@ -152,10 +157,10 @@ def build_summary_input_metrics(settings: Settings) -> list[Any]:
     model = build_deepeval_model(settings)
 
     return [
-        SummarizationMetric(
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-        ),
+        # SummarizationMetric(
+        #     model=model,
+        #     threshold=DEEPEVAL_THRESHOLD,
+        # ),
         GEval(
             name="summary_completeness",
             model=model,

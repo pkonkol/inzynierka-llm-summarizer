@@ -2,7 +2,15 @@
   "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["**", "!**/dist", "!**/.firebase", "!**/node_modules", "!**/*.css", "!public"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.firebase",
+      "!**/node_modules",
+      "!**/*.css",
+      "!public",
+      "!src/types/api.generated.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

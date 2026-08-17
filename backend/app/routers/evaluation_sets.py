@@ -86,12 +86,20 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
         .to_list(length=1000)
     )
 
+    run_counts = {
+        doc["_id"]: doc["run_count"]
+        async for doc in get_evaluation_runs_collection().aggregate(
+            [{"$group": {"_id": "$evaluation_set_id", "run_count": {"$sum": 1}}}]
+        )
+    }
+
     return [
         EvaluationSetListItemResponse(
             evaluation_set_id=str(doc["_id"]),
             name=doc["name"],
             language=doc["language"],
             entry_count=len(doc["entries"]),
+            run_count=run_counts.get(str(doc["_id"]), 0),
             created_at=doc["created_at"],
         )
         for doc in documents

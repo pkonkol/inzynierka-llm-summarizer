@@ -33,6 +33,7 @@ class EvaluationRunDocument(BaseModel):
     summary_mode: str
     language: str
     rate_limit_delay_ms: int
+    skip_takeaways: bool = False
     status: RunStatus
     created_at: datetime
     finished_at: datetime | None = None

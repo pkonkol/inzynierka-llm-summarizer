@@ -41,6 +41,7 @@ class EvaluationSetListItemResponse(ApiModel):
     name: str
     language: str
     entry_count: int
+    run_count: int
     created_at: datetime
 
 

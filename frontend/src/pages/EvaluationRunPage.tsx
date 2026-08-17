@@ -85,7 +85,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryRespons
         </>
       ) : null}
 
-      {entry.ai_metrics ? (
+      {entry.ai_metrics && entry.ai_key_takeaways.length > 0 ? (
         <div className="grid gap-2 border-t border-panel-border pt-3">
           <SectionHeading>AI key takeaways</SectionHeading>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -269,17 +269,17 @@ function RunEntryCard({
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="grid content-start gap-1">
-          <p className="text-sm uppercase tracking-wider text-label">Golden summary</p>
+          <p className="panel-kicker">Golden summary</p>
           <p className="whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
         </div>
 
         <div className="grid content-start gap-2">
-          <p className="text-sm uppercase tracking-wider text-label">AI summary</p>
+          <p className="panel-kicker">AI summary</p>
           <p className="whitespace-pre-wrap text-base text-ink">{entry.ai_summary ?? "—"}</p>
 
           {entry.ai_key_takeaways.length > 0 ? (
             <div className="grid gap-1">
-              <p className="text-sm uppercase tracking-wider text-label">AI key takeaways</p>
+              <p className="panel-kicker">AI key takeaways</p>
               <ul className="list-disc pl-5 text-md text-ink">
                 {entry.ai_key_takeaways.map((item) => (
                   <li key={item}>{item}</li>

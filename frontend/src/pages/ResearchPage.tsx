@@ -28,7 +28,7 @@ const PRETTY_EXAMPLE = `{
   ]
 }`;
 
-const SET_COLUMNS = ["Name", "Language", "Entries", "Created", "Action"];
+const SET_COLUMNS = ["Name", "Language", "Entries", "Runs", "Created", "Action"];
 
 function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
   return (
@@ -38,6 +38,7 @@ function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
           <Td>{set.name}</Td>
           <Td>{set.language}</Td>
           <Td>{set.entry_count}</Td>
+          <Td>{set.run_count}</Td>
           <Td>{new Date(set.created_at).toLocaleString()}</Td>
           <Td className="text-right">
             <LinkButton size="sm" href={`/research/${set.evaluation_set_id}`}>

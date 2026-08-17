@@ -168,20 +168,23 @@ type Props = {
 
 export function EvaluationSetPage({ setId }: Props) {
   const [selectedSet, setSelectedSet] = useState<EvaluationSetDetailResponse | null>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(true);
+  const [detailLoadError, setDetailLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
   const showFlash = useFlash();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [existingRuns, setExistingRuns] = useState<EvaluationRunListItemResponse[]>([]);
-  const [isLoadingExistingRuns, setIsLoadingExistingRuns] = useState(false);
+  const [isLoadingExistingRuns, setIsLoadingExistingRuns] = useState(true);
+  const [runsLoadError, setRunsLoadError] = useState<string | null>(null);
   const [isSubmittingNewRun, setIsSubmittingNewRun] = useState(false);
 
   const [newRunAvailableModels, setNewRunAvailableModels] = useState<Record<string, string[]>>({});
   const [newRunAvailableModes, setNewRunAvailableModes] = useState<Record<string, string>>({});
   const [newRunSelectedModel, setNewRunSelectedModel] = useState("");
   const [newRunSummaryMode, setNewRunSummaryMode] = useState("simple");
+  const [newRunSkipTakeaways, setNewRunSkipTakeaways] = useState(false);
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const [isLoadingNewRunOptions, setIsLoadingNewRunOptions] = useState(true);
 
@@ -199,6 +202,9 @@ export function EvaluationSetPage({ setId }: Props) {
     try {
       const data = await getEvaluationSet(setId);
       setSelectedSet(data);
+      setDetailLoadError(null);
+    } catch (error) {
+      setDetailLoadError(errorText(error));
     } finally {
       setIsLoadingDetail(false);
     }
@@ -209,6 +215,9 @@ export function EvaluationSetPage({ setId }: Props) {
     try {
       const data = await listEvaluationRuns(setId);
       setExistingRuns(data);
+      setRunsLoadError(null);
+    } catch (error) {
+      setRunsLoadError(errorText(error));
     } finally {
       setIsLoadingExistingRuns(false);
     }
@@ -263,6 +272,7 @@ export function EvaluationSetPage({ setId }: Props) {
         summary_mode: newRunSummaryMode,
         language: "en",
         rate_limit_delay_ms: newRunDelayMs,
+        skip_takeaways: newRunSkipTakeaways,
       });
 
       showFlash(`EvaluationRun created: ${created.evaluation_run_id}`);
@@ -343,7 +353,9 @@ export function EvaluationSetPage({ setId }: Props) {
     };
   }, []);
 
-  let entriesSection = <p className="helper-copy">Ładowanie szczegółów EvaluationSet...</p>;
+  let entriesSection: React.ReactNode = (
+    <p className="helper-copy">Ładowanie szczegółów EvaluationSet...</p>
+  );
   if (!isLoadingDetail && selectedSet) {
     entriesSection = (
       <div className="grid gap-3">
@@ -353,11 +365,13 @@ export function EvaluationSetPage({ setId }: Props) {
       </div>
     );
   } else if (!isLoadingDetail) {
-    entriesSection = <p className="helper-copy">Nie znaleziono EvaluationSet.</p>;
+    entriesSection = null;
   }
 
-  let runsSection = <p className="helper-copy">Ładowanie runów...</p>;
-  if (!isLoadingExistingRuns && existingRuns.length === 0) {
+  let runsSection: React.ReactNode = <p className="helper-copy">Ładowanie runów...</p>;
+  if (!isLoadingExistingRuns && runsLoadError) {
+    runsSection = null;
+  } else if (!isLoadingExistingRuns && existingRuns.length === 0) {
     runsSection = <p className="helper-copy">Brak EvaluationRunów dla tego seta.</p>;
   } else if (!isLoadingExistingRuns) {
     runsSection = <RunsTable runs={existingRuns} onDelete={setRunPendingDelete} />;
@@ -370,12 +384,14 @@ export function EvaluationSetPage({ setId }: Props) {
           <div className="grid gap-2">
             <p className="section-kicker">Evaluation set</p>
             <h1 className="font-mono text-xl uppercase tracking-wider">
-              {selectedSet?.name ?? "Loading..."}
+              {selectedSet?.name ?? (isLoadingDetail ? "Loading..." : "Set unavailable")}
             </h1>
             <p className="helper-copy">
               {selectedSet
                 ? `${selectedSet.language} · ${selectedSet.entries.length} entries`
-                : "Ładowanie szczegółów seta..."}
+                : isLoadingDetail
+                  ? "Ładowanie szczegółów seta..."
+                  : "Nie udało się wczytać szczegółów."}
             </p>
           </div>
 
@@ -397,29 +413,25 @@ export function EvaluationSetPage({ setId }: Props) {
           <LinkButton size="sm" href="/research">
             Back to sets
           </LinkButton>
-          <Button
-            variant="dangerOutline"
-            size="sm"
-            onClick={() => setIsSetDeletePending(true)}
-            disabled={!selectedSet}
-          >
+          <Button variant="dangerOutline" size="sm" onClick={() => setIsSetDeletePending(true)}>
             Delete set
           </Button>
         </div>
 
+        {detailLoadError ? (
+          <Alert tone="danger">Nie udało się wczytać seta: {detailLoadError}</Alert>
+        ) : null}
+        {runsLoadError ? (
+          <Alert tone="danger">Nie udało się wczytać evaluation runów: {runsLoadError}</Alert>
+        ) : null}
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 
         {selectedSet ? (
           <Panel as="section" padding="sm" className="grid gap-3">
-            <div className="grid gap-1">
-              <p className="text-sm uppercase tracking-wider text-label">New evaluation run</p>
-              <p className="helper-copy">
-                Naiwny runner generuje tylko AI summary i podstawowe metryki tekstowe. Bez GEval.
-              </p>
-            </div>
+            <p className="panel-kicker">New evaluation run</p>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="grid gap-2 md:col-span-2">
+            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
+              <div className="grid gap-2">
                 <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
                 <Select
                   id="new-run-model"
@@ -454,7 +466,7 @@ export function EvaluationSetPage({ setId }: Props) {
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor="new-run-delay">Delay between entries (ms)</FieldLabel>
+                <FieldLabel htmlFor="new-run-delay">Delay (ms)</FieldLabel>
                 <Input
                   id="new-run-delay"
                   type="number"
@@ -464,6 +476,17 @@ export function EvaluationSetPage({ setId }: Props) {
                   onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
                 />
               </div>
+
+              <label className="flex items-center gap-2 whitespace-nowrap text-base text-muted sm:h-control">
+                <input
+                  type="checkbox"
+                  checked={newRunSkipTakeaways}
+                  onChange={(event) => setNewRunSkipTakeaways(event.target.checked)}
+                  disabled={isSubmittingNewRun}
+                  className="h-4 w-4 border border-input-border"
+                />
+                Skip takeaways
+              </label>
             </div>
 
             <div className="flex items-center gap-2">
@@ -480,7 +503,7 @@ export function EvaluationSetPage({ setId }: Props) {
 
         <Panel as="section" padding="sm" className="grid gap-3">
           <div>
-            <p className="text-sm uppercase tracking-wider text-label">Evaluation runs</p>
+            <p className="panel-kicker">Evaluation runs</p>
           </div>
 
           {runsSection}
@@ -492,11 +515,7 @@ export function EvaluationSetPage({ setId }: Props) {
       <ConfirmDialog
         isOpen={isSetDeletePending}
         title="Usunąć evaluation set?"
-        message={
-          selectedSet
-            ? `Usunąć "${selectedSet.name}"?${existingRuns.length > 0 ? ` Usunie to też ${existingRuns.length} evaluation run(y/ów).` : ""}`
-            : ""
-        }
+        message={`Usunąć "${selectedSet?.name ?? setId}"?${existingRuns.length > 0 ? ` Usunie to też ${existingRuns.length} evaluation run(y/ów).` : ""}`}
         isConfirming={isDeletingSet}
         onConfirm={() => void handleConfirmDeleteSet()}
         onClose={() => setIsSetDeletePending(false)}

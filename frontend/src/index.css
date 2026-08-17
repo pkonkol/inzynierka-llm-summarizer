@@ -87,6 +87,10 @@
   @apply font-display text-lg font-semibold uppercase tracking-widest text-label;
 }
 
+@utility panel-kicker {
+  @apply text-sm font-semibold uppercase tracking-wider text-label;
+}
+
 @layer base {
   body {
     @apply m-0 bg-page text-ink font-sans;

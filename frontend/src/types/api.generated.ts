@@ -456,6 +456,11 @@ export interface components {
              * @default 0
              */
             rate_limit_delay_ms: number;
+            /**
+             * Skip Takeaways
+             * @default false
+             */
+            skip_takeaways: boolean;
         };
         /** EvaluationRunCreateResponse */
         EvaluationRunCreateResponse: {
@@ -577,6 +582,8 @@ export interface components {
             finished_at: string | null;
             /** Entry Count */
             entry_count: number;
+            /** Skip Takeaways */
+            skip_takeaways: boolean;
             aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
         };
         /** EvaluationSetCreateResponse */
@@ -703,6 +710,8 @@ export interface components {
             language: string;
             /** Entry Count */
             entry_count: number;
+            /** Run Count */
+            run_count: number;
             /**
              * Created At
              * Format: date-time

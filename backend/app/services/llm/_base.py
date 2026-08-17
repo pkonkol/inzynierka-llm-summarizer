@@ -176,3 +176,21 @@ def raw_output_str(raw_invoke_output: Any) -> str:
         log.warning("llm returned no content", shape=type(raw_msg).__name__)
         return ""
     return extract_text_from_content(content)
+
+
+def parse_structured_output(
+    raw_invoke_output: dict[str, Any] | BaseModel, mode: str, stage: str
+) -> tuple[Any, str, UsageMetadata, dict[str, Any]]:
+    if isinstance(raw_invoke_output, BaseModel):
+        raw_invoke_output = raw_invoke_output.model_dump()
+
+    raw_str = raw_output_str(raw_invoke_output)
+    parsed = raw_invoke_output.get("parsed")
+    if parsed is None:
+        log.error("llm output unparseable", mode=mode, stage=stage, raw_output=raw_str)
+        raise LlmOutputError(
+            f"[{mode}] model returned unparseable {stage} response", raw_output=raw_str
+        )
+
+    usage, raw_metadata = extract_usage(raw_invoke_output.get("raw"))
+    return parsed, raw_str, usage, raw_metadata

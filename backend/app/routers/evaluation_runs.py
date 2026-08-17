@@ -60,6 +60,7 @@ async def create_evaluation_run(
         summary_mode=payload.summary_mode,
         language=payload.language,
         rate_limit_delay_ms=payload.rate_limit_delay_ms,
+        skip_takeaways=payload.skip_takeaways,
         status="pending",
         created_at=created_at,
         finished_at=None,
@@ -142,6 +143,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
             "finished_at": 1,
             "entries.entry_id": 1,
             "aggregate_metrics": 1,
+            "skip_takeaways": 1,
         },
     )
 
@@ -160,6 +162,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
         entry_count=len(document["entries"]),
+        skip_takeaways=document.get("skip_takeaways", False),
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
 

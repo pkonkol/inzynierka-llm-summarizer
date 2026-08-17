@@ -59,6 +59,7 @@ async def run_evaluation_batch(run_id: str) -> None:
                 model_provider=run_doc["model_provider"],
                 language=run_doc["language"],
                 mode=run_doc["summary_mode"],
+                skip_takeaways=run_doc.get("skip_takeaways", False),
             )
 
             summary_text = summary.summary

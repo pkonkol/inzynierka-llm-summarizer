@@ -1336,6 +1336,11 @@
             "type": "integer",
             "title": "Rate Limit Delay Ms",
             "default": 0
+          },
+          "skip_takeaways": {
+            "type": "boolean",
+            "title": "Skip Takeaways",
+            "default": false
           }
         },
         "type": "object",
@@ -1654,6 +1659,10 @@
             "type": "integer",
             "title": "Entry Count"
           },
+          "skip_takeaways": {
+            "type": "boolean",
+            "title": "Skip Takeaways"
+          },
           "aggregate_metrics": {
             "$ref": "#/components/schemas/EvaluationRunAggregateMetrics"
           }
@@ -1671,6 +1680,7 @@
           "created_at",
           "finished_at",
           "entry_count",
+          "skip_takeaways",
           "aggregate_metrics"
         ],
         "title": "EvaluationRunResponse"
@@ -1976,6 +1986,10 @@
             "type": "integer",
             "title": "Entry Count"
           },
+          "run_count": {
+            "type": "integer",
+            "title": "Run Count"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -1988,6 +2002,7 @@
           "name",
           "language",
           "entry_count",
+          "run_count",
           "created_at"
         ],
         "title": "EvaluationSetListItemResponse"

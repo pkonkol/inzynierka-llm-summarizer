@@ -1,21 +1,18 @@
 """Single-prompt summarization (extractor + abstractor in one call)."""
 
-from typing import Any
-
 import structlog
-from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from ...schemas.summary import LlmSummaryResult
 from ._base import (
-    LlmOutputError,
     build_generic_detail_guidance,
     build_structured_llm,
     build_summary_detail_guidance,
     build_takeaway_detail_guidance,
-    extract_usage,
-    raw_output_str,
+    parse_structured_output,
+    prompt_texts,
 )
+from ._prompts import EXTRACT_FROM_CONTENT
 
 log = structlog.get_logger(__name__)
 
@@ -25,70 +22,48 @@ class _SummaryPromptResponse(BaseModel):
     key_takeaways: list[str]
 
 
-_PROMPT_MESSAGES = [
-    (
-        "system",
-        "You are an expert summarizer. Write the entire output in language code: {language}. "
-        "Return only valid JSON matching the requested schema.",
-    ),
-    (
-        "human",
-        "Generate summary and key_takeaways from the content. {detail_guidance}\n\n"
-        "Content:\n{text}",
-    ),
-]
-
-_PROMPT = ChatPromptTemplate.from_messages(_PROMPT_MESSAGES)
+class _SummaryOnlyPromptResponse(BaseModel):
+    summary: str
 
 
 async def run(
-    input: dict, source_url: str, model_name: str, model_provider: str, language: str
+    input: dict,
+    source_url: str,
+    model_name: str,
+    model_provider: str,
+    language: str,
+    skip_takeaways: bool = False,
 ) -> LlmSummaryResult:
-    """Single-call summarization."""
-    llm = build_structured_llm(_SummaryPromptResponse, model_provider, model_name)
-    chain = _PROMPT | llm
+    schema = _SummaryOnlyPromptResponse if skip_takeaways else _SummaryPromptResponse
+    what_to_generate = "summary" if skip_takeaways else "summary and key_takeaways"
+
+    guidance_parts = [build_generic_detail_guidance(), build_summary_detail_guidance()]
+    if not skip_takeaways:
+        guidance_parts.append(build_takeaway_detail_guidance())
+
+    llm = build_structured_llm(schema, model_provider, model_name)
+    chain = EXTRACT_FROM_CONTENT | llm
 
     text = input["text"]
-
-    detail_guidance = "\n".join(
-        [
-            build_generic_detail_guidance(),
-            build_summary_detail_guidance(),
-            build_takeaway_detail_guidance(),
-        ]
-    )
     invoke_params = {
         "language": language,
-        "detail_guidance": detail_guidance,
+        "what_to_generate": what_to_generate,
+        "detail_guidance": "\n".join(guidance_parts),
         "text": text.strip(),
     }
 
-    raw_invoke_output: dict[str, Any] | BaseModel = await chain.ainvoke(invoke_params)
-
-    if isinstance(raw_invoke_output, BaseModel):
-        raw_invoke_output = raw_invoke_output.model_dump()
-
-    raw_content_str = raw_output_str(raw_invoke_output)
-    log.debug("llm raw output", mode="simple", raw_output=raw_content_str)
-
-    parsed: _SummaryPromptResponse | None = raw_invoke_output.get("parsed")
-    if parsed is None:
-        raise LlmOutputError(
-            f"Model {model_provider}:{model_name} returned empty/unparseable response.",
-            raw_output=raw_content_str,
-        )
-
-    usage, raw_metadata = extract_usage(raw_invoke_output.get("raw"))
+    raw = await chain.ainvoke(invoke_params)
+    parsed, raw_str, usage, raw_metadata = parse_structured_output(raw, "simple", "summary")
 
     return LlmSummaryResult(
         title=input["title"],
         summary=parsed.summary,
-        key_takeaways=parsed.key_takeaways,
+        key_takeaways=[] if skip_takeaways else parsed.key_takeaways,
         source_url=source_url,
         usage=usage,
         raw_metadata=raw_metadata,
-        raw_output=raw_content_str,
+        raw_output=raw_str,
         input_text=text.strip(),
-        prompt_template=list(_PROMPT_MESSAGES),
+        prompt_template=prompt_texts(EXTRACT_FROM_CONTENT, "summary"),
         prompt_params={k: v for k, v in invoke_params.items() if k != "text"},
     )

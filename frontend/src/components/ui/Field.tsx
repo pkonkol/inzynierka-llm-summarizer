@@ -1,7 +1,7 @@
 import { cn } from "./cn";
 
 const FIELD =
-  "w-full border border-input-border bg-panel-solid px-3 text-ink focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full border border-input-border bg-subtle px-3 text-ink focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return <input {...props} className={cn(FIELD, "h-control", className)} />;

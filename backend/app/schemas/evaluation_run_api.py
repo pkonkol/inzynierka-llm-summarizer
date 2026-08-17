@@ -55,6 +55,7 @@ class EvaluationRunCreateRequest(ApiModel):
     summary_mode: str = "simple"
     language: str = "en"
     rate_limit_delay_ms: int = 0
+    skip_takeaways: bool = False
 
 
 class EvaluationRunResponse(ApiModel):
@@ -69,6 +70,7 @@ class EvaluationRunResponse(ApiModel):
     created_at: datetime
     finished_at: datetime | None = None
     entry_count: int
+    skip_takeaways: bool
     aggregate_metrics: EvaluationRunAggregateMetrics = Field(
         default_factory=EvaluationRunAggregateMetrics
     )

@@ -9,6 +9,7 @@ locals {
     MONGODB_JOBS_COLLECTION = "jobs"
     AUTH_ENABLED            = "true"
     LOG_FORMAT              = "json"
+    DEEPEVAL_JUDGE_MODEL    = jsonencode({ model_provider = "gemini", model_name = "gemini-flash-latest" })
     CORS_ALLOWED_ORIGINS = jsonencode([
       "https://${var.project_id}.web.app",
       "https://${var.project_id}.firebaseapp.com",

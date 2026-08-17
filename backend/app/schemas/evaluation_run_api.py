@@ -20,6 +20,7 @@ class DeepevalPassMetrics(ApiModel):
     finished_at: datetime | None = None
     updated_entries: int | None = None
     skipped_entries: int | None = None
+    already_scored_entries: int | None = None
     error: str | None = None
 
 

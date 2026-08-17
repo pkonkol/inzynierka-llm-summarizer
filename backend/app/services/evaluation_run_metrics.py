@@ -51,11 +51,16 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
     source_by_entry_id = {entry["entry_id"]: entry["input_text"] for entry in set_doc["entries"]}
     updated_entries = 0
     skipped_entries = 0
+    already_scored_entries = 0
 
     try:
         for entry in run_doc["entries"]:
             if entry["status"] != "completed":
                 skipped_entries += 1
+                continue
+
+            if entry["ai_metrics"].get("deepeval") is not None:
+                already_scored_entries += 1
                 continue
 
             entry_id = entry["entry_id"]
@@ -112,6 +117,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         "status": "completed",
         "updated_entries": updated_entries,
         "skipped_entries": skipped_entries,
+        "already_scored_entries": already_scored_entries,
         "finished_at": datetime.now(UTC),
     }
     await runs.update_one(

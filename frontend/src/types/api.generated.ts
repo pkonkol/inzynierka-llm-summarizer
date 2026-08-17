@@ -410,6 +410,8 @@ export interface components {
             updated_entries: number | null;
             /** Skipped Entries */
             skipped_entries: number | null;
+            /** Already Scored Entries */
+            already_scored_entries: number | null;
             /** Error */
             error: string | null;
         };

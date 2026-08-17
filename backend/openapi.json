@@ -1202,6 +1202,17 @@
             ],
             "title": "Skipped Entries"
           },
+          "already_scored_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Already Scored Entries"
+          },
           "error": {
             "anyOf": [
               {
@@ -1221,6 +1232,7 @@
           "finished_at",
           "updated_entries",
           "skipped_entries",
+          "already_scored_entries",
           "error"
         ],
         "title": "DeepevalPassMetrics",

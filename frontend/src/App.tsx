@@ -98,6 +98,9 @@ function App() {
       {route === "home" && <HomePage />}
       {route === "jobs" && <JobsPage />}
       {route === "research" && <ResearchRouter />}
+      <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
+        #{__COMMIT_HASH__}
+      </span>
     </div>
   );
 }

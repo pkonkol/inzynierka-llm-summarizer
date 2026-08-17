@@ -152,11 +152,6 @@ function statusBadge(status: JobStatusValue) {
   return null;
 }
 
-function tokensPerSecond(outputTokens: number, durationMs: number): string {
-  if (!durationMs || !outputTokens) return "—";
-  return (outputTokens / (durationMs / 1000)).toFixed(1);
-}
-
 function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const modelLabel = job.model_name
@@ -221,18 +216,8 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
           valueClassName="text-md"
         />
         <InfoRow
-          label="Zakończono"
-          value={formatDateMinute(job.finished_at)}
-          valueClassName="text-md"
-        />
-        <InfoRow
           label="Czas generacji"
           value={formatDuration(job.duration_ms)}
-          valueClassName="text-md"
-        />
-        <InfoRow
-          label="Tokens / s"
-          value={tokensPerSecond(job.usage.output_tokens, job.duration_ms)}
           valueClassName="text-md"
         />
         <InfoRow label="Input tokens" value={job.usage.input_tokens} valueClassName="text-md" />

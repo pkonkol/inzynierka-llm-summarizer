@@ -1,8 +1,8 @@
-import type { SummaryUrlListItem } from "../types/api";
+import type { UrlSummaryListItem } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
 
 interface CompletedJobsListProps {
-  urls: SummaryUrlListItem[];
+  urls: UrlSummaryListItem[];
   selectedUrl: string | null;
   isLoading: boolean;
   onSelectUrl: (url: string) => void;

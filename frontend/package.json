@@ -10,7 +10,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
-    "generate-types": "openapi-typescript ../backend/openapi.json -o src/types/api.generated.ts"
+    "generate-types": "openapi-typescript ../backend/openapi.json --root-types --root-types-no-schema-prefix -o src/types/api.generated.ts"
   },
   "dependencies": {
     "loglevel": "^1.9.2",

@@ -3,8 +3,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "../components/ui/Button";
 import { SectionHeading } from "../components/ui/PageShell";
-import type { JobMetrics, JobStatus, JobStatusValue, PromptMessage } from "../types/api";
-import type { DeepevalItem } from "../types/research";
+import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
+import type { JobStatusValue, PromptMessage } from "../types/local";
 import { formatDateMinute, formatDuration } from "../utils/format";
 import { Collapsible } from "./Collapsible";
 import { DeepevalItems } from "./DeepevalItems";
@@ -13,7 +13,7 @@ import { PreBlock } from "./PreBlock";
 
 interface JobDetailPanelProps {
   sourceUrl: string | null;
-  jobs: JobStatus[];
+  jobs: JobStatusResponse[];
   isOpen: boolean;
   isLoading: boolean;
   onClose: () => void;
@@ -157,7 +157,7 @@ function tokensPerSecond(outputTokens: number, durationMs: number): string {
   return (outputTokens / (durationMs / 1000)).toFixed(1);
 }
 
-function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: boolean }) {
+function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const modelLabel = job.model_name
     ? `${job.model_provider}:${job.model_name}`
@@ -204,7 +204,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatus; defaultOpen?: 
   );
 }
 
-function JobDetails({ job }: { job: JobStatus }) {
+function JobDetails({ job }: { job: JobStatusResponse }) {
   const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
   if (!shouldRenderDetails) return null;
 

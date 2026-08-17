@@ -23,10 +23,10 @@ import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Table, Td, Tr } from "../components/ui/Table";
 import type {
-  EvaluationRunListItem,
-  EvaluationSetDetail,
-  EvaluationSetEntry,
-} from "../types/research";
+  EvaluationRunListItemResponse,
+  EvaluationSetDetailResponse,
+  EvaluationSetEntryResponse,
+} from "../types/api.generated";
 import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { splitProviderModel } from "../utils/utils";
@@ -66,7 +66,7 @@ function EntryCard({
   setId,
 }: {
   index: number;
-  entry: EvaluationSetEntry;
+  entry: EvaluationSetEntryResponse;
   setId: string;
 }) {
   const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
@@ -133,8 +133,8 @@ function RunsTable({
   runs,
   onDelete,
 }: {
-  runs: EvaluationRunListItem[];
-  onDelete: (run: EvaluationRunListItem) => void;
+  runs: EvaluationRunListItemResponse[];
+  onDelete: (run: EvaluationRunListItemResponse) => void;
 }) {
   return (
     <Table headers={RUN_COLUMNS}>
@@ -167,14 +167,14 @@ type Props = {
 };
 
 export function EvaluationSetPage({ setId }: Props) {
-  const [selectedSet, setSelectedSet] = useState<EvaluationSetDetail | null>(null);
+  const [selectedSet, setSelectedSet] = useState<EvaluationSetDetailResponse | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
   const showFlash = useFlash();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const [existingRuns, setExistingRuns] = useState<EvaluationRunListItem[]>([]);
+  const [existingRuns, setExistingRuns] = useState<EvaluationRunListItemResponse[]>([]);
   const [isLoadingExistingRuns, setIsLoadingExistingRuns] = useState(false);
   const [isSubmittingNewRun, setIsSubmittingNewRun] = useState(false);
 
@@ -187,7 +187,9 @@ export function EvaluationSetPage({ setId }: Props) {
 
   const [isSetDeletePending, setIsSetDeletePending] = useState(false);
   const [isDeletingSet, setIsDeletingSet] = useState(false);
-  const [runPendingDelete, setRunPendingDelete] = useState<EvaluationRunListItem | null>(null);
+  const [runPendingDelete, setRunPendingDelete] = useState<EvaluationRunListItemResponse | null>(
+    null,
+  );
   const [isDeletingRun, setIsDeletingRun] = useState(false);
 
   useDocumentTitle(selectedSet?.name ?? null);

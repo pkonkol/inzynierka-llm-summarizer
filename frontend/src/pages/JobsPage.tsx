@@ -4,7 +4,7 @@ import { deleteJob, getJobStatus, listAllJobsFlat } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import type { JobListItem, JobStatus } from "../types/api";
+import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
@@ -17,12 +17,12 @@ const STATUS_STYLE: Record<string, { className: string; glyph: string }> = {
 
 export function JobsPage() {
   useDocumentTitle("Zadania");
-  const [jobs, setJobs] = useState<JobListItem[]>([]);
+  const [jobs, setJobs] = useState<JobListItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState<JobStatus | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobStatusResponse | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [jobPendingDelete, setJobPendingDelete] = useState<JobListItem | null>(null);
+  const [jobPendingDelete, setJobPendingDelete] = useState<JobListItemResponse | null>(null);
   const [isDeletingJob, setIsDeletingJob] = useState(false);
 
   const loadJobs = () => listAllJobsFlat(100).then(setJobs);
@@ -31,7 +31,7 @@ export function JobsPage() {
     loadJobs().finally(() => setIsLoading(false));
   }, []);
 
-  const handleSelect = async (job: JobListItem) => {
+  const handleSelect = async (job: JobListItemResponse) => {
     setSelectedJobId(job.job_id);
     setSelectedJob(null);
     setIsLoadingDetail(true);

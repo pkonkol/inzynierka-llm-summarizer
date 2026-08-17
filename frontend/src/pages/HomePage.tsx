@@ -13,7 +13,7 @@ import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import type { JobStatus, SummaryUrlListItem } from "../types/api";
+import type { JobStatusResponse, UrlSummaryListItem } from "../types/api.generated";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 const LIST_REFRESH_MS = 20_000;
@@ -21,12 +21,12 @@ const POLLING_MS = 2_500;
 
 export function HomePage() {
   useDocumentTitle("Podsumowania");
-  const [urlList, setUrlList] = useState<SummaryUrlListItem[]>([]);
+  const [urlList, setUrlList] = useState<UrlSummaryListItem[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
-  const [detailJobs, setDetailJobs] = useState<JobStatus[]>([]);
+  const [detailJobs, setDetailJobs] = useState<JobStatusResponse[]>([]);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const [activeJobId, setActiveJobId] = useState<string | null>(null);

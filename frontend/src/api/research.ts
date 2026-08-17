@@ -1,53 +1,55 @@
 import type {
-  EvaluationRunCreatePayload,
+  DeepevalQueuedResponse,
+  EvaluationRunCreateRequest,
   EvaluationRunCreateResponse,
-  EvaluationRunEntry,
-  EvaluationRunListItem,
-  EvaluationRunMeta,
+  EvaluationRunDeletedResponse,
+  EvaluationRunEntriesResponse,
+  EvaluationRunListItemResponse,
+  EvaluationRunResponse,
   EvaluationSetCreateResponse,
-  EvaluationSetDetail,
-  EvaluationSetEntryInputText,
-  EvaluationSetImportPayload,
-  EvaluationSetListItem,
-} from "../types/research";
+  EvaluationSetDeletedResponse,
+  EvaluationSetDetailResponse,
+  EvaluationSetEntryInputTextResponse,
+  EvaluationSetExportResponse,
+  EvaluationSetImportRequest,
+  EvaluationSetListItemResponse,
+  GoldenMetricsBackfillResponse,
+} from "../types/api.generated";
 import { request } from "./client";
 
-export const listEvaluationSets = (): Promise<EvaluationSetListItem[]> =>
-  request<EvaluationSetListItem[]>("/api/v1/research/evaluation-sets");
+export const listEvaluationSets = (): Promise<EvaluationSetListItemResponse[]> =>
+  request<EvaluationSetListItemResponse[]>("/api/v1/research/evaluation-sets");
 
 export const createEvaluationSet = (
-  payload: EvaluationSetImportPayload,
+  payload: EvaluationSetImportRequest,
 ): Promise<EvaluationSetCreateResponse> =>
   request<EvaluationSetCreateResponse>("/api/v1/research/evaluation-sets", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 
-export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetail> =>
-  request<EvaluationSetDetail>(`/api/v1/research/evaluation-sets/${setId}`);
+export const getEvaluationSet = (setId: string): Promise<EvaluationSetDetailResponse> =>
+  request<EvaluationSetDetailResponse>(`/api/v1/research/evaluation-sets/${setId}`);
 
-export const exportEvaluationSet = (setId: string): Promise<unknown> =>
-  request<unknown>(`/api/v1/research/evaluation-sets/${setId}/export`);
+export const exportEvaluationSet = (setId: string): Promise<EvaluationSetExportResponse> =>
+  request<EvaluationSetExportResponse>(`/api/v1/research/evaluation-sets/${setId}/export`);
 
-export const deleteEvaluationSet = (
-  setId: string,
-): Promise<{ status: string; evaluation_set_id: string; deleted_runs: number }> =>
-  request<{ status: string; evaluation_set_id: string; deleted_runs: number }>(
-    `/api/v1/research/evaluation-sets/${setId}`,
-    { method: "DELETE" },
-  );
+export const deleteEvaluationSet = (setId: string): Promise<EvaluationSetDeletedResponse> =>
+  request<EvaluationSetDeletedResponse>(`/api/v1/research/evaluation-sets/${setId}`, {
+    method: "DELETE",
+  });
 
-const inputTextCache = new Map<string, Promise<EvaluationSetEntryInputText>>();
+const inputTextCache = new Map<string, Promise<EvaluationSetEntryInputTextResponse>>();
 
 export const getEvaluationSetEntryInputText = (
   setId: string,
   entryId: string,
-): Promise<EvaluationSetEntryInputText> => {
+): Promise<EvaluationSetEntryInputTextResponse> => {
   const cacheKey = `${setId}:${entryId}`;
   const cached = inputTextCache.get(cacheKey);
   if (cached) return cached;
 
-  const result = request<EvaluationSetEntryInputText>(
+  const result = request<EvaluationSetEntryInputTextResponse>(
     `/api/v1/research/evaluation-sets/${setId}/entries/${entryId}/input-text`,
   );
   inputTextCache.set(cacheKey, result);
@@ -57,40 +59,36 @@ export const getEvaluationSetEntryInputText = (
 
 export const evaluateMissingGoldenMetrics = (
   setId: string,
-): Promise<{ status: string; updated_entries: number; total_entries: number }> =>
-  request<{ status: string; updated_entries: number; total_entries: number }>(
+): Promise<GoldenMetricsBackfillResponse> =>
+  request<GoldenMetricsBackfillResponse>(
     `/api/v1/research/evaluation-sets/${setId}/golden-metrics`,
     { method: "POST" },
   );
 
-export const listEvaluationRuns = (setId: string): Promise<EvaluationRunListItem[]> =>
-  request<EvaluationRunListItem[]>(`/api/v1/research/evaluation-sets/${setId}/runs`);
+export const listEvaluationRuns = (setId: string): Promise<EvaluationRunListItemResponse[]> =>
+  request<EvaluationRunListItemResponse[]>(`/api/v1/research/evaluation-sets/${setId}/runs`);
 
 export const createEvaluationRun = (
   setId: string,
-  payload: EvaluationRunCreatePayload,
+  payload: EvaluationRunCreateRequest,
 ): Promise<EvaluationRunCreateResponse> =>
   request<EvaluationRunCreateResponse>(`/api/v1/research/evaluation-sets/${setId}/runs`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 
-export const getEvaluationRun = (runId: string): Promise<EvaluationRunMeta> =>
-  request<EvaluationRunMeta>(`/api/v1/research/runs/${runId}`);
+export const getEvaluationRun = (runId: string): Promise<EvaluationRunResponse> =>
+  request<EvaluationRunResponse>(`/api/v1/research/runs/${runId}`);
 
-export const getEvaluationRunEntries = (
-  runId: string,
-): Promise<{ entries: EvaluationRunEntry[] }> =>
-  request<{ entries: EvaluationRunEntry[] }>(`/api/v1/research/runs/${runId}/entries`);
+export const getEvaluationRunEntries = (runId: string): Promise<EvaluationRunEntriesResponse> =>
+  request<EvaluationRunEntriesResponse>(`/api/v1/research/runs/${runId}/entries`);
 
-export const evaluateRunDeepeval = (runId: string): Promise<{ status: string; run_id: string }> =>
-  request<{ status: string; run_id: string }>(`/api/v1/research/runs/${runId}/deepeval`, {
+export const evaluateRunDeepeval = (runId: string): Promise<DeepevalQueuedResponse> =>
+  request<DeepevalQueuedResponse>(`/api/v1/research/runs/${runId}/deepeval`, {
     method: "POST",
   });
 
-export const deleteEvaluationRun = (
-  runId: string,
-): Promise<{ status: string; evaluation_run_id: string }> =>
-  request<{ status: string; evaluation_run_id: string }>(`/api/v1/research/runs/${runId}`, {
+export const deleteEvaluationRun = (runId: string): Promise<EvaluationRunDeletedResponse> =>
+  request<EvaluationRunDeletedResponse>(`/api/v1/research/runs/${runId}`, {
     method: "DELETE",
   });

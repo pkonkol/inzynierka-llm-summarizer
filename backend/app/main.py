@@ -9,7 +9,7 @@ from .core.config import settings
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .core.nltk_data import ensure_wordnet_resources
-from .routers import auth, health, meta, research, summarize
+from .routers import auth, evaluation_runs, evaluation_sets, health, meta, summarize
 
 setup_logging()
 
@@ -37,4 +37,5 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(summarize.router)
 app.include_router(meta.router)
-app.include_router(research.router)
+app.include_router(evaluation_sets.router)
+app.include_router(evaluation_runs.router)

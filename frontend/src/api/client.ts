@@ -1,10 +1,13 @@
 import type {
-  CreateJobResponse,
-  JobListItem,
-  JobStatus,
-  JobStatusValue,
-  SummaryUrlListItem,
-} from "../types/api";
+  AuthStatusResponse,
+  JobCreatedResponse,
+  JobDeletedResponse,
+  JobListItemResponse,
+  JobStatusResponse,
+  TokenResponse,
+  UrlSummaryListItem,
+} from "../types/api.generated";
+import type { JobStatusValue } from "../types/local";
 import { logger } from "../utils/logger";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -65,11 +68,11 @@ export async function request<T>(path: string, options?: RequestInit): Promise<T
   return (await response.json()) as T;
 }
 
-export const getAuthStatus = (): Promise<{ enabled: boolean }> =>
-  request<{ enabled: boolean }>("/auth/status");
+export const getAuthStatus = (): Promise<AuthStatusResponse> =>
+  request<AuthStatusResponse>("/auth/status");
 
-export const login = (password: string): Promise<{ token: string }> =>
-  request<{ token: string }>("/auth/token", {
+export const login = (password: string): Promise<TokenResponse> =>
+  request<TokenResponse>("/auth/token", {
     method: "POST",
     body: JSON.stringify({ password }),
   });
@@ -81,8 +84,8 @@ export const createSummaryJob = (
   language: string,
   summary_mode: string,
   run_deepeval: boolean,
-): Promise<CreateJobResponse> =>
-  request<CreateJobResponse>("/api/v1/jobs/summarize", {
+): Promise<JobCreatedResponse> =>
+  request<JobCreatedResponse>("/api/v1/jobs/summarize", {
     method: "POST",
     body: JSON.stringify({
       url,
@@ -94,22 +97,25 @@ export const createSummaryJob = (
     }),
   });
 
-export const listSummarizedUrls = (limit = 50): Promise<SummaryUrlListItem[]> =>
-  request<SummaryUrlListItem[]>(`/api/v1/jobs?limit=${limit}`);
+export const listSummarizedUrls = (limit = 50): Promise<UrlSummaryListItem[]> =>
+  request<UrlSummaryListItem[]>(`/api/v1/jobs?limit=${limit}`);
 
-export const listAllJobsFlat = (limit = 100): Promise<JobListItem[]> =>
-  request<JobListItem[]>(`/api/v1/jobs/list?limit=${limit}`);
+export const listAllJobsFlat = (limit = 100): Promise<JobListItemResponse[]> =>
+  request<JobListItemResponse[]>(`/api/v1/jobs/list?limit=${limit}`);
 
-export const getJobsForUrl = (sourceUrl: string, status: JobStatusValue): Promise<JobStatus[]> =>
-  request<JobStatus[]>(
+export const getJobsForUrl = (
+  sourceUrl: string,
+  status: JobStatusValue,
+): Promise<JobStatusResponse[]> =>
+  request<JobStatusResponse[]>(
     `/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}&status=${status}`,
   );
 
-export const getJobStatus = (jobId: string): Promise<JobStatus> =>
-  request<JobStatus>(`/api/v1/jobs/${jobId}`);
+export const getJobStatus = (jobId: string): Promise<JobStatusResponse> =>
+  request<JobStatusResponse>(`/api/v1/jobs/${jobId}`);
 
-export const deleteJob = (jobId: string): Promise<{ status: string; job_id: string }> =>
-  request<{ status: string; job_id: string }>(`/api/v1/jobs/${jobId}`, { method: "DELETE" });
+export const deleteJob = (jobId: string): Promise<JobDeletedResponse> =>
+  request<JobDeletedResponse>(`/api/v1/jobs/${jobId}`, { method: "DELETE" });
 
 export const getSupportedModels = (): Promise<Record<string, string[]>> =>
   request<Record<string, string[]>>("/api/v1/meta/models");

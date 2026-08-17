@@ -12,10 +12,10 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import type {
-  EvaluationRunEntry,
-  EvaluationRunMeta,
+  EvaluationRunEntryResponse,
+  EvaluationRunResponse,
   SummaryStatisticalMetrics,
-} from "../types/research";
+} from "../types/api.generated";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 type EntryCollapsibleKey = "input" | "metrics";
@@ -58,7 +58,7 @@ function ColumnsHeader() {
   );
 }
 
-function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
+function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }) {
   const goldenSummary: Partial<SummaryStatisticalMetrics> = entry.golden_metrics?.summary ?? {};
   const aiSummary: Partial<SummaryStatisticalMetrics> = entry.ai_metrics?.summary ?? {};
 
@@ -98,7 +98,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
   );
 }
 
-function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
+function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }) {
   const goldenItems: DeepevalDisplayItem[] = entry.golden_metrics?.deepeval ?? [];
   const aiItems: DeepevalDisplayItem[] = entry.ai_metrics?.deepeval ?? [];
 
@@ -127,7 +127,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntry }) {
   );
 }
 
-function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
+function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
   if (!entry.cross_metrics) {
     return <p className="p-3 text-sm text-muted">Not computed yet.</p>;
   }
@@ -166,7 +166,7 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntry }) {
   );
 }
 
-function EntryMetrics({ entry }: { entry: EvaluationRunEntry }) {
+function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
   return (
     <div className="grid gap-4 p-3">
       <div className="grid gap-2">
@@ -188,7 +188,7 @@ const RUN_STATUS_STYLE: Record<string, string> = {
   pending: "text-warning",
 };
 
-function RunSummary({ run }: { run: EvaluationRunMeta }) {
+function RunSummary({ run }: { run: EvaluationRunResponse }) {
   const { entry_count, completed_entries, failed_entries, error, deepeval } = run.aggregate_metrics;
 
   return (
@@ -244,7 +244,7 @@ function RunEntryCard({
   evaluationSetId,
 }: {
   index: number;
-  entry: EvaluationRunEntry;
+  entry: EvaluationRunEntryResponse;
   evaluationSetId: string;
 }) {
   const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
@@ -326,8 +326,8 @@ type Props = {
 const RUN_POLL_MS = 3_000;
 
 export function EvaluationRunPage({ runId }: Props) {
-  const [run, setRun] = useState<EvaluationRunMeta | null>(null);
-  const [entries, setEntries] = useState<EvaluationRunEntry[] | null>(null);
+  const [run, setRun] = useState<EvaluationRunResponse | null>(null);
+  const [entries, setEntries] = useState<EvaluationRunEntryResponse[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingEntries, setIsLoadingEntries] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

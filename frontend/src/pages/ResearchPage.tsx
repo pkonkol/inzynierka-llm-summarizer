@@ -8,7 +8,10 @@ import { FieldLabel, Textarea } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
-import type { EvaluationSetImportPayload, EvaluationSetListItem } from "../types/research";
+import type {
+  EvaluationSetImportRequest,
+  EvaluationSetListItemResponse,
+} from "../types/api.generated";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 const PRETTY_EXAMPLE = `{
@@ -27,7 +30,7 @@ const PRETTY_EXAMPLE = `{
 
 const SET_COLUMNS = ["Name", "Language", "Entries", "Created", "Action"];
 
-function SetsTable({ sets }: { sets: EvaluationSetListItem[] }) {
+function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
   return (
     <Table headers={SET_COLUMNS}>
       {sets.map((set) => (
@@ -50,7 +53,7 @@ function SetsTable({ sets }: { sets: EvaluationSetListItem[] }) {
 export function ResearchPage() {
   useDocumentTitle("Research");
   const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
-  const [sets, setSets] = useState<EvaluationSetListItem[]>([]);
+  const [sets, setSets] = useState<EvaluationSetListItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const showFlash = useFlash();
@@ -58,7 +61,7 @@ export function ResearchPage() {
 
   const parsedPreview = useMemo(() => {
     try {
-      const parsed = JSON.parse(rawJson) as EvaluationSetImportPayload;
+      const parsed = JSON.parse(rawJson) as EvaluationSetImportRequest;
       return {
         name: parsed.name,
         language: parsed.language,
@@ -83,9 +86,9 @@ export function ResearchPage() {
   const handleImport = async () => {
     setErrorMessage(null);
 
-    let payload: EvaluationSetImportPayload;
+    let payload: EvaluationSetImportRequest;
     try {
-      payload = JSON.parse(rawJson) as EvaluationSetImportPayload;
+      payload = JSON.parse(rawJson) as EvaluationSetImportRequest;
     } catch {
       showFlash("Niepoprawny JSON.", "danger");
       return;

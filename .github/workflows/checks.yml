@@ -33,6 +33,7 @@ jobs:
             frontend:
               - 'frontend/**'
               - 'justfile'
+              - 'backend/openapi.json' # generated TS types are derived from it
             security:
               - 'backend/Dockerfile'
               - 'backend/requirements.txt'
@@ -52,6 +53,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: just lint-backend
       - run: just venv deps-sync test-backend
+      - run: just typecheck-backend check-openapi
 
   frontend:
     needs: changes
@@ -69,6 +71,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: just install-frontend
       - run: just lint-frontend
+      - run: just check-generated-types
       - run: just audit-frontend
 
   # Secrets are scanned on every push regardless of paths: a leak can arrive in any file.

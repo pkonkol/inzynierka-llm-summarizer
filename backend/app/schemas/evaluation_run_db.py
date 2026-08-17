@@ -1,11 +1,10 @@
 # schemas/evaluation_run_db.py — stored shape of the evaluation_runs collection
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .evaluation_run_api import EntryStatus, RunStatus
+from .evaluation_run_api import EntryStatus, EvaluationRunAggregateMetrics, RunStatus
 from .shared_metrics import AiMetrics, CrossMetrics
 
 
@@ -38,4 +37,6 @@ class EvaluationRunDocument(BaseModel):
     created_at: datetime
     finished_at: datetime | None = None
     entries: list[EvaluationRunEntryDocument]
-    aggregate_metrics: dict[str, Any] = Field(default_factory=dict)
+    aggregate_metrics: EvaluationRunAggregateMetrics = Field(
+        default_factory=EvaluationRunAggregateMetrics
+    )

@@ -115,11 +115,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Create Summarize Job Api V1 Jobs Summarize Post"
+                  "$ref": "#/components/schemas/JobCreatedResponse"
                 }
               }
             }
@@ -368,11 +364,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Delete Job Api V1 Jobs  Job Id  Delete"
+                  "$ref": "#/components/schemas/JobDeletedResponse"
                 }
               }
             }
@@ -607,18 +599,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  },
-                  "title": "Response Delete Evaluation Set Api V1 Research Evaluation Sets  Set Id  Delete"
+                  "$ref": "#/components/schemas/EvaluationSetDeletedResponse"
                 }
               }
             }
@@ -659,7 +640,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationSetExportResponse"
+                }
               }
             }
           },
@@ -756,18 +739,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "integer"
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
-                  },
-                  "title": "Response Evaluate Missing Golden Metrics Api V1 Research Evaluation Sets  Set Id  Golden Metrics Post"
+                  "$ref": "#/components/schemas/GoldenMetricsBackfillResponse"
                 }
               }
             }
@@ -955,11 +927,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Delete Evaluation Run Api V1 Research Runs  Run Id  Delete"
+                  "$ref": "#/components/schemas/EvaluationRunDeletedResponse"
                 }
               }
             }
@@ -1048,11 +1016,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Evaluate Run Deepeval Api V1 Research Runs  Run Id  Deepeval Post"
+                  "$ref": "#/components/schemas/DeepevalQueuedResponse"
                 }
               }
             }
@@ -1099,7 +1063,8 @@
         "type": "object",
         "required": [
           "summary",
-          "key_takeaways"
+          "key_takeaways",
+          "deepeval"
         ],
         "title": "AiMetrics"
       },
@@ -1147,7 +1112,8 @@
           "rouge1",
           "rouge2",
           "rougeL",
-          "meteor"
+          "meteor",
+          "deepeval"
         ],
         "title": "CrossMetrics"
       },
@@ -1178,6 +1144,173 @@
           "reason"
         ],
         "title": "DeepevalItem"
+      },
+      "DeepevalPassMetrics": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "updated_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Entries"
+          },
+          "skipped_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Entries"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "started_at",
+          "finished_at",
+          "updated_entries",
+          "skipped_entries",
+          "error"
+        ],
+        "title": "DeepevalPassMetrics",
+        "description": "Progress of the GEval pass, which runs separately from the run itself."
+      },
+      "DeepevalQueuedResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id"
+        ],
+        "title": "DeepevalQueuedResponse"
+      },
+      "EvaluationRunAggregateMetrics": {
+        "properties": {
+          "entry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Count"
+          },
+          "completed_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed Entries"
+          },
+          "failed_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Entries"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "deepeval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeepevalPassMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_count",
+          "completed_entries",
+          "failed_entries",
+          "error",
+          "deepeval"
+        ],
+        "title": "EvaluationRunAggregateMetrics"
       },
       "EvaluationRunCreateRequest": {
         "properties": {
@@ -1242,6 +1375,25 @@
         ],
         "title": "EvaluationRunCreateResponse"
       },
+      "EvaluationRunDeletedResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "deleted",
+            "title": "Status"
+          },
+          "evaluation_run_id": {
+            "type": "string",
+            "title": "Evaluation Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "evaluation_run_id"
+        ],
+        "title": "EvaluationRunDeletedResponse"
+      },
       "EvaluationRunEntriesResponse": {
         "properties": {
           "entries": {
@@ -1253,6 +1405,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "entries"
+        ],
         "title": "EvaluationRunEntriesResponse"
       },
       "EvaluationRunEntryResponse": {
@@ -1348,7 +1503,14 @@
           "entry_id",
           "title",
           "url",
-          "golden_summary"
+          "golden_summary",
+          "golden_metrics",
+          "ai_summary",
+          "ai_key_takeaways",
+          "ai_metrics",
+          "cross_metrics",
+          "status",
+          "error"
         ],
         "title": "EvaluationRunEntryResponse",
         "description": "API-facing shape \u2014 includes title/url/golden_metrics joined from the parent set."
@@ -1426,6 +1588,7 @@
           "language",
           "status",
           "created_at",
+          "finished_at",
           "entry_count"
         ],
         "title": "EvaluationRunListItemResponse"
@@ -1492,9 +1655,7 @@
             "title": "Entry Count"
           },
           "aggregate_metrics": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Aggregate Metrics"
+            "$ref": "#/components/schemas/EvaluationRunAggregateMetrics"
           }
         },
         "type": "object",
@@ -1508,7 +1669,9 @@
           "language",
           "status",
           "created_at",
-          "entry_count"
+          "finished_at",
+          "entry_count",
+          "aggregate_metrics"
         ],
         "title": "EvaluationRunResponse"
       },
@@ -1545,6 +1708,30 @@
           "created_at"
         ],
         "title": "EvaluationSetCreateResponse"
+      },
+      "EvaluationSetDeletedResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "deleted",
+            "title": "Status"
+          },
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
+          },
+          "deleted_runs": {
+            "type": "integer",
+            "title": "Deleted Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "evaluation_set_id",
+          "deleted_runs"
+        ],
+        "title": "EvaluationSetDeletedResponse"
       },
       "EvaluationSetDetailResponse": {
         "properties": {
@@ -1583,7 +1770,7 @@
         ],
         "title": "EvaluationSetDetailResponse"
       },
-      "EvaluationSetEntryImport": {
+      "EvaluationSetEntryImport-Input": {
         "properties": {
           "input_text": {
             "type": "string",
@@ -1618,6 +1805,45 @@
           "golden_summary",
           "title",
           "url"
+        ],
+        "title": "EvaluationSetEntryImport"
+      },
+      "EvaluationSetEntryImport-Output": {
+        "properties": {
+          "input_text": {
+            "type": "string",
+            "title": "Input Text"
+          },
+          "golden_summary": {
+            "type": "string",
+            "title": "Golden Summary"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "golden_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoldenMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "input_text",
+          "golden_summary",
+          "title",
+          "url",
+          "golden_metrics"
         ],
         "title": "EvaluationSetEntryImport"
       },
@@ -1673,10 +1899,38 @@
           "entry_id",
           "golden_summary",
           "title",
-          "url"
+          "url",
+          "golden_metrics"
         ],
         "title": "EvaluationSetEntryResponse",
         "description": "input_text is deliberately excluded \u2014 fetched separately via the input-text endpoint."
+      },
+      "EvaluationSetExportResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationSetEntryImport-Output"
+            },
+            "type": "array",
+            "title": "Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "language",
+          "entries"
+        ],
+        "title": "EvaluationSetExportResponse",
+        "description": "Mirrors EvaluationSetImportRequest so an exported file can be imported back."
       },
       "EvaluationSetImportRequest": {
         "properties": {
@@ -1691,7 +1945,7 @@
           },
           "entries": {
             "items": {
-              "$ref": "#/components/schemas/EvaluationSetEntryImport"
+              "$ref": "#/components/schemas/EvaluationSetEntryImport-Input"
             },
             "type": "array",
             "title": "Entries"
@@ -1762,6 +2016,30 @@
         ],
         "title": "GoldenMetrics"
       },
+      "GoldenMetricsBackfillResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "updated_entries": {
+            "type": "integer",
+            "title": "Updated Entries"
+          },
+          "total_entries": {
+            "type": "integer",
+            "title": "Total Entries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "updated_entries",
+          "total_entries"
+        ],
+        "title": "GoldenMetricsBackfillResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1820,6 +2098,38 @@
           "url"
         ],
         "title": "JobCreateRequest"
+      },
+      "JobCreatedResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "JobCreatedResponse"
+      },
+      "JobDeletedResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "deleted",
+            "title": "Status"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "job_id"
+        ],
+        "title": "JobDeletedResponse"
       },
       "JobListItemResponse": {
         "properties": {
@@ -1920,6 +2230,11 @@
           }
         },
         "type": "object",
+        "required": [
+          "source",
+          "summary",
+          "key_takeaways"
+        ],
         "title": "JobMetrics",
         "description": "All None at insert time \u2014 metrics are computed asynchronously after the job starts."
       },
@@ -2072,6 +2387,7 @@
           "model_provider",
           "model_name",
           "summary_mode",
+          "summary_data",
           "metrics",
           "deepeval_metrics",
           "usage",
@@ -2081,7 +2397,10 @@
           "prompt_template",
           "prompt_params",
           "created_at",
-          "duration_ms"
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "error"
         ],
         "title": "JobStatusResponse"
       },
@@ -2295,6 +2614,12 @@
           }
         },
         "type": "object",
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "thinking_tokens",
+          "total_tokens"
+        ],
         "title": "UsageMetadata"
       },
       "ValidationError": {

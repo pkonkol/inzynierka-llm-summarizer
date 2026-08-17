@@ -3,8 +3,9 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import HttpUrl
 
+from .base import ApiModel
 from .job_db import JobMetrics
 from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
@@ -13,7 +14,7 @@ SummaryMode = Literal["simple", "sequential", "cascade"]
 JobStatusValue = Literal["pending", "completed", "failed"]
 
 
-class JobCreateRequest(BaseModel):
+class JobCreateRequest(ApiModel):
     model_name: str
     model_provider: str
     url: HttpUrl
@@ -22,7 +23,7 @@ class JobCreateRequest(BaseModel):
     run_deepeval: bool = False
 
 
-class JobStatusResponse(BaseModel):
+class JobStatusResponse(ApiModel):
     job_id: str
     source_url: str
     status: JobStatusValue
@@ -45,7 +46,7 @@ class JobStatusResponse(BaseModel):
     error: str | None = None
 
 
-class JobListItemResponse(BaseModel):
+class JobListItemResponse(ApiModel):
     """Flat per-job entry used by GET /api/v1/jobs/list."""
 
     job_id: str
@@ -59,7 +60,7 @@ class JobListItemResponse(BaseModel):
     updated_at: datetime
 
 
-class UrlSummaryListItem(BaseModel):
+class UrlSummaryListItem(ApiModel):
     """One entry per unique source_url for the home page list."""
 
     source_url: str
@@ -67,3 +68,12 @@ class UrlSummaryListItem(BaseModel):
     failed_count: int
     latest_title: str
     latest_updated_at: datetime
+
+
+class JobCreatedResponse(ApiModel):
+    job_id: str
+
+
+class JobDeletedResponse(ApiModel):
+    status: Literal["deleted"]
+    job_id: str

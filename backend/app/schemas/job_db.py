@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from .base import ApiModel
 from .shared_metrics import (
     DeepevalItem,
     KeyTakeawaysMetrics,
@@ -14,7 +15,8 @@ from .shared_metrics import (
 from .summary import SummaryResponse, UsageMetadata
 
 
-class JobMetrics(BaseModel):
+# In job_db.py but reachable from a response: JobStatusResponse.metrics exposes it.
+class JobMetrics(ApiModel):
     """All None at insert time — metrics are computed asynchronously after the job starts."""
 
     source: SourceMetrics | None = None

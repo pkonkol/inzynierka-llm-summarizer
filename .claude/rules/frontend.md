@@ -35,25 +35,17 @@ function InfoRow({ value }: InfoRowProps) {
 
 - `value ?? ""` / `value || ""` used to mask a value that should already be present — same ban as any other silent fallback.
 
-Real example from this codebase (`EvaluationRunPage.tsx`, evaluation-run entry header): `source_meta` is a required `{url, title}` object per the backend Pydantic schema — every entry has it. It was typed as `Record<string, unknown>` on the frontend, forcing the component to defend against absence that could never happen:
+Real example from this codebase (`EvaluationRunPage.tsx`, run status panel): `aggregate_metrics` carries the entry counts and the GEval pass status. It was `dict[str, Any]` on the backend and therefore `Record<string, unknown>` on the frontend — a shape no component can read without narrowing every key by hand, which is why it was rendered as a raw `JSON.stringify` dump instead of named fields:
 
 ```tsx
-// BAD — defends against a shape that the API contract already guarantees
-function EntryMetaLine({ sourceMeta }: { sourceMeta: Record<string, unknown> }) {
-  const title = typeof sourceMeta.title === "string" ? sourceMeta.title : null;
-  const url = typeof sourceMeta.url === "string" ? sourceMeta.url : null;
-  const bits = [title, url].filter((v): v is string => Boolean(v));
-  if (bits.length === 0) return null;
-  return <p>{bits.join(" · ")}</p>;
-}
+// BAD — the type carries no information, so the UI cannot do better than this
+<PreBlock>{JSON.stringify(run.aggregate_metrics, null, 2)}</PreBlock>
 
-// GOOD — type matches the backend contract (SourceMeta = {url: string, title: string}), no runtime guards
-function EntryMetaLine({ sourceMeta }: { sourceMeta: SourceMeta }) {
-  return <p>{sourceMeta.title} · {sourceMeta.url}</p>;
-}
+// GOOD — a real type, so the fields can be named and formatted
+const { entry_count, completed_entries, failed_entries, deepeval } = run.aggregate_metrics;
 ```
 
-The fix wasn't in the component — it was giving `source_meta` a real type (`SourceMeta`) instead of `Record<string, unknown>`, and fixing the backend Pydantic model (`dict[str, Any]` → `SourceMeta` submodel) so the API boundary actually enforces the field is present. If a defensive check like this shows up, look upstream for a loose type first.
+The fix wasn't in the component — it was giving the field a real Pydantic submodel (`EvaluationRunAggregateMetrics` in `schemas/evaluation_run_api.py`), which fixes the OpenAPI schema and the generated TypeScript in one move. If a defensive check or a JSON dump shows up, look upstream for a loose type first.
 
 ## Fail fast
 

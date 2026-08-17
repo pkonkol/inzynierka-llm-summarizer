@@ -3,14 +3,15 @@ from uuid import uuid4
 
 from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from pymongo import DESCENDING
 
 from ..core.auth import require_auth
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..schemas.evaluation_run_api import (
+    DeepevalQueuedResponse,
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
+    EvaluationRunDeletedResponse,
     EvaluationRunEntriesResponse,
     EvaluationRunEntryResponse,
     EvaluationRunListItemResponse,
@@ -19,11 +20,15 @@ from ..schemas.evaluation_run_api import (
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
 from ..schemas.evaluation_set_api import (
     EvaluationSetCreateResponse,
+    EvaluationSetDeletedResponse,
     EvaluationSetDetailResponse,
+    EvaluationSetEntryImport,
     EvaluationSetEntryInputTextResponse,
     EvaluationSetEntryResponse,
+    EvaluationSetExportResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
+    GoldenMetricsBackfillResponse,
 )
 from ..schemas.evaluation_set_db import EvaluationSetDocument, EvaluationSetEntryDocument
 from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
@@ -130,30 +135,28 @@ async def get_evaluation_set(set_id: str) -> EvaluationSetDetailResponse:
     )
 
 
-@router.get("/evaluation-sets/{set_id}/export")
-async def export_evaluation_set(set_id: str) -> JSONResponse:
+@router.get("/evaluation-sets/{set_id}/export", response_model=EvaluationSetExportResponse)
+async def export_evaluation_set(set_id: str) -> EvaluationSetExportResponse:
     collection = get_evaluation_sets_collection()
     document = await collection.find_one({"_id": ObjectId(set_id)})
 
     if document is None:
         raise HTTPException(status_code=404, detail="Evaluation set not found")
 
-    payload = {
-        "name": document["name"],
-        "language": document["language"],
-        "entries": [
-            {
-                "input_text": entry["input_text"],
-                "golden_summary": entry["golden_summary"],
-                "title": entry["title"],
-                "url": entry["url"],
-                "golden_metrics": entry.get("golden_metrics"),
-            }
+    return EvaluationSetExportResponse(
+        name=document["name"],
+        language=document["language"],
+        entries=[
+            EvaluationSetEntryImport(
+                input_text=entry["input_text"],
+                golden_summary=entry["golden_summary"],
+                title=entry["title"],
+                url=entry["url"],
+                golden_metrics=entry.get("golden_metrics"),
+            )
             for entry in document["entries"]
         ],
-    }
-
-    return JSONResponse(content=payload)
+    )
 
 
 @router.get(
@@ -178,8 +181,12 @@ async def get_evaluation_set_entry_input_text(
     )
 
 
-@router.post("/evaluation-sets/{set_id}/golden-metrics", dependencies=[Depends(require_auth)])
-async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
+@router.post(
+    "/evaluation-sets/{set_id}/golden-metrics",
+    response_model=GoldenMetricsBackfillResponse,
+    dependencies=[Depends(require_auth)],
+)
+async def evaluate_missing_golden_metrics(set_id: str) -> GoldenMetricsBackfillResponse:
     collection = get_evaluation_sets_collection()
     document = await collection.find_one({"_id": ObjectId(set_id)})
 
@@ -205,11 +212,11 @@ async def evaluate_missing_golden_metrics(set_id: str) -> dict[str, int | str]:
         {"$set": {"entries": entries}},
     )
 
-    return {
-        "status": "ok",
-        "updated_entries": updated_count,
-        "total_entries": len(entries),
-    }
+    return GoldenMetricsBackfillResponse(
+        status="ok",
+        updated_entries=updated_count,
+        total_entries=len(entries),
+    )
 
 
 @router.post(
@@ -393,11 +400,15 @@ async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesRespons
     return EvaluationRunEntriesResponse(entries=entries)
 
 
-@router.post("/runs/{run_id}/deepeval", dependencies=[Depends(require_auth)])
+@router.post(
+    "/runs/{run_id}/deepeval",
+    response_model=DeepevalQueuedResponse,
+    dependencies=[Depends(require_auth)],
+)
 async def evaluate_run_deepeval(
     run_id: str,
     background_tasks: BackgroundTasks,
-) -> dict[str, str]:
+) -> DeepevalQueuedResponse:
     runs = get_evaluation_runs_collection()
     document = await runs.find_one({"_id": ObjectId(run_id)}, {"status": 1})
 
@@ -412,11 +423,15 @@ async def evaluate_run_deepeval(
 
     background_tasks.add_task(compute_run_deepeval_metrics, run_id)
 
-    return {"status": "queued", "run_id": run_id}
+    return DeepevalQueuedResponse(status="queued", run_id=run_id)
 
 
-@router.delete("/evaluation-sets/{set_id}", dependencies=[Depends(require_auth)])
-async def delete_evaluation_set(set_id: str) -> dict[str, str | int]:
+@router.delete(
+    "/evaluation-sets/{set_id}",
+    response_model=EvaluationSetDeletedResponse,
+    dependencies=[Depends(require_auth)],
+)
+async def delete_evaluation_set(set_id: str) -> EvaluationSetDeletedResponse:
     sets = get_evaluation_sets_collection()
     runs = get_evaluation_runs_collection()
 
@@ -425,16 +440,20 @@ async def delete_evaluation_set(set_id: str) -> dict[str, str | int]:
         raise HTTPException(status_code=404, detail="Evaluation set not found")
 
     deleted_runs = await runs.delete_many({"evaluation_set_id": set_id})
-    return {
-        "status": "deleted",
-        "evaluation_set_id": set_id,
-        "deleted_runs": deleted_runs.deleted_count,
-    }
+    return EvaluationSetDeletedResponse(
+        status="deleted",
+        evaluation_set_id=set_id,
+        deleted_runs=deleted_runs.deleted_count,
+    )
 
 
-@router.delete("/runs/{run_id}", dependencies=[Depends(require_auth)])
-async def delete_evaluation_run(run_id: str) -> dict[str, str]:
+@router.delete(
+    "/runs/{run_id}",
+    response_model=EvaluationRunDeletedResponse,
+    dependencies=[Depends(require_auth)],
+)
+async def delete_evaluation_run(run_id: str) -> EvaluationRunDeletedResponse:
     result = await get_evaluation_runs_collection().delete_one({"_id": ObjectId(run_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Evaluation run not found")
-    return {"status": "deleted", "evaluation_run_id": run_id}
+    return EvaluationRunDeletedResponse(status="deleted", evaluation_run_id=run_id)

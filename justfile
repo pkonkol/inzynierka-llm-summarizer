@@ -86,8 +86,7 @@ check-openapi:
 [group('frontend')]
 [working-directory('frontend')]
 check-generated-types:
-    npm run generate-types
-    git diff --exit-code src/types/api.generated.ts || (echo "api.generated.ts is stale — run: cd frontend && npm run generate-types" && exit 1)
+    npx openapi-typescript ../backend/openapi.json 2>/dev/null | diff -u src/types/api.generated.ts - || (echo "api.generated.ts is stale — run: npm run generate-types" && exit 1)
 
 # Backend: recompile requirements.txt from requirements.in
 [group('backend')]

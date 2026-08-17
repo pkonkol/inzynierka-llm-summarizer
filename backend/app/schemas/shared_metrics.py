@@ -1,16 +1,18 @@
 # schemas/shared_metrics.py
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from .base import ApiModel
 
 
-class DeepevalItem(BaseModel):
+class DeepevalItem(ApiModel):
     name: str
     score: float
     passed: bool
     reason: str
 
 
-class PairwiseDeepevalItem(BaseModel):
+class PairwiseDeepevalItem(ApiModel):
     """score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."""
 
     name: str
@@ -18,7 +20,7 @@ class PairwiseDeepevalItem(BaseModel):
     reason: str
 
 
-class CrossMetrics(BaseModel):
+class CrossMetrics(ApiModel):
     rouge1: float
     rouge2: float
     rougeL: float
@@ -26,31 +28,31 @@ class CrossMetrics(BaseModel):
     deepeval: list[PairwiseDeepevalItem] = Field(default_factory=list)
 
 
-class SourceMetrics(BaseModel):
+class SourceMetrics(ApiModel):
     char_count: int
     flesch_kincaid_grade: float
     text_standard: float
 
 
-class SummaryStatisticalMetrics(BaseModel):
+class SummaryStatisticalMetrics(ApiModel):
     char_count: int
     flesch_kincaid_grade: float
     text_standard: float
     length_ratio: float  # summary chars / source chars
 
 
-class KeyTakeawaysMetrics(BaseModel):
+class KeyTakeawaysMetrics(ApiModel):
     bullet_count: int
     char_count: int
 
 
-class GoldenMetrics(BaseModel):
+class GoldenMetrics(ApiModel):
     source: SourceMetrics
     summary: SummaryStatisticalMetrics
     deepeval: list[DeepevalItem]
 
 
-class AiMetrics(BaseModel):
+class AiMetrics(ApiModel):
     summary: SummaryStatisticalMetrics
     key_takeaways: KeyTakeawaysMetrics
     deepeval: list[DeepevalItem] | None = None  # None until the separate GEval pass runs

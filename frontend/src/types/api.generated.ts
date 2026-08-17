@@ -361,7 +361,7 @@ export interface components {
             summary: components["schemas"]["SummaryStatisticalMetrics"];
             key_takeaways: components["schemas"]["KeyTakeawaysMetrics"];
             /** Deepeval */
-            deepeval?: components["schemas"]["DeepevalItem"][] | null;
+            deepeval: components["schemas"]["DeepevalItem"][] | null;
         };
         /** AuthStatusResponse */
         AuthStatusResponse: {
@@ -379,7 +379,7 @@ export interface components {
             /** Meteor */
             meteor: number;
             /** Deepeval */
-            deepeval?: components["schemas"]["PairwiseDeepevalItem"][];
+            deepeval: components["schemas"]["PairwiseDeepevalItem"][];
         };
         /** DeepevalItem */
         DeepevalItem: {
@@ -391,6 +391,49 @@ export interface components {
             passed: boolean;
             /** Reason */
             reason: string;
+        };
+        /**
+         * DeepevalPassMetrics
+         * @description Progress of the GEval pass, which runs separately from the run itself.
+         */
+        DeepevalPassMetrics: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "completed" | "failed";
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Updated Entries */
+            updated_entries: number | null;
+            /** Skipped Entries */
+            skipped_entries: number | null;
+            /** Error */
+            error: string | null;
+        };
+        /** DeepevalQueuedResponse */
+        DeepevalQueuedResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+            /** Run Id */
+            run_id: string;
+        };
+        /** EvaluationRunAggregateMetrics */
+        EvaluationRunAggregateMetrics: {
+            /** Entry Count */
+            entry_count: number | null;
+            /** Completed Entries */
+            completed_entries: number | null;
+            /** Failed Entries */
+            failed_entries: number | null;
+            /** Error */
+            error: string | null;
+            deepeval: components["schemas"]["DeepevalPassMetrics"] | null;
         };
         /** EvaluationRunCreateRequest */
         EvaluationRunCreateRequest: {
@@ -429,10 +472,20 @@ export interface components {
              */
             created_at: string;
         };
+        /** EvaluationRunDeletedResponse */
+        EvaluationRunDeletedResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "deleted";
+            /** Evaluation Run Id */
+            evaluation_run_id: string;
+        };
         /** EvaluationRunEntriesResponse */
         EvaluationRunEntriesResponse: {
             /** Entries */
-            entries?: components["schemas"]["EvaluationRunEntryResponse"][];
+            entries: components["schemas"]["EvaluationRunEntryResponse"][];
         };
         /**
          * EvaluationRunEntryResponse
@@ -447,13 +500,13 @@ export interface components {
             url: string;
             /** Golden Summary */
             golden_summary: string;
-            golden_metrics?: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
             /** Ai Summary */
-            ai_summary?: string | null;
+            ai_summary: string | null;
             /** Ai Key Takeaways */
-            ai_key_takeaways?: string[];
-            ai_metrics?: components["schemas"]["AiMetrics"] | null;
-            cross_metrics?: components["schemas"]["CrossMetrics"] | null;
+            ai_key_takeaways: string[];
+            ai_metrics: components["schemas"]["AiMetrics"] | null;
+            cross_metrics: components["schemas"]["CrossMetrics"] | null;
             /**
              * Status
              * @default pending
@@ -461,7 +514,7 @@ export interface components {
              */
             status: "pending" | "completed" | "failed";
             /** Error */
-            error?: string | null;
+            error: string | null;
         };
         /** EvaluationRunListItemResponse */
         EvaluationRunListItemResponse: {
@@ -490,7 +543,7 @@ export interface components {
              */
             created_at: string;
             /** Finished At */
-            finished_at?: string | null;
+            finished_at: string | null;
             /** Entry Count */
             entry_count: number;
         };
@@ -521,13 +574,10 @@ export interface components {
              */
             created_at: string;
             /** Finished At */
-            finished_at?: string | null;
+            finished_at: string | null;
             /** Entry Count */
             entry_count: number;
-            /** Aggregate Metrics */
-            aggregate_metrics?: {
-                [key: string]: unknown;
-            };
+            aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
         };
         /** EvaluationSetCreateResponse */
         EvaluationSetCreateResponse: {
@@ -544,6 +594,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** EvaluationSetDeletedResponse */
+        EvaluationSetDeletedResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "deleted";
+            /** Evaluation Set Id */
+            evaluation_set_id: string;
+            /** Deleted Runs */
+            deleted_runs: number;
         };
         /** EvaluationSetDetailResponse */
         EvaluationSetDetailResponse: {
@@ -562,7 +624,7 @@ export interface components {
             entries: components["schemas"]["EvaluationSetEntryResponse"][];
         };
         /** EvaluationSetEntryImport */
-        EvaluationSetEntryImport: {
+        "EvaluationSetEntryImport-Input": {
             /** Input Text */
             input_text: string;
             /** Golden Summary */
@@ -572,6 +634,18 @@ export interface components {
             /** Url */
             url: string;
             golden_metrics?: components["schemas"]["GoldenMetrics"] | null;
+        };
+        /** EvaluationSetEntryImport */
+        "EvaluationSetEntryImport-Output": {
+            /** Input Text */
+            input_text: string;
+            /** Golden Summary */
+            golden_summary: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
         };
         /** EvaluationSetEntryInputTextResponse */
         EvaluationSetEntryInputTextResponse: {
@@ -593,7 +667,19 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics?: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+        };
+        /**
+         * EvaluationSetExportResponse
+         * @description Mirrors EvaluationSetImportRequest so an exported file can be imported back.
+         */
+        EvaluationSetExportResponse: {
+            /** Name */
+            name: string;
+            /** Language */
+            language: string;
+            /** Entries */
+            entries: components["schemas"]["EvaluationSetEntryImport-Output"][];
         };
         /** EvaluationSetImportRequest */
         EvaluationSetImportRequest: {
@@ -605,7 +691,7 @@ export interface components {
              */
             language: string;
             /** Entries */
-            entries: components["schemas"]["EvaluationSetEntryImport"][];
+            entries: components["schemas"]["EvaluationSetEntryImport-Input"][];
         };
         /** EvaluationSetListItemResponse */
         EvaluationSetListItemResponse: {
@@ -629,6 +715,18 @@ export interface components {
             summary: components["schemas"]["SummaryStatisticalMetrics"];
             /** Deepeval */
             deepeval: components["schemas"]["DeepevalItem"][];
+        };
+        /** GoldenMetricsBackfillResponse */
+        GoldenMetricsBackfillResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ok";
+            /** Updated Entries */
+            updated_entries: number;
+            /** Total Entries */
+            total_entries: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -662,6 +760,21 @@ export interface components {
              * @default false
              */
             run_deepeval: boolean;
+        };
+        /** JobCreatedResponse */
+        JobCreatedResponse: {
+            /** Job Id */
+            job_id: string;
+        };
+        /** JobDeletedResponse */
+        JobDeletedResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "deleted";
+            /** Job Id */
+            job_id: string;
         };
         /**
          * JobListItemResponse
@@ -701,9 +814,9 @@ export interface components {
          * @description All None at insert time — metrics are computed asynchronously after the job starts.
          */
         JobMetrics: {
-            source?: components["schemas"]["SourceMetrics"] | null;
-            summary?: components["schemas"]["SummaryStatisticalMetrics"] | null;
-            key_takeaways?: components["schemas"]["KeyTakeawaysMetrics"] | null;
+            source: components["schemas"]["SourceMetrics"] | null;
+            summary: components["schemas"]["SummaryStatisticalMetrics"] | null;
+            key_takeaways: components["schemas"]["KeyTakeawaysMetrics"] | null;
         };
         /** JobStatusResponse */
         JobStatusResponse: {
@@ -725,7 +838,7 @@ export interface components {
              * @enum {string}
              */
             summary_mode: "simple" | "sequential" | "cascade";
-            summary_data?: components["schemas"]["SummaryResponse"] | null;
+            summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
             /** Deepeval Metrics */
             deepeval_metrics: components["schemas"]["DeepevalItem"][];
@@ -753,13 +866,13 @@ export interface components {
              */
             created_at: string;
             /** Started At */
-            started_at?: string | null;
+            started_at: string | null;
             /** Finished At */
-            finished_at?: string | null;
+            finished_at: string | null;
             /** Duration Ms */
             duration_ms: number;
             /** Error */
-            error?: string | null;
+            error: string | null;
         };
         /** KeyTakeawaysMetrics */
         KeyTakeawaysMetrics: {
@@ -982,9 +1095,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["JobCreatedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1142,9 +1253,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["JobDeletedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1323,9 +1432,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string | number;
-                    };
+                    "application/json": components["schemas"]["EvaluationSetDeletedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1356,7 +1463,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EvaluationSetExportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1419,9 +1526,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: number | string;
-                    };
+                    "application/json": components["schemas"]["GoldenMetricsBackfillResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1549,9 +1654,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["EvaluationRunDeletedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1613,9 +1716,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["DeepevalQueuedResponse"];
                 };
             };
             /** @description Validation Error */

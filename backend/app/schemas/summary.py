@@ -4,8 +4,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from .base import ApiModel
 
-class SummaryResponse(BaseModel):
+
+class SummaryResponse(ApiModel):
     """Structured output the LLM is asked to produce."""
 
     title: str
@@ -14,7 +16,7 @@ class SummaryResponse(BaseModel):
     source_url: str
 
 
-class UsageMetadata(BaseModel):
+class UsageMetadata(ApiModel):
     input_tokens: int = 0
     output_tokens: int = 0
     thinking_tokens: int = 0

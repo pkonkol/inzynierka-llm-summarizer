@@ -106,6 +106,26 @@ Longer-form writing has its own home, so it does not leak into READMEs:
 - `docs/adr/` — why a decision was made, when the code alone can't show it (e.g. public read endpoints, auth as an explicit flag).
 - `docs/security/` — a vulnerability, why it worked, and what changed as a result.
 
+## Banned construction: the "X, not Y" antithesis — FORBIDDEN pattern
+
+Applies to narrative prose: docs and README bodies, ADR context sections, chat replies, commit bodies. Never define something by negating its opposite in the same breath — this is one of the clearest tells of machine-written text, and one instance flags the surrounding paragraph as AI-generated.
+
+The banned shape is the comma or dash antithesis used for emphasis ("X, not Y"). A standalone sentence stating what something is not is fine — the ban is on the rhetorical pairing, not on negation itself.
+
+```markdown
+<!-- BAD -->
+Jobs are persisted in MongoDB, not in RAM.
+`basic` preset — a true gate at 0 errors, not an aspirational one.
+
+<!-- GOOD -->
+Jobs are persisted in MongoDB and survive a restart.
+`basic` preset, enforced at 0 errors: CI fails the build if any remain.
+```
+
+**Exemption — rule and spec text.** `CLAUDE.md`, `.claude/rules/*.md`, ADR decision statements, and similar prescriptive lists are exempt: when the negated half *is* the boundary being set, not rhetorical emphasis, the construction is the clearest way to state it — e.g. "Anything that navigates MUST be an `<a href>`, not a `<button>` with an `onClick`" loses real information if the negation is dropped. Tight, single-line "why" code comments fall under the same exemption when the negated half disambiguates a real, plausible misreading rather than padding for emphasis.
+
+Keep appending bad examples to this list as they're caught in review.
+
 ## README size and scope
 
 The failure mode is a thousand generated lines nobody reads, drifting from the code. A line

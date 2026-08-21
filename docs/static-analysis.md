@@ -41,9 +41,9 @@ is all it takes for `--no-verify` to become habit, and then no hook runs at all.
 | **ruff** | lint + format | Python style, bugs, unsorted imports, `print()`, and Bandit's security rules via `S` |
 | **Biome** | lint + format | TypeScript/JSX/JSON, React hook rules, import order. Replaces ESLint and Prettier |
 | **tsc** | types | TypeScript in `strict` mode, as a separate step from the build |
-| **pyrefly** | types | Python types. `basic` preset — a true gate at 0 errors, not an aspirational one |
+| **pyrefly** | types | Python types. `basic` preset, enforced at 0 errors: CI fails the build if any remain |
 | **pytest** | tests | currently the scraper's SSRF guard |
-| **gitleaks** | secrets | secrets across the whole git history, not just the working tree |
+| **gitleaks** | secrets | secrets across the whole git history, including already-committed and removed files |
 | **Trivy** | SCA + IaC + image | dependency CVEs, Terraform misconfiguration, CVEs in a built image |
 | **hadolint** | lint | Dockerfile practices — missing `USER`, unpinned installs |
 | **npm audit** | SCA | npm advisories. Kept alongside Trivy, see below |

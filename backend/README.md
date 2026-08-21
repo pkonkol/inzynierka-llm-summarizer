@@ -69,7 +69,7 @@ SUMMARY_MAX_OUTPUT_TOKENS=1600
 
 When `DEBUG=true`, backend logs detailed steps of: queueing job, scraping, LLM call, and final status.
 
-Jobs are persisted in MongoDB (naive create/read/update), not in RAM.
+Jobs are persisted in MongoDB (naive create/read/update) and survive a restart.
 
 Alternative (terminal/session only):
 

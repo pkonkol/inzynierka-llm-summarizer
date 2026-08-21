@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../inzynierka-tmp"
+		}
+	],
+	"settings": {
+		"python.analysis.autoFormatStrings": true,
+		"python-envs.defaultEnvManager": "ms-python.python:venv"
+	}
+}

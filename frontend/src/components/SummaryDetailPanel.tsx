@@ -165,7 +165,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
       aria-expanded={open}
       className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-subtle"
     >
-      <span className="flex min-w-0 flex-col gap-1">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-mono text-sm font-semibold">
           {modelLabel}
           {statusBadge(job.status)}

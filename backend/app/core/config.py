@@ -34,12 +34,20 @@ class Settings(BaseSettings):
     mongodb_jobs_collection: str = "jobs"
     supported_summary_languages: list[str] = ["en", "pl"]
     supported_models: dict[str, list[str]] = {
-        "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
-        "openrouter": [
-            "openai/gpt-oss-20b:free",
-            "google/gemma-4-31b-it:free",
+        "gemini": [
+            "gemini-flash-lite-latest",
+            "gemini-flash-latest",
+            "gemma-4-31b-it",
         ],
-        "ollama": ["gemma4:31b-cloud"],
+        "openrouter": [
+            "openrouter/free",
+            "openai/gpt-oss-20b:free",
+            "nvidia/nemotron-3.5-lightning:free",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "~deepseek/deepseek-v4-flash-latest",
+            "deepseek/deepseek-v3.2",
+            "~z-ai/glm-flash-latest",
+        ],
     }
     # mode -> human-readable label
     supported_summary_modes: dict[str, str] = {
@@ -49,7 +57,7 @@ class Settings(BaseSettings):
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",
-        "model_name": "gemini-2.5-flash-lite",
+        "model_name": "gemini-flash-latest",
     }
     auth_enabled: bool = False
     auth_secret: SecretStr = SecretStr("")

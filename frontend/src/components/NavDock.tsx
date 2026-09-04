@@ -4,7 +4,6 @@ type Route = "home" | "jobs" | "research";
 
 interface NavDockProps {
   active: Route;
-  isAuthEnabled: boolean;
   isLoggedIn: boolean;
   onOpenLogin: () => void;
 }
@@ -18,7 +17,7 @@ const NAV_ITEMS: { route: Route; label: string; href: string }[] = [
 const NAV_ITEM_CLASS =
   "px-5 py-2 font-mono text-sm uppercase tracking-widest no-underline transition-colors duration-150";
 
-export function NavDock({ active, isAuthEnabled, isLoggedIn, onOpenLogin }: NavDockProps) {
+export function NavDock({ active, isLoggedIn, onOpenLogin }: NavDockProps) {
   // The active route keeps its href so it can still be copied or opened in a new tab;
   // aria-current and the inverted background are what mark it as current.
   const navItems = NAV_ITEMS.map(({ route, label, href }) => (
@@ -47,7 +46,13 @@ export function NavDock({ active, isAuthEnabled, isLoggedIn, onOpenLogin }: NavD
         aria-label="Nawigacja główna"
       >
         {navItems}
-        {isAuthEnabled && !isLoggedIn ? (
+        {isLoggedIn ? (
+          <span
+            className={`${NAV_ITEM_CLASS} border-l border-success-border bg-success-bg text-success`}
+          >
+            Logged in
+          </span>
+        ) : (
           <button
             type="button"
             onClick={onOpenLogin}
@@ -55,14 +60,7 @@ export function NavDock({ active, isAuthEnabled, isLoggedIn, onOpenLogin }: NavD
           >
             Login
           </button>
-        ) : null}
-        {isAuthEnabled && isLoggedIn ? (
-          <span
-            className={`${NAV_ITEM_CLASS} border-l border-success-border bg-success-bg text-success`}
-          >
-            Logged in
-          </span>
-        ) : null}
+        )}
       </nav>
     </div>
   );

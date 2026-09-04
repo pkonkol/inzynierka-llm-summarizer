@@ -81,7 +81,7 @@ export GEMINI_API_KEY="your_key_here"
 Before starting backend, start local MongoDB from repository root:
 
 ```bash
-./dev.sh up
+just db-up
 ```
 
 ### Option A (from repository root)
@@ -151,7 +151,7 @@ Expected statuses:
 To stop local MongoDB:
 
 ```bash
-./dev.sh down
+just db-down
 ```
 
 ## Module path

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getToken } from "./api/client";
+import { getBackendVersion, getToken } from "./api/client";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
 import { DesignPage } from "./pages/DesignPage";
@@ -9,6 +9,7 @@ import { EvaluationSetPage } from "./pages/EvaluationSetPage";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
+import { logger } from "./utils/logger";
 import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRouting";
 
 type Route = "home" | "jobs" | "research";
@@ -42,11 +43,26 @@ function App() {
   const [route, setRoute] = useState<Route>(getRoute);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
+  const [backendSha, setBackendSha] = useState("");
 
   useEffect(() => {
     const onPop = () => setRoute(getRoute());
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    getBackendVersion()
+      .then(({ git_sha }) => {
+        if (isMounted) setBackendSha(git_sha);
+      })
+      .catch((error: unknown) => {
+        logger.warn("backend version unavailable", { error });
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function handleLoginSuccess() {
@@ -71,7 +87,7 @@ function App() {
       {route === "jobs" && <JobsPage />}
       {route === "research" && <ResearchRouter />}
       <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
-        #{__COMMIT_HASH__}
+        front #{__COMMIT_HASH__} · back #{backendSha || "?"}
       </span>
     </div>
   );

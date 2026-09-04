@@ -461,6 +461,27 @@
         }
       }
     },
+    "/api/v1/meta/version": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get the build this backend was deployed from",
+        "operationId": "get_version_api_v1_meta_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/research/evaluation-sets": {
       "get": {
         "tags": [
@@ -2688,6 +2709,19 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VersionResponse": {
+        "properties": {
+          "git_sha": {
+            "type": "string",
+            "title": "Git Sha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "git_sha"
+        ],
+        "title": "VersionResponse"
       }
     },
     "securitySchemes": {

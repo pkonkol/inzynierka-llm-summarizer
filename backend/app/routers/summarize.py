@@ -61,9 +61,15 @@ async def run_summarization_job(
     summary_mode: SummaryMode,
     run_deepeval: bool,
 ) -> None:
-    # Bind once here and every log line below this point carries job_id and mode, including
+    # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
-    structlog.contextvars.bind_contextvars(job_id=job_id, mode=summary_mode)
+    structlog.contextvars.bind_contextvars(
+        job_id=job_id,
+        mode=summary_mode,
+        provider=model_provider,
+        model=model_name,
+        url=url,
+    )
 
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(UTC)
@@ -120,7 +126,12 @@ async def run_summarization_job(
 
     except Exception as exc:
         finished_at = datetime.now(UTC)
-        log.exception("summarization job failed")
+        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
+        log.exception(
+            "summarization job failed",
+            error_type=type(exc).__name__,
+            duration_ms=duration_ms,
+        )
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -132,14 +143,14 @@ async def run_summarization_job(
                     "raw_output": exc.raw_output if isinstance(exc, LlmOutputError) else "",
                     "started_at": started_at,
                     "finished_at": finished_at,
-                    "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
+                    "duration_ms": duration_ms,
                     "error": str(exc),
                     "updated_at": finished_at,
                 }
             },
         )
     finally:
-        structlog.contextvars.unbind_contextvars("job_id", "mode")
+        structlog.contextvars.unbind_contextvars("job_id", "mode", "provider", "model", "url")
 
 
 @router.post(

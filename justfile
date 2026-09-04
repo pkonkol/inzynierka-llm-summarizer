@@ -65,6 +65,38 @@ lint-backend:
 typecheck-backend:
     uvx {{pyrefly}} check
 
+# Backend: uvicorn with reload, stamped with the working tree's commit
+[group('dev')]
+[working-directory('backend')]
+dev-backend:
+    GIT_SHA=$(git rev-parse --short HEAD) ./venv/bin/python -m uvicorn app.main:app --reload --port 8000
+
+# Frontend: vite dev server (vite.config.ts stamps the commit itself)
+[group('dev')]
+[working-directory('frontend')]
+dev-frontend:
+    npm run dev
+
+# Local MongoDB (infra/docker-compose.yml) in the background
+[group('dev')]
+db-up:
+    docker compose -f infra/docker-compose.yml up -d
+
+# Stop the local MongoDB container
+[group('dev')]
+db-down:
+    docker compose -f infra/docker-compose.yml down
+
+# Both dev servers in one terminal; Ctrl+C stops both
+[group('dev')]
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'kill 0' EXIT
+    just dev-backend &
+    just dev-frontend &
+    wait
+
 # Backend: does the app still import and wire up its routes?
 [group('backend')]
 smoke-backend:

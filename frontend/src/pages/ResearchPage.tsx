@@ -157,10 +157,6 @@ export function ResearchPage() {
         <div className="grid gap-2">
           <p className="section-kicker">Research</p>
           <h1 className="font-mono text-xl uppercase tracking-wider">Evaluation set import</h1>
-          <p className="helper-copy">
-            Importuj małe curated datasety JSON. To jest osobny moduł badawczy, niezależny od
-            zwykłych jobs.
-          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">

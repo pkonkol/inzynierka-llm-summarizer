@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Piotr Konkol - Praca inżynierska - Podsumowania z użyciem LLM"
+    git_sha: str = ""
     gemini_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
     ollama_url: str = ""

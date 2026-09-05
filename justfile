@@ -224,6 +224,7 @@ scan-deps:
     docker run --rm -v "{{root}}:/repo" {{trivy}} fs /repo --scanners vuln \
         --db-repository ghcr.io/aquasecurity/trivy-db:2 \
         --severity {{gate}} --exit-code 1 --quiet \
+        --ignorefile /repo/.trivyignore.yaml \
         --skip-dirs frontend/node_modules --skip-dirs backend/venv \
         --skip-dirs frontend/.firebase
 

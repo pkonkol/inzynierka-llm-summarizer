@@ -8,8 +8,15 @@ export interface DisclosureSection {
 }
 
 // A row of toggles with one section open at a time. Content is a React element, so a section
-// that fetches on mount does not fetch until it is opened.
-export function DisclosureSections({ sections }: { sections: DisclosureSection[] }) {
+// that fetches on mount does not fetch until it is opened. `trailing` shares the toggle row,
+// for an action that belongs beside the sections rather than in a row of its own.
+export function DisclosureSections({
+  sections,
+  trailing,
+}: {
+  sections: DisclosureSection[];
+  trailing?: React.ReactNode;
+}) {
   const [openKey, setOpenKey] = useState<string | null>(null);
   const open = sections.find((section) => section.key === openKey);
 
@@ -24,6 +31,7 @@ export function DisclosureSections({ sections }: { sections: DisclosureSection[]
             onToggle={() => setOpenKey((current) => (current === section.key ? null : section.key))}
           />
         ))}
+        {trailing}
       </div>
 
       {open ? <div className="min-w-0 border border-panel-border">{open.content}</div> : null}

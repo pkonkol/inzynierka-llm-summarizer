@@ -28,6 +28,7 @@ import type {
   EvaluationSetDetailResponse,
   EvaluationSetEntryResponse,
 } from "../types/api.generated";
+import { downloadJson } from "../utils/download";
 import { formatDateMinute, formatMetricLabel } from "../utils/format";
 import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
@@ -44,16 +45,6 @@ function MetricsSection({ title, data }: { title: string; data: Record<string, n
       </div>
     </div>
   );
-}
-
-function downloadJson(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 // One row: model, mode, delay, the skip toggle and the submit button.

@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
-import { Button } from "../components/ui/Button";
+import { Button, type ButtonSize, type ButtonVariant } from "../components/ui/Button";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { SectionHeading } from "../components/ui/PageShell";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatusValue, PromptMessage } from "../types/local";
+import { downloadJson } from "../utils/download";
+import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration, formatMetricLabel } from "../utils/format";
 import { DeepevalItems } from "./DeepevalItems";
 import { InfoRow } from "./InfoRow";
@@ -169,7 +171,54 @@ function statusBadge(status: JobStatusValue) {
   return null;
 }
 
-function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaultOpen?: boolean }) {
+// The article text is projected out of the by-url listing, so every entry is re-fetched by id.
+function ExportButton({
+  jobIds,
+  sourceUrl,
+  label,
+  variant,
+  size,
+}: {
+  jobIds: string[];
+  sourceUrl: string;
+  label: string;
+  variant: ButtonVariant;
+  size: ButtonSize;
+}) {
+  const [isExporting, setIsExporting] = useState(false);
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const fullJobs = await Promise.all(jobIds.map(getJobStatus));
+      const singleJobId = jobIds.length === 1 ? jobIds[0] : undefined;
+      downloadJson(exportFilename(sourceUrl, singleJobId), buildExportPayload(fullJobs, sourceUrl));
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      onClick={() => void handleExport()}
+      disabled={isExporting}
+    >
+      {isExporting ? "Pobieranie..." : label}
+    </Button>
+  );
+}
+
+function JobEntry({
+  job,
+  sourceUrl,
+  defaultOpen = false,
+}: {
+  job: JobStatusResponse;
+  sourceUrl: string;
+  defaultOpen?: boolean;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const modelLabel = job.model_name
     ? `${job.model_provider}:${job.model_name}`
@@ -203,7 +252,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
           <p className="text-danger">{job.error}</p>
         </section>
       ) : (
-        <JobDetails job={job} />
+        <JobDetails job={job} sourceUrl={sourceUrl} />
       )}
     </div>
   );
@@ -216,7 +265,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
   );
 }
 
-function JobDetails({ job }: { job: JobStatusResponse }) {
+function JobDetails({ job, sourceUrl }: { job: JobStatusResponse; sourceUrl: string }) {
   const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
   if (!shouldRenderDetails) return null;
 
@@ -275,6 +324,15 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
             content: <RawMetadata jobId={job.job_id} />,
           },
         ]}
+        trailing={
+          <ExportButton
+            jobIds={[job.job_id]}
+            sourceUrl={sourceUrl}
+            label="Pobierz JSON"
+            variant="disclosure"
+            size="xs"
+          />
+        }
       />
     </>
   );
@@ -296,14 +354,28 @@ export function SummaryDetailPanel({
   const jobsFilteredSorted = debugMode ? jobs : jobs.filter((job) => job.status === "completed");
 
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
+  const exportableJobIds = jobs
+    .filter((job) => job.status === "completed")
+    .map((job) => job.job_id);
 
   return (
     <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
       <div className="flex items-center justify-between border-b border-panel-border pb-3">
         <h2>Szczegóły</h2>
-        <Button variant="ghost" onClick={onClose}>
-          Zamknij
-        </Button>
+        <div className="flex items-center gap-2">
+          {exportableJobIds.length > 0 ? (
+            <ExportButton
+              jobIds={exportableJobIds}
+              sourceUrl={sourceUrl}
+              label="Pobierz wszystkie"
+              variant="secondary"
+              size="xs"
+            />
+          ) : null}
+          <Button variant="ghost" onClick={onClose}>
+            Zamknij
+          </Button>
+        </div>
       </div>
 
       <article className="grid gap-4 min-w-0">
@@ -325,7 +397,12 @@ export function SummaryDetailPanel({
             <p className="text-muted">Brak wyników.</p>
           ) : (
             jobsFilteredSorted.map((job, index) => (
-              <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
+              <JobEntry
+                key={job.job_id}
+                job={job}
+                sourceUrl={sourceUrl}
+                defaultOpen={index === 0}
+              />
             ))
           )}
         </section>

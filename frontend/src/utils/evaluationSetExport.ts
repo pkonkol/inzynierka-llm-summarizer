@@ -30,13 +30,15 @@ export function buildExportPayload(
 ): EvaluationSetImportRequest {
   return {
     name: `summarization_output:${sourceUrl}`,
-    language: "en", // jobs do not persist the summary language, and the import default is "en"
+    // TODO: a job summarised in another language still exports as "en". The value is in
+    // prompt_params.language; resolving this means promoting it to a field on JobDocument.
+    language: "en",
     entries: jobs.map((job) => toEntry(job, sourceUrl)),
   };
 }
 
-export function exportFilename(sourceUrl: string, jobId?: string): string {
+export function exportFilename(sourceUrl: string, jobIds: string[]): string {
   const host = URL.canParse(sourceUrl) ? new URL(sourceUrl).hostname : "export";
-  const suffix = jobId ? `_${jobId}` : "";
+  const suffix = jobIds.length === 1 ? `_${jobIds[0]}` : "";
   return `summarization_output_${host}${suffix}.json`;
 }

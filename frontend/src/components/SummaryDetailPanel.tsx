@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
-import { Button, type ButtonSize, type ButtonVariant } from "../components/ui/Button";
+import { Button, type ButtonVariant } from "../components/ui/Button";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { SectionHeading } from "../components/ui/PageShell";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
@@ -11,6 +11,7 @@ import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration, formatMetricLabel } from "../utils/format";
 import { DeepevalItems } from "./DeepevalItems";
+import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
 import { PreBlock } from "./PreBlock";
 
@@ -171,54 +172,40 @@ function statusBadge(status: JobStatusValue) {
   return null;
 }
 
-// The article text is projected out of the by-url listing, so every entry is re-fetched by id.
 function ExportButton({
   jobIds,
   sourceUrl,
   label,
   variant,
-  size,
 }: {
   jobIds: string[];
   sourceUrl: string;
   label: string;
   variant: ButtonVariant;
-  size: ButtonSize;
 }) {
+  const showFlash = useFlash();
   const [isExporting, setIsExporting] = useState(false);
 
   async function handleExport() {
     setIsExporting(true);
     try {
-      const fullJobs = await Promise.all(jobIds.map(getJobStatus));
-      const singleJobId = jobIds.length === 1 ? jobIds[0] : undefined;
-      downloadJson(exportFilename(sourceUrl, singleJobId), buildExportPayload(fullJobs, sourceUrl));
+      const fullJobs = await Promise.all(jobIds.map(getJobStatus)); // by-url projects input_text away
+      downloadJson(exportFilename(sourceUrl, jobIds), buildExportPayload(fullJobs, sourceUrl));
+    } catch (error) {
+      showFlash(`Nie udało się wyeksportować podsumowań: ${errorText(error)}`, "danger");
     } finally {
       setIsExporting(false);
     }
   }
 
   return (
-    <Button
-      variant={variant}
-      size={size}
-      onClick={() => void handleExport()}
-      disabled={isExporting}
-    >
+    <Button variant={variant} size="xs" onClick={() => void handleExport()} disabled={isExporting}>
       {isExporting ? "Pobieranie..." : label}
     </Button>
   );
 }
 
-function JobEntry({
-  job,
-  sourceUrl,
-  defaultOpen = false,
-}: {
-  job: JobStatusResponse;
-  sourceUrl: string;
-  defaultOpen?: boolean;
-}) {
+function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const modelLabel = job.model_name
     ? `${job.model_provider}:${job.model_name}`
@@ -252,7 +239,7 @@ function JobEntry({
           <p className="text-danger">{job.error}</p>
         </section>
       ) : (
-        <JobDetails job={job} sourceUrl={sourceUrl} />
+        <JobDetails job={job} />
       )}
     </div>
   );
@@ -265,7 +252,7 @@ function JobEntry({
   );
 }
 
-function JobDetails({ job, sourceUrl }: { job: JobStatusResponse; sourceUrl: string }) {
+function JobDetails({ job }: { job: JobStatusResponse }) {
   const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
   if (!shouldRenderDetails) return null;
 
@@ -327,10 +314,9 @@ function JobDetails({ job, sourceUrl }: { job: JobStatusResponse; sourceUrl: str
         trailing={
           <ExportButton
             jobIds={[job.job_id]}
-            sourceUrl={sourceUrl}
+            sourceUrl={job.source_url}
             label="Pobierz JSON"
             variant="disclosure"
-            size="xs"
           />
         }
       />
@@ -351,12 +337,11 @@ export function SummaryDetailPanel({
   if (!sourceUrl) return null;
 
   const title = jobs[0]?.summary_data?.title || "";
-  const jobsFilteredSorted = debugMode ? jobs : jobs.filter((job) => job.status === "completed");
+  const completedJobs = jobs.filter((job) => job.status === "completed");
+  const jobsFilteredSorted = debugMode ? jobs : completedJobs;
 
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
-  const exportableJobIds = jobs
-    .filter((job) => job.status === "completed")
-    .map((job) => job.job_id);
+  const exportableJobIds = completedJobs.map((job) => job.job_id);
 
   return (
     <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
@@ -369,7 +354,6 @@ export function SummaryDetailPanel({
               sourceUrl={sourceUrl}
               label="Pobierz wszystkie"
               variant="secondary"
-              size="xs"
             />
           ) : null}
           <Button variant="ghost" onClick={onClose}>
@@ -397,12 +381,7 @@ export function SummaryDetailPanel({
             <p className="text-muted">Brak wyników.</p>
           ) : (
             jobsFilteredSorted.map((job, index) => (
-              <JobEntry
-                key={job.job_id}
-                job={job}
-                sourceUrl={sourceUrl}
-                defaultOpen={index === 0}
-              />
+              <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
             ))
           )}
         </section>

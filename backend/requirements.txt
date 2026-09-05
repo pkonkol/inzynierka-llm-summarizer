@@ -157,7 +157,7 @@ multidict==6.7.1
     #   yarl
 nest-asyncio==1.6.0
     # via deepeval
-nltk==3.10.2
+nltk==3.10.3
     # via
     #   -r requirements.in
     #   rouge-score

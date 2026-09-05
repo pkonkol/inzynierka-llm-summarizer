@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { errorText, getJobStatus } from "../api/client";
 import { Button } from "../components/ui/Button";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { SectionHeading } from "../components/ui/PageShell";
@@ -65,16 +66,40 @@ function MetricsSection({
   );
 }
 
-function PromptSection({
-  template,
-  params,
-  inputText,
-}: {
-  template: PromptMessage[];
-  params: Record<string, string>;
-  inputText: string;
-}) {
-  if (template.length === 0 && !inputText) return null;
+function useFullJob(jobId: string) {
+  const [job, setJob] = useState<JobStatusResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getJobStatus(jobId)
+      .then((data) => {
+        if (isMounted) setJob(data);
+      })
+      .catch((error: unknown) => {
+        if (isMounted) setErrorMessage(`Nie udało się pobrać szczegółów: ${errorText(error)}`);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [jobId]);
+
+  const placeholder = errorMessage ? (
+    <p className="p-3 text-danger">{errorMessage}</p>
+  ) : job ? null : (
+    <p className="p-3 text-muted">Ładowanie...</p>
+  );
+
+  return { job, placeholder };
+}
+
+function PromptSection({ jobId }: { jobId: string }) {
+  const { job, placeholder } = useFullJob(jobId);
+  if (!job) return placeholder;
+
+  const template: PromptMessage[] = job.prompt_template;
+  const params = job.prompt_params;
+  const inputText = job.input_text;
 
   let templateBlock = null;
   if (template.length > 0) {
@@ -124,12 +149,16 @@ function PromptSection({
   );
 }
 
-function RawMetadata({ data }: { data: Record<string, unknown> }) {
-  return <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
+function RawMetadata({ jobId }: { jobId: string }) {
+  const { job, placeholder } = useFullJob(jobId);
+  if (!job) return placeholder;
+  return <PreBlock>{JSON.stringify(job.raw_metadata, null, 2)}</PreBlock>;
 }
 
-function RawOutput({ text }: { text: string }) {
-  return <PreBlock>{text}</PreBlock>;
+function RawOutput({ jobId }: { jobId: string }) {
+  const { job, placeholder } = useFullJob(jobId);
+  if (!job) return placeholder;
+  return <PreBlock>{job.raw_output}</PreBlock>;
 }
 
 function statusBadge(status: JobStatusValue) {
@@ -233,23 +262,17 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
           {
             key: "rawOutput",
             label: "Surowe wyjście",
-            content: <RawOutput text={job.raw_output} />,
+            content: <RawOutput jobId={job.job_id} />,
           },
           {
             key: "prompt",
             label: "Prompt",
-            content: (
-              <PromptSection
-                template={job.prompt_template}
-                params={job.prompt_params}
-                inputText={job.input_text}
-              />
-            ),
+            content: <PromptSection jobId={job.job_id} />,
           },
           {
             key: "rawMetadata",
             label: "Surowe metadane",
-            content: <RawMetadata data={job.raw_metadata} />,
+            content: <RawMetadata jobId={job.job_id} />,
           },
         ]}
       />

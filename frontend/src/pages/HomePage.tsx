@@ -39,15 +39,6 @@ export function HomePage() {
     setUrlList(data);
   };
 
-  const loadDetailForUrl = async (url: string) => {
-    setIsLoadingDetail(true);
-    try {
-      setDetailJobs(await getJobsForUrl(url, "completed"));
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  };
-
   const submitSummary = async (
     url: string,
     model_provider: string,
@@ -103,7 +94,19 @@ export function HomePage() {
       setDetailJobs([]);
       return;
     }
-    void loadDetailForUrl(selectedUrl);
+    let isCurrentSelection = true;
+    setIsLoadingDetail(true);
+    void getJobsForUrl(selectedUrl, "completed")
+      .then((jobs) => {
+        // A slower response for a previously selected url must not replace the current one.
+        if (isCurrentSelection) setDetailJobs(jobs);
+      })
+      .finally(() => {
+        if (isCurrentSelection) setIsLoadingDetail(false);
+      });
+    return () => {
+      isCurrentSelection = false;
+    };
   }, [selectedUrl]);
 
   useEffect(() => {

@@ -2352,11 +2352,13 @@
           },
           "raw_output": {
             "type": "string",
-            "title": "Raw Output"
+            "title": "Raw Output",
+            "default": ""
           },
           "input_text": {
             "type": "string",
-            "title": "Input Text"
+            "title": "Input Text",
+            "default": ""
           },
           "prompt_template": {
             "items": {

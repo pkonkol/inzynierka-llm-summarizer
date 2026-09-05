@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import HttpUrl
+from pydantic import Field, HttpUrl
 
 from .base import ApiModel
 from .job_db import JobMetrics
@@ -34,11 +34,11 @@ class JobStatusResponse(ApiModel):
     metrics: JobMetrics
     deepeval_metrics: list[DeepevalItem]
     usage: UsageMetadata
-    raw_metadata: dict[str, Any]
-    raw_output: str
-    input_text: str
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)
+    raw_output: str = ""
+    input_text: str = ""
     prompt_template: list[tuple[str, str]]
-    prompt_params: dict[str, str]
+    prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None

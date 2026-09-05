@@ -875,9 +875,15 @@ export interface components {
             raw_metadata: {
                 [key: string]: unknown;
             };
-            /** Raw Output */
+            /**
+             * Raw Output
+             * @default
+             */
             raw_output: string;
-            /** Input Text */
+            /**
+             * Input Text
+             * @default
+             */
             input_text: string;
             /** Prompt Template */
             prompt_template: [

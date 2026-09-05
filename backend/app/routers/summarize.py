@@ -298,9 +298,10 @@ async def get_jobs_for_url(
     status: str = Query(..., description="One of supported statuses"),
 ) -> list[JobStatusResponse]:
     jobs_collection = get_jobs_collection()
-    cursor = jobs_collection.find({"source_url": source_url, "status": status}, {"_id": 0}).sort(
-        "updated_at", -1
-    )
+    cursor = jobs_collection.find(
+        {"source_url": source_url, "status": status},
+        {"_id": 0, "input_text": 0, "prompt_params": 0, "raw_output": 0, "raw_metadata": 0},
+    ).sort("updated_at", -1)
     return [JobStatusResponse.model_validate(doc) async for doc in cursor]
 
 

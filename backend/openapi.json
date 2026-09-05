@@ -2617,6 +2617,10 @@
             "type": "integer",
             "title": "Failed Count"
           },
+          "pending_count": {
+            "type": "integer",
+            "title": "Pending Count"
+          },
           "latest_title": {
             "type": "string",
             "title": "Latest Title"
@@ -2632,6 +2636,7 @@
           "source_url",
           "completed_count",
           "failed_count",
+          "pending_count",
           "latest_title",
           "latest_updated_at"
         ],

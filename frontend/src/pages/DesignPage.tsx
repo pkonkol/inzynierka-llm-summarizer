@@ -31,17 +31,8 @@ const SWATCHES = [
   "bg-link",
 ];
 
-const TYPE_STEPS = [
-  "text-hero",
-  "text-2xl",
-  "text-xl",
-  "text-lg",
-  "text-base",
-  "text-md",
-  "text-sm",
-  "text-xs",
-  "text-2xs",
-];
+// Elements, not utilities: this is the scale components are supposed to reach for.
+const HEADING_LEVELS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 
 const SPACING_STEPS = [1, 2, 3, 4, 6, 8, 12, 16];
 const BUTTON_VARIANTS = ["primary", "secondary", "danger", "dangerOutline", "ghost"] as const;
@@ -65,16 +56,17 @@ function Swatch({ token }: { token: string }) {
   return (
     <div className="border border-panel-border">
       <div className={`h-12 ${token}`} />
-      <p className="border-t border-panel-border px-2 py-1 font-mono text-2xs">{token}</p>
+      <p className="border-t border-panel-border px-2 py-1 mono-value">{token}</p>
     </div>
   );
 }
 
-function TypeStep({ token }: { token: string }) {
+function HeadingStep({ level }: { level: (typeof HEADING_LEVELS)[number] }) {
+  const Tag = level;
   return (
     <div className="flex items-baseline gap-4 border-b border-panel-border pb-2">
-      <span className="w-24 shrink-0 font-mono text-2xs text-muted">{token}</span>
-      <span className={token}>Zażółć gęślą jaźń</span>
+      <span className="mono-value w-24 shrink-0 text-muted">{level}</span>
+      <Tag>Zażółć gęślą jaźń</Tag>
     </div>
   );
 }
@@ -82,7 +74,7 @@ function TypeStep({ token }: { token: string }) {
 function SpacingStep({ step }: { step: number }) {
   return (
     <div className="flex items-center gap-4">
-      <span className="w-24 shrink-0 font-mono text-2xs text-muted">
+      <span className="mono-value w-24 shrink-0 text-muted">
         {step} · {step * 4}px
       </span>
       <div className="h-4 bg-accent-700" style={{ width: `${step * 4}px` }} />
@@ -93,7 +85,7 @@ function SpacingStep({ step }: { step: number }) {
 function ButtonRow({ variant }: { variant: (typeof BUTTON_VARIANTS)[number] }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="w-28 shrink-0 font-mono text-2xs text-muted">{variant}</span>
+      <span className="mono-value w-28 shrink-0 text-muted">{variant}</span>
       {BUTTON_SIZES.map((size) => (
         <Button key={size} variant={variant} size={size}>
           {size}
@@ -114,8 +106,8 @@ export function DesignPage() {
   return (
     <PageShell>
       <div className="grid gap-2">
-        <h1 className="font-mono text-xl uppercase tracking-wider">Design system</h1>
-        <p className="helper-copy">
+        <h1>Design system</h1>
+        <p className="text-muted">
           Every primitive and token, rendered from the same source the app uses.
         </p>
       </div>
@@ -129,20 +121,31 @@ export function DesignPage() {
       </Section>
 
       <Section title="Typography">
+        <p className="text-muted">
+          Typography is carried by the element. h1–h6 share one family and weight and differ only in
+          size, so a component sets no typography class of its own.
+        </p>
         <div className="grid gap-2">
-          {TYPE_STEPS.map((token) => (
-            <TypeStep key={token} token={token} />
+          {HEADING_LEVELS.map((level) => (
+            <HeadingStep key={level} level={level} />
           ))}
         </div>
         <div className="grid gap-1">
-          <p className="section-kicker">section-kicker</p>
-          <p className="helper-copy">helper-copy — body text at the default step.</p>
-          <SectionHeading>SectionHeading</SectionHeading>
+          <p>p — body text at the default step.</p>
+          <p className="text-muted">p.text-muted — the same step, secondary colour.</p>
+          <a href="/design">a — a link inside running text.</a>
+          <p>
+            <span className="mono-value">mono-value</span> — URLs, model ids, metric numbers.
+          </p>
+          <code>code, pre, kbd — raw output and prompts.</code>
+          <span className="label-caps text-muted">label-caps — the name of a machine field</span>
+          <SectionHeading>SectionHeading renders an h4.</SectionHeading>
         </div>
+        <p className="hero-title">hero-title</p>
       </Section>
 
       <Section title="Spacing">
-        <p className="helper-copy">Preferred steps. Anything outside this set needs a reason.</p>
+        <p className="text-muted">Preferred steps. Anything outside this set needs a reason.</p>
         <div className="grid gap-2">
           {SPACING_STEPS.map((step) => (
             <SpacingStep key={step} step={step} />
@@ -162,7 +165,7 @@ export function DesignPage() {
         <div className="grid gap-3 md:grid-cols-3">
           {PANEL_PADDINGS.map((padding) => (
             <Panel key={padding} padding={padding} className="bg-subtle">
-              <span className="font-mono text-2xs text-muted">padding={padding}</span>
+              <span className="mono-value text-muted">padding={padding}</span>
             </Panel>
           ))}
         </div>
@@ -204,7 +207,7 @@ export function DesignPage() {
       </Section>
 
       <Section title="Notifications">
-        <p className="helper-copy">
+        <p className="text-muted">
           Transient events land in a Toast; page state stays in an Alert in the flow. A long message
           keeps its first sentence and hides the rest.
         </p>
@@ -223,7 +226,7 @@ export function DesignPage() {
       </Section>
 
       <Section title="Links and disclosure">
-        <p className="helper-copy">
+        <p className="text-muted">
           LinkButton renders an anchor, so it can be opened in a new tab. DisclosureButton carries
           aria-expanded.
         </p>
@@ -240,7 +243,7 @@ export function DesignPage() {
           isOpen={isDisclosureOpen}
           onToggle={() => setIsDisclosureOpen((value) => !value)}
         />
-        {isDisclosureOpen ? <p className="helper-copy">Revealed content.</p> : null}
+        {isDisclosureOpen ? <p className="text-muted">Revealed content.</p> : null}
       </Section>
 
       <Section title="Overlays and disclosure">
@@ -250,11 +253,11 @@ export function DesignPage() {
           </Button>
         </div>
         <Modal isOpen={isModalOpen} title="Modal title" onClose={() => setIsModalOpen(false)}>
-          <p className="helper-copy">Body of the dialog.</p>
+          <p className="text-muted">Body of the dialog.</p>
           <Button onClick={() => setIsModalOpen(false)}>Close</Button>
         </Modal>
         <Collapsible label="Collapsible">
-          <p className="helper-copy p-3">Hidden content.</p>
+          <p className="p-3 text-muted">Hidden content.</p>
         </Collapsible>
       </Section>
     </PageShell>

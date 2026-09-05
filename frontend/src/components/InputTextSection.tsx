@@ -34,8 +34,8 @@ export function InputTextSection({ setId, entryId }: Props) {
     };
   }, [setId, entryId]);
 
-  if (isLoading) return <p className="p-3 text-sm text-muted">Ładowanie...</p>;
-  if (errorMessage) return <p className="p-3 text-sm text-danger">{errorMessage}</p>;
+  if (isLoading) return <p className="p-3 text-muted">Ładowanie...</p>;
+  if (errorMessage) return <p className="p-3 text-danger">{errorMessage}</p>;
 
   return <PreBlock>{inputText ?? ""}</PreBlock>;
 }

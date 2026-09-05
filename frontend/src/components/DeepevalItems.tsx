@@ -10,25 +10,19 @@ export function DeepevalItems({ items }: { items: DeepevalDisplayItem[] }) {
     <div className="grid gap-2">
       {items.map((item) => {
         const statusText = item.passed != null ? (item.passed ? "passed" : "failed") : null;
-        const scoreText = item.score != null ? `score: ${item.score}` : null;
+        const scoreText = item.score != null ? String(item.score) : null;
         const bits = [statusText, scoreText].filter(Boolean);
 
         return (
           <div
             key={item.name}
-            className="grid gap-2 border border-panel-border bg-panel-solid px-3 py-2"
+            className="grid gap-2 border border-panel-border bg-subtle px-3 py-2"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-mono text-sm font-semibold uppercase tracking-wider text-ink">
-                {item.name}
-              </span>
-              {bits.length > 0 && (
-                <span className="font-mono text-xs text-muted">{bits.join(" · ")}</span>
-              )}
+            <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="label-caps font-semibold text-muted">{item.name}:</span>
+              {bits.length > 0 ? <span className="mono-value">{bits.join(" · ")}</span> : null}
             </div>
-            {item.reason ? (
-              <p className="text-sm leading-normal text-muted">{item.reason}</p>
-            ) : null}
+            {item.reason ? <p className="text-muted">{item.reason}</p> : null}
           </div>
         );
       })}

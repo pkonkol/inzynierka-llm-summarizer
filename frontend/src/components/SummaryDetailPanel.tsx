@@ -5,7 +5,7 @@ import { Button } from "../components/ui/Button";
 import { SectionHeading } from "../components/ui/PageShell";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatusValue, PromptMessage } from "../types/local";
-import { formatDateMinute, formatDuration } from "../utils/format";
+import { formatDateMinute, formatDuration, formatMetricLabel } from "../utils/format";
 import { Collapsible } from "./Collapsible";
 import { DeepevalItems } from "./DeepevalItems";
 import { InfoRow } from "./InfoRow";
@@ -21,9 +21,9 @@ interface JobDetailPanelProps {
 }
 
 const METRIC_SECTIONS = [
-  { key: "source", label: "Source", field: "source" as const },
-  { key: "summary", label: "Summary", field: "summary" as const },
-  { key: "key_takeaways", label: "Key Takeaways", field: "key_takeaways" as const },
+  { key: "source", label: "Źródło", field: "source" as const },
+  { key: "summary", label: "Podsumowanie", field: "summary" as const },
+  { key: "key_takeaways", label: "Punkty kluczowe", field: "key_takeaways" as const },
 ] as const;
 
 function MetricsSection({
@@ -38,27 +38,27 @@ function MetricsSection({
     if (!data) return null;
 
     const gridItems = Object.entries(data).map(([k, v]) => (
-      <InfoRow key={k} label={k.replace(/_/g, " ")} value={v} />
+      <InfoRow key={k} label={formatMetricLabel(k)} value={v} />
     ));
 
     return (
       <div key={section.key} className="grid gap-2">
         <SectionHeading>{section.label}</SectionHeading>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">{gridItems}</div>
+        <div className="metric-row">{gridItems}</div>
       </div>
     );
   });
 
   const deepevalBlock =
     deepevalMetrics.length > 0 ? (
-      <div className="grid gap-3 border-t border-panel-border pt-3">
+      <div className="grid gap-3 border-t border-panel-border pt-4">
         <SectionHeading>Deepeval</SectionHeading>
         <DeepevalItems items={deepevalMetrics} />
       </div>
     ) : null;
 
   return (
-    <Collapsible label="Metrics">
+    <Collapsible label="Metryki">
       <div className="grid gap-4 p-3">
         {defaultMetricsBlocks}
         {deepevalBlock}
@@ -81,15 +81,15 @@ function PromptSection({
   let templateBlock = null;
   if (template.length > 0) {
     const renderedMessages = template.map(([role, content]) => (
-      <div key={role} className="min-w-0">
-        <span className="font-mono text-2xs uppercase text-muted">{role}: </span>
+      <div key={role} className="min-w-0 text-xs">
+        <span className="label-caps font-semibold text-muted">{role}:</span>
         <PreBlock>{content}</PreBlock>
       </div>
     ));
 
     templateBlock = (
       <div className="grid min-w-0 gap-2">
-        <p className="text-2xs uppercase tracking-wider text-muted">Template</p>
+        <h6>Szablon</h6>
         {renderedMessages}
       </div>
     );
@@ -99,7 +99,7 @@ function PromptSection({
   if (params && Object.keys(params).length > 0) {
     paramsBlock = (
       <div className="grid min-w-0 gap-1">
-        <p className="text-2xs uppercase tracking-wider text-muted">Parametry</p>
+        <h6>Parametry</h6>
         <PreBlock>{JSON.stringify(params, null, 2)}</PreBlock>
       </div>
     );
@@ -109,8 +109,8 @@ function PromptSection({
   if (inputText) {
     inputBlock = (
       <div className="grid min-w-0 gap-1">
-        <p className="text-2xs uppercase tracking-wider text-muted">Input text</p>
-        <pre className="max-h-96 overflow-y-auto overflow-x-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2 text-xs leading-normal min-w-0">
+        <h6>Tekst źródłowy</h6>
+        <pre className="max-h-96 min-w-0 overflow-x-auto overflow-y-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2">
           {inputText}
         </pre>
       </div>
@@ -133,7 +133,7 @@ function RawMetadata({ data }: { data: Record<string, unknown> }) {
 
   const content = <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
 
-  return <Collapsible label="Raw metadata">{content}</Collapsible>;
+  return <Collapsible label="Surowe metadane">{content}</Collapsible>;
 }
 
 function RawOutput({ text }: { text: string }) {
@@ -141,14 +141,14 @@ function RawOutput({ text }: { text: string }) {
 
   const content = <PreBlock>{text}</PreBlock>;
 
-  return <Collapsible label="Raw output">{content}</Collapsible>;
+  return <Collapsible label="Surowe wyjście">{content}</Collapsible>;
 }
 
 function statusBadge(status: JobStatusValue) {
   if (status === "failed")
-    return <span className="ml-2 font-mono text-2xs uppercase text-danger">failed</span>;
+    return <span className="mono-value ml-2 uppercase text-danger">failed</span>;
   if (status === "pending")
-    return <span className="ml-2 font-mono text-2xs uppercase text-warning">pending</span>;
+    return <span className="mono-value ml-2 uppercase text-warning">pending</span>;
   return null;
 }
 
@@ -166,7 +166,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
       className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-subtle"
     >
       <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-mono text-sm font-semibold">
+        <span className="mono-value font-semibold">
           {modelLabel}
           {statusBadge(job.status)}
         </span>
@@ -182,8 +182,8 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
     <div className="grid gap-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-hidden">
       {job.status === "failed" && job.error ? (
         <section>
-          <h5 className="section-kicker">Błąd</h5>
-          <p className="text-lg leading-relaxed text-danger">{job.error}</p>
+          <h4>Błąd</h4>
+          <p className="text-danger">{job.error}</p>
         </section>
       ) : (
         <JobDetails job={job} />
@@ -209,38 +209,26 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-3 text-sm">
-        <InfoRow
-          label="Wywołano"
-          value={formatDateMinute(job.created_at)}
-          valueClassName="text-md"
-        />
-        <InfoRow
-          label="Czas generacji"
-          value={formatDuration(job.duration_ms)}
-          valueClassName="text-md"
-        />
-        <InfoRow label="Input tokens" value={job.usage.input_tokens} valueClassName="text-md" />
-        <InfoRow label="Output tokens" value={job.usage.output_tokens} valueClassName="text-md" />
+      <div className="metric-row">
+        <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
+        <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
+        <InfoRow label="Tokeny wejściowe" value={job.usage.input_tokens} />
+        <InfoRow label="Tokeny wyjściowe" value={job.usage.output_tokens} />
         {job.usage.thinking_tokens > 0 ? (
-          <InfoRow
-            label="Thinking tokens"
-            value={job.usage.thinking_tokens}
-            valueClassName="text-md"
-          />
+          <InfoRow label="Tokeny rozumowania" value={job.usage.thinking_tokens} />
         ) : null}
-        <InfoRow label="Total tokens" value={job.usage.total_tokens} valueClassName="text-md" />
-        <InfoRow label="Summary mode" value={job.summary_mode} valueClassName="text-md" />
+        <InfoRow label="Tokeny łącznie" value={job.usage.total_tokens} />
+        <InfoRow label="Tryb podsumowania" value={job.summary_mode} />
       </div>
 
       <section>
-        <h5 className="section-kicker">Krótkie podsumowanie</h5>
-        <p className="text-lg leading-relaxed">{job.summary_data?.summary}</p>
+        <h4>Krótkie podsumowanie</h4>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.summary_data?.summary}</ReactMarkdown>
       </section>
 
       <section>
-        <h5 className="section-kicker">Najważniejsze punkty</h5>
-        <div className="grid gap-3 text-lg leading-relaxed [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
+        <h4>Najważniejsze punkty</h4>
+        <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{takeawaysMarkdown}</ReactMarkdown>
         </div>
       </section>
@@ -266,7 +254,7 @@ export function SummaryDetailPanel({
   debugMode = false,
 }: JobDetailPanelProps) {
   if (!isOpen) return null;
-  if (isLoading) return <p className="text-base text-muted">Ładowanie wyników...</p>;
+  if (isLoading) return <p className="text-muted">Ładowanie wyników...</p>;
   if (!sourceUrl) return null;
 
   const title = jobs[0]?.summary_data?.title || "";
@@ -277,31 +265,29 @@ export function SummaryDetailPanel({
   return (
     <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
       <div className="flex items-center justify-between border-b border-panel-border pb-3">
-        <h3 className="font-mono text-xl">Szczegóły</h3>
+        <h2>Szczegóły</h2>
         <Button variant="ghost" onClick={onClose}>
           Zamknij
         </Button>
       </div>
 
       <article className="grid gap-4 min-w-0">
-        <h3 className="font-mono text-lg leading-snug text-ink">{title}</h3>
+        <h3>{title}</h3>
 
         <a
           href={sourceUrl}
           target="_blank"
           rel="noreferrer"
-          className="wrap-anywhere font-mono text-lg font-bold text-link no-underline leading-snug"
+          className="mono-value wrap-anywhere font-semibold no-underline"
         >
           {sourceUrl}
         </a>
 
         <section className="grid content-start gap-3 border-t border-panel-border pt-4 min-w-0">
-          <h5 className="font-mono text-base font-semibold uppercase tracking-wider text-muted">
-            {sectionTitle}
-          </h5>
+          <h4>{sectionTitle}</h4>
 
           {jobsFilteredSorted.length === 0 ? (
-            <p className="text-base text-muted">Brak wyników.</p>
+            <p className="text-muted">Brak wyników.</p>
           ) : (
             jobsFilteredSorted.map((job, index) => (
               <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />

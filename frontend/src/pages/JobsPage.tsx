@@ -2,18 +2,14 @@ import { useEffect, useState } from "react";
 
 import { deleteJob, getJobStatus, listAllJobsFlat } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { JobStatusLabel } from "../components/JobStatusLabel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
+import { buttonClasses } from "../components/ui/Button";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-
-// Glyph as well as colour, so the state survives greyscale and colour-blind vision.
-const STATUS_STYLE: Record<string, { className: string; glyph: string }> = {
-  completed: { className: "text-success", glyph: "✓" },
-  failed: { className: "text-danger", glyph: "✗" },
-  pending: { className: "text-warning", glyph: "⋯" },
-};
+import { useListPolling } from "../utils/useListPolling";
 
 export function JobsPage() {
   useDocumentTitle("Zadania");
@@ -25,11 +21,18 @@ export function JobsPage() {
   const [jobPendingDelete, setJobPendingDelete] = useState<JobListItemResponse | null>(null);
   const [isDeletingJob, setIsDeletingJob] = useState(false);
 
-  const loadJobs = () => listAllJobsFlat(100).then(setJobs);
+  const loadJobs = async () => {
+    setJobs(await listAllJobsFlat(100));
+  };
 
   useEffect(() => {
     loadJobs().finally(() => setIsLoading(false));
   }, []);
+
+  useListPolling(
+    loadJobs,
+    jobs.some((job) => job.status === "pending"),
+  );
 
   const handleSelect = async (job: JobListItemResponse) => {
     setSelectedJobId(job.job_id);
@@ -68,14 +71,14 @@ export function JobsPage() {
       <section className={selectedJobId ? STICKY_COLUMN : "min-w-0"}>
         <div className="panel-shell grid gap-3">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="font-mono text-xl">Gotowe podsumowania</h2>
-            <span className="text-md text-muted">{jobs.length}</span>
+            <h2>Gotowe podsumowania</h2>
+            <span className="text-muted">{jobs.length}</span>
           </div>
 
-          {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
-          {!isLoading && jobs.length === 0 ? <p className="helper-copy">Brak wyników.</p> : null}
+          {isLoading ? <p className="text-muted">Ładowanie listy...</p> : null}
+          {!isLoading && jobs.length === 0 ? <p className="text-muted">Brak wyników.</p> : null}
 
-          <ul className="grid min-w-0 gap-2">
+          <ul aria-live="polite" className="grid min-w-0 gap-2">
             {jobs.map((job) => (
               <li key={job.job_id} className="relative min-w-0">
                 <button
@@ -85,17 +88,12 @@ export function JobsPage() {
                     void handleSelect(job);
                   }}
                 >
-                  <span className="block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-sm font-mono text-link">
+                  <span className="mono-value block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-link">
                     {job.source_url}
                   </span>
-                  <span className="block text-md leading-snug text-ink line-clamp-1">
-                    {job.title}
-                  </span>
+                  <span className="block text-ink line-clamp-1">{job.title}</span>
                   <span className="flex gap-3 text-xs text-muted">
-                    <span className={STATUS_STYLE[job.status]?.className}>
-                      <span aria-hidden="true">{STATUS_STYLE[job.status]?.glyph} </span>
-                      {job.status}
-                    </span>
+                    <JobStatusLabel status={job.status} />
                     <span>
                       {job.model_provider}:{job.model_name}
                     </span>
@@ -108,7 +106,11 @@ export function JobsPage() {
                     e.stopPropagation();
                     setJobPendingDelete(job);
                   }}
-                  className="absolute right-2 top-2 cursor-pointer border border-panel-border bg-panel-solid px-2 py-1 text-xs text-danger hover:bg-subtle-hover"
+                  className={buttonClasses(
+                    "dangerOutline",
+                    "xs",
+                    "absolute right-2 top-2 px-2 py-1",
+                  )}
                   aria-label="Usuń job"
                 >
                   ✕

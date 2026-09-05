@@ -976,6 +976,8 @@ export interface components {
             completed_count: number;
             /** Failed Count */
             failed_count: number;
+            /** Pending Count */
+            pending_count: number;
             /** Latest Title */
             latest_title: string;
             /**

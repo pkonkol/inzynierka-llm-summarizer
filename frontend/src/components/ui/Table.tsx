@@ -4,9 +4,9 @@ import { cn } from "./cn";
 export function Table({ headers, children }: { headers: string[]; children: React.ReactNode }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left text-base">
+      <table className="w-full border-collapse text-left">
         <thead>
-          <tr className="border-b border-panel-border">
+          <tr>
             {headers.map((header, index) => (
               <Th key={header} className={index === headers.length - 1 ? "text-right" : undefined}>
                 {header}
@@ -21,7 +21,7 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
 }
 
 export function Th({ className, ...props }: React.ComponentProps<"th">) {
-  return <th scope="col" {...props} className={cn("px-3 py-2 font-medium", className)} />;
+  return <th scope="col" {...props} className={cn("px-3 py-2 font-semibold", className)} />;
 }
 
 export function Td({ className, ...props }: React.ComponentProps<"td">) {
@@ -29,5 +29,5 @@ export function Td({ className, ...props }: React.ComponentProps<"td">) {
 }
 
 export function Tr({ className, ...props }: React.ComponentProps<"tr">) {
-  return <tr {...props} className={cn("border-b border-panel-border", className)} />;
+  return <tr {...props} className={cn("border-t border-panel-border", className)} />;
 }

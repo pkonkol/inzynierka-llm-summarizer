@@ -92,6 +92,7 @@ db-down:
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
+    source backend/.env
     trap 'kill 0' EXIT
     just dev-backend &
     just dev-frontend &

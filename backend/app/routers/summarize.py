@@ -210,18 +210,29 @@ async def list_summarized_urls(
 ) -> list[UrlSummaryListItem]:
     jobs_collection = get_jobs_collection()
     pipeline = [
-        {"$match": {"status": {"$in": ["completed", "failed"]}}},
+        {"$match": {"status": {"$in": ["completed", "failed", "pending"]}}},
         {"$sort": {"updated_at": -1}},
         {
             "$group": {
                 "_id": "$source_url",
                 "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
                 "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
+                "pending_count": {"$sum": {"$cond": [{"$eq": ["$status", "pending"]}, 1, 0]}},
                 "latest_updated_at": {"$first": "$updated_at"},
-                # null for failed jobs, which have no summary_data
-                "latest_title": {"$first": {"$ifNull": ["$summary_data.title", ""]}},
+                # $$REMOVE drops the element, so only completed jobs contribute a title and a
+                # pending or failed job at the top of the sort cannot blank out the URL's label.
+                "completed_titles": {
+                    "$push": {
+                        "$cond": [
+                            {"$eq": ["$status", "completed"]},
+                            {"$ifNull": ["$summary_data.title", ""]},
+                            "$$REMOVE",
+                        ]
+                    }
+                },
             }
         },
+        {"$addFields": {"latest_title": {"$ifNull": [{"$first": "$completed_titles"}, ""]}}},
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
@@ -230,6 +241,7 @@ async def list_summarized_urls(
             source_url=doc["_id"],
             completed_count=doc["completed_count"],
             failed_count=doc["failed_count"],
+            pending_count=doc["pending_count"],
             latest_title=doc["latest_title"],
             latest_updated_at=doc["latest_updated_at"],
         )

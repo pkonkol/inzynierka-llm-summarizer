@@ -66,6 +66,7 @@ class UrlSummaryListItem(ApiModel):
     source_url: str
     completed_count: int
     failed_count: int
+    pending_count: int
     latest_title: str
     latest_updated_at: datetime
 

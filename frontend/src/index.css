@@ -1,11 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-sans: "IBM Plex Sans", "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", "Courier New", monospace;
-  /* Section labels only. Condensed reads as a different voice from body text without leaving the Plex family. */
-  --font-display: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
 
   --color-page: #ececec;
   --color-ink: #111111;
@@ -61,8 +59,6 @@
   --text-xs--line-height: 1.45;
   --text-sm: 0.85rem;
   --text-sm--line-height: 1.5;
-  --text-md: 0.9rem;
-  --text-md--line-height: 1.55;
   --text-base: 0.94rem;
   --text-base--line-height: 1.6;
   --text-lg: 1.05rem;
@@ -79,16 +75,22 @@
   @apply min-w-0 overflow-hidden border border-panel-border bg-panel-solid p-4;
 }
 
-@utility helper-copy {
-  @apply m-0 text-base text-muted;
+@utility hero-title {
+  @apply text-hero font-semibold tracking-[-0.04em];
 }
 
-@utility section-kicker {
-  @apply font-display text-lg font-semibold uppercase tracking-widest text-label;
+@utility mono-value {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
 }
 
-@utility panel-kicker {
-  @apply text-sm font-semibold uppercase tracking-wider text-label;
+@utility metric-row {
+  @apply flex flex-wrap gap-x-6 gap-y-1;
+}
+
+@utility label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @layer base {
@@ -99,12 +101,64 @@
     background-size: 28px 28px;
   }
 
+  h1 {
+    font-size: 1.3rem;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 0.98rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+
+  h5 {
+    font-size: 0.94rem;
+    line-height: 1.45;
+    font-weight: 600;
+  }
+
+  h6 {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    font-weight: 600;
+    @apply text-muted;
+  }
+
+  p,
+  li,
+  th,
+  td {
+    @apply text-base;
+  }
+
+  a {
+    @apply text-link;
+  }
+
+  code,
+  pre,
+  kbd {
+    @apply font-mono text-xs;
+  }
+
   button {
     @apply transition-colors;
   }
 
-  /* One visible focus ring for every interactive element. `:focus-visible` and not `:focus`,
-     so it appears for keyboard users without ringing every mouse click. */
   :focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 2px;

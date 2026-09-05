@@ -63,9 +63,7 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
         padding="xl"
         className="grid w-full max-w-sm gap-6 focus:outline-none"
       >
-        <h2 id={titleId} className="font-mono text-2xl">
-          {title}
-        </h2>
+        <h2 id={titleId}>{title}</h2>
         {onSubmit ? (
           <form onSubmit={onSubmit} className="grid gap-4">
             {children}

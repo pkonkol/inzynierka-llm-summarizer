@@ -11,5 +11,5 @@ interface AlertProps extends React.ComponentProps<"div"> {
 }
 
 export function Alert({ tone = "success", className, ...props }: AlertProps) {
-  return <div {...props} className={cn("border px-3 py-2 text-base", TONE[tone], className)} />;
+  return <div {...props} className={cn("border px-3 py-2", TONE[tone], className)} />;
 }

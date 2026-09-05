@@ -52,9 +52,9 @@ class Settings(BaseSettings):
     }
     # mode -> human-readable label
     supported_summary_modes: dict[str, str] = {
-        "simple": "Simple — single prompt (extractor + abstractor)",
-        "sequential": "Sequential — two independent prompts (takeaways first, then summary)",
-        "cascade": "Cascade — takeaways first, summary derived from takeaways",
+        "simple": "Prosty — jeden prompt (ekstraktor + abstraktor)",
+        "sequential": "Sekwencyjny — dwa niezależne prompty (najpierw punkty, potem podsumowanie)",
+        "cascade": "Kaskadowy — najpierw punkty, podsumowanie wyprowadzone z punktów",
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",

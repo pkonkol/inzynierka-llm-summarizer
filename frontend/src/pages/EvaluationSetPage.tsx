@@ -17,7 +17,7 @@ import { InputTextSection } from "../components/InputTextSection";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
-import { DisclosureButton } from "../components/ui/DisclosureButton";
+import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { FieldLabel, Input, Select } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
@@ -59,8 +59,6 @@ function downloadJson(filename: string, data: unknown) {
 // One row: model, mode, delay, the skip toggle and the submit button.
 const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto_auto]";
 
-type EntryCollapsibleKey = "input" | "metrics";
-
 function EntryCard({
   index,
   entry,
@@ -70,12 +68,6 @@ function EntryCard({
   entry: EvaluationSetEntryResponse;
   setId: string;
 }) {
-  const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
-
-  const toggleSection = (key: EntryCollapsibleKey) => {
-    setOpenSection((current) => (current === key ? null : key));
-  };
-
   return (
     <div className="grid gap-3 border-t border-panel-border p-4">
       <h4>
@@ -88,40 +80,33 @@ function EntryCard({
 
       <p className="whitespace-pre-wrap text-ink">{entry.golden_summary}</p>
 
-      <div className="flex flex-wrap gap-2">
-        <DisclosureButton
-          label="Tekst źródłowy"
-          isOpen={openSection === "input"}
-          onToggle={() => toggleSection("input")}
-        />
-
-        <DisclosureButton
-          label="Metryki"
-          isOpen={openSection === "metrics"}
-          onToggle={() => toggleSection("metrics")}
-        />
-      </div>
-
-      {openSection === "input" ? (
-        <div className="border border-panel-border">
-          <InputTextSection setId={setId} entryId={entry.entry_id} />
-        </div>
-      ) : null}
-
-      {openSection === "metrics" && entry.golden_metrics ? (
-        <div className="grid gap-3 border border-panel-border p-3 bg-subtle">
-          <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
-          <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
-          {entry.golden_metrics.deepeval.length > 0 ? (
-            <div className="grid gap-2 border-t border-panel-border pt-4">
-              <SectionHeading>Deepeval</SectionHeading>
-              <DeepevalItems items={entry.golden_metrics.deepeval} />
-            </div>
-          ) : null}
-        </div>
-      ) : openSection === "metrics" ? (
-        <p className="border border-panel-border p-3 text-muted">Metryki jeszcze nie policzone.</p>
-      ) : null}
+      <DisclosureSections
+        sections={[
+          {
+            key: "input",
+            label: "Tekst źródłowy",
+            content: <InputTextSection setId={setId} entryId={entry.entry_id} />,
+          },
+          {
+            key: "metrics",
+            label: "Metryki",
+            content: entry.golden_metrics ? (
+              <div className="grid gap-3 bg-subtle p-3">
+                <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
+                <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
+                {entry.golden_metrics.deepeval.length > 0 ? (
+                  <div className="grid gap-2 border-t border-panel-border pt-4">
+                    <SectionHeading>Deepeval</SectionHeading>
+                    <DeepevalItems items={entry.golden_metrics.deepeval} />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="p-3 text-muted">Metryki jeszcze nie policzone.</p>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

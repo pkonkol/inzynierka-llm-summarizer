@@ -8,7 +8,7 @@ import { InputTextSection } from "../components/InputTextSection";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
-import { DisclosureButton } from "../components/ui/DisclosureButton";
+import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
@@ -19,8 +19,6 @@ import type {
 } from "../types/api.generated";
 import { formatDateMinute, formatMetricLabel } from "../utils/format";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-
-type EntryCollapsibleKey = "input" | "metrics" | "takeaways";
 
 const PAIRWISE_TIE_MARGIN = 0.05;
 
@@ -247,12 +245,6 @@ function RunEntryCard({
   entry: EvaluationRunEntryResponse;
   evaluationSetId: string;
 }) {
-  const [openSection, setOpenSection] = useState<EntryCollapsibleKey | null>(null);
-
-  const toggleSection = (key: EntryCollapsibleKey) => {
-    setOpenSection((current) => (current === key ? null : key));
-  };
-
   return (
     <article className="grid gap-3 border-t border-panel-border p-4">
       <h4>
@@ -279,47 +271,27 @@ function RunEntryCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <DisclosureButton
-          label="Tekst źródłowy"
-          isOpen={openSection === "input"}
-          onToggle={() => toggleSection("input")}
-        />
-
-        <DisclosureButton
-          label="Metryki"
-          isOpen={openSection === "metrics"}
-          onToggle={() => toggleSection("metrics")}
-        />
-
-        {entry.ai_key_takeaways.length > 0 ? (
-          <DisclosureButton
-            label="Punkty kluczowe AI"
-            isOpen={openSection === "takeaways"}
-            onToggle={() => toggleSection("takeaways")}
-          />
-        ) : null}
-      </div>
-
-      {openSection === "input" ? (
-        <div className="border border-panel-border">
-          <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />
-        </div>
-      ) : null}
-
-      {openSection === "metrics" ? (
-        <div className="border border-panel-border">
-          <EntryMetrics entry={entry} />
-        </div>
-      ) : null}
-
-      {openSection === "takeaways" ? (
-        <ul className="list-disc border border-panel-border py-3 pl-8 pr-3 text-ink">
-          {entry.ai_key_takeaways.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : null}
+      <DisclosureSections
+        sections={[
+          {
+            key: "input",
+            label: "Tekst źródłowy",
+            content: <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />,
+          },
+          { key: "metrics", label: "Metryki", content: <EntryMetrics entry={entry} /> },
+          {
+            key: "takeaways",
+            label: "Punkty kluczowe AI",
+            content: (
+              <ul className="list-disc py-3 pl-8 pr-3 text-ink">
+                {entry.ai_key_takeaways.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ),
+          },
+        ]}
+      />
     </article>
   );
 }

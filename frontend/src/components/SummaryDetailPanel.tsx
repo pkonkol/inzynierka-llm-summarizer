@@ -2,11 +2,11 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "../components/ui/Button";
+import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { SectionHeading } from "../components/ui/PageShell";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatusValue, PromptMessage } from "../types/local";
 import { formatDateMinute, formatDuration, formatMetricLabel } from "../utils/format";
-import { Collapsible } from "./Collapsible";
 import { DeepevalItems } from "./DeepevalItems";
 import { InfoRow } from "./InfoRow";
 import { PreBlock } from "./PreBlock";
@@ -58,12 +58,10 @@ function MetricsSection({
     ) : null;
 
   return (
-    <Collapsible label="Metryki">
-      <div className="grid gap-4 p-3">
-        {defaultMetricsBlocks}
-        {deepevalBlock}
-      </div>
-    </Collapsible>
+    <div className="grid gap-4 p-3">
+      {defaultMetricsBlocks}
+      {deepevalBlock}
+    </div>
   );
 }
 
@@ -118,30 +116,20 @@ function PromptSection({
   }
 
   return (
-    <Collapsible label="Prompt">
-      <div className="grid gap-3 p-3 min-w-0">
-        {templateBlock}
-        {paramsBlock}
-        {inputBlock}
-      </div>
-    </Collapsible>
+    <div className="grid min-w-0 gap-3 p-3">
+      {templateBlock}
+      {paramsBlock}
+      {inputBlock}
+    </div>
   );
 }
 
 function RawMetadata({ data }: { data: Record<string, unknown> }) {
-  if (!data || Object.keys(data).length === 0) return null;
-
-  const content = <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
-
-  return <Collapsible label="Surowe metadane">{content}</Collapsible>;
+  return <PreBlock>{JSON.stringify(data, null, 2)}</PreBlock>;
 }
 
 function RawOutput({ text }: { text: string }) {
-  if (!text) return null;
-
-  const content = <PreBlock>{text}</PreBlock>;
-
-  return <Collapsible label="Surowe wyjście">{content}</Collapsible>;
+  return <PreBlock>{text}</PreBlock>;
 }
 
 function statusBadge(status: JobStatusValue) {
@@ -233,14 +221,38 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
         </div>
       </section>
 
-      <MetricsSection metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
-      <RawOutput text={job.raw_output} />
-      <PromptSection
-        template={job.prompt_template}
-        params={job.prompt_params}
-        inputText={job.input_text}
+      <DisclosureSections
+        sections={[
+          {
+            key: "metrics",
+            label: "Metryki",
+            content: (
+              <MetricsSection metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
+            ),
+          },
+          {
+            key: "rawOutput",
+            label: "Surowe wyjście",
+            content: <RawOutput text={job.raw_output} />,
+          },
+          {
+            key: "prompt",
+            label: "Prompt",
+            content: (
+              <PromptSection
+                template={job.prompt_template}
+                params={job.prompt_params}
+                inputText={job.input_text}
+              />
+            ),
+          },
+          {
+            key: "rawMetadata",
+            label: "Surowe metadane",
+            content: <RawMetadata data={job.raw_metadata} />,
+          },
+        ]}
       />
-      <RawMetadata data={job.raw_metadata} />
     </>
   );
 }

@@ -244,8 +244,11 @@ lint-workflows:
 # CVEs in a built image (base OS included, unlike scan-deps)
 [group('security')]
 scan-image image="inzynierka-backend:local":
-    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock {{trivy}} image {{image}} \
+    # The repo is mounted for one file: the same ignore list the lockfile scan uses.
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "{{root}}:/repo:ro" \
+        {{trivy}} image {{image}} \
         --db-repository ghcr.io/aquasecurity/trivy-db:2 \
+        --ignorefile /repo/.trivyignore.yaml \
         --severity {{gate}} --exit-code 1 --quiet
 
 # Build the backend image locally under the name scan-image expects
@@ -256,7 +259,9 @@ build-backend:
 # Full misconfiguration report at every severity — what the gate deliberately lets past
 [group('security')]
 report-infra:
-    docker run --rm -v "{{root}}:/repo" {{trivy}} config /repo/infra /repo/backend/Dockerfile --quiet
+    # `trivy config` takes a single target, so the two live in separate runs.
+    docker run --rm -v "{{root}}:/repo" {{trivy}} config /repo/infra --quiet
+    docker run --rm -v "{{root}}:/repo" {{trivy}} config /repo/backend/Dockerfile --quiet
 
 # Every workflow finding, including the ones below the gate
 [group('security')]

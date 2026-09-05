@@ -8,6 +8,12 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.14-alpine AS runtime
 
 WORKDIR /app
+
+# The base image lags the Alpine repo on util-linux, so this pulls the patched libuuid rather
+# than waiting for a rebuilt python:3.14-alpine. Pinned low bound, so the version is auditable.
+# apk itself is deleted further down, once this and the nltk corpora are in place.
+RUN apk add --no-cache "libuuid>=2.42.3-r0"
+
 COPY --from=builder /install /usr/local
 
 COPY app ./app
@@ -24,7 +30,10 @@ RUN python -c "import nltk; [nltk.download(r, download_dir='/app/nltk_data', rai
     # so pip here only lets code execution turn into code installation. Also drops pip's
     # vendored bundle, which is where image scanners were finding CVEs.
     && python -m pip uninstall -y pip \
-    && rm -rf /usr/local/lib/python3.14/ensurepip
+    && rm -rf /usr/local/lib/python3.14/ensurepip \
+    # apk comes with the base image, so removing it is what actually leaves the runtime
+    # without a package manager.
+    && rm -rf /sbin/apk /etc/apk /lib/apk /usr/share/apk /var/cache/apk
 
 ENV PYTHONUNBUFFERED=1 \
     DEEPEVAL_TELEMETRY_OPT_OUT=YES

@@ -14,14 +14,6 @@ export function PageShell({ className, ...props }: React.ComponentProps<"main">)
   );
 }
 
-export function SectionHeading({ className, ...props }: React.ComponentProps<"h6">) {
-  return (
-    <h6
-      {...props}
-      className={cn(
-        "font-display text-xl font-semibold uppercase tracking-wide text-ink",
-        className,
-      )}
-    />
-  );
+export function SectionHeading(props: React.ComponentProps<"h5">) {
+  return <h5 {...props} />;
 }

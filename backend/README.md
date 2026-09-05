@@ -69,7 +69,7 @@ SUMMARY_MAX_OUTPUT_TOKENS=1600
 
 When `DEBUG=true`, backend logs detailed steps of: queueing job, scraping, LLM call, and final status.
 
-Jobs are persisted in MongoDB (naive create/read/update), not in RAM.
+Jobs are persisted in MongoDB (naive create/read/update) and survive a restart.
 
 Alternative (terminal/session only):
 
@@ -81,7 +81,7 @@ export GEMINI_API_KEY="your_key_here"
 Before starting backend, start local MongoDB from repository root:
 
 ```bash
-./dev.sh up
+just db-up
 ```
 
 ### Option A (from repository root)
@@ -151,7 +151,7 @@ Expected statuses:
 To stop local MongoDB:
 
 ```bash
-./dev.sh down
+just db-down
 ```
 
 ## Module path

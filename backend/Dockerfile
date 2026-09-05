@@ -29,6 +29,9 @@ RUN python -c "import nltk; [nltk.download(r, download_dir='/app/nltk_data', rai
 ENV PYTHONUNBUFFERED=1 \
     DEEPEVAL_TELEMETRY_OPT_OUT=YES
 
+ARG GIT_SHA=""
+ENV GIT_SHA=$GIT_SHA
+
 EXPOSE 8000
 
 # Numeric, not `appuser`: orchestrators enforcing runAsNonRoot cannot resolve a name

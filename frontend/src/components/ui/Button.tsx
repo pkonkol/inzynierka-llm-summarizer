@@ -6,9 +6,8 @@ const VARIANT = {
   danger: "border-danger bg-danger text-accent-50 hover:enabled:opacity-90",
   dangerOutline: "border-danger bg-panel-solid text-danger hover:enabled:bg-subtle-hover",
   ghost: "border-panel-border bg-subtle-hover text-ink hover:enabled:bg-subtle",
-  // Section toggles: full width, label left, chevron right.
   disclosure:
-    "w-full justify-between border-panel-border text-left uppercase tracking-wider text-muted hover:enabled:bg-subtle",
+    "gap-2 border-panel-border bg-subtle uppercase tracking-wider text-muted hover:enabled:bg-subtle-hover",
 } as const;
 
 const SIZE = {

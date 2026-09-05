@@ -16,6 +16,7 @@ import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { cn } from "../components/ui/cn";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { FieldLabel, Input, Select } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
@@ -27,21 +28,18 @@ import type {
   EvaluationSetDetailResponse,
   EvaluationSetEntryResponse,
 } from "../types/api.generated";
+import { formatDateMinute, formatMetricLabel } from "../utils/format";
 import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { splitProviderModel } from "../utils/utils";
-
-function formatLabel(key: string): string {
-  return key.replace(/_/g, " ");
-}
 
 function MetricsSection({ title, data }: { title: string; data: Record<string, number | null> }) {
   return (
     <div className="grid gap-2">
       <SectionHeading>{title}</SectionHeading>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+      <div className="metric-row">
         {Object.entries(data).map(([key, value]) => (
-          <InfoRow key={key} label={formatLabel(key)} value={value} />
+          <InfoRow key={key} label={formatMetricLabel(key)} value={value} />
         ))}
       </div>
     </div>
@@ -57,6 +55,9 @@ function downloadJson(filename: string, data: unknown) {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+// One row: model, mode, delay, the skip toggle and the submit button.
+const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto_auto]";
 
 type EntryCollapsibleKey = "input" | "metrics";
 
@@ -76,58 +77,56 @@ function EntryCard({
   };
 
   return (
-    <Panel as="article" padding="sm" className="grid gap-3">
-      <p className="text-sm text-ink">
-        <span className="font-medium">{index + 1}</span>
+    <div className="grid gap-3 border-t border-panel-border p-4">
+      <h4>
+        {index + 1}
         {" · "}
-        <span className="lowercase text-muted">
+        <span className="mono-value font-normal lowercase text-muted">
           {entry.title} · {entry.url}
         </span>
-      </p>
+      </h4>
 
-      <p className="whitespace-pre-wrap text-base text-ink">{entry.golden_summary}</p>
+      <p className="whitespace-pre-wrap text-ink">{entry.golden_summary}</p>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-wrap gap-2">
         <DisclosureButton
-          label="Input text"
+          label="Tekst źródłowy"
           isOpen={openSection === "input"}
           onToggle={() => toggleSection("input")}
         />
 
         <DisclosureButton
-          label="Metrics"
+          label="Metryki"
           isOpen={openSection === "metrics"}
           onToggle={() => toggleSection("metrics")}
         />
       </div>
 
       {openSection === "input" ? (
-        <div className="border border-t-0 border-panel-border">
+        <div className="border border-panel-border">
           <InputTextSection setId={setId} entryId={entry.entry_id} />
         </div>
       ) : null}
 
       {openSection === "metrics" && entry.golden_metrics ? (
-        <div className="grid gap-3 border border-t-0 border-panel-border p-3">
-          <MetricsSection title="Source" data={entry.golden_metrics.source} />
-          <MetricsSection title="Summary" data={entry.golden_metrics.summary} />
+        <div className="grid gap-3 border border-panel-border p-3 bg-subtle">
+          <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
+          <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
           {entry.golden_metrics.deepeval.length > 0 ? (
-            <div className="grid gap-2 border-t border-panel-border pt-3">
+            <div className="grid gap-2 border-t border-panel-border pt-4">
               <SectionHeading>Deepeval</SectionHeading>
               <DeepevalItems items={entry.golden_metrics.deepeval} />
             </div>
           ) : null}
         </div>
       ) : openSection === "metrics" ? (
-        <p className="border border-t-0 border-panel-border p-3 text-xs italic text-muted">
-          Metrics not computed yet.
-        </p>
+        <p className="border border-panel-border p-3 text-muted">Metryki jeszcze nie policzone.</p>
       ) : null}
-    </Panel>
+    </div>
   );
 }
 
-const RUN_COLUMNS = ["Provider", "Model", "Mode", "Status", "Entries", "Created", "Action"];
+const RUN_COLUMNS = ["Dostawca", "Model", "Tryb", "Status", "Wpisów", "Utworzono", "Akcja"];
 
 function RunsTable({
   runs,
@@ -145,14 +144,14 @@ function RunsTable({
           <Td>{run.summary_mode}</Td>
           <Td>{run.status}</Td>
           <Td>{run.entry_count}</Td>
-          <Td>{new Date(run.created_at).toLocaleString()}</Td>
+          <Td>{formatDateMinute(run.created_at)}</Td>
           <Td className="text-right">
             <div className="flex justify-end gap-2">
               <LinkButton size="sm" href={`/research/runs/${run.evaluation_run_id}`}>
-                Open
+                Otwórz
               </LinkButton>
               <Button variant="dangerOutline" size="sm" onClick={() => onDelete(run)}>
-                Delete
+                Usuń
               </Button>
             </div>
           </Td>
@@ -251,7 +250,7 @@ export function EvaluationSetPage({ setId }: Props) {
       );
       await loadSetDetail();
     } catch (error) {
-      showFlash(`Nie udało się policzyć golden metrics: ${errorText(error)}`, "danger");
+      showFlash(`Nie udało się policzyć metryk wzorca: ${errorText(error)}`, "danger");
     } finally {
       setIsEvaluatingMetrics(false);
     }
@@ -354,11 +353,11 @@ export function EvaluationSetPage({ setId }: Props) {
   }, []);
 
   let entriesSection: React.ReactNode = (
-    <p className="helper-copy">Ładowanie szczegółów EvaluationSet...</p>
+    <p className="text-muted">Ładowanie szczegółów zbioru...</p>
   );
   if (!isLoadingDetail && selectedSet) {
     entriesSection = (
-      <div className="grid gap-3">
+      <div className="grid">
         {selectedSet.entries.map((entry, index) => (
           <EntryCard key={entry.entry_id} index={index} entry={entry} setId={setId} />
         ))}
@@ -368,11 +367,11 @@ export function EvaluationSetPage({ setId }: Props) {
     entriesSection = null;
   }
 
-  let runsSection: React.ReactNode = <p className="helper-copy">Ładowanie runów...</p>;
+  let runsSection: React.ReactNode = <p className="text-muted">Ładowanie przebiegów...</p>;
   if (!isLoadingExistingRuns && runsLoadError) {
     runsSection = null;
   } else if (!isLoadingExistingRuns && existingRuns.length === 0) {
-    runsSection = <p className="helper-copy">Brak EvaluationRunów dla tego seta.</p>;
+    runsSection = <p className="text-muted">Brak przebiegów dla tego zbioru.</p>;
   } else if (!isLoadingExistingRuns) {
     runsSection = <RunsTable runs={existingRuns} onDelete={setRunPendingDelete} />;
   }
@@ -381,56 +380,59 @@ export function EvaluationSetPage({ setId }: Props) {
     <PageShell>
       <section className="panel-shell grid min-w-0 gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-2">
-            <p className="section-kicker">Evaluation set</p>
-            <h1 className="font-mono text-xl uppercase tracking-wider">
-              {selectedSet?.name ?? (isLoadingDetail ? "Loading..." : "Set unavailable")}
-            </h1>
-            <p className="helper-copy">
-              {selectedSet
-                ? `${selectedSet.language} · ${selectedSet.entries.length} entries`
-                : isLoadingDetail
-                  ? "Ładowanie szczegółów seta..."
-                  : "Nie udało się wczytać szczegółów."}
-            </p>
-          </div>
+          <h1 className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-muted">Zbiór</span>
+            {selectedSet ? (
+              <>
+                <span className="mono-value">{selectedSet.name}</span>
+                <span className="text-muted">·</span>
+                <span className="mono-value">{selectedSet.entries.length} wpisów</span>
+              </>
+            ) : (
+              <span className="text-muted">
+                {isLoadingDetail ? "ładowanie..." : "zbiór niedostępny"}
+              </span>
+            )}
+          </h1>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => void handleEvaluateMetrics()}
-            disabled={!selectedSet || isEvaluatingMetrics}
-          >
-            {isEvaluatingMetrics ? "Evaluating..." : "Evaluate metrics"}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => void handleExportSet()}
-            disabled={!selectedSet || isExporting}
-          >
-            {isExporting ? "Exporting..." : "Export JSON"}
-          </Button>
-          <LinkButton size="sm" href="/research">
-            Back to sets
-          </LinkButton>
-          <Button variant="dangerOutline" size="sm" onClick={() => setIsSetDeletePending(true)}>
-            Delete set
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => void handleEvaluateMetrics()}
+              disabled={!selectedSet || isEvaluatingMetrics}
+            >
+              {isEvaluatingMetrics ? "Liczenie..." : "Policz metryki"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void handleExportSet()}
+              disabled={!selectedSet || isExporting}
+            >
+              {isExporting ? "Eksportowanie..." : "Eksport JSON"}
+            </Button>
+            <LinkButton size="sm" href="/research">
+              Wróć do listy
+            </LinkButton>
+            <Button variant="dangerOutline" size="sm" onClick={() => setIsSetDeletePending(true)}>
+              Usuń zbiór
+            </Button>
+          </div>
         </div>
 
         {detailLoadError ? (
-          <Alert tone="danger">Nie udało się wczytać seta: {detailLoadError}</Alert>
+          <Alert tone="danger">Nie udało się wczytać zbioru: {detailLoadError}</Alert>
         ) : null}
         {runsLoadError ? (
-          <Alert tone="danger">Nie udało się wczytać evaluation runów: {runsLoadError}</Alert>
+          <Alert tone="danger">Nie udało się wczytać przebiegów: {runsLoadError}</Alert>
         ) : null}
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 
         {selectedSet ? (
           <Panel as="section" padding="sm" className="grid gap-3">
-            <p className="panel-kicker">New evaluation run</p>
+            <h2>Nowy przebieg</h2>
 
-            <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end">
+            <div className={cn("grid gap-3 sm:items-end", NEW_RUN_COLUMNS)}>
               <div className="grid gap-2">
                 <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
                 <Select
@@ -450,7 +452,7 @@ export function EvaluationSetPage({ setId }: Props) {
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor="new-run-mode">Summary mode</FieldLabel>
+                <FieldLabel htmlFor="new-run-mode">Tryb podsumowania</FieldLabel>
                 <Select
                   id="new-run-mode"
                   value={newRunSummaryMode}
@@ -466,7 +468,7 @@ export function EvaluationSetPage({ setId }: Props) {
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor="new-run-delay">Delay (ms)</FieldLabel>
+                <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
                 <Input
                   id="new-run-delay"
                   type="number"
@@ -477,7 +479,7 @@ export function EvaluationSetPage({ setId }: Props) {
                 />
               </div>
 
-              <label className="flex items-center gap-2 whitespace-nowrap text-base text-muted sm:h-control">
+              <label className="flex items-center gap-2 whitespace-nowrap text-muted sm:h-control">
                 <input
                   type="checkbox"
                   checked={newRunSkipTakeaways}
@@ -485,17 +487,16 @@ export function EvaluationSetPage({ setId }: Props) {
                   disabled={isSubmittingNewRun}
                   className="h-4 w-4 border border-input-border"
                 />
-                Skip takeaways
+                Pomiń punkty kluczowe
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
               <Button
                 variant="primary"
+                size="lg"
                 onClick={() => void handleSubmitNewRun()}
                 disabled={isSubmittingNewRun || isLoadingNewRunOptions || !newRunSelectedModel}
               >
-                {isSubmittingNewRun ? "Creating..." : "Create evaluation run"}
+                {isSubmittingNewRun ? "Tworzenie..." : "Utwórz przebieg"}
               </Button>
             </div>
           </Panel>
@@ -503,12 +504,13 @@ export function EvaluationSetPage({ setId }: Props) {
 
         <Panel as="section" padding="sm" className="grid gap-3">
           <div>
-            <p className="panel-kicker">Evaluation runs</p>
+            <h2>Przebiegi</h2>
           </div>
 
           {runsSection}
         </Panel>
 
+        <h2>Wpisy</h2>
         {entriesSection}
       </section>
 

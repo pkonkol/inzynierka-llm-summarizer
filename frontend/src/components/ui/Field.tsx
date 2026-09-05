@@ -12,7 +12,7 @@ export function Select({ className, ...props }: React.ComponentProps<"select">) 
 }
 
 export function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
-  return <textarea {...props} className={cn(FIELD, "py-2 font-mono text-md", className)} />;
+  return <textarea {...props} className={cn(FIELD, "py-2 font-mono text-sm", className)} />;
 }
 
 interface FieldLabelProps extends React.ComponentProps<"label"> {
@@ -20,7 +20,7 @@ interface FieldLabelProps extends React.ComponentProps<"label"> {
 }
 
 export function FieldLabel({ className, ...props }: FieldLabelProps) {
-  const classes = cn("block text-base font-semibold text-muted", className);
+  const classes = cn("block font-semibold text-muted", className);
   // biome-ignore lint/a11y/noLabelWithoutControl: htmlFor is required by FieldLabelProps
   return <label {...props} className={classes} />;
 }

@@ -1,5 +1,6 @@
 import type { UrlSummaryListItem } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
+import { JobStatusLabel } from "./JobStatusLabel";
 
 interface CompletedJobsListProps {
   urls: UrlSummaryListItem[];
@@ -22,16 +23,16 @@ export function CompletedJobsList({
   return (
     <section className="panel-shell grid gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-mono text-xl">Lista podsumowanych linków</h2>
-        <span className="text-md text-muted">{urls.length}</span>
+        <h2>Lista podsumowanych linków</h2>
+        <span className="text-muted">{urls.length}</span>
       </div>
 
-      {isLoading ? <p className="helper-copy">Ładowanie listy...</p> : null}
+      {isLoading ? <p className="text-muted">Ładowanie listy...</p> : null}
       {!isLoading && urls.length === 0 ? (
-        <p className="helper-copy">Brak wyników. Dodaj pierwszy URL powyżej.</p>
+        <p className="text-muted">Brak wyników. Dodaj pierwszy URL powyżej.</p>
       ) : null}
 
-      <ul className="grid min-w-0 gap-2">
+      <ul aria-live="polite" className="grid min-w-0 gap-2">
         {urls.map((item) => (
           <li key={item.source_url} className="min-w-0">
             <button
@@ -40,24 +41,27 @@ export function CompletedJobsList({
               onClick={() => onSelectUrl(item.source_url)}
             >
               {/* URL — primary, full width, wrap */}
-              <span className="block font-mono text-sm font-semibold text-link break-all leading-snug">
+              <span className="mono-value block break-all font-semibold text-link">
                 {item.source_url}
               </span>
 
               {/* Latest title from most recent completed job */}
               {item.latest_title ? (
-                <span className="block text-xs text-muted leading-snug line-clamp-1">
-                  {item.latest_title}
-                </span>
+                <span className="block text-muted line-clamp-1">{item.latest_title}</span>
               ) : null}
 
               {/* Counts + date */}
-              <span className="flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted">
-                <span>✓ {item.completed_count}</span>
-                {item.failed_count > 0 && (
-                  <span className="text-danger">✗ {item.failed_count}</span>
+              <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+                {item.pending_count > 0 && (
+                  <JobStatusLabel status="pending" count={item.pending_count} />
                 )}
-                {item.latest_updated_at && <span>{formatDateMinute(item.latest_updated_at)}</span>}
+                {item.completed_count > 0 && (
+                  <JobStatusLabel status="completed" count={item.completed_count} />
+                )}
+                {item.failed_count > 0 && (
+                  <JobStatusLabel status="failed" count={item.failed_count} />
+                )}
+                <span>{formatDateMinute(item.latest_updated_at)}</span>
               </span>
             </button>
           </li>

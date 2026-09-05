@@ -61,9 +61,15 @@ async def run_summarization_job(
     summary_mode: SummaryMode,
     run_deepeval: bool,
 ) -> None:
-    # Bind once here and every log line below this point carries job_id and mode, including
+    # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
-    structlog.contextvars.bind_contextvars(job_id=job_id, mode=summary_mode)
+    structlog.contextvars.bind_contextvars(
+        job_id=job_id,
+        mode=summary_mode,
+        provider=model_provider,
+        model=model_name,
+        url=url,
+    )
 
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(UTC)
@@ -120,7 +126,12 @@ async def run_summarization_job(
 
     except Exception as exc:
         finished_at = datetime.now(UTC)
-        log.exception("summarization job failed")
+        duration_ms = int((finished_at - started_at).total_seconds() * 1000)
+        log.exception(
+            "summarization job failed",
+            error_type=type(exc).__name__,
+            duration_ms=duration_ms,
+        )
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -132,14 +143,14 @@ async def run_summarization_job(
                     "raw_output": exc.raw_output if isinstance(exc, LlmOutputError) else "",
                     "started_at": started_at,
                     "finished_at": finished_at,
-                    "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
+                    "duration_ms": duration_ms,
                     "error": str(exc),
                     "updated_at": finished_at,
                 }
             },
         )
     finally:
-        structlog.contextvars.unbind_contextvars("job_id", "mode")
+        structlog.contextvars.unbind_contextvars("job_id", "mode", "provider", "model", "url")
 
 
 @router.post(
@@ -199,18 +210,29 @@ async def list_summarized_urls(
 ) -> list[UrlSummaryListItem]:
     jobs_collection = get_jobs_collection()
     pipeline = [
-        {"$match": {"status": {"$in": ["completed", "failed"]}}},
+        {"$match": {"status": {"$in": ["completed", "failed", "pending"]}}},
         {"$sort": {"updated_at": -1}},
         {
             "$group": {
                 "_id": "$source_url",
                 "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
                 "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
+                "pending_count": {"$sum": {"$cond": [{"$eq": ["$status", "pending"]}, 1, 0]}},
                 "latest_updated_at": {"$first": "$updated_at"},
-                # null for failed jobs, which have no summary_data
-                "latest_title": {"$first": {"$ifNull": ["$summary_data.title", ""]}},
+                # $$REMOVE drops the element, so only completed jobs contribute a title and a
+                # pending or failed job at the top of the sort cannot blank out the URL's label.
+                "completed_titles": {
+                    "$push": {
+                        "$cond": [
+                            {"$eq": ["$status", "completed"]},
+                            {"$ifNull": ["$summary_data.title", ""]},
+                            "$$REMOVE",
+                        ]
+                    }
+                },
             }
         },
+        {"$addFields": {"latest_title": {"$ifNull": [{"$first": "$completed_titles"}, ""]}}},
         {"$sort": {"latest_updated_at": -1}},
         {"$limit": limit},
     ]
@@ -219,6 +241,7 @@ async def list_summarized_urls(
             source_url=doc["_id"],
             completed_count=doc["completed_count"],
             failed_count=doc["failed_count"],
+            pending_count=doc["pending_count"],
             latest_title=doc["latest_title"],
             latest_updated_at=doc["latest_updated_at"],
         )

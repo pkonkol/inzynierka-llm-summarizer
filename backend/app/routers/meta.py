@@ -2,6 +2,7 @@ import structlog
 from fastapi import APIRouter
 
 from ..core.config import settings
+from ..schemas.meta_api import VersionResponse
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
 log = structlog.get_logger(__name__)
@@ -21,3 +22,8 @@ async def get_supported_languages() -> list[str]:
 async def get_supported_modes() -> dict[str, str]:
     """Returns {mode_key: human_readable_label}."""
     return settings.supported_summary_modes
+
+
+@router.get("/version", summary="Get the build this backend was deployed from")
+async def get_version() -> VersionResponse:
+    return VersionResponse(git_sha=settings.git_sha)

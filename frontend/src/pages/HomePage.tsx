@@ -15,9 +15,9 @@ import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobStatusResponse, UrlSummaryListItem } from "../types/api.generated";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useListPolling } from "../utils/useListPolling";
 
-const LIST_REFRESH_MS = 20_000;
-const POLLING_MS = 2_500;
+const ACTIVE_JOB_POLL_MS = 2_500;
 
 export function HomePage() {
   useDocumentTitle("Podsumowania");
@@ -68,6 +68,7 @@ export function HomePage() {
         run_deepeval,
       );
       setActiveJobId(created.job_id);
+      await loadUrlList();
     } catch (error) {
       showFlash(`Nie udało się utworzyć joba: ${errorText(error)}`, "danger");
     } finally {
@@ -87,14 +88,15 @@ export function HomePage() {
       }
     };
     void initialize();
-    const interval = setInterval(() => {
-      void loadUrlList();
-    }, LIST_REFRESH_MS);
     return () => {
       isMounted = false;
-      clearInterval(interval);
     };
   }, []);
+
+  useListPolling(
+    loadUrlList,
+    urlList.some((item) => item.pending_count > 0),
+  );
 
   useEffect(() => {
     if (!selectedUrl) {
@@ -112,7 +114,6 @@ export function HomePage() {
         if (status.status === "completed") {
           showFlash("Podsumowanie gotowe.");
           setActiveJobId(null);
-          await loadUrlList();
           setSelectedUrl(status.source_url);
         } else if (status.status === "failed") {
           showFlash(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`, "danger");
@@ -125,7 +126,7 @@ export function HomePage() {
     };
     const interval = setInterval(() => {
       void poll();
-    }, POLLING_MS);
+    }, ACTIVE_JOB_POLL_MS);
     void poll();
     return () => clearInterval(interval);
   }, [activeJobId]);

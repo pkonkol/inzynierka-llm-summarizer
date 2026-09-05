@@ -1,0 +1,11 @@
+# Findings accepted on purpose, each with a date after which trivy reports it again. Anything
+# without a reason and an expiry belongs in the lockfile as an upgrade, not here.
+vulnerabilities:
+  - id: CVE-2026-81726
+    paths:
+      - backend/requirements.txt
+    # Path traversal in NLTK's model-artifact APIs. No fixed release exists yet. Reachable only
+    # by controlling the resource name passed to nltk.download / nltk.data.find; this app passes
+    # two hardcoded corpora and never derives a resource name from a request
+    # (backend/app/core/nltk_data.py). See docs/security/0002-nltk-model-artifact-traversal.md.
+    expired_at: 2026-12-05

@@ -50,6 +50,28 @@ class SourceMeta(BaseModel):
 
 Raise (`ValueError`, `HTTPException`, a domain exception) as soon as an invariant is broken. Do not write recovery logic for states that should be impossible given correct upstream validation.
 
+## Configuration and secrets — FORBIDDEN patterns
+
+Settings arrive correct or the app has no business running. Never write code that repairs
+malformed configuration.
+
+- No `.strip()`, no case folding, no whitespace repair on an API key, URL or any other
+  setting. A secret stored with a trailing newline is a deployment defect — fix the secret,
+  never the reader.
+- No validator whose only job is to clean a value. `model_validator` asserts invariants
+  across fields (`_require_secrets_when_auth_enabled`); it does not launder input.
+
+```python
+# BAD — hides a broken secret and makes the deployment defect permanent
+@field_validator("openrouter_api_key", mode="before")
+@classmethod
+def _strip_key_whitespace(cls, value: object) -> object:
+    return value.strip() if isinstance(value, str) else value
+
+# GOOD — the field is declared and trusted
+openrouter_api_key: SecretStr | None = None
+```
+
 ## Stack notes
 
 - Async everywhere for I/O (Mongo via `motor`, LLM calls, scraping) — use `asyncio`/FastAPI `BackgroundTasks`, no blocking calls in request handlers.

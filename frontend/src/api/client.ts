@@ -6,6 +6,7 @@ import type {
   JobStatusResponse,
   TokenResponse,
   UrlSummaryListItem,
+  VersionResponse,
 } from "../types/api.generated";
 import type { JobStatusValue } from "../types/local";
 import { logger } from "../utils/logger";
@@ -125,3 +126,6 @@ export const getSupportedLanguages = (): Promise<string[]> =>
 
 export const getSupportedModes = (): Promise<Record<string, string>> =>
   request<Record<string, string>>("/api/v1/meta/modes");
+
+export const getBackendVersion = (): Promise<VersionResponse> =>
+  request<VersionResponse>("/api/v1/meta/version");

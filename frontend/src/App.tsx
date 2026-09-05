@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getAuthStatus, getToken } from "./api/client";
+import { getBackendVersion, getToken } from "./api/client";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
 import { DesignPage } from "./pages/DesignPage";
@@ -41,9 +41,9 @@ function ResearchRouter() {
 
 function App() {
   const [route, setRoute] = useState<Route>(getRoute);
-  const [isAuthEnabled, setIsAuthEnabled] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
+  const [backendSha, setBackendSha] = useState("");
 
   useEffect(() => {
     const onPop = () => setRoute(getRoute());
@@ -53,20 +53,13 @@ function App() {
 
   useEffect(() => {
     let isMounted = true;
-    const loadAuthStatus = async () => {
-      try {
-        const authStatus = await getAuthStatus();
-        if (!isMounted) return;
-        setIsAuthEnabled(authStatus.enabled);
-      } catch {
-        if (!isMounted) return;
-        // Fails open: the UI hides the login prompt. The backend still rejects
-        // unauthenticated writes, so this only affects what is rendered.
-        logger.warn("auth status unavailable, assuming auth disabled");
-        setIsAuthEnabled(false);
-      }
-    };
-    void loadAuthStatus();
+    getBackendVersion()
+      .then(({ git_sha }) => {
+        if (isMounted) setBackendSha(git_sha);
+      })
+      .catch((error: unknown) => {
+        logger.warn("backend version unavailable", { error });
+      });
     return () => {
       isMounted = false;
     };
@@ -84,12 +77,7 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      <NavDock
-        active={route}
-        isAuthEnabled={isAuthEnabled}
-        isLoggedIn={isLoggedIn}
-        onOpenLogin={() => setIsLoginOpen(true)}
-      />
+      <NavDock active={route} isLoggedIn={isLoggedIn} onOpenLogin={() => setIsLoginOpen(true)} />
       <LoginOverlay
         isOpen={isLoginOpen}
         onSuccess={handleLoginSuccess}
@@ -99,7 +87,7 @@ function App() {
       {route === "jobs" && <JobsPage />}
       {route === "research" && <ResearchRouter />}
       <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
-        #{__COMMIT_HASH__}
+        front #{__COMMIT_HASH__} · back #{backendSha || "?"}
       </span>
     </div>
   );

@@ -1,7 +1,7 @@
 import logging
 
 import structlog
-from structlog.typing import EventDict, WrappedLogger
+from structlog.typing import EventDict, Processor, WrappedLogger
 
 from .config import settings
 
@@ -19,6 +19,35 @@ _QUIET_IN_DEBUG = [
 ]
 
 
+def _secret_values() -> list[str]:
+    values = []
+    for secret in (
+        settings.gemini_api_key,
+        settings.openrouter_api_key,
+        settings.auth_secret,
+        settings.jwt_secret,
+    ):
+        if secret is None:
+            continue
+        value = secret.get_secret_value()
+        if value:  # an empty secret would match every string and blank the whole log line
+            values.append(value)
+    return values
+
+
+def _redact_secrets(secrets: list[str]) -> Processor:
+    def processor(_logger: WrappedLogger, _name: str, event_dict: EventDict) -> EventDict:
+        for key, value in event_dict.items():
+            if not isinstance(value, str):
+                continue
+            for secret in secrets:
+                value = value.replace(secret, "***")
+            event_dict[key] = value
+        return event_dict
+
+    return processor
+
+
 # Cloud Logging keys off `severity` for the level and `message` for the summary line;
 # every other key lands in jsonPayload and becomes filterable.
 def _rename_for_cloud_logging(
@@ -26,6 +55,7 @@ def _rename_for_cloud_logging(
 ) -> EventDict:
     event_dict["severity"] = event_dict.pop("level").upper()
     event_dict["message"] = event_dict.pop("event")
+    event_dict["git_sha"] = settings.git_sha
     return event_dict
 
 
@@ -102,14 +132,17 @@ def setup_logging() -> None:
         cache_logger_on_first_use=True,
     )
 
+    redact = _redact_secrets(_secret_values())
+
     if to_json:
         render = [
             structlog.processors.format_exc_info,
+            redact,
             _rename_for_cloud_logging,
             structlog.processors.JSONRenderer(),
         ]
     else:
-        render = [_console_renderer()]
+        render = [redact, _console_renderer()]
 
     handler = logging.StreamHandler()
     handler.setFormatter(

@@ -14,7 +14,7 @@ infra/     Docker Compose for local MongoDB, Terraform for GCP, model catalogues
 Start local infrastructure (MongoDB):
 
 ```bash
-./dev.sh up
+just db-up
 ```
 
 Run backend from repository root:
@@ -40,5 +40,5 @@ Reference-only design source remains in:
 Stop local infrastructure:
 
 ```bash
-./dev.sh down
+just db-down
 ```

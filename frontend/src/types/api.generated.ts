@@ -195,6 +195,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meta/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the build this backend was deployed from */
+        get: operations["get_version_api_v1_meta_version_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/evaluation-sets": {
         parameters: {
             query?: never;
@@ -959,6 +976,8 @@ export interface components {
             completed_count: number;
             /** Failed Count */
             failed_count: number;
+            /** Pending Count */
+            pending_count: number;
             /** Latest Title */
             latest_title: string;
             /**
@@ -1002,6 +1021,11 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VersionResponse */
+        VersionResponse: {
+            /** Git Sha */
+            git_sha: string;
         };
     };
     responses: never;
@@ -1053,6 +1077,7 @@ export type TokenResponse = components['schemas']['TokenResponse'];
 export type UrlSummaryListItem = components['schemas']['UrlSummaryListItem'];
 export type UsageMetadata = components['schemas']['UsageMetadata'];
 export type ValidationError = components['schemas']['ValidationError'];
+export type VersionResponse = components['schemas']['VersionResponse'];
 export type $defs = Record<string, never>;
 export interface operations {
     health_check_health_get: {
@@ -1381,6 +1406,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    get_version_api_v1_meta_version_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
                 };
             };
         };

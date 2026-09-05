@@ -55,7 +55,7 @@ jobs:
         env:
           SHA: ${{ github.sha }}
         run: |
-          docker build -t "$IMAGE:$SHA" ./backend
+          docker build --build-arg GIT_SHA="$SHA" -t "$IMAGE:$SHA" ./backend
           docker tag "$IMAGE:$SHA" "$IMAGE:latest"
           docker tag "$IMAGE:$SHA" "$IMAGE:latest-github-actions"
 

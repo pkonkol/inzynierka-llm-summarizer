@@ -3,8 +3,8 @@ import { errorText } from "../api/client";
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
 import { useFlash } from "../components/FlashProvider";
 import { Alert } from "../components/ui/Alert";
-import { Button } from "../components/ui/Button";
-import { FieldLabel, Textarea } from "../components/ui/Field";
+import { Button, buttonClasses } from "../components/ui/Button";
+import { Textarea } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
@@ -12,6 +12,7 @@ import type {
   EvaluationSetImportRequest,
   EvaluationSetListItemResponse,
 } from "../types/api.generated";
+import { formatDateMinute } from "../utils/format";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 const PRETTY_EXAMPLE = `{
@@ -28,7 +29,7 @@ const PRETTY_EXAMPLE = `{
   ]
 }`;
 
-const SET_COLUMNS = ["Name", "Language", "Entries", "Runs", "Created", "Action"];
+const SET_COLUMNS = ["Nazwa", "Język", "Wpisów", "Przebiegów", "Utworzono", "Akcja"];
 
 function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
   return (
@@ -39,10 +40,10 @@ function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
           <Td>{set.language}</Td>
           <Td>{set.entry_count}</Td>
           <Td>{set.run_count}</Td>
-          <Td>{new Date(set.created_at).toLocaleString()}</Td>
+          <Td>{formatDateMinute(set.created_at)}</Td>
           <Td className="text-right">
             <LinkButton size="sm" href={`/research/${set.evaluation_set_id}`}>
-              Open
+              Otwórz
             </LinkButton>
           </Td>
         </Tr>
@@ -52,7 +53,7 @@ function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
 }
 
 export function ResearchPage() {
-  useDocumentTitle("Research");
+  useDocumentTitle("Badania");
   const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
   const [sets, setSets] = useState<EvaluationSetListItemResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,9 +145,9 @@ export function ResearchPage() {
     };
   }, []);
 
-  let setsSection = <p className="helper-copy">Ładowanie listy EvaluationSet...</p>;
+  let setsSection = <p className="text-muted">Ładowanie listy zbiorów...</p>;
   if (!isLoading && sets.length === 0) {
-    setsSection = <p className="helper-copy">Brak EvaluationSetów. Zaimportuj pierwszy dataset.</p>;
+    setsSection = <p className="text-muted">Brak zbiorów. Zaimportuj pierwszy dataset.</p>;
   } else if (!isLoading) {
     setsSection = <SetsTable sets={sets} />;
   }
@@ -155,34 +156,13 @@ export function ResearchPage() {
     <PageShell>
       <section className="panel-shell grid min-w-0 gap-4">
         <div className="grid gap-2">
-          <p className="section-kicker">Research</p>
-          <h1 className="font-mono text-xl uppercase tracking-wider">Evaluation set import</h1>
-          <p className="helper-copy">
-            Importuj małe curated datasety JSON. To jest osobny moduł badawczy, niezależny od
-            zwykłych jobs.
-          </p>
+          <h1>Import zbioru ewaluacyjnego</h1>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center justify-center border border-panel-border bg-panel-solid px-3 py-2 text-md text-ink hover:bg-subtle-hover">
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            Wczytaj plik JSON
-          </label>
-          <Button size="sm" onClick={() => setRawJson(PRETTY_EXAMPLE)}>
-            Wstaw przykład
-          </Button>
-        </div>
+        <div className="flex flex-wrap gap-2"></div>
 
         <div className="grid gap-3">
           <div className="grid gap-2">
-            <FieldLabel htmlFor="import-json" className="font-normal text-label">
-              Import JSON
-            </FieldLabel>
             <Textarea
               id="import-json"
               value={rawJson}
@@ -192,7 +172,7 @@ export function ResearchPage() {
             />
           </div>
 
-          <div className="grid gap-1 border border-panel-border bg-panel-solid px-3 py-2 text-md">
+          <div className="grid gap-1 border border-panel-border bg-panel-solid px-3 py-2">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <span>Status: {parsedPreview.isValid ? "valid JSON" : "invalid JSON"}</span>
               <span>Name: {parsedPreview.name ?? "—"}</span>
@@ -203,8 +183,17 @@ export function ResearchPage() {
 
           <div className="flex items-center gap-2">
             <Button variant="primary" onClick={() => void handleImport()} disabled={isImporting}>
-              {isImporting ? "Importing..." : "Import evaluation set"}
+              {isImporting ? "Importowanie..." : "Importuj zbiór"}
             </Button>
+            <label className={buttonClasses("secondary", "sm", "cursor-pointer")}>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              Wczytaj plik JSON
+            </label>
           </div>
 
           {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
@@ -214,11 +203,10 @@ export function ResearchPage() {
       <section className="panel-shell grid min-w-0 gap-4">
         <div className="flex items-end justify-between gap-3">
           <div className="grid gap-2">
-            <p className="section-kicker">Evaluation sets</p>
-            <h2 className="font-mono text-lg uppercase tracking-wider">Existing sets</h2>
+            <h2>Zbiory ewaluacyjne</h2>
           </div>
           <Button size="sm" onClick={() => void loadSets()}>
-            Refresh
+            Odśwież
           </Button>
         </div>
 

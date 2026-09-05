@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Piotr Konkol - Praca inżynierska - Podsumowania z użyciem LLM"
+    git_sha: str = ""
     gemini_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
     ollama_url: str = ""
@@ -34,22 +35,30 @@ class Settings(BaseSettings):
     mongodb_jobs_collection: str = "jobs"
     supported_summary_languages: list[str] = ["en", "pl"]
     supported_models: dict[str, list[str]] = {
-        "gemini": ["gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3.5-flash"],
-        "openrouter": [
-            "openai/gpt-oss-20b:free",
-            "google/gemma-4-31b-it:free",
+        "gemini": [
+            "gemini-flash-lite-latest",
+            "gemini-flash-latest",
+            "gemma-4-31b-it",
         ],
-        "ollama": ["gemma4:31b-cloud"],
+        "openrouter": [
+            "openrouter/free",
+            "openai/gpt-oss-20b:free",
+            "nvidia/nemotron-3.5-lightning:free",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "~deepseek/deepseek-v4-flash-latest",
+            "deepseek/deepseek-v3.2",
+            "~z-ai/glm-flash-latest",
+        ],
     }
     # mode -> human-readable label
     supported_summary_modes: dict[str, str] = {
-        "simple": "Simple — single prompt (extractor + abstractor)",
-        "sequential": "Sequential — two independent prompts (takeaways first, then summary)",
-        "cascade": "Cascade — takeaways first, summary derived from takeaways",
+        "simple": "Prosty — jeden prompt (ekstraktor + abstraktor)",
+        "sequential": "Sekwencyjny — dwa niezależne prompty (najpierw punkty, potem podsumowanie)",
+        "cascade": "Kaskadowy — najpierw punkty, podsumowanie wyprowadzone z punktów",
     }
     default_model: dict[str, str] = {
         "model_provider": "gemini",
-        "model_name": "gemini-2.5-flash-lite",
+        "model_name": "gemini-flash-latest",
     }
     auth_enabled: bool = False
     auth_secret: SecretStr = SecretStr("")

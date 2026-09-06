@@ -24,3 +24,14 @@ export function FieldLabel({ className, ...props }: FieldLabelProps) {
   // biome-ignore lint/a11y/noLabelWithoutControl: htmlFor is required by FieldLabelProps
   return <label {...props} className={classes} />;
 }
+
+// `provider:model` is the value shape both summarization forms submit.
+export function ModelOptions({ models }: { models: Record<string, string[]> }) {
+  return Object.entries(models).map(([provider, modelList]) =>
+    modelList.map((model) => (
+      <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
+        {provider} – {model}
+      </option>
+    )),
+  );
+}

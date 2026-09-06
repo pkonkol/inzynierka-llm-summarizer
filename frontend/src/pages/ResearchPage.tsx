@@ -124,25 +124,11 @@ export function ResearchPage() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const initialize = async () => {
-      try {
-        const data = await listEvaluationSets();
-        if (!isMounted) return;
-        setSets(data);
-      } catch (error) {
-        if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać EvaluationSetów: ${errorText(error)}`);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    void initialize();
-    return () => {
-      isMounted = false;
-    };
+    void loadSets()
+      .catch((error: unknown) =>
+        setErrorMessage(`Nie udało się pobrać EvaluationSetów: ${errorText(error)}`),
+      )
+      .finally(() => setIsLoading(false));
   }, []);
 
   let setsSection = <p className="text-muted">Ładowanie listy zbiorów...</p>;
@@ -158,8 +144,6 @@ export function ResearchPage() {
         <div className="grid gap-2">
           <h1>Import zbioru ewaluacyjnego</h1>
         </div>
-
-        <div className="flex flex-wrap gap-2"></div>
 
         <div className="grid gap-3">
           <div className="grid gap-2">

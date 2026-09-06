@@ -5,10 +5,10 @@ from pydantic import BaseModel
 
 from ...schemas.summary import LlmSummaryResult
 from ._base import (
-    build_generic_detail_guidance,
+    GENERIC_DETAIL_GUIDANCE,
+    SUMMARY_DETAIL_GUIDANCE,
+    TAKEAWAY_DETAIL_GUIDANCE,
     build_structured_llm,
-    build_summary_detail_guidance,
-    build_takeaway_detail_guidance,
     parse_structured_output,
     prompt_texts,
 )
@@ -37,9 +37,9 @@ async def run(
     schema = _SummaryOnlyPromptResponse if skip_takeaways else _SummaryPromptResponse
     what_to_generate = "summary" if skip_takeaways else "summary and key_takeaways"
 
-    guidance_parts = [build_generic_detail_guidance(), build_summary_detail_guidance()]
+    guidance_parts = [GENERIC_DETAIL_GUIDANCE, SUMMARY_DETAIL_GUIDANCE]
     if not skip_takeaways:
-        guidance_parts.append(build_takeaway_detail_guidance())
+        guidance_parts.append(TAKEAWAY_DETAIL_GUIDANCE)
 
     llm = build_structured_llm(schema, model_provider, model_name)
     chain = EXTRACT_FROM_CONTENT | llm

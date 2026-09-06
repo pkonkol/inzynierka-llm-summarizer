@@ -108,9 +108,7 @@ def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
     result = DeepEvalMetricResult(
-        name=getattr(metric, "name", None)
-        or getattr(metric, "__name__", None)
-        or type(metric).__name__,
+        name=metric.name,
         score=metric.score,
         reason=metric.reason,
         passed=metric.success,
@@ -125,161 +123,108 @@ def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
     return result
 
 
-def build_summary_metrics(settings: Settings) -> list[Any]:
-    model = build_deepeval_model(settings)
+@dataclass(frozen=True, slots=True)
+class GEvalSpec:
+    """The per-judge half of a GEval metric; the model and threshold are shared by all of them."""
 
-    return [
-        GEval(
-            name="summary_coherence",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the summary is logically coherent, thematically consistent, and easy to follow "
-                "for its length. A single-sentence summary can score highly if it presents one clear, unified idea "
-                "without contradictions, abrupt shifts, or confusing structure."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+    name: str
+    criteria: str
+    params: list[LLMTestCaseParams]
+    evaluation_steps: list[str] | None = None
+
+
+SUMMARY_SPECS = [
+    GEvalSpec(
+        name="summary_coherence",
+        criteria=(
+            "Assess whether the summary is logically coherent, thematically consistent, and easy to follow "
+            "for its length. A single-sentence summary can score highly if it presents one clear, unified idea "
+            "without contradictions, abrupt shifts, or confusing structure."
         ),
-        GEval(
-            name="summary_fluency",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the summary is fluent, grammatically correct, natural-sounding, "
-                "and easy to read. Penalize awkward wording, grammar mistakes, and unnatural phrasing."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+    GEvalSpec(
+        name="summary_fluency",
+        criteria=(
+            "Assess whether the summary is fluent, grammatically correct, natural-sounding, "
+            "and easy to read. Penalize awkward wording, grammar mistakes, and unnatural phrasing."
         ),
-    ]
+        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+]
 
-
-def build_summary_input_metrics(settings: Settings) -> list[Any]:
-    model = build_deepeval_model(settings)
-
-    return [
-        # SummarizationMetric(
-        #     model=model,
-        #     threshold=DEEPEVAL_THRESHOLD,
-        # ),
-        GEval(
-            name="summary_completeness",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the summary preserves the key information from the input text "
-                "without omitting major facts, claims, or conclusions."
-            ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+SUMMARY_INPUT_SPECS = [
+    GEvalSpec(
+        name="summary_completeness",
+        criteria=(
+            "Assess whether the summary preserves the key information from the input text "
+            "without omitting major facts, claims, or conclusions."
         ),
-    ]
+        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+]
 
-
-def build_takeaways_metrics(settings: Settings) -> list[Any]:
-    model = build_deepeval_model(settings)
-
-    return [
-        GEval(
-            name="takeaways_non_redundancy",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the key takeaways are non-redundant. Penalize repeated ideas, "
-                "near-duplicate bullets, and multiple points that express the same fact."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+TAKEAWAYS_SPECS = [
+    GEvalSpec(
+        name="takeaways_non_redundancy",
+        criteria=(
+            "Assess whether the key takeaways are non-redundant. Penalize repeated ideas, "
+            "near-duplicate bullets, and multiple points that express the same fact."
         ),
-    ]
+        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+]
 
-
-def build_takeaways_input_metrics(settings: Settings) -> list[Any]:
-    model = build_deepeval_model(settings)
-
-    return [
-        GEval(
-            name="takeaways_coverage",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the key takeaways cover the most important facts and ideas from the input text. "
-                "Penalize missing major points and overemphasis on minor details."
-            ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+TAKEAWAYS_INPUT_SPECS = [
+    GEvalSpec(
+        name="takeaways_coverage",
+        criteria=(
+            "Assess whether the key takeaways cover the most important facts and ideas from the input text. "
+            "Penalize missing major points and overemphasis on minor details."
         ),
-    ]
+        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+]
 
-
-def build_summary_takeaways_metrics(settings: Settings) -> list[Any]:
-    model = build_deepeval_model(settings)
-
-    return [
-        GEval(
-            name="summary_covers_takeaways",
-            model=model,
-            threshold=DEEPEVAL_THRESHOLD,
-            criteria=(
-                "Assess whether the summary covers the factual content expressed in the key takeaways. "
-                "Penalize omission of major takeaway points, contradictions, and summaries that are "
-                "too generic relative to the takeaways."
-            ),
-            evaluation_params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+SUMMARY_TAKEAWAYS_SPECS = [
+    GEvalSpec(
+        name="summary_covers_takeaways",
+        criteria=(
+            "Assess whether the summary covers the factual content expressed in the key takeaways. "
+            "Penalize omission of major takeaway points, contradictions, and summaries that are "
+            "too generic relative to the takeaways."
         ),
-    ]
+        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
+    ),
+]
 
 
-async def evaluate_summary_metrics(settings: Settings, summary: str) -> list[DeepEvalMetricResult]:
-    test_case = LLMTestCase(input="", actual_output=summary)
-    metrics = build_summary_metrics(settings)
-    return await asyncio.gather(
-        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
-    )
-
-
-async def evaluate_summary_input_metrics(
-    settings: Settings,
-    article_text: str,
-    summary: str,
+async def evaluate_geval(
+    settings: Settings, work: list[tuple[GEvalSpec, LLMTestCase]]
 ) -> list[DeepEvalMetricResult]:
-    test_case = LLMTestCase(input=article_text, actual_output=summary)
-    metrics = build_summary_input_metrics(settings)
-    return await asyncio.gather(
-        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
-    )
+    """Run every (spec, test case) pair concurrently against a single judge model.
 
-
-async def evaluate_takeaways_metrics(
-    settings: Settings, takeaways_text: str
-) -> list[DeepEvalMetricResult]:
-    test_case = LLMTestCase(input="", actual_output=takeaways_text)
-    metrics = build_takeaways_metrics(settings)
-    return await asyncio.gather(
-        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
-    )
-
-
-async def evaluate_takeaways_input_metrics(
-    settings: Settings,
-    article_text: str,
-    takeaways_text: str,
-) -> list[DeepEvalMetricResult]:
-    test_case = LLMTestCase(input=article_text, actual_output=takeaways_text)
-    metrics = build_takeaways_input_metrics(settings)
-    return await asyncio.gather(
-        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
-    )
-
-
-async def evaluate_summary_takeaways_metrics(
-    settings: Settings,
-    article_text: str,
-    summary: str,
-    takeaways_text: str,
-) -> list[DeepEvalMetricResult]:
-    test_case = LLMTestCase(
-        input=article_text,
-        actual_output=summary,
-        expected_output=takeaways_text,
-    )
-    metrics = build_summary_takeaways_metrics(settings)
-    return await asyncio.gather(
-        *(asyncio.to_thread(run_metric, metric, test_case) for metric in metrics)
+    Results come back in the order the pairs were given, so callers can rely on positions.
+    """
+    if not work:
+        return []
+    model = build_deepeval_model(settings)
+    metrics = [
+        GEval(
+            name=spec.name,
+            model=model,
+            threshold=DEEPEVAL_THRESHOLD,
+            criteria=spec.criteria,
+            evaluation_params=spec.params,
+            **({"evaluation_steps": spec.evaluation_steps} if spec.evaluation_steps else {}),
+        )
+        for spec, _ in work
+    ]
+    return list(
+        await asyncio.gather(
+            *(
+                asyncio.to_thread(run_metric, metric, test_case)
+                for metric, (_, test_case) in zip(metrics, work, strict=True)
+            )
+        )
     )

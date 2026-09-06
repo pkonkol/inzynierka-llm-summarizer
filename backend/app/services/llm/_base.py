@@ -28,12 +28,18 @@ class LlmOutputError(ValueError):
         self.raw_output = raw_output
 
 
-def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
+def validate_model(model_provider: str, model_name: str) -> None:
+    """Raises ValueError when the provider/model pair is not in settings.supported_models."""
     provider = model_provider.lower()
     if provider not in settings.supported_models:
         raise ValueError(f"Unsupported model provider: {model_provider}")
     if model_name.lower() not in [m.lower() for m in settings.supported_models[provider]]:
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")
+
+
+def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
+    validate_model(model_provider, model_name)
+    provider = model_provider.lower()
 
     if provider == "gemini":
         if not settings.gemini_api_key:
@@ -59,16 +65,11 @@ def build_structured_llm(
     structure: type, model_provider: str, model_name: str
 ) -> Runnable[Any, dict[str, Any]]:
     llm = build_llm(model_provider, model_name)
-
-    if model_provider.lower() == "openrouter":
-        return cast(
-            Runnable[Any, dict[str, Any]],
-            llm.with_structured_output(structure, include_raw=True, method="json_mode"),
-        )
+    extra = {"method": "json_mode"} if model_provider.lower() == "openrouter" else {}
 
     return cast(
         Runnable[Any, dict[str, Any]],
-        llm.with_structured_output(structure, include_raw=True),
+        llm.with_structured_output(structure, include_raw=True, **extra),
     )
 
 
@@ -81,29 +82,24 @@ def prompt_texts(prompt: ChatPromptTemplate, label: str) -> list[tuple[str, str]
     ]
 
 
-def build_generic_detail_guidance() -> str:
-    return (
-        "Return only valid JSON matching the requested schema. "
-        "Do not wrap the response in markdown code fences. "
-        "Do not add extra keys or explanatory text."
-    )
+GENERIC_DETAIL_GUIDANCE = (
+    "Return only valid JSON matching the requested schema. "
+    "Do not wrap the response in markdown code fences. "
+    "Do not add extra keys or explanatory text."
+)
 
+SUMMARY_DETAIL_GUIDANCE = (
+    "Write a fluent prose summary that stays coherent and easy to read. "
+    "Include all important facts from the source without introducing information that is not present. "
+    "Keep the result concise but complete."
+)
 
-def build_summary_detail_guidance() -> str:
-    return (
-        "Write a fluent prose summary that stays coherent and easy to read. "
-        "Include all important facts from the source without introducing information that is not present. "
-        "Keep the result concise but complete."
-    )
-
-
-def build_takeaway_detail_guidance() -> str:
-    return (
-        "Write key_takeaways as a JSON array of strings (list[str]), one concise takeaway per array item. "
-        "Do not return markdown bullets or numbered lists. "
-        "Keep the points specific, content-rich, and non-redundant. "
-        "Cover the important facts from the source without repeating the same idea."
-    )
+TAKEAWAY_DETAIL_GUIDANCE = (
+    "Write key_takeaways as a JSON array of strings (list[str]), one concise takeaway per array item. "
+    "Do not return markdown bullets or numbered lists. "
+    "Keep the points specific, content-rich, and non-redundant. "
+    "Cover the important facts from the source without repeating the same idea."
+)
 
 
 def as_dict(obj: Any) -> dict[str, Any]:
@@ -167,9 +163,7 @@ def extract_usage(ai_message: Any) -> tuple[UsageMetadata, dict[str, Any]]:
     return usage, raw_metadata
 
 
-def raw_output_str(raw_invoke_output: Any) -> str:
-    if not isinstance(raw_invoke_output, dict):
-        return str(raw_invoke_output)
+def raw_output_str(raw_invoke_output: dict[str, Any]) -> str:
     raw_msg = raw_invoke_output.get("raw")
     content = getattr(raw_msg, "content", None)
     if content is None:

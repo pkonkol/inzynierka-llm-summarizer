@@ -19,6 +19,7 @@ import type {
 } from "../types/api.generated";
 import { formatDateMinute, formatMetricLabel } from "../utils/format";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useListPolling } from "../utils/useListPolling";
 
 const PAIRWISE_TIE_MARGIN = 0.05;
 
@@ -300,8 +301,6 @@ type Props = {
   runId: string;
 };
 
-const RUN_POLL_MS = 3_000;
-
 export function EvaluationRunPage({ runId }: Props) {
   const [run, setRun] = useState<EvaluationRunResponse | null>(null);
   const [entries, setEntries] = useState<EvaluationRunEntryResponse[] | null>(null);
@@ -350,25 +349,7 @@ export function EvaluationRunPage({ runId }: Props) {
   }, [runId]);
 
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
-  // Chained timeouts rather than an interval: a slow response must not let requests pile up.
-  useEffect(() => {
-    if (!isRunInProgress) return;
-
-    let timeoutId: ReturnType<typeof setTimeout>;
-    let isCancelled = false;
-
-    const pollUntilCancelled = async () => {
-      await loadRun();
-      if (isCancelled) return;
-      timeoutId = setTimeout(() => void pollUntilCancelled(), RUN_POLL_MS);
-    };
-
-    timeoutId = setTimeout(() => void pollUntilCancelled(), RUN_POLL_MS);
-    return () => {
-      isCancelled = true;
-      clearTimeout(timeoutId);
-    };
-  }, [isRunInProgress, runId]);
+  useListPolling(loadRun, true, isRunInProgress);
 
   useEffect(() => {
     if (!run) return;

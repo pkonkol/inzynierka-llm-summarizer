@@ -12,10 +12,10 @@ from pydantic import BaseModel
 
 from ...schemas.summary import LlmSummaryResult
 from ._base import (
-    build_generic_detail_guidance,
+    GENERIC_DETAIL_GUIDANCE,
+    SUMMARY_DETAIL_GUIDANCE,
+    TAKEAWAY_DETAIL_GUIDANCE,
     build_structured_llm,
-    build_summary_detail_guidance,
-    build_takeaway_detail_guidance,
     parse_structured_output,
     prompt_texts,
 )
@@ -48,10 +48,8 @@ async def run(
     chain_synthesis = SYNTHESIZE_FROM_TAKEAWAYS | summary_llm
 
     text = input["text"]
-    takeaways_guidance = "\n".join(
-        [build_generic_detail_guidance(), build_takeaway_detail_guidance()]
-    )
-    summary_guidance = "\n".join([build_generic_detail_guidance(), build_summary_detail_guidance()])
+    takeaways_guidance = "\n".join([GENERIC_DETAIL_GUIDANCE, TAKEAWAY_DETAIL_GUIDANCE])
+    summary_guidance = "\n".join([GENERIC_DETAIL_GUIDANCE, SUMMARY_DETAIL_GUIDANCE])
 
     raw_tk = await chain_takeaways.ainvoke(
         {

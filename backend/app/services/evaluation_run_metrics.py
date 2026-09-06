@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,6 +18,16 @@ from .run_metrics import (
 log = structlog.get_logger(__name__)
 
 
+async def _store_deepeval_status(
+    run_id: str, aggregate_metrics: dict[str, Any], deepeval_status: dict[str, Any]
+) -> None:
+    aggregate_metrics["deepeval"] = deepeval_status
+    await get_evaluation_runs_collection().update_one(
+        {"_id": ObjectId(run_id)},
+        {"$set": {"aggregate_metrics": aggregate_metrics}},
+    )
+
+
 async def compute_run_deepeval_metrics(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
@@ -26,25 +37,20 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         return
 
     aggregate_metrics = run_doc["aggregate_metrics"]
-    aggregate_metrics["deepeval"] = {
-        "status": "running",
-        "started_at": datetime.now(UTC),
-    }
-    await runs.update_one(
-        {"_id": ObjectId(run_id)},
-        {"$set": {"aggregate_metrics": aggregate_metrics}},
+    await _store_deepeval_status(
+        run_id, aggregate_metrics, {"status": "running", "started_at": datetime.now(UTC)}
     )
 
     set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])})
     if set_doc is None:
-        aggregate_metrics["deepeval"] = {
-            "status": "failed",
-            "error": "Evaluation set not found",
-            "finished_at": datetime.now(UTC),
-        }
-        await runs.update_one(
-            {"_id": ObjectId(run_id)},
-            {"$set": {"aggregate_metrics": aggregate_metrics}},
+        await _store_deepeval_status(
+            run_id,
+            aggregate_metrics,
+            {
+                "status": "failed",
+                "error": "Evaluation set not found",
+                "finished_at": datetime.now(UTC),
+            },
         )
         return
 
@@ -68,27 +74,26 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             takeaways_text = join_takeaways(entry["ai_key_takeaways"])
             source_text = source_by_entry_id[entry_id]
 
-            deepeval_metrics = await compute_deepeval_metrics(
-                summary_text=summary_text,
-                takeaways_text=takeaways_text,
-                source_text=source_text,
+            deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
+                compute_deepeval_metrics(
+                    summary_text=summary_text,
+                    takeaways_text=takeaways_text,
+                    source_text=source_text,
+                ),
+                compute_cross_metrics(
+                    reference_text=entry["golden_summary"],
+                    summary_text=summary_text,
+                ),
+                compute_pairwise_cross_deepeval_metrics(
+                    source_text=source_text,
+                    golden_summary=entry["golden_summary"],
+                    ai_summary=summary_text,
+                ),
             )
 
             ai_metrics = entry["ai_metrics"]
             ai_metrics["deepeval"] = deepeval_metrics
-
-            cross_metrics: dict[str, Any] = dict(
-                await compute_cross_metrics(
-                    reference_text=entry["golden_summary"],
-                    summary_text=summary_text,
-                )
-            )
-            pairwise = await compute_pairwise_cross_deepeval_metrics(
-                source_text=source_text,
-                golden_summary=entry["golden_summary"],
-                ai_summary=summary_text,
-            )
-            cross_metrics["deepeval"] = pairwise
+            cross_metrics: dict[str, Any] = {**rouge_meteor, "deepeval": pairwise}
 
             await runs.update_one(
                 {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
@@ -102,25 +107,21 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             updated_entries += 1
     except Exception as exc:
         log.exception("deepeval failed", run_id=run_id)
-        aggregate_metrics["deepeval"] = {
-            "status": "failed",
-            "error": str(exc),
-            "finished_at": datetime.now(UTC),
-        }
-        await runs.update_one(
-            {"_id": ObjectId(run_id)},
-            {"$set": {"aggregate_metrics": aggregate_metrics}},
+        await _store_deepeval_status(
+            run_id,
+            aggregate_metrics,
+            {"status": "failed", "error": str(exc), "finished_at": datetime.now(UTC)},
         )
         raise
 
-    aggregate_metrics["deepeval"] = {
-        "status": "completed",
-        "updated_entries": updated_entries,
-        "skipped_entries": skipped_entries,
-        "already_scored_entries": already_scored_entries,
-        "finished_at": datetime.now(UTC),
-    }
-    await runs.update_one(
-        {"_id": ObjectId(run_id)},
-        {"$set": {"aggregate_metrics": aggregate_metrics}},
+    await _store_deepeval_status(
+        run_id,
+        aggregate_metrics,
+        {
+            "status": "completed",
+            "updated_entries": updated_entries,
+            "skipped_entries": skipped_entries,
+            "already_scored_entries": already_scored_entries,
+            "finished_at": datetime.now(UTC),
+        },
     )

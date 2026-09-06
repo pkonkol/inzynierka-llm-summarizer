@@ -3,22 +3,11 @@ import { useState } from "react";
 interface CollapsibleProps {
   label: string;
   children: React.ReactNode;
-  open?: boolean;
-  onToggle?: () => void;
 }
 
-export function Collapsible({ label, children, open: controlledOpen, onToggle }: CollapsibleProps) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const isControlled = controlledOpen !== undefined;
-  const open = isControlled ? controlledOpen : uncontrolledOpen;
-
-  const handleToggle = () => {
-    if (isControlled) {
-      onToggle?.();
-    } else {
-      setUncontrolledOpen((value) => !value);
-    }
-  };
+export function Collapsible({ label, children }: CollapsibleProps) {
+  const [open, setOpen] = useState(false);
+  const handleToggle = () => setOpen((value) => !value);
 
   return (
     <div className="border border-panel-border min-w-0">

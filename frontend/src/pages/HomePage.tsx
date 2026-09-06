@@ -68,20 +68,7 @@ export function HomePage() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    const initialize = async () => {
-      try {
-        const listResult = await listSummarizedUrls(50);
-        if (!isMounted) return;
-        setUrlList(listResult);
-      } finally {
-        if (isMounted) setIsLoadingList(false);
-      }
-    };
-    void initialize();
-    return () => {
-      isMounted = false;
-    };
+    void loadUrlList().finally(() => setIsLoadingList(false));
   }, []);
 
   useListPolling(

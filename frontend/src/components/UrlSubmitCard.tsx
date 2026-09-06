@@ -1,14 +1,9 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
-
-import {
-  errorText,
-  getSupportedLanguages,
-  getSupportedModels,
-  getSupportedModes,
-} from "../api/client";
+import { useState } from "react";
+import { useSummarizationOptions } from "../utils/useSummarizationOptions";
+import { splitProviderModel } from "../utils/utils";
 import { Button } from "./ui/Button";
-import { FieldLabel, Input, Select } from "./ui/Field";
+import { FieldLabel, Input, ModelOptions, Select } from "./ui/Field";
 
 interface UrlSubmitCardProps {
   onSubmit: (
@@ -25,39 +20,20 @@ interface UrlSubmitCardProps {
 export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [models, setModels] = useState<Record<string, string[]>>({});
-  const [selectedModel, setSelectedModel] = useState("");
-  const [isLoadingMeta, setIsLoadingMeta] = useState(true);
-  const [languages, setLanguages] = useState<string[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [modes, setModes] = useState<Record<string, string>>({});
-  const [selectedMode, setSelectedMode] = useState("simple");
   const [runDeepeval, setRunDeepeval] = useState(false);
-
-  useEffect(() => {
-    const loadMeta = async () => {
-      try {
-        const [data, langs, modeMap] = await Promise.all([
-          getSupportedModels(),
-          getSupportedLanguages(),
-          getSupportedModes(),
-        ]);
-        setModels(data);
-        setLanguages(langs);
-        setModes(modeMap);
-        if (langs[0]) setSelectedLanguage(langs[0]);
-        if (Object.keys(modeMap)[0]) setSelectedMode(Object.keys(modeMap)[0]);
-        const firstProvider = Object.keys(data)[0];
-        const firstModel = data[firstProvider]?.[0];
-        if (firstProvider && firstModel) setSelectedModel(`${firstProvider}:${firstModel}`);
-      } catch (err) {
-        setError(`Nie udało się pobrać konfiguracji: ${errorText(err)}`);
-      } finally {
-        setIsLoadingMeta(false);
-      }
-    };
-    void loadMeta();
-  }, []);
+  const {
+    models,
+    modes,
+    languages,
+    selectedModel,
+    setSelectedModel,
+    selectedMode,
+    setSelectedMode,
+    selectedLanguage,
+    setSelectedLanguage,
+    isLoading: isLoadingMeta,
+    errorMessage: optionsError,
+  } = useSummarizationOptions();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -73,9 +49,8 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
       return;
     }
 
-    const [provider, ...modelParts] = selectedModel.split(":");
-    const model = modelParts.join(":");
-    await onSubmit(url.trim(), provider, model, selectedLanguage, selectedMode, runDeepeval);
+    const { provider, modelName } = splitProviderModel(selectedModel);
+    await onSubmit(url.trim(), provider, modelName, selectedLanguage, selectedMode, runDeepeval);
     setUrl("");
   };
 
@@ -121,13 +96,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={isSubmitting || isLoadingMeta}
             >
-              {Object.entries(models).map(([provider, modelList]) =>
-                modelList.map((model) => (
-                  <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
-                    {provider} – {model}
-                  </option>
-                )),
-              )}
+              <ModelOptions models={models} />
             </Select>
           </div>
 
@@ -175,7 +144,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
           </label>
         </div>
 
-        {error ? <p className="text-danger">{error}</p> : null}
+        {error || optionsError ? <p className="text-danger">{error ?? optionsError}</p> : null}
       </form>
     </section>
   );

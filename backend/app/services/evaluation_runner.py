@@ -67,14 +67,16 @@ async def run_evaluation_batch(run_id: str) -> None:
 
             update["ai_summary"] = summary_text
             update["ai_key_takeaways"] = takeaways
-            update["ai_metrics"] = await compute_statistical_metrics(
-                summary_text=summary_text,
-                takeaways_text=join_takeaways(takeaways),
-                source_text=source_entry["input_text"],
-            )
-            update["cross_metrics"] = await compute_cross_metrics(
-                reference_text=run_entry["golden_summary"],
-                summary_text=summary_text,
+            update["ai_metrics"], update["cross_metrics"] = await asyncio.gather(
+                compute_statistical_metrics(
+                    summary_text=summary_text,
+                    takeaways_text=join_takeaways(takeaways),
+                    source_text=source_entry["input_text"],
+                ),
+                compute_cross_metrics(
+                    reference_text=run_entry["golden_summary"],
+                    summary_text=summary_text,
+                ),
             )
             update["status"] = "completed"
             update["error"] = None

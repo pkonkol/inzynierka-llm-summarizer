@@ -9,10 +9,11 @@ import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.g
 import type { JobStatusValue, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
-import { formatDateMinute, formatDuration, formatMetricLabel } from "../utils/format";
+import { formatDateMinute, formatDuration } from "../utils/format";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
+import { MetricsSection } from "./MetricsSection";
 import { PreBlock } from "./PreBlock";
 
 interface JobDetailPanelProps {
@@ -30,7 +31,7 @@ const METRIC_SECTIONS = [
   { key: "key_takeaways", label: "Punkty kluczowe", field: "key_takeaways" as const },
 ] as const;
 
-function MetricsSection({
+function JobMetricsPanel({
   metrics,
   deepevalMetrics,
 }: {
@@ -40,17 +41,7 @@ function MetricsSection({
   const defaultMetricsBlocks = METRIC_SECTIONS.map((section) => {
     const data = metrics[section.field];
     if (!data) return null;
-
-    const gridItems = Object.entries(data).map(([k, v]) => (
-      <InfoRow key={k} label={formatMetricLabel(k)} value={v} />
-    ));
-
-    return (
-      <div key={section.key} className="grid gap-2">
-        <SectionHeading>{section.label}</SectionHeading>
-        <div className="metric-row">{gridItems}</div>
-      </div>
-    );
+    return <MetricsSection key={section.key} title={section.label} data={data} />;
   });
 
   const deepevalBlock =
@@ -96,10 +87,7 @@ function useFullJob(jobId: string) {
   return { job, placeholder };
 }
 
-function PromptSection({ jobId }: { jobId: string }) {
-  const { job, placeholder } = useFullJob(jobId);
-  if (!job) return placeholder;
-
+function PromptSection({ job }: { job: JobStatusResponse }) {
   const template: PromptMessage[] = job.prompt_template;
   const params = job.prompt_params;
   const inputText = job.input_text;
@@ -136,9 +124,7 @@ function PromptSection({ jobId }: { jobId: string }) {
     inputBlock = (
       <div className="grid min-w-0 gap-1">
         <h6>Tekst źródłowy</h6>
-        <pre className="max-h-96 min-w-0 overflow-x-auto overflow-y-auto whitespace-pre-wrap wrap-break-word bg-subtle p-2">
-          {inputText}
-        </pre>
+        <PreBlock className="max-h-96 overflow-y-auto">{inputText}</PreBlock>
       </div>
     );
   }
@@ -150,18 +136,6 @@ function PromptSection({ jobId }: { jobId: string }) {
       {inputBlock}
     </div>
   );
-}
-
-function RawMetadata({ jobId }: { jobId: string }) {
-  const { job, placeholder } = useFullJob(jobId);
-  if (!job) return placeholder;
-  return <PreBlock>{JSON.stringify(job.raw_metadata, null, 2)}</PreBlock>;
-}
-
-function RawOutput({ jobId }: { jobId: string }) {
-  const { job, placeholder } = useFullJob(jobId);
-  if (!job) return placeholder;
-  return <PreBlock>{job.raw_output}</PreBlock>;
 }
 
 function statusBadge(status: JobStatusValue) {
@@ -238,7 +212,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
           <h4>Błąd</h4>
           <p className="text-danger">{job.error}</p>
         </section>
-      ) : (
+      ) : job.status === "pending" ? null : (
         <JobDetails job={job} />
       )}
     </div>
@@ -253,8 +227,8 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
 }
 
 function JobDetails({ job }: { job: JobStatusResponse }) {
-  const shouldRenderDetails = job.status !== "pending" && job.status !== "failed";
-  if (!shouldRenderDetails) return null;
+  // by-url projects the bulky fields away, so the disclosures below need the full document.
+  const { job: fullJob, placeholder } = useFullJob(job.job_id);
 
   const takeawaysMarkdown = (job.summary_data?.key_takeaways ?? [])
     .map((item) => `- ${item}`)
@@ -292,23 +266,27 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
             key: "metrics",
             label: "Metryki",
             content: (
-              <MetricsSection metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
+              <JobMetricsPanel metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
             ),
           },
           {
             key: "rawOutput",
             label: "Surowe wyjście",
-            content: <RawOutput jobId={job.job_id} />,
+            content: fullJob ? <PreBlock>{fullJob.raw_output}</PreBlock> : placeholder,
           },
           {
             key: "prompt",
             label: "Prompt",
-            content: <PromptSection jobId={job.job_id} />,
+            content: fullJob ? <PromptSection job={fullJob} /> : placeholder,
           },
           {
             key: "rawMetadata",
             label: "Surowe metadane",
-            content: <RawMetadata jobId={job.job_id} />,
+            content: fullJob ? (
+              <PreBlock>{JSON.stringify(fullJob.raw_metadata, null, 2)}</PreBlock>
+            ) : (
+              placeholder
+            ),
           },
         ]}
         trailing={

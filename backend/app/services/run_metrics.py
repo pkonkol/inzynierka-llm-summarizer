@@ -3,6 +3,7 @@ from dataclasses import asdict
 from typing import Any
 
 import structlog
+from deepeval.test_case import LLMTestCase
 
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
@@ -13,11 +14,12 @@ from ..services.metrics.cross import (
     evaluate_pairwise_cross_deepeval,
 )
 from ..services.metrics.deepeval import (
-    evaluate_summary_input_metrics,
-    evaluate_summary_metrics,
-    evaluate_summary_takeaways_metrics,
-    evaluate_takeaways_input_metrics,
-    evaluate_takeaways_metrics,
+    SUMMARY_INPUT_SPECS,
+    SUMMARY_SPECS,
+    SUMMARY_TAKEAWAYS_SPECS,
+    TAKEAWAYS_INPUT_SPECS,
+    TAKEAWAYS_SPECS,
+    evaluate_geval,
 )
 from ..services.metrics.statistical import (
     key_takeaways_metrics,
@@ -39,22 +41,18 @@ async def store_job_metrics(job_id: str, update: dict) -> None:
         log.exception("metrics store failed")
 
 
-async def compute_source_metrics(text: str) -> dict:
-    return await asyncio.to_thread(source_metrics, text)
-
-
 async def compute_statistical_metrics(
     summary_text: str,
     takeaways_text: str,
     source_text: str,
 ) -> dict:
-    sm = await asyncio.to_thread(summary_metrics, summary_text, source_text)
-    kt = await asyncio.to_thread(key_takeaways_metrics, takeaways_text)
+    def compute() -> dict:
+        return {
+            "summary": summary_metrics(summary_text, source_text),
+            "key_takeaways": key_takeaways_metrics(takeaways_text),
+        }
 
-    return {
-        "summary": sm,
-        "key_takeaways": kt,
-    }
+    return await asyncio.to_thread(compute)
 
 
 async def compute_deepeval_metrics(
@@ -68,19 +66,28 @@ async def compute_deepeval_metrics(
     may return zero key takeaways, and judging an empty actual/expected_output would
     produce a meaningless score rather than a real evaluation.
     """
-    evaluations = [
-        evaluate_summary_metrics(settings, summary_text),
-        evaluate_summary_input_metrics(settings, source_text, summary_text),
+    summary_case = LLMTestCase(input="", actual_output=summary_text)
+    summary_input_case = LLMTestCase(input=source_text, actual_output=summary_text)
+
+    work = [
+        *((spec, summary_case) for spec in SUMMARY_SPECS),
+        *((spec, summary_input_case) for spec in SUMMARY_INPUT_SPECS),
     ]
     if takeaways_text:
-        evaluations += [
-            evaluate_takeaways_metrics(settings, takeaways_text),
-            evaluate_takeaways_input_metrics(settings, source_text, takeaways_text),
-            evaluate_summary_takeaways_metrics(settings, source_text, summary_text, takeaways_text),
+        takeaways_case = LLMTestCase(input="", actual_output=takeaways_text)
+        takeaways_input_case = LLMTestCase(input=source_text, actual_output=takeaways_text)
+        summary_takeaways_case = LLMTestCase(
+            input=source_text,
+            actual_output=summary_text,
+            expected_output=takeaways_text,
+        )
+        work += [
+            *((spec, takeaways_case) for spec in TAKEAWAYS_SPECS),
+            *((spec, takeaways_input_case) for spec in TAKEAWAYS_INPUT_SPECS),
+            *((spec, summary_takeaways_case) for spec in SUMMARY_TAKEAWAYS_SPECS),
         ]
 
-    results_by_group = await asyncio.gather(*evaluations)
-    return [asdict(x) for results in results_by_group for x in results]
+    return [asdict(x) for x in await evaluate_geval(settings, work)]
 
 
 async def compute_cross_metrics(
@@ -108,7 +115,7 @@ async def compute_pairwise_cross_deepeval_metrics(
 
 
 async def store_source_metrics_for_job(job_id: str, text: str) -> None:
-    metrics = await compute_source_metrics(text)
+    metrics = await asyncio.to_thread(source_metrics, text)
     await store_job_metrics(job_id, {"metrics.source": metrics})
     log.debug("source metrics stored")
 

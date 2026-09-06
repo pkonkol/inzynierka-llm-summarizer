@@ -8,6 +8,12 @@ from . import summary_cascade, summary_sequential, summary_simple
 
 log = structlog.get_logger(__name__)
 
+_RUNNERS = {
+    "simple": summary_simple.run,
+    "sequential": summary_sequential.run,
+    "cascade": summary_cascade.run,
+}
+
 
 async def generate_summary(
     input: dict,
@@ -37,17 +43,9 @@ async def generate_summary(
         skip_takeaways=skip_takeaways,
     )
 
-    if mode == "simple":
-        return await summary_simple.run(
-            input, source_url, model_name, model_provider, language, skip_takeaways
-        )
-    if mode == "sequential":
-        return await summary_sequential.run(
-            input, source_url, model_name, model_provider, language, skip_takeaways
-        )
-    if mode == "cascade":
-        return await summary_cascade.run(
-            input, source_url, model_name, model_provider, language, skip_takeaways
-        )
+    if mode not in _RUNNERS:
+        raise NotImplementedError(f"Summary mode '{mode}' is not implemented")
 
-    raise NotImplementedError(f"Summary mode '{mode}' is not implemented")
+    return await _RUNNERS[mode](
+        input, source_url, model_name, model_provider, language, skip_takeaways
+    )

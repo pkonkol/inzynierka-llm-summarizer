@@ -21,8 +21,18 @@ from ..schemas.evaluation_run_api import (
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
 from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
 from ..services.evaluation_runner import run_evaluation_batch
+from .evaluation_sets import find_evaluation_set_or_404
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
+
+
+async def find_evaluation_run_or_404(run_id: str, projection: dict | None = None) -> dict:
+    document = await get_evaluation_runs_collection().find_one(
+        {"_id": ObjectId(run_id)}, projection
+    )
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+    return document
 
 
 @router.post(
@@ -35,12 +45,11 @@ async def create_evaluation_run(
     payload: EvaluationRunCreateRequest,
     background_tasks: BackgroundTasks,
 ) -> EvaluationRunCreateResponse:
-    sets = get_evaluation_sets_collection()
     runs = get_evaluation_runs_collection()
 
-    set_document = await sets.find_one({"_id": ObjectId(set_id)})
-    if set_document is None:
-        raise HTTPException(status_code=404, detail="Evaluation set not found")
+    set_document = await find_evaluation_set_or_404(
+        set_id, {"entries.entry_id": 1, "entries.golden_summary": 1, "name": 1}
+    )
 
     created_at = datetime.now(UTC)
 
@@ -109,28 +118,15 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
     ).to_list(length=1000)
 
     return [
-        EvaluationRunListItemResponse(
-            evaluation_run_id=str(doc["_id"]),
-            evaluation_set_id=doc["evaluation_set_id"],
-            evaluation_set_name=doc["evaluation_set_name"],
-            model_provider=doc["model_provider"],
-            model_name=doc["model_name"],
-            summary_mode=doc["summary_mode"],
-            language=doc["language"],
-            status=doc["status"],
-            created_at=doc["created_at"],
-            finished_at=doc.get("finished_at"),
-            entry_count=doc["entry_count"],
-        )
+        EvaluationRunListItemResponse.model_validate({**doc, "evaluation_run_id": str(doc["_id"])})
         for doc in documents
     ]
 
 
 @router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
 async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
-    runs = get_evaluation_runs_collection()
-    document = await runs.find_one(
-        {"_id": ObjectId(run_id)},
+    document = await find_evaluation_run_or_404(
+        run_id,
         {
             "evaluation_set_id": 1,
             "evaluation_set_name": 1,
@@ -146,9 +142,6 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
             "skip_takeaways": 1,
         },
     )
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Evaluation run not found")
 
     return EvaluationRunResponse(
         id=str(document["_id"]),
@@ -169,16 +162,9 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
 
 @router.get("/runs/{run_id}/entries", response_model=EvaluationRunEntriesResponse)
 async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesResponse:
-    runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 
-    run_document = await runs.find_one(
-        {"_id": ObjectId(run_id)},
-        {"entries": 1, "evaluation_set_id": 1},
-    )
-
-    if run_document is None:
-        raise HTTPException(status_code=404, detail="Evaluation run not found")
+    run_document = await find_evaluation_run_or_404(run_id, {"entries": 1, "evaluation_set_id": 1})
 
     set_document = await sets.find_one(
         {"_id": ObjectId(run_document["evaluation_set_id"])},
@@ -189,19 +175,10 @@ async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesRespons
 
     set_entries_by_id = {entry["entry_id"]: entry for entry in set_document["entries"]}
 
+    # title/url/golden_metrics live on the set entry, everything else on the run entry.
     entries = [
-        EvaluationRunEntryResponse(
-            entry_id=run_entry["entry_id"],
-            title=set_entries_by_id[run_entry["entry_id"]]["title"],
-            url=set_entries_by_id[run_entry["entry_id"]]["url"],
-            golden_summary=run_entry["golden_summary"],
-            golden_metrics=set_entries_by_id[run_entry["entry_id"]]["golden_metrics"],
-            ai_summary=run_entry["ai_summary"],
-            ai_key_takeaways=run_entry["ai_key_takeaways"],
-            ai_metrics=run_entry["ai_metrics"],
-            cross_metrics=run_entry["cross_metrics"],
-            status=run_entry["status"],
-            error=run_entry["error"],
+        EvaluationRunEntryResponse.model_validate(
+            {**set_entries_by_id[run_entry["entry_id"]], **run_entry}
         )
         for run_entry in run_document["entries"]
     ]
@@ -218,11 +195,7 @@ async def evaluate_run_deepeval(
     run_id: str,
     background_tasks: BackgroundTasks,
 ) -> DeepevalQueuedResponse:
-    runs = get_evaluation_runs_collection()
-    document = await runs.find_one({"_id": ObjectId(run_id)}, {"status": 1})
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Evaluation run not found")
+    document = await find_evaluation_run_or_404(run_id, {"status": 1})
 
     if document["status"] in {"pending", "running"}:
         raise HTTPException(

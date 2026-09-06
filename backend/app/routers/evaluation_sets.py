@@ -27,6 +27,15 @@ from ..services.evaluation_set_metrics import build_golden_metrics
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
 
+async def find_evaluation_set_or_404(set_id: str, projection: dict | None = None) -> dict:
+    document = await get_evaluation_sets_collection().find_one(
+        {"_id": ObjectId(set_id)}, projection
+    )
+    if document is None:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+    return document
+
+
 @router.post(
     "/evaluation-sets",
     response_model=EvaluationSetCreateResponse,
@@ -72,19 +81,19 @@ async def create_evaluation_set(
 async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
     collection = get_evaluation_sets_collection()
 
-    documents = (
-        await collection.find(
-            {},
+    documents = await collection.aggregate(
+        [
+            {"$sort": {"created_at": DESCENDING}},
             {
-                "name": 1,
-                "language": 1,
-                "created_at": 1,
-                "entries.entry_id": 1,
+                "$project": {
+                    "name": 1,
+                    "language": 1,
+                    "created_at": 1,
+                    "entry_count": {"$size": "$entries"},
+                }
             },
-        )
-        .sort("created_at", DESCENDING)
-        .to_list(length=1000)
-    )
+        ]
+    ).to_list(length=1000)
 
     run_counts = {
         doc["_id"]: doc["run_count"]
@@ -98,7 +107,7 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
             evaluation_set_id=str(doc["_id"]),
             name=doc["name"],
             language=doc["language"],
-            entry_count=len(doc["entries"]),
+            entry_count=doc["entry_count"],
             run_count=run_counts.get(str(doc["_id"]), 0),
             created_at=doc["created_at"],
         )
@@ -108,51 +117,25 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
 
 @router.get("/evaluation-sets/{set_id}", response_model=EvaluationSetDetailResponse)
 async def get_evaluation_set(set_id: str) -> EvaluationSetDetailResponse:
-    collection = get_evaluation_sets_collection()
-    document = await collection.find_one({"_id": ObjectId(set_id)})
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Evaluation set not found")
+    document = await find_evaluation_set_or_404(set_id, {"entries.input_text": 0})
 
     return EvaluationSetDetailResponse(
         evaluation_set_id=str(document["_id"]),
         name=document["name"],
         language=document["language"],
         created_at=document["created_at"],
-        entries=[
-            EvaluationSetEntryResponse(
-                entry_id=entry["entry_id"],
-                golden_summary=entry["golden_summary"],
-                title=entry["title"],
-                url=entry["url"],
-                golden_metrics=entry["golden_metrics"],
-            )
-            for entry in document["entries"]
-        ],
+        entries=[EvaluationSetEntryResponse.model_validate(entry) for entry in document["entries"]],
     )
 
 
 @router.get("/evaluation-sets/{set_id}/export", response_model=EvaluationSetExportResponse)
 async def export_evaluation_set(set_id: str) -> EvaluationSetExportResponse:
-    collection = get_evaluation_sets_collection()
-    document = await collection.find_one({"_id": ObjectId(set_id)})
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Evaluation set not found")
+    document = await find_evaluation_set_or_404(set_id)
 
     return EvaluationSetExportResponse(
         name=document["name"],
         language=document["language"],
-        entries=[
-            EvaluationSetEntryImport(
-                input_text=entry["input_text"],
-                golden_summary=entry["golden_summary"],
-                title=entry["title"],
-                url=entry["url"],
-                golden_metrics=entry.get("golden_metrics"),
-            )
-            for entry in document["entries"]
-        ],
+        entries=[EvaluationSetEntryImport.model_validate(entry) for entry in document["entries"]],
     )
 
 
@@ -184,12 +167,7 @@ async def get_evaluation_set_entry_input_text(
     dependencies=[Depends(require_auth)],
 )
 async def evaluate_missing_golden_metrics(set_id: str) -> GoldenMetricsBackfillResponse:
-    collection = get_evaluation_sets_collection()
-    document = await collection.find_one({"_id": ObjectId(set_id)})
-
-    if document is None:
-        raise HTTPException(status_code=404, detail="Evaluation set not found")
-
+    document = await find_evaluation_set_or_404(set_id)
     entries = document["entries"]
     updated_count = 0
 
@@ -204,7 +182,7 @@ async def evaluate_missing_golden_metrics(set_id: str) -> GoldenMetricsBackfillR
         )
         updated_count += 1
 
-    await collection.update_one(
+    await get_evaluation_sets_collection().update_one(
         {"_id": document["_id"]},
         {"$set": {"entries": entries}},
     )

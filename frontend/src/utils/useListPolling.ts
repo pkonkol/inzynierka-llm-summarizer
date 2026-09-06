@@ -6,11 +6,17 @@ const IDLE_INTERVAL_MS = 15_000;
 // Chained timeouts rather than an interval: a slow response must not let requests pile up.
 // A hidden tab schedules nothing at all and refreshes once on the way back, so a list left
 // open overnight costs nothing.
-export function useListPolling(reload: () => Promise<void>, hasWorkInProgress: boolean) {
+export function useListPolling(
+  reload: () => Promise<void>,
+  hasWorkInProgress: boolean,
+  enabled = true,
+) {
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
 
   useEffect(() => {
+    if (!enabled) return;
+
     let timeoutId: ReturnType<typeof setTimeout>;
     let isCancelled = false;
 
@@ -39,5 +45,5 @@ export function useListPolling(reload: () => Promise<void>, hasWorkInProgress: b
       clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [hasWorkInProgress]);
+  }, [hasWorkInProgress, enabled]);
 }

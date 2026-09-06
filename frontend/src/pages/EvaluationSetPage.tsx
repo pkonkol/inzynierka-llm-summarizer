@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { errorText, getSupportedModels, getSupportedModes } from "../api/client";
+import { errorText } from "../api/client";
 import {
   createEvaluationRun,
   deleteEvaluationRun,
@@ -12,13 +12,13 @@ import {
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
-import { InfoRow } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
+import { MetricsSection } from "../components/MetricsSection";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
-import { FieldLabel, Input, Select } from "../components/ui/Field";
+import { FieldLabel, Input, ModelOptions, Select } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
@@ -29,23 +29,11 @@ import type {
   EvaluationSetEntryResponse,
 } from "../types/api.generated";
 import { downloadJson } from "../utils/download";
-import { formatDateMinute, formatMetricLabel } from "../utils/format";
+import { formatDateMinute } from "../utils/format";
 import { navigateTo } from "../utils/researchRouting";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { splitProviderModel } from "../utils/utils";
-
-function MetricsSection({ title, data }: { title: string; data: Record<string, number | null> }) {
-  return (
-    <div className="grid gap-2">
-      <SectionHeading>{title}</SectionHeading>
-      <div className="metric-row">
-        {Object.entries(data).map(([key, value]) => (
-          <InfoRow key={key} label={formatMetricLabel(key)} value={value} />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // One row: model, mode, delay, the skip toggle and the submit button.
 const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto_auto]";
@@ -148,20 +136,24 @@ export function EvaluationSetPage({ setId }: Props) {
   const [isExporting, setIsExporting] = useState(false);
   const [isEvaluatingMetrics, setIsEvaluatingMetrics] = useState(false);
   const showFlash = useFlash();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [existingRuns, setExistingRuns] = useState<EvaluationRunListItemResponse[]>([]);
   const [isLoadingExistingRuns, setIsLoadingExistingRuns] = useState(true);
   const [runsLoadError, setRunsLoadError] = useState<string | null>(null);
   const [isSubmittingNewRun, setIsSubmittingNewRun] = useState(false);
 
-  const [newRunAvailableModels, setNewRunAvailableModels] = useState<Record<string, string[]>>({});
-  const [newRunAvailableModes, setNewRunAvailableModes] = useState<Record<string, string>>({});
-  const [newRunSelectedModel, setNewRunSelectedModel] = useState("");
-  const [newRunSummaryMode, setNewRunSummaryMode] = useState("simple");
   const [newRunSkipTakeaways, setNewRunSkipTakeaways] = useState(false);
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
-  const [isLoadingNewRunOptions, setIsLoadingNewRunOptions] = useState(true);
+  const {
+    models: newRunAvailableModels,
+    modes: newRunAvailableModes,
+    selectedModel: newRunSelectedModel,
+    setSelectedModel: setNewRunSelectedModel,
+    selectedMode: newRunSummaryMode,
+    setSelectedMode: setNewRunSummaryMode,
+    isLoading: isLoadingNewRunOptions,
+    errorMessage,
+  } = useSummarizationOptions();
 
   const [isSetDeletePending, setIsSetDeletePending] = useState(false);
   const [isDeletingSet, setIsDeletingSet] = useState(false);
@@ -201,7 +193,6 @@ export function EvaluationSetPage({ setId }: Props) {
   const handleExportSet = async () => {
     if (!selectedSet) return;
 
-    setErrorMessage(null);
     setIsExporting(true);
 
     try {
@@ -216,7 +207,6 @@ export function EvaluationSetPage({ setId }: Props) {
   };
 
   const handleEvaluateMetrics = async () => {
-    setErrorMessage(null);
     setIsEvaluatingMetrics(true);
 
     try {
@@ -235,7 +225,6 @@ export function EvaluationSetPage({ setId }: Props) {
   const handleSubmitNewRun = async () => {
     if (!selectedSet) return;
 
-    setErrorMessage(null);
     setIsSubmittingNewRun(true);
 
     try {
@@ -290,43 +279,6 @@ export function EvaluationSetPage({ setId }: Props) {
     void loadSetDetail();
     void loadExistingRuns();
   }, [setId]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadNewRunOptions = async () => {
-      try {
-        const [models, modes] = await Promise.all([getSupportedModels(), getSupportedModes()]);
-
-        if (!isMounted) return;
-
-        setNewRunAvailableModels(models);
-        setNewRunAvailableModes(modes);
-
-        const firstProvider = Object.keys(models)[0];
-        const firstModel = firstProvider ? models[firstProvider]?.[0] : "";
-        if (firstProvider && firstModel) {
-          setNewRunSelectedModel(`${firstProvider}:${firstModel}`);
-        }
-
-        const firstMode = Object.keys(modes)[0];
-        if (firstMode) {
-          setNewRunSummaryMode(firstMode);
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać konfiguracji runa: ${errorText(error)}`);
-      } finally {
-        if (isMounted) setIsLoadingNewRunOptions(false);
-      }
-    };
-
-    void loadNewRunOptions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   let entriesSection: React.ReactNode = (
     <p className="text-muted">Ładowanie szczegółów zbioru...</p>
@@ -417,13 +369,7 @@ export function EvaluationSetPage({ setId }: Props) {
                   onChange={(event) => setNewRunSelectedModel(event.target.value)}
                   disabled={isSubmittingNewRun || isLoadingNewRunOptions}
                 >
-                  {Object.entries(newRunAvailableModels).map(([provider, modelList]) =>
-                    modelList.map((model) => (
-                      <option key={`${provider}:${model}`} value={`${provider}:${model}`}>
-                        {provider} – {model}
-                      </option>
-                    )),
-                  )}
+                  <ModelOptions models={newRunAvailableModels} />
                 </Select>
               </div>
 

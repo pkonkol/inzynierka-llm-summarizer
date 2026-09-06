@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JobStatusLabel } from "../components/JobStatusLabel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { buttonClasses } from "../components/ui/Button";
+import { listItemClasses } from "../components/ui/listItem";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
@@ -61,11 +62,6 @@ export function JobsPage() {
     }
   };
 
-  const baseItem =
-    "grid w-full min-w-0 cursor-pointer gap-1 border px-3 py-3 text-left transition-[border-color,background-color] duration-200";
-  const selectedItem = `${baseItem} border-selected-border bg-selected-bg`;
-  const defaultItem = `${baseItem} border-panel-border bg-subtle hover:bg-subtle-hover`;
-
   return (
     <PageShell className={selectedJobId ? SPLIT_COLUMNS : undefined}>
       <section className={selectedJobId ? STICKY_COLUMN : "min-w-0"}>
@@ -83,7 +79,7 @@ export function JobsPage() {
               <li key={job.job_id} className="relative min-w-0">
                 <button
                   type="button"
-                  className={selectedJobId === job.job_id ? selectedItem : defaultItem}
+                  className={listItemClasses(selectedJobId === job.job_id)}
                   onClick={() => {
                     void handleSelect(job);
                   }}

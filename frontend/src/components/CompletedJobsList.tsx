@@ -1,6 +1,7 @@
 import type { UrlSummaryListItem } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
 import { JobStatusLabel } from "./JobStatusLabel";
+import { listItemClasses } from "./ui/listItem";
 
 interface CompletedJobsListProps {
   urls: UrlSummaryListItem[];
@@ -15,11 +16,6 @@ export function CompletedJobsList({
   isLoading,
   onSelectUrl,
 }: CompletedJobsListProps) {
-  const baseItemClass =
-    "grid w-full min-w-0 cursor-pointer gap-1 border px-3 py-3 text-left transition-[border-color,background-color] duration-200";
-  const selectedClass = `${baseItemClass} border-selected-border bg-selected-bg`;
-  const defaultClass = `${baseItemClass} border-panel-border bg-subtle hover:bg-subtle-hover`;
-
   return (
     <section className="panel-shell grid gap-3">
       <div className="flex items-baseline justify-between gap-2">
@@ -37,7 +33,7 @@ export function CompletedJobsList({
           <li key={item.source_url} className="min-w-0">
             <button
               type="button"
-              className={selectedUrl === item.source_url ? selectedClass : defaultClass}
+              className={listItemClasses(selectedUrl === item.source_url)}
               onClick={() => onSelectUrl(item.source_url)}
             >
               {/* URL — primary, full width, wrap */}

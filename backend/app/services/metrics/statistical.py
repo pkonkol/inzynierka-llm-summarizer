@@ -40,14 +40,8 @@ def summary_metrics(text: str, source_text: str) -> dict[str, Any]:
 
 
 def key_takeaways_metrics(text: str) -> dict[str, Any]:
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    bullet_lines = [
-        line
-        for line in lines
-        if line.startswith(("- ", "* ", "• "))
-        or (len(line) > 2 and line[0].isdigit() and line[1] in ".)")
-    ]
+    # Always fed by join_takeaways, so every non-blank line is exactly one takeaway.
     return {
-        "bullet_count": len(bullet_lines),
+        "bullet_count": sum(1 for line in text.splitlines() if line.strip()),
         "char_count": len(text),
     }

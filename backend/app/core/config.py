@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     # Browser origins allowed to call this API. Defaults to the Vite dev server; production
     # origins (Firebase Hosting) are injected as JSON via the CORS_ALLOWED_ORIGINS env var.
     cors_allowed_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
-    summary_max_output_tokens: int = 32000
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db_name: str = "web_summarization"
     mongodb_jobs_collection: str = "jobs"
@@ -55,10 +54,6 @@ class Settings(BaseSettings):
         "simple": "Prosty — jeden prompt (ekstraktor + abstraktor)",
         "sequential": "Sekwencyjny — dwa niezależne prompty (najpierw punkty, potem podsumowanie)",
         "cascade": "Kaskadowy — najpierw punkty, podsumowanie wyprowadzone z punktów",
-    }
-    default_model: dict[str, str] = {
-        "model_provider": "gemini",
-        "model_name": "gemini-flash-latest",
     }
     auth_enabled: bool = False
     auth_secret: SecretStr = SecretStr("")

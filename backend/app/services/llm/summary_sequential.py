@@ -13,10 +13,10 @@ from pydantic import BaseModel
 
 from ...schemas.summary import LlmSummaryResult
 from ._base import (
-    build_generic_detail_guidance,
+    GENERIC_DETAIL_GUIDANCE,
+    SUMMARY_DETAIL_GUIDANCE,
+    TAKEAWAY_DETAIL_GUIDANCE,
     build_structured_llm,
-    build_summary_detail_guidance,
-    build_takeaway_detail_guidance,
     parse_structured_output,
     prompt_texts,
 )
@@ -45,7 +45,7 @@ async def run(
     chain_summary = EXTRACT_FROM_CONTENT | summary_llm
 
     text = input["text"]
-    summary_guidance = "\n".join([build_generic_detail_guidance(), build_summary_detail_guidance()])
+    summary_guidance = "\n".join([GENERIC_DETAIL_GUIDANCE, SUMMARY_DETAIL_GUIDANCE])
     summary_params = {
         "language": language,
         "text": text.strip(),
@@ -73,9 +73,7 @@ async def run(
 
     takeaway_llm = build_structured_llm(_TakeawaysOnly, model_provider, model_name)
     chain_takeaways = EXTRACT_FROM_CONTENT | takeaway_llm
-    takeaways_guidance = "\n".join(
-        [build_generic_detail_guidance(), build_takeaway_detail_guidance()]
-    )
+    takeaways_guidance = "\n".join([GENERIC_DETAIL_GUIDANCE, TAKEAWAY_DETAIL_GUIDANCE])
     takeaways_params = {
         "language": language,
         "text": text.strip(),

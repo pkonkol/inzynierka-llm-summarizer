@@ -1,8 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", sans-serif; /* faces are loaded in main.tsx */
   --font-mono: "IBM Plex Mono", "Courier New", monospace;
 
   --color-page: #ececec;

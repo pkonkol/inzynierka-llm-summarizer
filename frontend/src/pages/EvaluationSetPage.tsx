@@ -424,13 +424,8 @@ export function EvaluationSetPage({ setId }: Props) {
           </Panel>
         ) : null}
 
-        <Panel as="section" padding="sm" className="grid gap-3">
-          <div>
-            <h2>Przebiegi</h2>
-          </div>
-
-          {runsSection}
-        </Panel>
+        <h2>Przebiegi</h2>
+        {runsSection}
 
         <h2>Wpisy</h2>
         {entriesSection}

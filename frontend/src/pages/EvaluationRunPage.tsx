@@ -71,6 +71,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryRespons
 
   return (
     <div className="grid gap-2">
+      <SectionHeading>Metryki statystyczne</SectionHeading>
       {allLabels.length > 0 ? (
         <>
           <div className={cn(COMPARISON_COLUMNS, "gap-y-1 text-xs")}>
@@ -89,16 +90,6 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryRespons
           ) : null}
         </>
       ) : null}
-
-      {entry.ai_metrics && entry.ai_key_takeaways.length > 0 ? (
-        <div className="grid gap-2 border-t border-panel-border pt-4">
-          <SectionHeading>Punkty kluczowe AI</SectionHeading>
-          <div className="metric-row">
-            <InfoRow label="liczba punktów" value={entry.ai_metrics.key_takeaways.bullet_count} />
-            <InfoRow label="liczba znaków" value={entry.ai_metrics.key_takeaways.char_count} />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -111,7 +102,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }
 
   return (
     <div className="grid gap-2 border-t border-panel-border pt-4">
-      <SectionHeading>Deepeval</SectionHeading>
+      <SectionHeading>Metryki deepeval</SectionHeading>
       <div className="grid grid-cols-2 gap-3">
         <div>
           {goldenItems.length > 0 ? (
@@ -134,31 +125,24 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
   }
 
   const { rouge1, rouge2, rougeL, meteor, deepeval } = entry.cross_metrics;
+  const pairwiseItems: DeepevalDisplayItem[] = deepeval.map((item) => ({
+    ...item,
+    statusLabel: pairwiseWinnerLabel(item.score),
+  }));
 
   return (
     <div className="grid gap-3">
+      <SectionHeading>Metryki statystyczne porównawcze</SectionHeading>
       <div className="metric-row">
         <InfoRow label="rouge1" value={rouge1} />
         <InfoRow label="rouge2" value={rouge2} />
         <InfoRow label="rougeL" value={rougeL} />
         <InfoRow label="meteor" value={meteor} />
       </div>
-      {deepeval.length > 0 ? (
-        <div className="grid gap-2 border-t border-panel-border pt-4">
-          {deepeval.map((item) => (
-            <div
-              key={item.name}
-              className="grid gap-2 border border-panel-border bg-panel-solid px-3 py-2"
-            >
-              <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                <span className="label-caps font-semibold text-muted">{item.name}:</span>
-                <span className="mono-value">{pairwiseWinnerLabel(item.score)}</span>
-                <span className="mono-value text-muted">·</span>
-                <span className="mono-value">{item.score}</span>
-              </div>
-              <p className="text-muted">{item.reason}</p>
-            </div>
-          ))}
+      {pairwiseItems.length > 0 ? (
+        <div className="border-t border-panel-border pt-4">
+          <SectionHeading>Metryki deepeval porównawcze</SectionHeading>
+          <DeepevalItems items={pairwiseItems} />
         </div>
       ) : null}
     </div>
@@ -169,7 +153,6 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
   return (
     <div className="grid gap-4 p-3 bg-subtle">
       <div className="grid gap-2">
-        <SectionHeading>Metryki porównawcze</SectionHeading>
         <CrossMetricsSection entry={entry} />
       </div>
       <div className="grid gap-4 border-t border-panel-border pt-4">

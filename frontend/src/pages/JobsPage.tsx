@@ -1,66 +1,63 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { deleteJob, getJobStatus, listAllJobsFlat } from "../api/client";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { JobStatusLabel } from "../components/JobStatusLabel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
+import { Alert } from "../components/ui/Alert";
 import { buttonClasses } from "../components/ui/Button";
 import { listItemClasses } from "../components/ui/listItem";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
+import { useAsyncAction } from "../utils/useAsyncAction";
+import { useConfirmDelete } from "../utils/useConfirmDelete";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
+import { useReloadableResource } from "../utils/useReloadableResource";
 
 export function JobsPage() {
   useDocumentTitle("Zadania");
-  const [jobs, setJobs] = useState<JobListItemResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobStatusResponse | null>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [jobPendingDelete, setJobPendingDelete] = useState<JobListItemResponse | null>(null);
-  const [isDeletingJob, setIsDeletingJob] = useState(false);
 
-  const loadJobs = async () => {
-    setJobs(await listAllJobsFlat(100));
-  };
-
-  useEffect(() => {
-    loadJobs().finally(() => setIsLoading(false));
-  }, []);
+  const jobsResource = useReloadableResource(
+    () => listAllJobsFlat(100),
+    "",
+    "Nie udało się pobrać listy zadań",
+  );
+  // null means "no answer yet" — a real third state, not a missing value.
+  const jobs = jobsResource.data ?? [];
 
   useListPolling(
-    loadJobs,
+    jobsResource.reload,
     jobs.some((job) => job.status === "pending"),
   );
 
-  const handleSelect = async (job: JobListItemResponse) => {
-    setSelectedJobId(job.job_id);
-    setSelectedJob(null);
-    setIsLoadingDetail(true);
-    try {
+  const selectJob = useAsyncAction(
+    async (job: JobListItemResponse) => {
+      setSelectedJobId(job.job_id);
+      setSelectedJob(null);
       setSelectedJob(await getJobStatus(job.job_id));
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  };
+    },
+    { errorPrefix: "Nie udało się pobrać szczegółów joba" },
+  );
 
-  const handleConfirmDelete = async () => {
-    if (!jobPendingDelete) return;
-    setIsDeletingJob(true);
-    try {
-      await deleteJob(jobPendingDelete.job_id);
-      if (selectedJobId === jobPendingDelete.job_id) {
+  const deleteJobConfirm = useConfirmDelete<JobListItemResponse>({
+    title: "Usunąć job?",
+    message: (job) => `Usunąć "${job.title}" (${job.source_url})?`,
+    onConfirm: async (job) => {
+      await deleteJob(job.job_id);
+    },
+    errorPrefix: "Nie udało się usunąć joba",
+    afterConfirm: (job) => {
+      if (selectedJobId === job.job_id) {
         setSelectedJobId(null);
         setSelectedJob(null);
       }
-      setJobPendingDelete(null);
-      await loadJobs();
-    } finally {
-      setIsDeletingJob(false);
-    }
-  };
+      return jobsResource.reload();
+    },
+  });
 
   return (
     <PageShell className={selectedJobId ? SPLIT_COLUMNS : undefined}>
@@ -71,8 +68,13 @@ export function JobsPage() {
             <span className="text-muted">{jobs.length}</span>
           </div>
 
-          {isLoading ? <p className="text-muted">Ładowanie listy...</p> : null}
-          {!isLoading && jobs.length === 0 ? <p className="text-muted">Brak wyników.</p> : null}
+          {jobsResource.errorMessage ? (
+            <Alert tone="danger">{jobsResource.errorMessage}</Alert>
+          ) : null}
+          {jobsResource.isInitialLoading ? <p className="text-muted">Ładowanie listy...</p> : null}
+          {!jobsResource.isInitialLoading && jobs.length === 0 ? (
+            <p className="text-muted">Brak wyników.</p>
+          ) : null}
 
           <ul aria-live="polite" className="grid min-w-0 gap-2">
             {jobs.map((job) => (
@@ -81,7 +83,7 @@ export function JobsPage() {
                   type="button"
                   className={listItemClasses(selectedJobId === job.job_id)}
                   onClick={() => {
-                    void handleSelect(job);
+                    void selectJob.run(job);
                   }}
                 >
                   <span className="mono-value block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-link">
@@ -100,7 +102,7 @@ export function JobsPage() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setJobPendingDelete(job);
+                    deleteJobConfirm.request(job);
                   }}
                   className={buttonClasses(
                     "dangerOutline",
@@ -121,7 +123,7 @@ export function JobsPage() {
         isOpen={Boolean(selectedJobId)}
         sourceUrl={selectedJob?.source_url ?? null}
         jobs={selectedJob ? [selectedJob] : []}
-        isLoading={isLoadingDetail}
+        isLoading={selectJob.isPending}
         onClose={() => {
           setSelectedJobId(null);
           setSelectedJob(null);
@@ -129,20 +131,7 @@ export function JobsPage() {
         debugMode
       />
 
-      <ConfirmDialog
-        isOpen={Boolean(jobPendingDelete)}
-        title="Usunąć job?"
-        message={
-          jobPendingDelete
-            ? `Usunąć "${jobPendingDelete.title}" (${jobPendingDelete.source_url})?`
-            : ""
-        }
-        isConfirming={isDeletingJob}
-        onConfirm={() => {
-          void handleConfirmDelete();
-        }}
-        onClose={() => setJobPendingDelete(null)}
-      />
+      {deleteJobConfirm.dialogProps ? <ConfirmDialog {...deleteJobConfirm.dialogProps} /> : null}
     </PageShell>
   );
 }

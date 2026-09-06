@@ -1,7 +1,7 @@
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 
-interface ConfirmDialogProps {
+export interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: string;

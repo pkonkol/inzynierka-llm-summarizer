@@ -1,3 +1,5 @@
+import { formatScore } from "../utils/format";
+
 export type DeepevalDisplayItem = {
   name: string;
   score?: number | null;
@@ -12,14 +14,11 @@ export function DeepevalItems({ items }: { items: DeepevalDisplayItem[] }) {
       {items.map((item) => {
         const passedText = item.passed != null ? (item.passed ? "passed" : "failed") : null;
         const statusText = item.statusLabel ?? passedText;
-        const scoreText = item.score != null ? String(item.score) : null;
+        const scoreText = item.score != null ? formatScore(item.score) : null;
         const bits = [statusText, scoreText].filter(Boolean);
 
         return (
-          <div
-            key={item.name}
-            className="grid gap-2 bg-subtle"
-          >
+          <div key={item.name} className="grid gap-2 bg-subtle">
             <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
               <span className="label-caps font-semibold text-muted">{item.name}:</span>
               {bits.length > 0 ? <span className="mono-value">{bits.join(" · ")}</span> : null}

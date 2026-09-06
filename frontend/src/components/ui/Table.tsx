@@ -20,7 +20,7 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
   );
 }
 
-export function Th({ className, ...props }: React.ComponentProps<"th">) {
+function Th({ className, ...props }: React.ComponentProps<"th">) {
   return <th scope="col" {...props} className={cn("px-3 py-2 font-semibold", className)} />;
 }
 

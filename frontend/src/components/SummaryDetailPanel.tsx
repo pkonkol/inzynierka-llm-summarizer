@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
@@ -10,6 +10,7 @@ import type { JobStatusValue, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration } from "../utils/format";
+import { useFetchOnMount } from "../utils/useFetchOnMount";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
@@ -58,33 +59,6 @@ function JobMetricsPanel({
       {deepevalBlock}
     </div>
   );
-}
-
-function useFullJob(jobId: string) {
-  const [job, setJob] = useState<JobStatusResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    getJobStatus(jobId)
-      .then((data) => {
-        if (isMounted) setJob(data);
-      })
-      .catch((error: unknown) => {
-        if (isMounted) setErrorMessage(`Nie udało się pobrać szczegółów: ${errorText(error)}`);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [jobId]);
-
-  const placeholder = errorMessage ? (
-    <p className="p-3 text-danger">{errorMessage}</p>
-  ) : job ? null : (
-    <p className="p-3 text-muted">Ładowanie...</p>
-  );
-
-  return { job, placeholder };
 }
 
 function PromptSection({ job }: { job: JobStatusResponse }) {
@@ -228,7 +202,16 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
 
 function JobDetails({ job }: { job: JobStatusResponse }) {
   // by-url projects the bulky fields away, so the disclosures below need the full document.
-  const { job: fullJob, placeholder } = useFullJob(job.job_id);
+  const { data: fullJob, errorMessage } = useFetchOnMount(
+    () => getJobStatus(job.job_id),
+    job.job_id,
+    "Nie udało się pobrać szczegółów",
+  );
+  const placeholder = errorMessage ? (
+    <p className="p-3 text-danger">{errorMessage}</p>
+  ) : (
+    <p className="p-3 text-muted">Ładowanie...</p>
+  );
 
   const takeawaysMarkdown = (job.summary_data?.key_takeaways ?? [])
     .map((item) => `- ${item}`)
@@ -311,8 +294,6 @@ export function SummaryDetailPanel({
   debugMode = false,
 }: JobDetailPanelProps) {
   if (!isOpen) return null;
-  if (isLoading) return <p className="text-muted">Ładowanie wyników...</p>;
-  if (!sourceUrl) return null;
 
   const title = jobs[0]?.summary_data?.title || "";
   const completedJobs = jobs.filter((job) => job.status === "completed");
@@ -321,25 +302,15 @@ export function SummaryDetailPanel({
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
   const exportableJobIds = completedJobs.map((job) => job.job_id);
 
-  return (
-    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
-      <div className="flex items-center justify-between border-b border-panel-border pb-3">
-        <h2>Szczegóły</h2>
-        <div className="flex items-center gap-2">
-          {exportableJobIds.length > 0 ? (
-            <ExportButton
-              jobIds={exportableJobIds}
-              sourceUrl={sourceUrl}
-              label="Pobierz wszystkie"
-              variant="secondary"
-            />
-          ) : null}
-          <Button variant="ghost" onClick={onClose}>
-            Zamknij
-          </Button>
-        </div>
-      </div>
-
+  // The shell renders from the first frame, so opening a row cannot leave the split layout
+  // with an unstyled right column and no way to close it.
+  let body: React.ReactNode;
+  if (isLoading) {
+    body = <p className="text-muted">Ładowanie wyników...</p>;
+  } else if (!sourceUrl) {
+    body = <p className="text-muted">Brak wyników.</p>;
+  } else {
+    body = (
       <article className="grid gap-4 min-w-0">
         <h3>{title}</h3>
 
@@ -364,6 +335,29 @@ export function SummaryDetailPanel({
           )}
         </section>
       </article>
+    );
+  }
+
+  return (
+    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
+      <div className="flex items-center justify-between border-b border-panel-border pb-3">
+        <h2>Szczegóły</h2>
+        <div className="flex items-center gap-2">
+          {sourceUrl && exportableJobIds.length > 0 ? (
+            <ExportButton
+              jobIds={exportableJobIds}
+              sourceUrl={sourceUrl}
+              label="Pobierz wszystkie"
+              variant="secondary"
+            />
+          ) : null}
+          <Button variant="ghost" onClick={onClose}>
+            Zamknij
+          </Button>
+        </div>
+      </div>
+
+      {body}
     </aside>
   );
 }

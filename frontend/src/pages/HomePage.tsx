@@ -1,56 +1,51 @@
 import { useEffect, useState } from "react";
 
-import {
-  createSummaryJob,
-  errorText,
-  getJobStatus,
-  getJobsForUrl,
-  listSummarizedUrls,
-} from "../api/client";
+import { createSummaryJob, getJobsForUrl, listSummarizedUrls } from "../api/client";
 import { CompletedJobsList } from "../components/CompletedJobsList";
 import { useFlash } from "../components/FlashProvider";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
+import { Alert } from "../components/ui/Alert";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import type { JobStatusResponse, UrlSummaryListItem } from "../types/api.generated";
+import type { JobStatusResponse } from "../types/api.generated";
+import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useJobCompletionWatch } from "../utils/useJobCompletionWatch";
 import { useListPolling } from "../utils/useListPolling";
-
-const ACTIVE_JOB_POLL_MS = 2_500;
+import { useReloadableResource } from "../utils/useReloadableResource";
 
 export function HomePage() {
   useDocumentTitle("Podsumowania");
-  const [urlList, setUrlList] = useState<UrlSummaryListItem[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [detailJobs, setDetailJobs] = useState<JobStatusResponse[]>([]);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const hasDetailOpen = Boolean(selectedUrl);
   const showFlash = useFlash();
 
-  const hasDetailOpen = Boolean(selectedUrl);
+  const urlListResource = useReloadableResource(
+    () => listSummarizedUrls(50),
+    "",
+    "Nie udało się pobrać listy podsumowań",
+  );
+  // null means "no answer yet" — a real third state, not a missing value.
+  const urlList = urlListResource.data ?? [];
 
-  const loadUrlList = async () => {
-    const data = await listSummarizedUrls(50);
-    setUrlList(data);
-  };
+  const { watchJob } = useJobCompletionWatch((status) => setSelectedUrl(status.source_url));
 
-  const submitSummary = async (
-    url: string,
-    model_provider: string,
-    model_name: string,
-    language: string,
-    summary_mode: string,
-    run_deepeval: boolean,
-  ) => {
-    setIsSubmitting(true);
-    showFlash("Zadanie zostało utworzone. Trwa analiza artykułu...");
-    try {
-      const created = await createSummaryJob(
+  const submitSummary = useAsyncAction(
+    async (
+      url: string,
+      model_provider: string,
+      model_name: string,
+      language: string,
+      summary_mode: string,
+      run_deepeval: boolean,
+    ) => {
+      // Optimistic: it announces the queued job, so it cannot be a successMessage.
+      showFlash("Zadanie zostało utworzone. Trwa analiza artykułu...");
+      return createSummaryJob(
         url,
         model_provider,
         model_name,
@@ -58,21 +53,18 @@ export function HomePage() {
         summary_mode,
         run_deepeval,
       );
-      setActiveJobId(created.job_id);
-      await loadUrlList();
-    } catch (error) {
-      showFlash(`Nie udało się utworzyć joba: ${errorText(error)}`, "danger");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadUrlList().finally(() => setIsLoadingList(false));
-  }, []);
+    },
+    {
+      errorPrefix: "Nie udało się utworzyć joba",
+      onSuccess: (created) => {
+        watchJob(created.job_id);
+        return urlListResource.reload();
+      },
+    },
+  );
 
   useListPolling(
-    loadUrlList,
+    urlListResource.reload,
     urlList.some((item) => item.pending_count > 0),
   );
 
@@ -96,44 +88,23 @@ export function HomePage() {
     };
   }, [selectedUrl]);
 
-  useEffect(() => {
-    if (!activeJobId) return;
-    const poll = async () => {
-      try {
-        const status = await getJobStatus(activeJobId);
-        if (status.status === "completed") {
-          showFlash("Podsumowanie gotowe.");
-          setActiveJobId(null);
-          setSelectedUrl(status.source_url);
-        } else if (status.status === "failed") {
-          showFlash(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`, "danger");
-          setActiveJobId(null);
-        }
-      } catch (error) {
-        showFlash(`Nie udało się odczytać statusu joba: ${errorText(error)}`, "danger");
-        setActiveJobId(null);
-      }
-    };
-    const interval = setInterval(() => {
-      void poll();
-    }, ACTIVE_JOB_POLL_MS);
-    void poll();
-    return () => clearInterval(interval);
-  }, [activeJobId]);
-
   return (
     <PageShell className={hasDetailOpen ? SPLIT_COLUMNS : undefined}>
       <section
         className={cn("grid content-start gap-6", hasDetailOpen ? STICKY_COLUMN : "min-w-0")}
       >
         {!hasDetailOpen ? (
-          <UrlSubmitCard onSubmit={submitSummary} isSubmitting={isSubmitting} />
+          <UrlSubmitCard onSubmit={submitSummary.run} isSubmitting={submitSummary.isPending} />
+        ) : null}
+
+        {urlListResource.errorMessage ? (
+          <Alert tone="danger">{urlListResource.errorMessage}</Alert>
         ) : null}
 
         <CompletedJobsList
           urls={urlList}
           selectedUrl={selectedUrl}
-          isLoading={isLoadingList}
+          isLoading={urlListResource.isInitialLoading}
           onSelectUrl={setSelectedUrl}
         />
       </section>

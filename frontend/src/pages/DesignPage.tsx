@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Collapsible } from "../components/Collapsible";
 import { useFlash } from "../components/FlashProvider";
 import { Alert } from "../components/ui/Alert";
-import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { FieldLabel, Input, Textarea } from "../components/ui/Field";
@@ -37,7 +36,7 @@ const HEADING_LEVELS = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
 const SPACING_STEPS = [1, 2, 3, 4, 6, 8, 12, 16];
 const BUTTON_VARIANTS = ["primary", "secondary", "danger", "dangerOutline", "ghost"] as const;
 const BUTTON_SIZES = ["xs", "sm", "md", "lg"] as const;
-const PANEL_PADDINGS = ["xs", "sm", "md", "lg", "xl"] as const;
+const PANEL_PADDINGS = ["sm", "md", "xl"] as const;
 const TONES = ["success", "danger", "warning"] as const;
 
 const SAMPLE_PROVIDER_ERROR =
@@ -171,20 +170,12 @@ export function DesignPage() {
         </div>
       </Section>
 
-      <Section title="Alerts and badges">
+      <Section title="Alerts">
         <div className="grid gap-2">
           {TONES.map((tone) => (
             <Alert key={tone} tone={tone}>
               Alert with tone={tone}
             </Alert>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge>neutral</Badge>
-          {TONES.map((tone) => (
-            <Badge key={tone} tone={tone}>
-              {tone}
-            </Badge>
           ))}
         </div>
       </Section>
@@ -233,9 +224,6 @@ export function DesignPage() {
         <div className="flex flex-wrap items-center gap-2">
           <LinkButton size="sm" href="/research">
             LinkButton
-          </LinkButton>
-          <LinkButton size="sm" variant="primary" href="/jobs">
-            primary
           </LinkButton>
         </div>
         <DisclosureButton

@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { errorText } from "../api/client";
 import { getEvaluationSetEntryInputText } from "../api/research";
+import { useFetchOnMount } from "../utils/useFetchOnMount";
 import { PreBlock } from "./PreBlock";
 
 type Props = {
@@ -9,33 +8,15 @@ type Props = {
 };
 
 export function InputTextSection({ setId, entryId }: Props) {
-  const [inputText, setInputText] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getEvaluationSetEntryInputText(setId, entryId)
-      .then((data) => {
-        if (!isMounted) return;
-        setInputText(data.input_text);
-      })
-      .catch((error: unknown) => {
-        if (!isMounted) return;
-        setErrorMessage(`Nie udało się pobrać input text: ${errorText(error)}`);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [setId, entryId]);
+  const { data, isLoading, errorMessage } = useFetchOnMount(
+    () => getEvaluationSetEntryInputText(setId, entryId),
+    `${setId}/${entryId}`,
+    "Nie udało się pobrać input text",
+  );
 
   if (isLoading) return <p className="p-3 text-muted">Ładowanie...</p>;
   if (errorMessage) return <p className="p-3 text-danger">{errorMessage}</p>;
+  if (!data) return null;
 
-  return <PreBlock>{inputText ?? ""}</PreBlock>;
+  return <PreBlock>{data.input_text}</PreBlock>;
 }

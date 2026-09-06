@@ -60,9 +60,6 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
         <h1 className="hero-title text-balance">
           Praca Inżynierska - Podsumowanie Artykułów z LLM
         </h1>
-        <p className="max-w-measure text-muted">
-          Wklej link do artykułu, a system wygeneruje podsumowanie i zapisze wynik do listy.
-        </p>
       </div>
       <form
         className="grid gap-4 border border-panel-border bg-panel-solid p-6"

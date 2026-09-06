@@ -1,17 +1,14 @@
 import { cn } from "./cn";
 
 const PADDING = {
-  none: "",
-  xs: "px-3 py-2",
   sm: "px-3 py-3",
   md: "p-4",
-  lg: "p-6",
   xl: "p-8",
 } as const;
 
 interface PanelProps extends React.ComponentProps<"div"> {
   padding?: keyof typeof PADDING;
-  as?: "div" | "section" | "article" | "aside";
+  as?: "div" | "section";
 }
 
 export function Panel({ padding = "md", as: Tag = "div", className, ...props }: PanelProps) {

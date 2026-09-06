@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { errorText } from "../api/client";
+import { useEffect, useMemo, useRef } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
@@ -17,9 +16,11 @@ import type {
   EvaluationRunResponse,
   SummaryStatisticalMetrics,
 } from "../types/api.generated";
-import { formatDateMinute, formatMetricLabel } from "../utils/format";
+import { formatDateMinute, formatMetricLabel, formatScore } from "../utils/format";
+import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
+import { useReloadableResource } from "../utils/useReloadableResource";
 
 const PAIRWISE_TIE_MARGIN = 0.05;
 
@@ -45,8 +46,8 @@ function MetricRow({
   return (
     <>
       <span className="label-caps font-semibold text-muted">{label}:</span>
-      <span className="mono-value">{golden ?? "—"}</span>
-      <span className="mono-value">{ai ?? "—"}</span>
+      <span className="mono-value">{golden != null ? formatScore(golden) : "—"}</span>
+      <span className="mono-value">{ai != null ? formatScore(ai) : "—"}</span>
     </>
   );
 }
@@ -189,10 +190,7 @@ function RunSummary({ run }: { run: EvaluationRunResponse }) {
           valueClassName={failed_entries ? "text-danger" : ""}
         />
         <InfoRow label="utworzono" value={formatDateMinute(run.created_at)} />
-        <InfoRow
-          label="zakończono"
-          value={run.finished_at ? formatDateMinute(run.finished_at) : "—"}
-        />
+        <InfoRow label="zakończono" value={formatDateMinute(run.finished_at)} />
       </div>
 
       {deepeval ? (
@@ -206,10 +204,9 @@ function RunSummary({ run }: { run: EvaluationRunResponse }) {
             />
             <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
             <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
-            <InfoRow
-              label="zakończono"
-              value={deepeval.finished_at ? formatDateMinute(deepeval.finished_at) : null}
-            />
+            <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
+            <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
+            <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
           </div>
           {deepeval.error ? <p className="text-danger">{deepeval.error}</p> : null}
         </div>
@@ -285,14 +282,21 @@ type Props = {
 };
 
 export function EvaluationRunPage({ runId }: Props) {
-  const [run, setRun] = useState<EvaluationRunResponse | null>(null);
-  const [entries, setEntries] = useState<EvaluationRunEntryResponse[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingEntries, setIsLoadingEntries] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const showFlash = useFlash();
-  const [isEvaluatingDeepeval, setIsEvaluatingDeepeval] = useState(false);
   const previousRunStatus = useRef<string | null>(null);
+
+  const runResource = useReloadableResource(
+    () => getEvaluationRun(runId),
+    runId,
+    "Nie udało się pobrać runa",
+  );
+  const entriesResource = useReloadableResource(
+    () => getEvaluationRunEntries(runId),
+    runId,
+    "Nie udało się pobrać entries",
+  );
+  const run = runResource.data;
+  const entries = entriesResource.data?.entries ?? null;
 
   const isRunInProgress = run?.status === "pending" || run?.status === "running";
 
@@ -300,39 +304,8 @@ export function EvaluationRunPage({ runId }: Props) {
     run ? `${run.model_provider}:${run.model_name} · ${run.evaluation_set_name}` : null,
   );
 
-  const loadRun = async () => {
-    try {
-      const data = await getEvaluationRun(runId);
-      setRun(data);
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(`Nie udało się pobrać runa: ${errorText(error)}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadEntries = async () => {
-    setIsLoadingEntries(true);
-    try {
-      const data = await getEvaluationRunEntries(runId);
-      setEntries(data.entries);
-    } catch (error) {
-      setErrorMessage(`Nie udało się pobrać entries: ${errorText(error)}`);
-    } finally {
-      setIsLoadingEntries(false);
-    }
-  };
-
-  useEffect(() => {
-    setIsLoading(true);
-    setIsLoadingEntries(true);
-    void loadRun();
-    void loadEntries();
-  }, [runId]);
-
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
-  useListPolling(loadRun, true, isRunInProgress);
+  useListPolling(runResource.reload, true, isRunInProgress);
 
   useEffect(() => {
     if (!run) return;
@@ -340,32 +313,24 @@ export function EvaluationRunPage({ runId }: Props) {
     previousRunStatus.current = run.status;
     if (previousStatus && previousStatus !== run.status && !isRunInProgress) {
       showFlash(`Run zakończony ze statusem: ${run.status}.`);
-      void loadEntries();
+      void entriesResource.reload();
     }
-  }, [run, isRunInProgress]);
+  }, [run, isRunInProgress, entriesResource.reload, showFlash]);
 
-  const handleDeepeval = async () => {
-    setErrorMessage(null);
-    setIsEvaluatingDeepeval(true);
-    try {
-      await evaluateRunDeepeval(runId);
-      showFlash("GEval zakolejkowany. Odśwież za chwilę, aby zobaczyć wyniki.");
-    } catch (error) {
-      showFlash(`Nie udało się uruchomić GEval: ${errorText(error)}`, "danger");
-    } finally {
-      setIsEvaluatingDeepeval(false);
-    }
-  };
+  const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
+    errorPrefix: "Nie udało się uruchomić GEval",
+    successMessage: () => "GEval zakolejkowany. Odśwież za chwilę, aby zobaczyć wyniki.",
+  });
 
   const handleRefresh = () => {
-    void loadRun();
-    void loadEntries();
+    void runResource.reload();
+    void entriesResource.reload();
   };
 
   let runSummary = null;
   if (run) {
     runSummary = <RunSummary run={run} />;
-  } else if (isLoading) {
+  } else if (runResource.isInitialLoading) {
     runSummary = <p className="text-muted">Ładowanie szczegółów runa...</p>;
   }
 
@@ -387,7 +352,7 @@ export function EvaluationRunPage({ runId }: Props) {
     );
   }, [entries, evaluationSetId]);
 
-  const entriesSection = isLoadingEntries ? (
+  const entriesSection = entriesResource.isInitialLoading ? (
     <p className="text-muted">Ładowanie wpisów...</p>
   ) : (
     entryCards
@@ -418,12 +383,16 @@ export function EvaluationRunPage({ runId }: Props) {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => void handleDeepeval()}
-              disabled={!run || isRunInProgress || isEvaluatingDeepeval}
+              onClick={() => void startDeepeval.run()}
+              disabled={!run || isRunInProgress || startDeepeval.isPending}
             >
-              {isEvaluatingDeepeval ? "Liczenie..." : "Policz GEval"}
+              {startDeepeval.isPending ? "Liczenie..." : "Policz GEval"}
             </Button>
-            <Button size="sm" onClick={handleRefresh} disabled={isLoading || isLoadingEntries}>
+            <Button
+              size="sm"
+              onClick={handleRefresh}
+              disabled={runResource.isInitialLoading || entriesResource.isInitialLoading}
+            >
               Odśwież
             </Button>
             <LinkButton size="sm" href={run ? `/research/${run.evaluation_set_id}` : "/research"}>
@@ -439,7 +408,10 @@ export function EvaluationRunPage({ runId }: Props) {
           ) : null}
         </div>
 
-        {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
+        {runResource.errorMessage ? <Alert tone="danger">{runResource.errorMessage}</Alert> : null}
+        {entriesResource.errorMessage ? (
+          <Alert tone="danger">{entriesResource.errorMessage}</Alert>
+        ) : null}
 
         {runSummary}
 

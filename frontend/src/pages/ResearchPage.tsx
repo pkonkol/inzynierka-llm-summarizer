@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { errorText } from "../api/client";
 import { createEvaluationSet, listEvaluationSets } from "../api/research";
 import { useFlash } from "../components/FlashProvider";
@@ -13,7 +13,9 @@ import type {
   EvaluationSetListItemResponse,
 } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
+import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useReloadableResource } from "../utils/useReloadableResource";
 
 const PRETTY_EXAMPLE = `{
   "name": "cnn-sample1",
@@ -55,11 +57,14 @@ function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
 export function ResearchPage() {
   useDocumentTitle("Badania");
   const [rawJson, setRawJson] = useState(PRETTY_EXAMPLE);
-  const [sets, setSets] = useState<EvaluationSetListItemResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isImporting, setIsImporting] = useState(false);
   const showFlash = useFlash();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const setsResource = useReloadableResource(
+    listEvaluationSets,
+    "",
+    "Nie udało się pobrać EvaluationSetów",
+  );
+  // null means "no answer yet" — a real third state, not a missing value.
+  const sets = setsResource.data ?? [];
 
   const parsedPreview = useMemo(() => {
     try {
@@ -80,32 +85,23 @@ export function ResearchPage() {
     }
   }, [rawJson]);
 
-  const loadSets = async () => {
-    const data = await listEvaluationSets();
-    setSets(data);
-  };
+  const importSet = useAsyncAction(createEvaluationSet, {
+    errorPrefix: "Nie udało się zaimportować EvaluationSetu",
+    successMessage: (created) =>
+      `Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`,
+    onSuccess: () => setsResource.reload(),
+  });
 
-  const handleImport = async () => {
-    setErrorMessage(null);
-
+  const handleImport = () => {
     let payload: EvaluationSetImportRequest;
     try {
       payload = JSON.parse(rawJson) as EvaluationSetImportRequest;
     } catch {
+      // A malformed textarea is a validation failure, not a failed request.
       showFlash("Niepoprawny JSON.", "danger");
       return;
     }
-
-    setIsImporting(true);
-    try {
-      const created = await createEvaluationSet(payload);
-      showFlash(`Zaimportowano EvaluationSet: ${created.name} (${created.entry_count} entries).`);
-      await loadSets();
-    } catch (error) {
-      showFlash(`Nie udało się zaimportować EvaluationSetu: ${errorText(error)}`, "danger");
-    } finally {
-      setIsImporting(false);
-    }
+    void importSet.run(payload);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +111,6 @@ export function ResearchPage() {
     try {
       const text = await file.text();
       setRawJson(text);
-      setErrorMessage(null);
     } catch (error) {
       showFlash(`Nie udało się odczytać pliku: ${errorText(error)}`, "danger");
     }
@@ -123,19 +118,14 @@ export function ResearchPage() {
     event.target.value = "";
   };
 
-  useEffect(() => {
-    void loadSets()
-      .catch((error: unknown) =>
-        setErrorMessage(`Nie udało się pobrać EvaluationSetów: ${errorText(error)}`),
-      )
-      .finally(() => setIsLoading(false));
-  }, []);
-
   let setsSection = <p className="text-muted">Ładowanie listy zbiorów...</p>;
-  if (!isLoading && sets.length === 0) {
-    setsSection = <p className="text-muted">Brak zbiorów. Zaimportuj pierwszy dataset.</p>;
-  } else if (!isLoading) {
-    setsSection = <SetsTable sets={sets} />;
+  if (!setsResource.isInitialLoading) {
+    setsSection =
+      sets.length === 0 ? (
+        <p className="text-muted">Brak zbiorów. Zaimportuj pierwszy dataset.</p>
+      ) : (
+        <SetsTable sets={sets} />
+      );
   }
 
   return (
@@ -166,8 +156,8 @@ export function ResearchPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="primary" onClick={() => void handleImport()} disabled={isImporting}>
-              {isImporting ? "Importowanie..." : "Importuj zbiór"}
+            <Button variant="primary" onClick={handleImport} disabled={importSet.isPending}>
+              {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
             </Button>
             <label className={buttonClasses("secondary", "sm", "cursor-pointer")}>
               <input
@@ -179,8 +169,6 @@ export function ResearchPage() {
               Wczytaj plik JSON
             </label>
           </div>
-
-          {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
         </div>
       </section>
 
@@ -189,11 +177,14 @@ export function ResearchPage() {
           <div className="grid gap-2">
             <h2>Zbiory ewaluacyjne</h2>
           </div>
-          <Button size="sm" onClick={() => void loadSets()}>
+          <Button size="sm" onClick={() => void setsResource.reload()}>
             Odśwież
           </Button>
         </div>
 
+        {setsResource.errorMessage ? (
+          <Alert tone="danger">{setsResource.errorMessage}</Alert>
+        ) : null}
         {setsSection}
       </section>
     </PageShell>

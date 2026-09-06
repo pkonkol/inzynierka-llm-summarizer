@@ -9,6 +9,11 @@ export function formatDateMinute(iso: string | null | undefined): string {
   });
 }
 
+// GEval scores arrive as raw doubles, so without this the reader sees 0.6666666666666666.
+export function formatScore(value: number): string {
+  return String(Math.round(value * 1000) / 1000);
+}
+
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;

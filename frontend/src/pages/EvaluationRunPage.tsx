@@ -284,6 +284,7 @@ type Props = {
 export function EvaluationRunPage({ runId }: Props) {
   const showFlash = useFlash();
   const previousRunStatus = useRef<string | null>(null);
+  const previousDeepevalStatus = useRef<string | null>(null);
 
   const runResource = useReloadableResource(
     () => getEvaluationRun(runId),
@@ -299,13 +300,16 @@ export function EvaluationRunPage({ runId }: Props) {
   const entries = entriesResource.data?.entries ?? null;
 
   const isRunInProgress = run?.status === "pending" || run?.status === "running";
+  // The GEval pass is queued separately and keeps running after the run itself has finished.
+  const deepevalStatus = run?.aggregate_metrics.deepeval?.status ?? null;
+  const isDeepevalRunning = deepevalStatus === "running";
 
   useDocumentTitle(
     run ? `${run.model_provider}:${run.model_name} · ${run.evaluation_set_name}` : null,
   );
 
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
-  useListPolling(runResource.reload, true, isRunInProgress);
+  useListPolling(runResource.reload, true, isRunInProgress || isDeepevalRunning);
 
   useEffect(() => {
     if (!run) return;
@@ -317,15 +321,20 @@ export function EvaluationRunPage({ runId }: Props) {
     }
   }, [run, isRunInProgress, entriesResource.reload, showFlash]);
 
+  // GEval writes its scores into the entries, which the run document does not carry.
+  useEffect(() => {
+    const previousStatus = previousDeepevalStatus.current;
+    previousDeepevalStatus.current = deepevalStatus;
+    if (previousStatus === "running" && deepevalStatus && deepevalStatus !== "running") {
+      showFlash(`GEval zakończony ze statusem: ${deepevalStatus}.`);
+      void entriesResource.reload();
+    }
+  }, [deepevalStatus, entriesResource.reload, showFlash]);
+
   const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
     errorPrefix: "Nie udało się uruchomić GEval",
-    successMessage: () => "GEval zakolejkowany. Odśwież za chwilę, aby zobaczyć wyniki.",
+    successMessage: () => "GEval zakolejkowany. Wyniki pojawią się automatycznie.",
   });
-
-  const handleRefresh = () => {
-    void runResource.reload();
-    void entriesResource.reload();
-  };
 
   let runSummary = null;
   if (run) {
@@ -387,13 +396,6 @@ export function EvaluationRunPage({ runId }: Props) {
               disabled={!run || isRunInProgress || startDeepeval.isPending}
             >
               {startDeepeval.isPending ? "Liczenie..." : "Policz GEval"}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleRefresh}
-              disabled={runResource.isInitialLoading || entriesResource.isInitialLoading}
-            >
-              Odśwież
             </Button>
             <LinkButton size="sm" href={run ? `/research/${run.evaluation_set_id}` : "/research"}>
               Wróć do setu

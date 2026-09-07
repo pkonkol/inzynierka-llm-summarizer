@@ -39,7 +39,7 @@
 
   /* Layout widths. Anything above the 64px spacing ceiling is a named decision, not a scale step. */
   --container-app: 88rem;
-  --container-measure: 48rem;
+  --container-measure: 90ch; /* line length, so it tracks the element's own font */
   --container-list: 32rem;
   --container-detail: 48rem;
 
@@ -71,7 +71,7 @@
 }
 
 @utility panel-shell {
-  @apply min-w-0 overflow-hidden border border-panel-border bg-panel-solid p-4;
+  @apply min-w-0 overflow-clip border border-panel-border bg-panel-solid p-4;
 }
 
 @utility hero-title {

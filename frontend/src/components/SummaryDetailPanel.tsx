@@ -98,7 +98,9 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
     inputBlock = (
       <div className="grid min-w-0 gap-1">
         <h6>Tekst źródłowy</h6>
-        <PreBlock className="max-h-96 overflow-y-auto">{inputText}</PreBlock>
+        <PreBlock withoutBackground className="mx-auto max-h-96 max-w-measure overflow-y-auto">
+          {inputText}
+        </PreBlock>
       </div>
     );
   }
@@ -180,7 +182,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
   );
 
   const details = open && (
-    <div className="grid gap-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-hidden">
+    <div className="grid gap-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-clip">
       {job.status === "failed" && job.error ? (
         <section>
           <h4>Błąd</h4>

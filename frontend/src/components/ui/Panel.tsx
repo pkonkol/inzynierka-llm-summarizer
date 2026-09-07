@@ -16,7 +16,7 @@ export function Panel({ padding = "md", as: Tag = "div", className, ...props }: 
     <Tag
       {...props}
       className={cn(
-        "min-w-0 overflow-hidden border border-panel-border bg-panel-solid",
+        "min-w-0 overflow-clip border border-panel-border bg-panel-solid",
         PADDING[padding],
         className,
       )}

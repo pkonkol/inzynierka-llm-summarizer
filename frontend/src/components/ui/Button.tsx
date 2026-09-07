@@ -8,6 +8,8 @@ const VARIANT = {
   ghost: "border-panel-border bg-subtle-hover text-ink hover:enabled:bg-subtle",
   disclosure:
     "gap-2 border-panel-border bg-subtle uppercase tracking-wider text-muted hover:enabled:bg-subtle-hover",
+  disclosureOpen:
+    "gap-2 border-panel-border bg-subtle-hover uppercase tracking-wider text-ink hover:enabled:bg-subtle",
 } as const;
 
 const SIZE = {

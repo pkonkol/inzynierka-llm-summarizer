@@ -20,9 +20,7 @@ export function Collapsible({ label, children }: CollapsibleProps) {
         <span>{label}</span>
         <span aria-hidden="true">{open ? "▼" : "▶"}</span>
       </button>
-      {open && (
-        <div className="border-t border-panel-border min-w-0 overflow-hidden">{children}</div>
-      )}
+      {open && <div className="border-t border-panel-border min-w-0 overflow-clip">{children}</div>}
     </div>
   );
 }

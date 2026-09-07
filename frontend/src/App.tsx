@@ -76,7 +76,7 @@ function App() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div className="relative min-h-screen overflow-x-clip">
       <NavDock active={route} isLoggedIn={isLoggedIn} onOpenLogin={() => setIsLoginOpen(true)} />
       <LoginOverlay
         isOpen={isLoginOpen}

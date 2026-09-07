@@ -18,5 +18,9 @@ export function InputTextSection({ setId, entryId }: Props) {
   if (errorMessage) return <p className="p-3 text-danger">{errorMessage}</p>;
   if (!data) return null;
 
-  return <PreBlock>{data.input_text}</PreBlock>;
+  return (
+    <PreBlock withoutBackground className="mx-auto max-w-measure">
+      {data.input_text}
+    </PreBlock>
+  );
 }

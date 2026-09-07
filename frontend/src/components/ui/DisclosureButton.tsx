@@ -8,7 +8,12 @@ interface DisclosureButtonProps {
 
 export function DisclosureButton({ label, isOpen, onToggle }: DisclosureButtonProps) {
   return (
-    <Button variant="disclosure" size="xs" onClick={onToggle} aria-expanded={isOpen}>
+    <Button
+      variant={isOpen ? "disclosureOpen" : "disclosure"}
+      size="xs"
+      onClick={onToggle}
+      aria-expanded={isOpen}
+    >
       <span>{label}</span>
       <span aria-hidden="true">{isOpen ? "▼" : "▶"}</span>
     </Button>

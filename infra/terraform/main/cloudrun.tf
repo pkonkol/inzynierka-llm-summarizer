@@ -37,12 +37,13 @@ resource "google_cloud_run_v2_service" "backend" {
 
       dynamic "env" {
         for_each = local.secrets
+        iterator = secret
         content {
-          name = env.value
+          name = secret.value.env
           value_source {
             secret_key_ref {
-              secret  = env.key
-              version = "latest"
+              secret  = secret.key
+              version = secret.value.version
             }
           }
         }

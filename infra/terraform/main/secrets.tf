@@ -1,12 +1,11 @@
 locals {
-  # secret_id -> env var name
   secrets = {
-    mongodb_uri        = "MONGODB_URI"
-    gemini_key         = "GEMINI_API_KEY"
-    openrouter_api_key = "OPENROUTER_API_KEY"
-    auth_secret        = "AUTH_SECRET"
-    jwt_secret         = "JWT_SECRET"
-    supported_models   = "SUPPORTED_MODELS"
+    mongodb_uri        = { env = "MONGODB_URI", version = "latest" }
+    gemini_key         = { env = "GEMINI_API_KEY", version = "1" }
+    openrouter_api_key = { env = "OPENROUTER_API_KEY", version = "latest" }
+    auth_secret        = { env = "AUTH_SECRET", version = "latest" }
+    jwt_secret         = { env = "JWT_SECRET", version = "latest" }
+    supported_models   = { env = "SUPPORTED_MODELS", version = "latest" }
   }
 }
 

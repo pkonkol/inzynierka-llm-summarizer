@@ -18,7 +18,7 @@ import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useReloadableResource } from "../utils/useReloadableResource";
 
 const PRETTY_EXAMPLE = `{
-  "name": "cnn-sample1",
+  "name": "dataset-sample1",
   "language": "en",
   "entries": [
     {

@@ -69,7 +69,8 @@ typecheck-backend:
 [group('dev')]
 [working-directory('backend')]
 dev-backend:
-    GIT_SHA=$(git rev-parse --short HEAD) ./venv/bin/python -m uvicorn app.main:app --reload --port 8000
+    # --reload-include: the default excludes cover every dotfile, so .env edits would need a manual restart.
+    GIT_SHA=$(git rev-parse --short HEAD) ./venv/bin/python -m uvicorn app.main:app --reload --reload-include .env --port 8000
 
 # Frontend: vite dev server (vite.config.ts stamps the commit itself)
 [group('dev')]
@@ -92,7 +93,6 @@ db-down:
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
-    source backend/.env
     trap 'kill 0' EXIT
     just dev-backend &
     just dev-frontend &

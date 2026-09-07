@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,10 +17,16 @@ setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    executor = ThreadPoolExecutor(
+        max_workers=settings.eval_max_concurrent_geval + 2, thread_name_prefix="metrics"
+    )
+    asyncio.get_running_loop().set_default_executor(executor)
+
     await asyncio.to_thread(ensure_wordnet_resources)
     await init_mongo()
     yield
     await close_mongo()
+    executor.shutdown(wait=False, cancel_futures=True)
 
 
 app = FastAPI(title=settings.app_name, version="0.0.1", lifespan=lifespan)

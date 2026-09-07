@@ -212,6 +212,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/meta/keepalive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Hold a connection open while background work runs
+         * @description Held open for as long as there is background work, up to a bounded window.
+         *
+         *     Cloud Run treats an instance with no request in flight as idle: it throttles the CPU and
+         *     may reclaim the instance. Summarisation and evaluation both run as background tasks after
+         *     their response was already sent, so this open connection is what keeps them running.
+         *
+         *     Returns as soon as the work finishes, so callers loop on `active_work > 0` and an idle
+         *     caller cannot pin an instance.
+         */
+        get: operations["keepalive_api_v1_meta_keepalive_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/research/evaluation-sets": {
         parameters: {
             query?: never;
@@ -908,6 +935,13 @@ export interface components {
             /** Error */
             error: string | null;
         };
+        /** KeepaliveResponse */
+        KeepaliveResponse: {
+            /** Active Work */
+            active_work: number;
+            /** Held Seconds */
+            held_seconds: number;
+        };
         /** KeyTakeawaysMetrics */
         KeyTakeawaysMetrics: {
             /** Bullet Count */
@@ -1073,6 +1107,7 @@ export type JobDeletedResponse = components['schemas']['JobDeletedResponse'];
 export type JobListItemResponse = components['schemas']['JobListItemResponse'];
 export type JobMetrics = components['schemas']['JobMetrics'];
 export type JobStatusResponse = components['schemas']['JobStatusResponse'];
+export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
 export type KeyTakeawaysMetrics = components['schemas']['KeyTakeawaysMetrics'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
@@ -1432,6 +1467,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionResponse"];
+                };
+            };
+        };
+    };
+    keepalive_api_v1_meta_keepalive_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeepaliveResponse"];
                 };
             };
         };

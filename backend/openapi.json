@@ -482,6 +482,28 @@
         }
       }
     },
+    "/api/v1/meta/keepalive": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Hold a connection open while background work runs",
+        "description": "Held open for as long as there is background work, up to a bounded window.\n\nCloud Run treats an instance with no request in flight as idle: it throttles the CPU and\nmay reclaim the instance. Summarisation and evaluation both run as background tasks after\ntheir response was already sent, so this open connection is what keeps them running.\n\nReturns as soon as the work finishes, so callers loop on `active_work > 0` and an idle\ncaller cannot pin an instance.",
+        "operationId": "keepalive_api_v1_meta_keepalive_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeepaliveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/research/evaluation-sets": {
       "get": {
         "tags": [
@@ -2453,6 +2475,24 @@
           "error"
         ],
         "title": "JobStatusResponse"
+      },
+      "KeepaliveResponse": {
+        "properties": {
+          "active_work": {
+            "type": "integer",
+            "title": "Active Work"
+          },
+          "held_seconds": {
+            "type": "number",
+            "title": "Held Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_work",
+          "held_seconds"
+        ],
+        "title": "KeepaliveResponse"
       },
       "KeyTakeawaysMetrics": {
         "properties": {

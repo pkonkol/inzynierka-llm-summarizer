@@ -7,7 +7,9 @@ from typing import Any
 import structlog
 from bson import ObjectId
 
+from ..core.background_work import track_background_work
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from .evaluation_runner import fetch_source_entry
 from .run_metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
@@ -29,10 +31,27 @@ async def _store_deepeval_status(
 
 
 async def compute_run_deepeval_metrics(run_id: str) -> None:
+    async with track_background_work("deepeval_pass"):
+        await _compute_run_deepeval_metrics(run_id)
+
+
+async def _compute_run_deepeval_metrics(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 
-    run_doc = await runs.find_one({"_id": ObjectId(run_id)})
+    run_doc = await runs.find_one(
+        {"_id": ObjectId(run_id)},
+        {
+            "evaluation_set_id": 1,
+            "aggregate_metrics": 1,
+            "entries.entry_id": 1,
+            "entries.status": 1,
+            "entries.golden_summary": 1,
+            "entries.ai_summary": 1,
+            "entries.ai_key_takeaways": 1,
+            "entries.ai_metrics": 1,
+        },
+    )
     if run_doc is None:
         return
 
@@ -41,7 +60,8 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         run_id, aggregate_metrics, {"status": "running", "started_at": datetime.now(UTC)}
     )
 
-    set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])})
+    set_id = run_doc["evaluation_set_id"]
+    set_doc = await sets.find_one({"_id": ObjectId(set_id)}, {"_id": 1})
     if set_doc is None:
         await _store_deepeval_status(
             run_id,
@@ -54,7 +74,6 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         )
         return
 
-    source_by_entry_id = {entry["entry_id"]: entry["input_text"] for entry in set_doc["entries"]}
     updated_entries = 0
     skipped_entries = 0
     already_scored_entries = 0
@@ -72,7 +91,7 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
             entry_id = entry["entry_id"]
             summary_text = entry["ai_summary"].strip()
             takeaways_text = join_takeaways(entry["ai_key_takeaways"])
-            source_text = source_by_entry_id[entry_id]
+            source_text = (await fetch_source_entry(set_id, entry_id))["input_text"]
 
             deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
                 compute_deepeval_metrics(

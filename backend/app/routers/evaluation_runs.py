@@ -125,23 +125,36 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
 
 @router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
 async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
-    document = await find_evaluation_run_or_404(
-        run_id,
-        {
-            "evaluation_set_id": 1,
-            "evaluation_set_name": 1,
-            "model_provider": 1,
-            "model_name": 1,
-            "summary_mode": 1,
-            "language": 1,
-            "status": 1,
-            "created_at": 1,
-            "finished_at": 1,
-            "entries.entry_id": 1,
-            "aggregate_metrics": 1,
-            "skip_takeaways": 1,
-        },
+    documents = (
+        await get_evaluation_runs_collection()
+        .aggregate(
+            [
+                {"$match": {"_id": ObjectId(run_id)}},
+                {
+                    "$project": {
+                        "evaluation_set_id": 1,
+                        "evaluation_set_name": 1,
+                        "model_provider": 1,
+                        "model_name": 1,
+                        "summary_mode": 1,
+                        "language": 1,
+                        "status": 1,
+                        "created_at": 1,
+                        "finished_at": 1,
+                        "aggregate_metrics": 1,
+                        "skip_takeaways": 1,
+                        "entry_count": {"$size": "$entries"},
+                    }
+                },
+            ]
+        )
+        .to_list(length=1)
     )
+
+    if not documents:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+
+    document = documents[0]
 
     return EvaluationRunResponse(
         id=str(document["_id"]),
@@ -154,7 +167,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         status=document["status"],
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
-        entry_count=len(document["entries"]),
+        entry_count=document["entry_count"],
         skip_takeaways=document.get("skip_takeaways", False),
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )

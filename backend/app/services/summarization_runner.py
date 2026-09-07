@@ -7,6 +7,7 @@ from typing import Any
 
 import structlog
 
+from ..core.background_work import track_background_work
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import SummaryMode
 from ..schemas.summary import SummaryResponse
@@ -34,13 +35,33 @@ def _log_metrics_task_exception(task: asyncio.Task) -> None:
         log.error("metrics task failed", exc_info=exc)
 
 
+async def _tracked_metrics(coro: Coroutine[Any, Any, None]) -> None:
+    async with track_background_work("job_metrics"):
+        await coro
+
+
 def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
-    task = asyncio.create_task(coro)
+    task = asyncio.create_task(_tracked_metrics(coro))
     _metrics_tasks.add(task)
     task.add_done_callback(_log_metrics_task_exception)
 
 
 async def run_summarization_job(
+    job_id: str,
+    url: str,
+    model_name: str,
+    model_provider: str,
+    language: str,
+    summary_mode: SummaryMode,
+    run_deepeval: bool,
+) -> None:
+    async with track_background_work("summarization_job"):
+        await _run_summarization_job(
+            job_id, url, model_name, model_provider, language, summary_mode, run_deepeval
+        )
+
+
+async def _run_summarization_job(
     job_id: str,
     url: str,
     model_name: str,

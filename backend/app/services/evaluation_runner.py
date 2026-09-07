@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import structlog
 from bson import ObjectId
 
+from ..core.background_work import track_background_work
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..services.run_metrics import (
     compute_cross_metrics,
@@ -17,15 +18,45 @@ from .llm import generate_summary
 log = structlog.get_logger(__name__)
 
 
+async def fetch_source_entry(set_id: str, entry_id: str) -> dict:
+    """One set entry per round-trip; the whole entries array carries every input_text."""
+    set_doc = await get_evaluation_sets_collection().find_one(
+        {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
+        {"entries.$": 1},
+    )
+    if set_doc is None:
+        raise ValueError(f"evaluation set {set_id} has no entry {entry_id}")
+    return set_doc["entries"][0]
+
+
 async def run_evaluation_batch(run_id: str) -> None:
+    async with track_background_work("evaluation_run"):
+        await _run_evaluation_batch(run_id)
+
+
+async def _run_evaluation_batch(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 
-    run_doc = await runs.find_one({"_id": ObjectId(run_id)})
+    run_doc = await runs.find_one(
+        {"_id": ObjectId(run_id)},
+        {
+            "evaluation_set_id": 1,
+            "model_name": 1,
+            "model_provider": 1,
+            "language": 1,
+            "summary_mode": 1,
+            "skip_takeaways": 1,
+            "rate_limit_delay_ms": 1,
+            "entries.entry_id": 1,
+            "entries.golden_summary": 1,
+            "entries.status": 1,
+        },
+    )
     if run_doc is None:
         return
 
-    set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])})
+    set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])}, {"_id": 1})
     if set_doc is None:
         await runs.update_one(
             {"_id": ObjectId(run_id)},
@@ -41,17 +72,17 @@ async def run_evaluation_batch(run_id: str) -> None:
 
     await runs.update_one({"_id": ObjectId(run_id)}, {"$set": {"status": "running"}})
 
-    source_entries_by_id = {entry["entry_id"]: entry for entry in set_doc["entries"]}
     delay_ms = run_doc["rate_limit_delay_ms"]
+    set_id = run_doc["evaluation_set_id"]
 
     statuses: list[str] = []
 
     for run_entry in run_doc["entries"]:
         entry_id = run_entry["entry_id"]
-        source_entry = source_entries_by_id[entry_id]
         update: dict = {}
 
         try:
+            source_entry = await fetch_source_entry(set_id, entry_id)
             summary = await generate_summary(
                 input={"text": source_entry["input_text"], "title": source_entry["title"]},
                 source_url=source_entry["url"],

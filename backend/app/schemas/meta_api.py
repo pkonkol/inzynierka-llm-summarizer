@@ -5,3 +5,8 @@ from .base import ApiModel
 
 class VersionResponse(ApiModel):
     git_sha: str
+
+
+class KeepaliveResponse(ApiModel):
+    active_work: int
+    held_seconds: float

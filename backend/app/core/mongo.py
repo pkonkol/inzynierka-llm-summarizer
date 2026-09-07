@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import structlog
+from bson import ObjectId
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorCollection,
@@ -92,6 +93,17 @@ async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> 
 async def ensure_evaluation_runs_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index("evaluation_set_id")
     await collection.create_index([("created_at", -1)])
+
+
+async def find_evaluation_set_entry(set_id: str, entry_id: str) -> dict | None:
+    """One set entry per round-trip; the whole entries array carries every input_text."""
+    document = await get_evaluation_sets_collection().find_one(
+        {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
+        {"entries.$": 1},
+    )
+    if document is None or not document.get("entries"):
+        return None
+    return document["entries"][0]
 
 
 async def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:

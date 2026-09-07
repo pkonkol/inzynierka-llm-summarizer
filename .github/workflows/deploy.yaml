@@ -67,6 +67,14 @@ jobs:
           SHA: ${{ github.sha }}
         run: just scan-image "$IMAGE:$SHA"
 
+      # The Dockerfile prunes deepeval's pytest dependency and leaves the wordnet corpus
+      # zipped. Neither shows up as a build failure — an image that got this wrong starts
+      # fine and breaks on the first GEval or METEOR score.
+      - name: Smoke test image
+        env:
+          SHA: ${{ github.sha }}
+        run: just smoke-image "$IMAGE:$SHA"
+
       - name: Push
         env:
           SHA: ${{ github.sha }}

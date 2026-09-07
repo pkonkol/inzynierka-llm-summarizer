@@ -35,9 +35,9 @@ def _log_metrics_task_exception(task: asyncio.Task) -> None:
         log.error("metrics task failed", exc_info=exc)
 
 
+@track_background_work("job_metrics")
 async def _tracked_metrics(coro: Coroutine[Any, Any, None]) -> None:
-    async with track_background_work("job_metrics"):
-        await coro
+    await coro
 
 
 def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
@@ -46,22 +46,8 @@ def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
     task.add_done_callback(_log_metrics_task_exception)
 
 
+@track_background_work("summarization_job")
 async def run_summarization_job(
-    job_id: str,
-    url: str,
-    model_name: str,
-    model_provider: str,
-    language: str,
-    summary_mode: SummaryMode,
-    run_deepeval: bool,
-) -> None:
-    async with track_background_work("summarization_job"):
-        await _run_summarization_job(
-            job_id, url, model_name, model_provider, language, summary_mode, run_deepeval
-        )
-
-
-async def _run_summarization_job(
     job_id: str,
     url: str,
     model_name: str,

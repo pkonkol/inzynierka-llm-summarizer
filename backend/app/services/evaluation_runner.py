@@ -7,7 +7,11 @@ import structlog
 from bson import ObjectId
 
 from ..core.background_work import track_background_work
-from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from ..core.mongo import (
+    find_evaluation_set_entry,
+    get_evaluation_runs_collection,
+    get_evaluation_sets_collection,
+)
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
@@ -19,22 +23,14 @@ log = structlog.get_logger(__name__)
 
 
 async def fetch_source_entry(set_id: str, entry_id: str) -> dict:
-    """One set entry per round-trip; the whole entries array carries every input_text."""
-    set_doc = await get_evaluation_sets_collection().find_one(
-        {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
-        {"entries.$": 1},
-    )
-    if set_doc is None:
+    entry = await find_evaluation_set_entry(set_id, entry_id)
+    if entry is None:
         raise ValueError(f"evaluation set {set_id} has no entry {entry_id}")
-    return set_doc["entries"][0]
+    return entry
 
 
+@track_background_work("evaluation_run")
 async def run_evaluation_batch(run_id: str) -> None:
-    async with track_background_work("evaluation_run"):
-        await _run_evaluation_batch(run_id)
-
-
-async def _run_evaluation_batch(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 

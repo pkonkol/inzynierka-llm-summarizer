@@ -127,7 +127,10 @@ check-generated-types:
 [working-directory('backend')]
 deps-compile *args:
     uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 {{args}}
-    uv pip compile requirements-dev.in -o requirements-dev.txt --universal --python-version 3.14 {{args}}
+    # -c requirements.txt: deepeval ships pytest as a runtime dependency, so the same packages
+    # appear in both locks. The constraint makes the dev lock resolve to the versions prod
+    # already pins, instead of quietly downgrading them at `deps-sync` install time.
+    uv pip compile requirements-dev.in -o requirements-dev.txt --universal --python-version 3.14 -c requirements.txt {{args}}
 
 # Create backend/venv from scratch. Local dev already has one; CI does not.
 [group('backend')]
@@ -255,6 +258,20 @@ scan-image image="inzynierka-backend:local":
 [group('backend')]
 build-backend:
     docker build -t inzynierka-backend:local ./backend
+
+# The Dockerfile deletes deepeval's pytest dependency and keeps the wordnet corpus zipped.
+# Both are invisible to every other check: the image builds, imports pass, and the failure
+# only shows up when a run reaches a GEval or a METEOR score. This is that check.
+[group('backend')]
+smoke-image image="inzynierka-backend:local":
+    docker run --rm {{image}} python -c "\
+    import importlib.util; \
+    from deepeval.metrics import GEval; \
+    from nltk.translate.meteor_score import meteor_score; \
+    assert importlib.util.find_spec('pytest') is None, 'pytest survived the prune'; \
+    score = meteor_score([['the','cat','sat']], ['a','feline','sat']); \
+    assert score > 0, f'wordnet synonyms unreadable, METEOR returned {score}'; \
+    print(f'image smoke ok - GEval importable, pytest gone, METEOR {score:.4f}')"
 
 # Full misconfiguration report at every severity — what the gate deliberately lets past
 [group('security')]

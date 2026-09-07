@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,7 +14,7 @@ from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 
-from ...core.config import Settings
+from ...core.config import Settings, settings
 from ..llm._base import build_llm, extract_text_from_content
 
 log = structlog.get_logger(__name__)
@@ -90,7 +91,7 @@ def _apply_deepeval_timeout_override(timeout_seconds: int) -> None:
     log.info("deepeval per-task timeout overridden", timeout_seconds=timeout_seconds)
 
 
-def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
+def _build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
     if settings.deepeval_timeout_seconds:
         _apply_deepeval_timeout_override(settings.deepeval_timeout_seconds)
 
@@ -106,22 +107,22 @@ def build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
 
 
 _judge_model: DeepEvalBaseLLM | None = None
-_geval_concurrency_limit: asyncio.Semaphore | None = None
+
+# Judges run here rather than on the loop's default executor, which asyncio also uses for
+# getaddrinfo: a judge holds its thread for the whole LLM round-trip, so sharing the pool
+# would queue DNS for every other outbound call behind it. Its size is the concurrency
+# ceiling — each running judge holds a prompt carrying the full source text.
+_geval_executor = ThreadPoolExecutor(
+    max_workers=settings.eval_max_concurrent_geval, thread_name_prefix="geval"
+)
 
 
 def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
     """One judge per process. Each build opens an HTTP client that is never closed."""
     global _judge_model
     if _judge_model is None:
-        _judge_model = build_deepeval_model(settings)
+        _judge_model = _build_deepeval_model(settings)
     return _judge_model
-
-
-def _get_geval_concurrency_limit(settings: Settings) -> asyncio.Semaphore:
-    global _geval_concurrency_limit
-    if _geval_concurrency_limit is None:
-        _geval_concurrency_limit = asyncio.Semaphore(settings.eval_max_concurrent_geval)
-    return _geval_concurrency_limit
 
 
 def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
@@ -223,28 +224,33 @@ async def evaluate_geval(
 ) -> list[DeepEvalMetricResult]:
     """Run every (spec, test case) pair against a single judge model.
 
-    At most `eval_max_concurrent_geval` run at a time, counted process-wide so that two
-    concurrent callers cannot add up past the limit. Each metric is built inside the
-    semaphore, so only in-flight judges hold a prompt and a copy of the source text.
+    `_geval_executor` bounds how many judges are in flight at once, process-wide, so two
+    concurrent callers cannot add up past the limit.
 
     Results come back in the order the pairs were given, so callers can rely on positions.
     """
     if not work:
         return []
     model = get_deepeval_judge_model(settings)
-    concurrency_limit = _get_geval_concurrency_limit(settings)
+    loop = asyncio.get_running_loop()
 
-    async def measure(spec: GEvalSpec, test_case: LLMTestCase) -> DeepEvalMetricResult:
-        async with concurrency_limit:
-            metric = GEval(
-                name=spec.name,
-                model=model,
-                threshold=DEEPEVAL_THRESHOLD,
-                criteria=spec.criteria,
-                evaluation_params=spec.params,
-                async_mode=False,  # measure() already gets its own thread below; deepeval's async path opens an event loop per worker thread and never closes it
-                **({"evaluation_steps": spec.evaluation_steps} if spec.evaluation_steps else {}),
+    def measure(spec: GEvalSpec, test_case: LLMTestCase) -> DeepEvalMetricResult:
+        metric = GEval(
+            name=spec.name,
+            model=model,
+            threshold=DEEPEVAL_THRESHOLD,
+            criteria=spec.criteria,
+            evaluation_params=spec.params,
+            async_mode=False,  # this already runs on its own thread; deepeval's async path opens an event loop per worker thread and never closes it
+            **({"evaluation_steps": spec.evaluation_steps} if spec.evaluation_steps else {}),
+        )
+        return run_metric(metric, test_case)
+
+    return list(
+        await asyncio.gather(
+            *(
+                loop.run_in_executor(_geval_executor, measure, spec, test_case)
+                for spec, test_case in work
             )
-            return await asyncio.to_thread(run_metric, metric, test_case)
-
-    return list(await asyncio.gather(*(measure(spec, test_case) for spec, test_case in work)))
+        )
+    )

@@ -1,9 +1,9 @@
 # Direct dependencies with loose (~=) pins: patch releases are allowed, but only when the
 # lock is regenerated deliberately. requirements.txt is the compiled lock that Docker installs.
 #
-#   uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 --generate-hashes
-#   ... --upgrade                     bump everything within the ~= ranges
-#   ... --upgrade-package fastapi     bump a single dependency
+#   just deps-compile                            regenerate both locks
+#   just deps-compile --upgrade                  bump everything within the ~= ranges
+#   just deps-compile --upgrade-package fastapi  bump a single dependency
 fastapi~=0.135.3
 uvicorn~=0.44.0
 structlog~=26.1.0

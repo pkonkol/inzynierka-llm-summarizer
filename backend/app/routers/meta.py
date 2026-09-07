@@ -3,7 +3,7 @@ import asyncio
 import structlog
 from fastapi import APIRouter
 
-from ..core.background_work import active_work_count, wait_until_no_work_remaining
+from ..core.background_work import wait_until_no_work_remaining
 from ..core.config import settings
 from ..schemas.meta_api import KeepaliveResponse, VersionResponse
 
@@ -11,7 +11,6 @@ router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
 log = structlog.get_logger(__name__)
 
 _KEEPALIVE_MAX_SECONDS = 55.0
-_KEEPALIVE_POLL_SECONDS = 2.0
 
 
 @router.get("/models", summary="Get supported models")
@@ -49,9 +48,8 @@ async def keepalive() -> KeepaliveResponse:
     loop = asyncio.get_running_loop()
     started_at = loop.time()
 
-    await wait_until_no_work_remaining(_KEEPALIVE_MAX_SECONDS)
+    active_work = await wait_until_no_work_remaining(_KEEPALIVE_MAX_SECONDS)
 
     held_seconds = loop.time() - started_at
-    active_work = active_work_count()
     log.debug("keepalive released", active_work=active_work, duration_ms=held_seconds * 1000)
     return KeepaliveResponse(active_work=active_work, held_seconds=round(held_seconds, 1))

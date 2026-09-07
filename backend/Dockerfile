@@ -5,6 +5,15 @@ WORKDIR /build
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+RUN sp=/install/lib/python3.14/site-packages \
+    # A base-image bump moves this path; failing here beats silently pruning nothing.
+    && test -d "$sp" \
+    && rm -rf "$sp"/_pytest "$sp"/pytest "$sp"/pytest_asyncio "$sp"/pytest_repeat.py \
+    "$sp"/pytest_rerunfailures.py "$sp"/xdist "$sp"/execnet "$sp"/iniconfig "$sp"/pluggy \
+    "$sp"/pytest-*.dist-info "$sp"/pytest_*.dist-info "$sp"/execnet-*.dist-info \
+    "$sp"/iniconfig-*.dist-info "$sp"/pluggy-*.dist-info \
+    && rm -f /install/bin/pytest /install/bin/py.test
+
 FROM python:3.14-alpine AS runtime
 
 WORKDIR /app
@@ -23,8 +32,14 @@ COPY app ./app
 # lets the running app find the corpora.
 ENV NLTK_DATA=/app/nltk_data
 
-RUN python -c "import nltk; [nltk.download(r, download_dir='/app/nltk_data', raise_on_error=True) for r in ('wordnet','omw-1.4')]" \
+# Unpacked rather than left zipped: nltk reads a zipped corpus by inflating whole members into
+# memory and caching them, putting ~22 MB in anonymous heap. Extracted, those bytes are page
+# cache the kernel can reclaim, and this container is memory-bound before it is size-bound.
+# Which corpora to fetch is stated once, in app/core/nltk_data.py.
+RUN python -c "from app.core.nltk_data import ensure_wordnet_resources; ensure_wordnet_resources()" \
     && python -c "import zipfile,pathlib; d=pathlib.Path('/app/nltk_data/corpora'); [(zipfile.ZipFile(z).extractall(d), z.unlink()) for z in d.glob('*.zip')]" \
+    # nltk writes 0600 root, and the container runs as uid 1000.
+    && chmod -R a+rX /app/nltk_data \
     && adduser -D -u 1000 appuser \
     # No package manager in the runtime image: the builder already installed everything,
     # so pip here only lets code execution turn into code installation. Also drops pip's

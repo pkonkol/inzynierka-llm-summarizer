@@ -35,11 +35,11 @@ async def track_background_work(kind: str) -> AsyncIterator[None]:
         log.debug("background work finished", kind=kind, active_work=_active_work_count)
 
 
-def active_work_count() -> int:
-    return _active_work_count
+async def wait_until_no_work_remaining(timeout_seconds: float) -> int:
+    """Returns the moment this instance runs out of work, or when the window closes.
 
-
-async def wait_until_no_work_remaining(timeout_seconds: float) -> None:
-    """Returns the moment this instance runs out of work, or when the window closes."""
+    The value is how much work is still tracked, so a caller knows whether to wait again.
+    """
     with suppress(TimeoutError):
         await asyncio.wait_for(_no_work_remaining.wait(), timeout=timeout_seconds)
+    return _active_work_count

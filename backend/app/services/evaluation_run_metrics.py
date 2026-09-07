@@ -30,12 +30,8 @@ async def _store_deepeval_status(
     )
 
 
+@track_background_work("deepeval_pass")
 async def compute_run_deepeval_metrics(run_id: str) -> None:
-    async with track_background_work("deepeval_pass"):
-        await _compute_run_deepeval_metrics(run_id)
-
-
-async def _compute_run_deepeval_metrics(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 

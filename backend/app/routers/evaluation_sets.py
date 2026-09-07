@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pymongo import DESCENDING
 
 from ..core.auth import require_auth
-from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from ..core.mongo import (
+    find_evaluation_set_entry,
+    get_evaluation_runs_collection,
+    get_evaluation_sets_collection,
+)
 from ..schemas.evaluation_set_api import (
     EvaluationSetCreateResponse,
     EvaluationSetDeletedResponse,
@@ -146,18 +150,14 @@ async def export_evaluation_set(set_id: str) -> EvaluationSetExportResponse:
 async def get_evaluation_set_entry_input_text(
     set_id: str, entry_id: str
 ) -> EvaluationSetEntryInputTextResponse:
-    collection = get_evaluation_sets_collection()
-    document = await collection.find_one(
-        {"_id": ObjectId(set_id), "entries.entry_id": entry_id},
-        {"entries.$": 1},
-    )
+    entry = await find_evaluation_set_entry(set_id, entry_id)
 
-    if document is None or not document.get("entries"):
+    if entry is None:
         raise HTTPException(status_code=404, detail="Evaluation set entry not found")
 
     return EvaluationSetEntryInputTextResponse(
         entry_id=entry_id,
-        input_text=document["entries"][0]["input_text"],
+        input_text=entry["input_text"],
     )
 
 

@@ -31,13 +31,11 @@ class CrossMetrics(ApiModel):
 class SourceMetrics(ApiModel):
     char_count: int
     flesch_kincaid_grade: float
-    text_standard: float
 
 
 class SummaryStatisticalMetrics(ApiModel):
     char_count: int
     flesch_kincaid_grade: float
-    text_standard: float
     length_ratio: float  # summary chars / source chars
 
 

@@ -2545,17 +2545,12 @@
           "flesch_kincaid_grade": {
             "type": "number",
             "title": "Flesch Kincaid Grade"
-          },
-          "text_standard": {
-            "type": "number",
-            "title": "Text Standard"
           }
         },
         "type": "object",
         "required": [
           "char_count",
-          "flesch_kincaid_grade",
-          "text_standard"
+          "flesch_kincaid_grade"
         ],
         "title": "SourceMetrics"
       },
@@ -2601,10 +2596,6 @@
             "type": "number",
             "title": "Flesch Kincaid Grade"
           },
-          "text_standard": {
-            "type": "number",
-            "title": "Text Standard"
-          },
           "length_ratio": {
             "type": "number",
             "title": "Length Ratio"
@@ -2614,7 +2605,6 @@
         "required": [
           "char_count",
           "flesch_kincaid_grade",
-          "text_standard",
           "length_ratio"
         ],
         "title": "SummaryStatisticalMetrics"

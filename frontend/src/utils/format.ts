@@ -22,7 +22,6 @@ export function formatDuration(ms: number): string {
 const METRIC_LABEL_OVERRIDES: Record<string, string> = {
   char_count: "liczba znaków",
   flesch_kincaid_grade: "Flesch-Kincaid",
-  text_standard: "poziom tekstu",
   length_ratio: "stosunek długości",
   bullet_count: "liczba punktów",
 };

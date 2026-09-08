@@ -967,8 +967,6 @@ export interface components {
             char_count: number;
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
-            /** Text Standard */
-            text_standard: number;
         };
         /**
          * SummaryResponse
@@ -990,8 +988,6 @@ export interface components {
             char_count: number;
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
-            /** Text Standard */
-            text_standard: number;
             /** Length Ratio */
             length_ratio: number;
         };

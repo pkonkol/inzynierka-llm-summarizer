@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
@@ -21,7 +20,6 @@ log = structlog.get_logger(__name__)
 
 DEEPEVAL_THRESHOLD = 0.5
 
-_OLLAMA_CONCURRENCY_LIMIT = threading.Semaphore(2)
 _LOGGED_RESPONSE_CHARS = 200
 
 
@@ -30,23 +28,16 @@ def _truncated(text: str) -> str:
 
 
 class _LangchainDeepEvalModel(DeepEvalBaseLLM):
-    def __init__(
-        self, chat_model: BaseChatModel | Runnable[Any, Any], model_name: str, is_ollama: bool
-    ) -> None:
+    def __init__(self, chat_model: BaseChatModel | Runnable[Any, Any], model_name: str) -> None:
         self._chat_model = chat_model
         self._model_name = model_name
-        self._is_ollama = is_ollama
 
     def load_model(self) -> BaseChatModel | Runnable[Any, Any]:
         return self._chat_model
 
     def generate(self, prompt: str) -> str:
         log.debug("deepeval judge model generate", model=self._model_name)
-        if self._is_ollama:
-            with _OLLAMA_CONCURRENCY_LIMIT:
-                response = self._chat_model.invoke(prompt)
-        else:
-            response = self._chat_model.invoke(prompt)
+        response = self._chat_model.invoke(prompt)
         text = extract_text_from_content(response.content)
         log.debug(
             "deepeval judge model response", model=self._model_name, response=_truncated(text)
@@ -55,11 +46,7 @@ class _LangchainDeepEvalModel(DeepEvalBaseLLM):
 
     async def a_generate(self, prompt: str) -> str:
         log.debug("deepeval judge model a_generate", model=self._model_name)
-        if self._is_ollama:
-            with _OLLAMA_CONCURRENCY_LIMIT:
-                response = await self._chat_model.ainvoke(prompt)
-        else:
-            response = await self._chat_model.ainvoke(prompt)
+        response = await self._chat_model.ainvoke(prompt)
         text = extract_text_from_content(response.content)
         log.debug(
             "deepeval judge model response", model=self._model_name, response=_truncated(text)
@@ -101,9 +88,7 @@ def _build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
     chat_model = build_llm(model_provider, model_name)
     if model_provider.lower() == "openrouter":
         chat_model = chat_model.bind(response_format={"type": "json_object"})
-    return _LangchainDeepEvalModel(
-        chat_model, model_name, is_ollama=model_provider.lower() == "ollama"
-    )
+    return _LangchainDeepEvalModel(chat_model, model_name)
 
 
 _judge_model: DeepEvalBaseLLM | None = None

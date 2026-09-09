@@ -396,6 +396,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/runs/{run_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Evaluation Run */
+        post: operations["resume_evaluation_run_api_v1_research_runs__run_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -563,7 +580,7 @@ export interface components {
              * @default pending
              * @enum {string}
              */
-            status: "pending" | "completed" | "failed";
+            status: "pending" | "running" | "completed" | "failed";
             /** Error */
             error: string | null;
         };
@@ -631,6 +648,18 @@ export interface components {
             /** Skip Takeaways */
             skip_takeaways: boolean;
             aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
+        };
+        /** EvaluationRunResumeResponse */
+        EvaluationRunResumeResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+            /** Evaluation Run Id */
+            evaluation_run_id: string;
+            /** Resume Attempts */
+            resume_attempts: number;
         };
         /** EvaluationSetCreateResponse */
         EvaluationSetCreateResponse: {
@@ -1084,6 +1113,7 @@ export type EvaluationRunEntriesResponse = components['schemas']['EvaluationRunE
 export type EvaluationRunEntryResponse = components['schemas']['EvaluationRunEntryResponse'];
 export type EvaluationRunListItemResponse = components['schemas']['EvaluationRunListItemResponse'];
 export type EvaluationRunResponse = components['schemas']['EvaluationRunResponse'];
+export type EvaluationRunResumeResponse = components['schemas']['EvaluationRunResumeResponse'];
 export type EvaluationSetCreateResponse = components['schemas']['EvaluationSetCreateResponse'];
 export type EvaluationSetDeletedResponse = components['schemas']['EvaluationSetDeletedResponse'];
 export type EvaluationSetDetailResponse = components['schemas']['EvaluationSetDetailResponse'];
@@ -1873,6 +1903,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeepevalQueuedResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_evaluation_run_api_v1_research_runs__run_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunResumeResponse"];
                 };
             };
             /** @description Validation Error */

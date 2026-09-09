@@ -30,6 +30,8 @@ class JobDocument(BaseModel):
     model_provider: str
     model_name: str
     summary_mode: Literal["simple", "sequential", "cascade"]
+    language: str
+    run_deepeval: bool
     status: Literal["pending", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
@@ -41,6 +43,8 @@ class JobDocument(BaseModel):
     prompt_template: list[tuple[str, str]] = Field(default_factory=list)
     prompt_params: dict[str, str] = Field(default_factory=dict)
     created_at: datetime
+    heartbeat_at: datetime
+    resume_attempts: int = 0
     started_at: datetime | None = None
     finished_at: datetime | None = None
     duration_ms: int = 0

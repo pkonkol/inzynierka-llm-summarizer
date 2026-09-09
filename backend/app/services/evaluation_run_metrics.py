@@ -20,13 +20,10 @@ from .run_metrics import (
 log = structlog.get_logger(__name__)
 
 
-async def _store_deepeval_status(
-    run_id: str, aggregate_metrics: dict[str, Any], deepeval_status: dict[str, Any]
-) -> None:
-    aggregate_metrics["deepeval"] = deepeval_status
+async def _store_deepeval_status(run_id: str, deepeval_status: dict[str, Any]) -> None:
     await get_evaluation_runs_collection().update_one(
         {"_id": ObjectId(run_id)},
-        {"$set": {"aggregate_metrics": aggregate_metrics}},
+        {"$set": {"aggregate_metrics.deepeval": deepeval_status}},
     )
 
 
@@ -39,7 +36,6 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         {"_id": ObjectId(run_id)},
         {
             "evaluation_set_id": 1,
-            "aggregate_metrics": 1,
             "entries.entry_id": 1,
             "entries.status": 1,
             "entries.golden_summary": 1,
@@ -51,17 +47,13 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
     if run_doc is None:
         return
 
-    aggregate_metrics = run_doc["aggregate_metrics"]
-    await _store_deepeval_status(
-        run_id, aggregate_metrics, {"status": "running", "started_at": datetime.now(UTC)}
-    )
+    await _store_deepeval_status(run_id, {"status": "running", "started_at": datetime.now(UTC)})
 
     set_id = run_doc["evaluation_set_id"]
     set_doc = await sets.find_one({"_id": ObjectId(set_id)}, {"_id": 1})
     if set_doc is None:
         await _store_deepeval_status(
             run_id,
-            aggregate_metrics,
             {
                 "status": "failed",
                 "error": "Evaluation set not found",
@@ -124,14 +116,12 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         log.exception("deepeval failed", run_id=run_id)
         await _store_deepeval_status(
             run_id,
-            aggregate_metrics,
             {"status": "failed", "error": str(exc), "finished_at": datetime.now(UTC)},
         )
         raise
 
     await _store_deepeval_status(
         run_id,
-        aggregate_metrics,
         {
             "status": "completed",
             "updated_entries": updated_entries,

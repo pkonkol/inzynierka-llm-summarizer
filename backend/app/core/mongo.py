@@ -39,13 +39,7 @@ async def init_mongo() -> None:
     await ensure_evaluation_sets_indexes(evaluation_sets_collection)
     await ensure_evaluation_runs_indexes(evaluation_runs_collection)
 
-    count = await cleanup_stale_pending_jobs(max_age_hours=2)
-    run_count = await cleanup_stale_evaluation_runs(max_age_hours=2)
-    log.info(
-        "mongodb initialised",
-        stale_jobs_cleaned=count,
-        stale_runs_cleaned=run_count,
-    )
+    log.info("mongodb initialised")
 
 
 async def close_mongo() -> None:
@@ -80,6 +74,7 @@ def get_evaluation_runs_collection() -> AsyncIOMotorCollection:
 
 async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index("job_id", unique=True)
+    await collection.create_index([("status", 1), ("heartbeat_at", 1)])
     await collection.create_index("source_url")
     await collection.create_index([("created_at", -1)])
     await collection.create_index([("updated_at", -1)])
@@ -92,6 +87,7 @@ async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> 
 
 async def ensure_evaluation_runs_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index("evaluation_set_id")
+    await collection.create_index([("status", 1), ("heartbeat_at", 1)])
     await collection.create_index([("created_at", -1)])
 
 
@@ -106,33 +102,51 @@ async def find_evaluation_set_entry(set_id: str, entry_id: str) -> dict | None:
     return document["entries"][0]
 
 
-async def cleanup_stale_pending_jobs(max_age_hours: int = 24) -> int:
+def stale_work_cutoff() -> datetime:
+    """Work whose heartbeat is older than this is treated as belonging to a dead process.
+
+    The bound being cleared is the longest gap between two heartbeats, which is the time one
+    entry takes, so this is sized against a slow entry rather than against a whole run. Erring
+    long is deliberate: killing a live run costs the whole run, while leaving a dead one costs
+    the delay before it is reported.
+    """
+    return datetime.now(UTC) - timedelta(minutes=settings.stale_work_timeout_minutes)
+
+
+# MIGRATION: until 2026-03, documents created before heartbeats existed have no heartbeat_at.
+# Range operators in MongoDB are type-bracketed, so the query above cannot see them and they
+# would hang forever. Delete this once no such documents remain.
+_MISSING_HEARTBEAT = {"heartbeat_at": {"$exists": False}}
+
+
+async def cleanup_stale_pending_jobs() -> int:
     jobs_collection = get_jobs_collection()
-    cutoff = datetime.now(UTC) - timedelta(hours=max_age_hours)
+    update = {
+        "$set": {
+            "status": "failed",
+            "error": "Job killed before completion (server restart)",
+            "updated_at": datetime.now(UTC),
+        }
+    }
     result = await jobs_collection.update_many(
-        {"status": "pending", "created_at": {"$lt": cutoff}},
-        {
-            "$set": {
-                "status": "failed",
-                "error": "Job killed before completion (server restart)",
-                "updated_at": datetime.now(UTC),
-            }
-        },
+        {"status": "pending", "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
     )
-    return result.modified_count
+    legacy = await jobs_collection.update_many({"status": "pending", **_MISSING_HEARTBEAT}, update)
+    return result.modified_count + legacy.modified_count
 
 
-async def cleanup_stale_evaluation_runs(max_age_hours: int = 2) -> int:
+async def cleanup_stale_evaluation_runs() -> int:
     runs_collection = get_evaluation_runs_collection()
-    cutoff = datetime.now(UTC) - timedelta(hours=max_age_hours)
+    unfinished = {"status": {"$in": ["pending", "running"]}}
+    update = {
+        "$set": {
+            "status": "failed",
+            "finished_at": datetime.now(UTC),
+            "aggregate_metrics.error": "Evaluation run stopped responding and could not be resumed",
+        }
+    }
     result = await runs_collection.update_many(
-        {"status": {"$in": ["pending", "running"]}, "created_at": {"$lt": cutoff}},
-        {
-            "$set": {
-                "status": "failed",
-                "finished_at": datetime.now(UTC),
-                "aggregate_metrics.error": "Evaluation run killed before completion (server restart)",
-            }
-        },
+        {**unfinished, "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
     )
-    return result.modified_count
+    legacy = await runs_collection.update_many({**unfinished, **_MISSING_HEARTBEAT}, update)
+    return result.modified_count + legacy.modified_count

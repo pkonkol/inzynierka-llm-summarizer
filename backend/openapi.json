@@ -1076,6 +1076,53 @@
           }
         }
       }
+    },
+    "/api/v1/research/runs/{run_id}/resume": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Resume Evaluation Run",
+        "operationId": "resume_evaluation_run_api_v1_research_runs__run_id__resume_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationRunResumeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1540,6 +1587,7 @@
             "type": "string",
             "enum": [
               "pending",
+              "running",
               "completed",
               "failed"
             ],
@@ -1739,6 +1787,30 @@
           "aggregate_metrics"
         ],
         "title": "EvaluationRunResponse"
+      },
+      "EvaluationRunResumeResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          },
+          "evaluation_run_id": {
+            "type": "string",
+            "title": "Evaluation Run Id"
+          },
+          "resume_attempts": {
+            "type": "integer",
+            "title": "Resume Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "evaluation_run_id",
+          "resume_attempts"
+        ],
+        "title": "EvaluationRunResumeResponse"
       },
       "EvaluationSetCreateResponse": {
         "properties": {

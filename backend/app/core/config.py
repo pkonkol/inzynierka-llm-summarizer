@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     deepeval_timeout_seconds: int | None = None
     eval_max_concurrent_geval: int = 3
     blocking_work_max_threads: int = 5
+    stale_work_timeout_minutes: int = 15
+    max_resume_attempts: int = 3
 
     @model_validator(mode="after")
     def _require_secrets_when_auth_enabled(self) -> Settings:

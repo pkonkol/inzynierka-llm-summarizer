@@ -53,8 +53,11 @@ async def create_summarize_job(
         model_provider=payload.model_provider,
         model_name=payload.model_name,
         summary_mode=payload.summary_mode,
+        language=payload.language,
+        run_deepeval=payload.run_deepeval,
         status="pending",
         created_at=now,
+        heartbeat_at=now,
         updated_at=now,
     )
 

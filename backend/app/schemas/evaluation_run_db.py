@@ -36,6 +36,8 @@ class EvaluationRunDocument(BaseModel):
     skip_takeaways: bool = False
     status: RunStatus
     created_at: datetime
+    heartbeat_at: datetime
+    resume_attempts: int = 0
     finished_at: datetime | None = None
     entries: list[EvaluationRunEntryDocument]
     aggregate_metrics: EvaluationRunAggregateMetrics = Field(

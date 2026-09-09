@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 
+import structlog
 from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pymongo import DESCENDING
@@ -17,11 +18,15 @@ from ..schemas.evaluation_run_api import (
     EvaluationRunEntryResponse,
     EvaluationRunListItemResponse,
     EvaluationRunResponse,
+    EvaluationRunResumeResponse,
 )
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
 from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
 from ..services.evaluation_runner import run_evaluation_batch
+from ..services.startup_resume import claim_evaluation_run_for_resume
 from .evaluation_sets import find_evaluation_set_or_404
+
+log = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
@@ -72,6 +77,7 @@ async def create_evaluation_run(
         skip_takeaways=payload.skip_takeaways,
         status="pending",
         created_at=created_at,
+        heartbeat_at=created_at,
         finished_at=None,
         entries=entries,
         aggregate_metrics={},
@@ -219,6 +225,33 @@ async def evaluate_run_deepeval(
     background_tasks.add_task(compute_run_deepeval_metrics, run_id)
 
     return DeepevalQueuedResponse(status="queued", run_id=run_id)
+
+
+@router.post(
+    "/runs/{run_id}/resume",
+    response_model=EvaluationRunResumeResponse,
+    dependencies=[Depends(require_auth)],
+)
+async def resume_evaluation_run(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+) -> EvaluationRunResumeResponse:
+    document = await find_evaluation_run_or_404(run_id, {"status": 1, "resume_attempts": 1})
+
+    if document["status"] == "completed":
+        raise HTTPException(status_code=409, detail="Evaluation run has already finished")
+
+    if not await claim_evaluation_run_for_resume(ObjectId(run_id), reset_attempts=True):
+        raise HTTPException(status_code=409, detail="Evaluation run is still being processed")
+
+    background_tasks.add_task(run_evaluation_batch, run_id)
+    log.info("evaluation run resume requested", run_id=run_id)
+
+    return EvaluationRunResumeResponse(
+        status="queued",
+        evaluation_run_id=run_id,
+        resume_attempts=document["resume_attempts"],
+    )
 
 
 @router.delete(

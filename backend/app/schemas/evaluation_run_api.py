@@ -9,7 +9,7 @@ from .base import ApiModel
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
 
 RunStatus = Literal["pending", "running", "completed", "failed"]
-EntryStatus = Literal["pending", "completed", "failed"]
+EntryStatus = Literal["pending", "running", "completed", "failed"]
 
 
 class DeepevalPassMetrics(ApiModel):
@@ -99,6 +99,12 @@ class EvaluationRunCreateResponse(ApiModel):
     evaluation_run_id: str
     status: RunStatus
     created_at: datetime
+
+
+class EvaluationRunResumeResponse(ApiModel):
+    status: Literal["queued"]
+    evaluation_run_id: str
+    resume_attempts: int
 
 
 class EvaluationRunDeletedResponse(ApiModel):

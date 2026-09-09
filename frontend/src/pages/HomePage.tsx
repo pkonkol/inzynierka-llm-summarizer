@@ -8,15 +8,15 @@ import {
   listAllJobsFlat,
   listSummarizedUrls,
 } from "../api/client";
-import { ActiveJobsPanel } from "../components/ActiveJobsPanel";
 import { CompletedJobsList } from "../components/CompletedJobsList";
 import { useFlash } from "../components/FlashProvider";
+import { JobActivityPanel } from "../components/JobActivityPanel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { UrlSubmitCard } from "../components/UrlSubmitCard";
 import { Alert } from "../components/ui/Alert";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import type { JobStatusResponse } from "../types/api.generated";
+import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -45,6 +45,15 @@ export function HomePage() {
     "Nie udało się pobrać listy zadań w toku",
   );
   const activeJobs = activeJobsResource.data ?? [];
+
+  // Cleared by leaving the page: the panel reports this visit, and the jobs list is the archive.
+  const [finishedJobsThisVisit, setFinishedJobsThisVisit] = useState<JobListItemResponse[]>([]);
+  const activeJobIds = new Set(activeJobs.map((job) => job.job_id));
+  const jobActivityRows = [
+    // A resumed job is back in the polled list, so its finished row would be a duplicate.
+    ...activeJobs,
+    ...finishedJobsThisVisit.filter((job) => !activeJobIds.has(job.job_id)),
+  ];
 
   useListPolling(activeJobsResource.reload, activeJobs.length > 0);
   useListPolling(
@@ -79,10 +88,12 @@ export function HomePage() {
   );
 
   const announceFinishedJobs = useCallback(
-    async (jobIds: string[]) => {
-      for (const jobId of jobIds) {
+    async (finishedJobs: JobListItemResponse[]) => {
+      for (const finishedJob of finishedJobs) {
+        const jobId = finishedJob.job_id;
         try {
           const status = await getJobStatus(jobId);
+          setFinishedJobsThisVisit((rows) => [...rows, { ...finishedJob, status: status.status }]);
           const openJobAction = { label: "Zobacz podsumowanie", href: `/jobs/${jobId}` };
           // An article URL is long enough that the notification would fold it out of sight.
           const jobLabel = status.summary_data?.title || status.source_url;
@@ -105,16 +116,19 @@ export function HomePage() {
 
   // A job that was in the in-progress list and is no longer there has reached a terminal state.
   // The list is the source, so any number of jobs can run at once and each still reports itself.
-  const previousActiveJobIdsRef = useRef<string[] | null>(null);
+  // Whole entries are kept: the vanished one is what the panel goes on showing, restated as done.
+  const previousActiveJobsRef = useRef<JobListItemResponse[] | null>(null);
   useEffect(() => {
     if (activeJobsResource.data === null) return;
-    const currentIds = activeJobsResource.data.map((job) => job.job_id);
-    const previousIds = previousActiveJobIdsRef.current;
-    previousActiveJobIdsRef.current = currentIds;
-    if (previousIds === null) return;
+    const currentJobs = activeJobsResource.data;
+    const previousJobs = previousActiveJobsRef.current;
+    previousActiveJobsRef.current = currentJobs;
+    if (previousJobs === null) return;
 
-    const finishedIds = previousIds.filter((jobId) => !currentIds.includes(jobId));
-    if (finishedIds.length > 0) void announceFinishedJobs(finishedIds);
+    const finishedJobs = previousJobs.filter(
+      (job) => !currentJobs.some((currentJob) => currentJob.job_id === job.job_id),
+    );
+    if (finishedJobs.length > 0) void announceFinishedJobs(finishedJobs);
   }, [activeJobsResource.data, announceFinishedJobs]);
 
   useEffect(() => {
@@ -146,7 +160,7 @@ export function HomePage() {
           <UrlSubmitCard onSubmit={submitSummary.run} isSubmitting={submitSummary.isPending} />
         ) : null}
 
-        <ActiveJobsPanel jobs={activeJobs} />
+        <JobActivityPanel jobs={jobActivityRows} />
 
         {urlListResource.errorMessage ? (
           <Alert tone="danger">{urlListResource.errorMessage}</Alert>

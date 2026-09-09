@@ -55,7 +55,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
   };
 
   return (
-    <section className="grid animate-[riseIn_.55s_ease_both] gap-6">
+    <section className="grid gap-6">
       <div className="grid gap-3">
         <h1 className="hero-title text-balance">
           Praca Inżynierska - Podsumowanie Artykułów z LLM

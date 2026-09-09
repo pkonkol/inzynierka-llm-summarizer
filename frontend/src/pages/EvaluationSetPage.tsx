@@ -12,6 +12,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { InputTextSection } from "../components/InputTextSection";
 import { MetricsSection } from "../components/MetricsSection";
+import { StatusLabel } from "../components/StatusLabel";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
@@ -27,7 +28,7 @@ import type {
 } from "../types/api.generated";
 import { downloadJson } from "../utils/download";
 import { formatDateMinute } from "../utils/format";
-import { navigateTo } from "../utils/researchRouting";
+import { navigateTo } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useConfirmDelete } from "../utils/useConfirmDelete";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
@@ -107,7 +108,9 @@ function RunsTable({
           <Td>{run.model_provider}</Td>
           <Td>{run.model_name}</Td>
           <Td>{run.summary_mode}</Td>
-          <Td>{run.status}</Td>
+          <Td>
+            <StatusLabel status={run.status} />
+          </Td>
           <Td>{run.entry_count}</Td>
           <Td>{formatDateMinute(run.created_at)}</Td>
           <Td className="text-right">

@@ -1290,6 +1290,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                status?: ("pending" | "running" | "completed" | "failed")[] | null;
             };
             header?: never;
             path?: never;

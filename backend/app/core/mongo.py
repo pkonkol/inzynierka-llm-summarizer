@@ -20,6 +20,7 @@ async def init_mongo() -> None:
 
     _mongo_client = AsyncIOMotorClient(
         settings.mongodb_uri,
+        tz_aware=True,
         retryWrites=False,
         retryReads=True,
         serverSelectionTimeoutMS=5000,

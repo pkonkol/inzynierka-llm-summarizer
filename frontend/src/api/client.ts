@@ -102,8 +102,16 @@ export const createSummaryJob = (
 export const listSummarizedUrls = (limit = 50): Promise<UrlSummaryListItem[]> =>
   request<UrlSummaryListItem[]>(`/api/v1/jobs?limit=${limit}`);
 
-export const listAllJobsFlat = (limit = 100): Promise<JobListItemResponse[]> =>
-  request<JobListItemResponse[]>(`/api/v1/jobs/list?limit=${limit}`);
+export const listAllJobsFlat = (
+  limit = 100,
+  status: JobStatusValue[] = [],
+): Promise<JobListItemResponse[]> => {
+  const query = new URLSearchParams([
+    ["limit", String(limit)],
+    ...status.map((value): [string, string] => ["status", value]),
+  ]);
+  return request<JobListItemResponse[]>(`/api/v1/jobs/list?${query}`);
+};
 
 export const getJobsForUrl = (
   sourceUrl: string,

@@ -1,6 +1,6 @@
 import type { UrlSummaryListItem } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
-import { JobStatusLabel } from "./JobStatusLabel";
+import { StatusLabel } from "./StatusLabel";
 import { listItemClasses } from "./ui/listItem";
 
 interface CompletedJobsListProps {
@@ -49,14 +49,12 @@ export function CompletedJobsList({
               {/* Counts + date */}
               <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
                 {item.pending_count > 0 && (
-                  <JobStatusLabel status="pending" count={item.pending_count} />
+                  <StatusLabel status="pending" count={item.pending_count} />
                 )}
                 {item.completed_count > 0 && (
-                  <JobStatusLabel status="completed" count={item.completed_count} />
+                  <StatusLabel status="completed" count={item.completed_count} />
                 )}
-                {item.failed_count > 0 && (
-                  <JobStatusLabel status="failed" count={item.failed_count} />
-                )}
+                {item.failed_count > 0 && <StatusLabel status="failed" count={item.failed_count} />}
                 <span>{formatDateMinute(item.latest_updated_at)}</span>
               </span>
             </button>

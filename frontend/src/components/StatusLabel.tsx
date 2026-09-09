@@ -1,5 +1,6 @@
 import type { JobStatusValue } from "../types/local";
 
+// Jobs, evaluation runs and run entries all report the same four values.
 // Glyph as well as colour, so the state survives greyscale and colour-blind vision.
 const STATUS_STYLE: Record<JobStatusValue, { className: string; glyph: string }> = {
   completed: { className: "text-success", glyph: "✓" },
@@ -8,7 +9,7 @@ const STATUS_STYLE: Record<JobStatusValue, { className: string; glyph: string }>
   running: { className: "text-warning", glyph: "▶" },
 };
 
-export function JobStatusLabel({ status, count }: { status: JobStatusValue; count?: number }) {
+export function StatusLabel({ status, count }: { status: JobStatusValue; count?: number }) {
   const { className, glyph } = STATUS_STYLE[status];
   return (
     <span className={className}>

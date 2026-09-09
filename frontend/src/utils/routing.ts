@@ -20,3 +20,8 @@ export function getRunIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/research\/runs\/([^/]+)$/);
   return match?.[1] ?? null;
 }
+
+export function getJobIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/jobs\/([^/]+)$/);
+  return match?.[1] ?? null;
+}

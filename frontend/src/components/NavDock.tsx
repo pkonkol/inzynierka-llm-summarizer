@@ -1,4 +1,4 @@
-import { navigateTo, shouldInterceptClick } from "../utils/researchRouting";
+import { navigateTo, shouldInterceptClick } from "../utils/routing";
 
 type Route = "home" | "jobs" | "research";
 

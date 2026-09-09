@@ -3,6 +3,7 @@ import { Collapsible } from "../Collapsible";
 import { PreBlock } from "../PreBlock";
 import { Alert } from "./Alert";
 import { Button } from "./Button";
+import { LinkButton } from "./LinkButton";
 
 const SUMMARY_LIMIT = 140;
 
@@ -40,6 +41,11 @@ export function Toast({ flash, onDismiss }: ToastProps) {
           </Button>
         </div>
         {details}
+        {flash.action ? (
+          <LinkButton href={flash.action.href} size="lg" className="w-full" onClick={onDismiss}>
+            {flash.action.label}
+          </LinkButton>
+        ) : null}
       </Alert>
     ) : null;
 

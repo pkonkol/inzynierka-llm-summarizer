@@ -1,9 +1,9 @@
-import { navigateTo, shouldInterceptClick } from "../../utils/researchRouting";
-import { buttonClasses } from "./Button";
+import { navigateTo, shouldInterceptClick } from "../../utils/routing";
+import { type ButtonSize, buttonClasses } from "./Button";
 
 interface LinkButtonProps extends React.ComponentProps<"a"> {
   href: string;
-  size?: "sm" | "md";
+  size?: ButtonSize;
 }
 
 // A real <a href>, so the row can be opened in a new tab, middle-clicked or copied as a link.

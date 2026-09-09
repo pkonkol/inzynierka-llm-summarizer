@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { createSummaryJob, getJobsForUrl, listSummarizedUrls } from "../api/client";
+import {
+  createSummaryJob,
+  errorText,
+  getJobStatus,
+  getJobsForUrl,
+  listAllJobsFlat,
+  listSummarizedUrls,
+} from "../api/client";
+import { ActiveJobsPanel } from "../components/ActiveJobsPanel";
 import { CompletedJobsList } from "../components/CompletedJobsList";
 import { useFlash } from "../components/FlashProvider";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
@@ -11,7 +19,6 @@ import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageSh
 import type { JobStatusResponse } from "../types/api.generated";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useJobCompletionWatch } from "../utils/useJobCompletionWatch";
 import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
 
@@ -32,7 +39,18 @@ export function HomePage() {
   // null means "no answer yet" — a real third state, not a missing value.
   const urlList = urlListResource.data ?? [];
 
-  const { watchJob } = useJobCompletionWatch((status) => setSelectedUrl(status.source_url));
+  const activeJobsResource = useReloadableResource(
+    () => listAllJobsFlat(50, ["pending", "running"]),
+    "",
+    "Nie udało się pobrać listy zadań w toku",
+  );
+  const activeJobs = activeJobsResource.data ?? [];
+
+  useListPolling(activeJobsResource.reload, activeJobs.length > 0);
+  useListPolling(
+    urlListResource.reload,
+    urlList.some((item) => item.pending_count > 0),
+  );
 
   const submitSummary = useAsyncAction(
     async (
@@ -56,17 +74,48 @@ export function HomePage() {
     },
     {
       errorPrefix: "Nie udało się utworzyć joba",
-      onSuccess: (created) => {
-        watchJob(created.job_id);
-        return urlListResource.reload();
-      },
+      onSuccess: () => activeJobsResource.reload(),
     },
   );
 
-  useListPolling(
-    urlListResource.reload,
-    urlList.some((item) => item.pending_count > 0),
+  const announceFinishedJobs = useCallback(
+    async (jobIds: string[]) => {
+      for (const jobId of jobIds) {
+        try {
+          const status = await getJobStatus(jobId);
+          const openJobAction = { label: "Zobacz podsumowanie", href: `/jobs/${jobId}` };
+          // An article URL is long enough that the notification would fold it out of sight.
+          const jobLabel = status.summary_data?.title || status.source_url;
+          if (status.status === "completed") {
+            showFlash(`Podsumowanie gotowe: ${jobLabel}`, "success", openJobAction);
+          } else {
+            showFlash(`Job zakończył się błędem: ${status.error ?? "nieznany błąd"}`, "danger", {
+              ...openJobAction,
+              label: "Zobacz szczegóły",
+            });
+          }
+        } catch (error) {
+          showFlash(`Nie udało się odczytać statusu joba: ${errorText(error)}`, "danger");
+        }
+      }
+      await urlListResource.reload();
+    },
+    [showFlash, urlListResource.reload],
   );
+
+  // A job that was in the in-progress list and is no longer there has reached a terminal state.
+  // The list is the source, so any number of jobs can run at once and each still reports itself.
+  const previousActiveJobIdsRef = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (activeJobsResource.data === null) return;
+    const currentIds = activeJobsResource.data.map((job) => job.job_id);
+    const previousIds = previousActiveJobIdsRef.current;
+    previousActiveJobIdsRef.current = currentIds;
+    if (previousIds === null) return;
+
+    const finishedIds = previousIds.filter((jobId) => !currentIds.includes(jobId));
+    if (finishedIds.length > 0) void announceFinishedJobs(finishedIds);
+  }, [activeJobsResource.data, announceFinishedJobs]);
 
   useEffect(() => {
     if (!selectedUrl) {
@@ -97,8 +146,13 @@ export function HomePage() {
           <UrlSubmitCard onSubmit={submitSummary.run} isSubmitting={submitSummary.isPending} />
         ) : null}
 
+        <ActiveJobsPanel jobs={activeJobs} />
+
         {urlListResource.errorMessage ? (
           <Alert tone="danger">{urlListResource.errorMessage}</Alert>
+        ) : null}
+        {activeJobsResource.errorMessage ? (
+          <Alert tone="danger">{activeJobsResource.errorMessage}</Alert>
         ) : null}
 
         <CompletedJobsList

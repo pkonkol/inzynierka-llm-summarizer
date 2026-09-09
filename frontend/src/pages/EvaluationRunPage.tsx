@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
-import { InfoRow } from "../components/InfoRow";
+import { InfoRow, InfoRowContent } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
+import { StatusLabel } from "../components/StatusLabel";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
@@ -164,30 +165,29 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
   );
 }
 
-const RUN_STATUS_STYLE: Record<string, string> = {
-  completed: "text-success",
-  failed: "text-danger",
-  running: "text-warning",
-  pending: "text-warning",
-};
+interface EntryProgress {
+  completedEntryCount: number;
+  failedEntryCount: number;
+}
 
-function RunSummary({ run }: { run: EvaluationRunResponse }) {
-  const { entry_count, completed_entries, failed_entries, error, deepeval } = run.aggregate_metrics;
+function RunSummary({ run, progress }: { run: EvaluationRunResponse; progress: EntryProgress }) {
+  const { error, deepeval } = run.aggregate_metrics;
 
   return (
     <Panel padding="sm" className="grid gap-3">
       <div className="metric-row">
+        <InfoRowContent label="status">
+          <StatusLabel status={run.status} />
+        </InfoRowContent>
+        <InfoRow label="wpisów" value={run.entry_count} />
         <InfoRow
-          label="status"
-          value={run.status}
-          valueClassName={RUN_STATUS_STYLE[run.status] ?? ""}
+          label="ukończonych"
+          value={`${progress.completedEntryCount} / ${run.entry_count}`}
         />
-        <InfoRow label="wpisów" value={entry_count} />
-        <InfoRow label="ukończonych" value={completed_entries} />
         <InfoRow
           label="błędnych"
-          value={failed_entries}
-          valueClassName={failed_entries ? "text-danger" : ""}
+          value={progress.failedEntryCount}
+          valueClassName={progress.failedEntryCount ? "text-danger" : ""}
         />
         <InfoRow label="utworzono" value={formatDateMinute(run.created_at)} />
         <InfoRow label="zakończono" value={formatDateMinute(run.finished_at)} />
@@ -197,11 +197,9 @@ function RunSummary({ run }: { run: EvaluationRunResponse }) {
         <div className="grid gap-2 border-t border-panel-border pt-4">
           <SectionHeading>GEval</SectionHeading>
           <div className="metric-row">
-            <InfoRow
-              label="status"
-              value={deepeval.status}
-              valueClassName={RUN_STATUS_STYLE[deepeval.status] ?? ""}
-            />
+            <InfoRowContent label="status">
+              <StatusLabel status={deepeval.status} />
+            </InfoRowContent>
             <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
             <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
             <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
@@ -231,7 +229,9 @@ function RunEntryCard({
       <h4>
         {index + 1}
         {" · "}
-        <span className="font-normal">{entry.status}</span>
+        <span className="font-normal">
+          <StatusLabel status={entry.status} />
+        </span>
         {" · "}
         <span className="mono-value font-normal lowercase text-muted">
           {entry.title} · {entry.url}
@@ -299,6 +299,11 @@ export function EvaluationRunPage({ runId }: Props) {
   const run = runResource.data;
   const entries = entriesResource.data?.entries ?? null;
 
+  const entryProgress = {
+    completedEntryCount: (entries ?? []).filter((entry) => entry.status === "completed").length,
+    failedEntryCount: (entries ?? []).filter((entry) => entry.status === "failed").length,
+  };
+
   const isRunInProgress = run?.status === "pending" || run?.status === "running";
   // The GEval pass is queued separately and keeps running after the run itself has finished.
   const deepevalStatus = run?.aggregate_metrics.deepeval?.status ?? null;
@@ -310,6 +315,7 @@ export function EvaluationRunPage({ runId }: Props) {
 
   // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
   useListPolling(runResource.reload, true, isRunInProgress || isDeepevalRunning);
+  useListPolling(entriesResource.reload, true, isRunInProgress || isDeepevalRunning);
 
   useEffect(() => {
     if (!run) return;
@@ -338,7 +344,7 @@ export function EvaluationRunPage({ runId }: Props) {
 
   let runSummary = null;
   if (run) {
-    runSummary = <RunSummary run={run} />;
+    runSummary = <RunSummary run={run} progress={entryProgress} />;
   } else if (runResource.isInitialLoading) {
     runSummary = <p className="text-muted">Ładowanie szczegółów runa...</p>;
   }

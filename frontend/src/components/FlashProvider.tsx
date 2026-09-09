@@ -1,9 +1,9 @@
 import { createContext, useContext } from "react";
 
-import { type FlashTone, useFlashMessage } from "../utils/useFlashMessage";
+import { type FlashAction, type FlashTone, useFlashMessage } from "../utils/useFlashMessage";
 import { Toast } from "./ui/Toast";
 
-type ShowFlash = (text: string, tone?: FlashTone) => void;
+type ShowFlash = (text: string, tone?: FlashTone, action?: FlashAction) => void;
 
 const FlashContext = createContext<ShowFlash | null>(null);
 

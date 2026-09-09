@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated
 from uuid import uuid4
 
 import structlog
@@ -14,6 +15,7 @@ from ..schemas.job_api import (
     JobDeletedResponse,
     JobListItemResponse,
     JobStatusResponse,
+    JobStatusValue,
     UrlSummaryListItem,
 )
 from ..schemas.job_db import JobDocument
@@ -132,12 +134,13 @@ async def list_summarized_urls(
     "/list", response_model=list[JobListItemResponse], summary="List all jobs flat (/jobs page)"
 )
 async def list_all_jobs_flat(
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    status: Annotated[list[JobStatusValue] | None, Query()] = None,
 ) -> list[JobListItemResponse]:
     jobs_collection = get_jobs_collection()
     cursor = (
         jobs_collection.find(
-            {},
+            {"status": {"$in": status}} if status else {},
             {
                 "_id": 0,
                 "input_text": 0,

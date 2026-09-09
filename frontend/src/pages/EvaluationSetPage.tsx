@@ -8,6 +8,7 @@ import {
   getEvaluationSet,
   listEvaluationRuns,
 } from "../api/research";
+import { Breadcrumbs, EVALUATION_TRAIL } from "../components/Breadcrumbs";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { InputTextSection } from "../components/InputTextSection";
@@ -178,7 +179,7 @@ export function EvaluationSetPage({ setId }: Props) {
   const evaluateMetrics = useAsyncAction(() => evaluateMissingGoldenMetrics(setId), {
     errorPrefix: "Nie udało się policzyć metryk wzorca",
     successMessage: (result) =>
-      `Golden metrics updated for ${result.updated_entries} of ${result.total_entries} entries.`,
+      `Policzono metryki wzorcowe dla ${result.updated_entries} z ${result.total_entries} wpisów.`,
     onSuccess: () => setDetail.reload(),
   });
 
@@ -196,7 +197,7 @@ export function EvaluationSetPage({ setId }: Props) {
     },
     {
       errorPrefix: "Nie udało się utworzyć runa",
-      successMessage: (created) => `EvaluationRun created: ${created.evaluation_run_id}`,
+      successMessage: (created) => `Utworzono przebieg: ${created.evaluation_run_id}`,
       onSuccess: () => runs.reload(),
     },
   );
@@ -259,6 +260,8 @@ export function EvaluationSetPage({ setId }: Props) {
   return (
     <PageShell>
       <section className="panel-shell grid min-w-0 gap-4">
+        <Breadcrumbs trail={EVALUATION_TRAIL} current={selectedSet ? selectedSet.name : "…"} />
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-muted">Zbiór</span>
@@ -291,9 +294,6 @@ export function EvaluationSetPage({ setId }: Props) {
             >
               {exportSet.isPending ? "Eksportowanie..." : "Eksport JSON"}
             </Button>
-            <LinkButton size="sm" href="/research">
-              Wróć do listy
-            </LinkButton>
             <Button variant="dangerOutline" size="sm" onClick={() => deleteSet.request(setId)}>
               Usuń zbiór
             </Button>

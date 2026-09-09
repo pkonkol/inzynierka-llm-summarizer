@@ -9,6 +9,7 @@ import { LinkButton } from "../components/ui/LinkButton";
 import { Modal } from "../components/ui/Modal";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
+import { Tooltip } from "../components/ui/Tooltip";
 
 // Tailwind only emits classes it can find as literal strings, so every swatch is spelled out.
 const SWATCHES = [
@@ -225,6 +226,14 @@ export function DesignPage() {
           <LinkButton size="sm" href="/research">
             LinkButton
           </LinkButton>
+          <Tooltip
+            id="design-tooltip"
+            description="Tooltip is CSS only, so it also opens on keyboard focus. The caller owns the id and puts it on the child's aria-describedby."
+          >
+            <Button size="sm" aria-describedby="design-tooltip">
+              Tooltip — hover or focus
+            </Button>
+          </Tooltip>
         </div>
         <DisclosureButton
           label="DisclosureButton"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
+import { Breadcrumbs, EVALUATION_TRAIL } from "../components/Breadcrumbs";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
 import { InfoRow, InfoRowContent } from "../components/InfoRow";
@@ -9,7 +10,6 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
-import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import type {
@@ -195,7 +195,7 @@ function RunSummary({ run, progress }: { run: EvaluationRunResponse; progress: E
 
       {deepeval ? (
         <div className="grid gap-2 border-t border-panel-border pt-4">
-          <SectionHeading>GEval</SectionHeading>
+          <SectionHeading>G-Eval</SectionHeading>
           <div className="metric-row">
             <InfoRowContent label="status">
               <StatusLabel status={deepeval.status} />
@@ -332,14 +332,14 @@ export function EvaluationRunPage({ runId }: Props) {
     const previousStatus = previousDeepevalStatus.current;
     previousDeepevalStatus.current = deepevalStatus;
     if (previousStatus === "running" && deepevalStatus && deepevalStatus !== "running") {
-      showFlash(`GEval zakończony ze statusem: ${deepevalStatus}.`);
+      showFlash(`G-Eval zakończony ze statusem: ${deepevalStatus}.`);
       void entriesResource.reload();
     }
   }, [deepevalStatus, entriesResource.reload, showFlash]);
 
   const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
-    errorPrefix: "Nie udało się uruchomić GEval",
-    successMessage: () => "GEval zakolejkowany. Wyniki pojawią się automatycznie.",
+    errorPrefix: "Nie udało się uruchomić G-Eval",
+    successMessage: () => "G-Eval zakolejkowany. Wyniki pojawią się automatycznie.",
   });
 
   let runSummary = null;
@@ -376,6 +376,18 @@ export function EvaluationRunPage({ runId }: Props) {
   return (
     <PageShell>
       <section className="panel-shell grid min-w-0 gap-4">
+        <Breadcrumbs
+          trail={
+            run
+              ? [
+                  ...EVALUATION_TRAIL,
+                  { label: run.evaluation_set_name, href: `/research/${run.evaluation_set_id}` },
+                ]
+              : EVALUATION_TRAIL
+          }
+          current={run ? `${run.model_provider}:${run.model_name}` : "…"}
+        />
+
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-muted">Przebieg</span>
@@ -401,11 +413,8 @@ export function EvaluationRunPage({ runId }: Props) {
               onClick={() => void startDeepeval.run()}
               disabled={!run || isRunInProgress || startDeepeval.isPending}
             >
-              {startDeepeval.isPending ? "Liczenie..." : "Policz GEval"}
+              {startDeepeval.isPending ? "Liczenie..." : "Policz G-Eval"}
             </Button>
-            <LinkButton size="sm" href={run ? `/research/${run.evaluation_set_id}` : "/research"}>
-              Wróć do setu
-            </LinkButton>
           </div>
         </div>
 

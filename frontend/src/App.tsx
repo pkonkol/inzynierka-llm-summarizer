@@ -4,13 +4,19 @@ import { getBackendVersion, getToken } from "./api/client";
 import { LoginOverlay } from "./components/LoginOverlay";
 import { NavDock } from "./components/NavDock";
 import { DesignPage } from "./pages/DesignPage";
+import { EvaluationImportPage } from "./pages/EvaluationImportPage";
 import { EvaluationRunPage } from "./pages/EvaluationRunPage";
 import { EvaluationSetPage } from "./pages/EvaluationSetPage";
 import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
 import { logger } from "./utils/logger";
-import { getEvaluationSetIdFromPath, getJobIdFromPath, getRunIdFromPath } from "./utils/routing";
+import {
+  getEvaluationSetIdFromPath,
+  getJobIdFromPath,
+  getRunIdFromPath,
+  RESEARCH_IMPORT_PATH,
+} from "./utils/routing";
 import { useBackgroundWorkKeepalive } from "./utils/useBackgroundWorkKeepalive";
 
 type Route = "home" | "jobs" | "research";
@@ -27,6 +33,8 @@ function ResearchRouter({ pathname }: { pathname: string }) {
 
   const setId = getEvaluationSetIdFromPath(pathname);
   if (setId) return <EvaluationSetPage setId={setId} />;
+
+  if (pathname === RESEARCH_IMPORT_PATH) return <EvaluationImportPage />;
 
   return <ResearchPage />;
 }
@@ -71,7 +79,11 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-clip">
-      <NavDock active={route} isLoggedIn={isLoggedIn} onOpenLogin={() => setIsLoginOpen(true)} />
+      <NavDock
+        pathname={pathname}
+        isLoggedIn={isLoggedIn}
+        onOpenLogin={() => setIsLoginOpen(true)}
+      />
       <LoginOverlay
         isOpen={isLoginOpen}
         onSuccess={handleLoginSuccess}

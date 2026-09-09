@@ -60,6 +60,10 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
         <h1 className="hero-title text-balance">
           Praca Inżynierska - Podsumowanie Artykułów z LLM
         </h1>
+        <p className="max-w-measure text-muted">
+          Wklej adres artykułu i wybierz model — system pobierze treść, wygeneruje podsumowanie i
+          policzy metryki jakości.
+        </p>
       </div>
       <form
         className="grid gap-4 border border-panel-border bg-panel-solid p-6"
@@ -137,7 +141,7 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
               disabled={isSubmitting || isLoadingMeta}
               className="h-4 w-4 border border-input-border"
             />
-            Run G-Eval
+            Policz G-Eval
           </label>
         </div>
 

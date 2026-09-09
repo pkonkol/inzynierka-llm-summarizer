@@ -11,25 +11,46 @@ export function shouldInterceptClick(event: React.MouseEvent): boolean {
   );
 }
 
-export const RESEARCH_IMPORT_PATH = "/research/import";
-export const RESEARCH_SETS_PATH = "/research";
+export const SUMMARIES_NEW_PATH = "/";
+export const SUMMARIES_ALL_PATH = "/jobs";
+export const EVALUATION_IMPORT_PATH = "/research/import";
+export const EVALUATION_SETS_PATH = "/research";
 
-// Segments straight under /research that name a page. Without this list `/research/import` and
-// `/research/runs` both read as an evaluation set id and open the set page against a bad id.
-const RESERVED_RESEARCH_SEGMENTS = ["import", "runs"];
+export const jobPath = (jobId: string) => `${SUMMARIES_ALL_PATH}/${jobId}`;
+export const evaluationSetPath = (setId: string) => `${EVALUATION_SETS_PATH}/${setId}`;
+export const evaluationRunPath = (runId: string) => `${EVALUATION_SETS_PATH}/runs/${runId}`;
 
-export function getEvaluationSetIdFromPath(pathname: string): string | null {
-  const segment = pathname.match(/^\/research\/([^/]+)$/)?.[1];
-  if (!segment || RESERVED_RESEARCH_SEGMENTS.includes(segment)) return null;
-  return segment;
-}
+/** `tab` is what the navigation bar highlights; the rest is what the page needs to render. */
+export type Route =
+  | { tab: "new" }
+  | { tab: "all"; jobId: string | null }
+  | { tab: "import" }
+  | { tab: "sets" }
+  | { tab: "set"; setId: string }
+  | { tab: "run"; runId: string };
 
-export function getRunIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/research\/runs\/([^/]+)$/);
-  return match?.[1] ?? null;
-}
+/**
+ * The one place that knows the URL shape: the page dispatcher and the navigation bar both read
+ * their answer from here, so a path can never light one tab while rendering another page.
+ * Static paths are matched before the id-shaped ones, which is what keeps `/research/import`
+ * from reading as an evaluation set called "import".
+ */
+export function matchRoute(pathname: string): Route {
+  if (pathname === EVALUATION_IMPORT_PATH) return { tab: "import" };
 
-export function getJobIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/jobs\/([^/]+)$/);
-  return match?.[1] ?? null;
+  if (pathname.startsWith(`${EVALUATION_SETS_PATH}/runs`)) {
+    const runId = pathname.match(/^\/research\/runs\/([^/]+)$/)?.[1];
+    return runId ? { tab: "run", runId } : { tab: "sets" };
+  }
+
+  if (pathname.startsWith(EVALUATION_SETS_PATH)) {
+    const setId = pathname.match(/^\/research\/([^/]+)$/)?.[1];
+    return setId ? { tab: "set", setId } : { tab: "sets" };
+  }
+
+  if (pathname.startsWith(SUMMARIES_ALL_PATH)) {
+    return { tab: "all", jobId: pathname.match(/^\/jobs\/([^/]+)$/)?.[1] ?? null };
+  }
+
+  return { tab: "new" };
 }

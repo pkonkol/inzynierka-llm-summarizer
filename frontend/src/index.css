@@ -50,6 +50,11 @@
   /* Every input, select and full-height button, so a row of them lines up without per-call tuning. */
   --spacing-control: 3rem;
 
+  /* Where a fixed overlay has to start to clear the navigation bar. Measured: the bar ends at
+     89px once the modules sit side by side, and at 162px while they are stacked. */
+  --spacing-below-nav: 6rem;
+  --spacing-below-nav-stacked: 11rem;
+
   /* Overrides Tailwind's own scale, so the utilities stay the familiar text-sm / text-base.
      Steps are ~0.05rem apart at the bottom because that is where this UI does its work. */
   --text-2xs: 0.7rem;

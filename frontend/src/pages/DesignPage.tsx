@@ -226,13 +226,12 @@ export function DesignPage() {
           <LinkButton size="sm" href="/research">
             LinkButton
           </LinkButton>
-          <Tooltip
-            id="design-tooltip"
-            description="Tooltip is CSS only, so it also opens on keyboard focus. The caller owns the id and puts it on the child's aria-describedby."
-          >
-            <Button size="sm" aria-describedby="design-tooltip">
-              Tooltip — hover or focus
-            </Button>
+          <Tooltip description="Tooltip is CSS only, so it also opens on keyboard focus. It owns the description id and hands it to the trigger.">
+            {(describedBy) => (
+              <Button size="sm" aria-describedby={describedBy}>
+                Tooltip — hover or focus
+              </Button>
+            )}
           </Tooltip>
         </div>
         <DisclosureButton

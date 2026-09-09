@@ -6,7 +6,7 @@ import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
 import type { EvaluationSetListItemResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
-import { RESEARCH_IMPORT_PATH } from "../utils/routing";
+import { EVALUATION_IMPORT_PATH } from "../utils/routing";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useReloadableResource } from "../utils/useReloadableResource";
 
@@ -49,7 +49,7 @@ export function ResearchPage() {
       sets.length === 0 ? (
         <div className="grid justify-items-start gap-3">
           <p className="text-muted">Brak zbiorów. Zaimportuj pierwszy, żeby uruchomić przebieg.</p>
-          <LinkButton href={RESEARCH_IMPORT_PATH}>Przejdź do importu</LinkButton>
+          <LinkButton href={EVALUATION_IMPORT_PATH}>Przejdź do importu</LinkButton>
         </div>
       ) : (
         <SetsTable sets={sets} />

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
 import type { JobListItemResponse } from "../types/api.generated";
-import { navigateTo, shouldInterceptClick } from "../utils/routing";
+import { jobPath } from "../utils/routing";
 import { isJobInProgress } from "../utils/utils";
 import { StatusLabel } from "./StatusLabel";
+import { AppLink } from "./ui/AppLink";
 import { buttonClasses } from "./ui/Button";
 import { listItemClasses } from "./ui/listItem";
 
@@ -29,15 +30,7 @@ function useSecondsTick(isRunning: boolean): number {
 
 function JobActivityRow({ job, now }: { job: JobListItemResponse; now: number }) {
   return (
-    <a
-      href={`/jobs/${job.job_id}`}
-      className={listItemClasses(false)}
-      onClick={(event) => {
-        if (!shouldInterceptClick(event)) return;
-        event.preventDefault();
-        navigateTo(`/jobs/${job.job_id}`);
-      }}
-    >
+    <AppLink href={jobPath(job.job_id)} className={listItemClasses(false)}>
       <span className="mono-value block break-all text-link">{job.source_url}</span>
       <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span className="flex items-center gap-2">
@@ -59,7 +52,7 @@ function JobActivityRow({ job, now }: { job: JobListItemResponse; now: number })
           <span className={buttonClasses("secondary", "xs")}>Zobacz</span>
         )}
       </span>
-    </a>
+    </AppLink>
   );
 }
 

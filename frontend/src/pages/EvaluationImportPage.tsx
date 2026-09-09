@@ -8,7 +8,7 @@ import { Button, buttonClasses } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Field";
 import { PageShell } from "../components/ui/PageShell";
 import type { EvaluationSetImportRequest } from "../types/api.generated";
-import { navigateTo, RESEARCH_SETS_PATH } from "../utils/routing";
+import { EVALUATION_SETS_PATH, navigateTo } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
@@ -26,30 +26,47 @@ const PRETTY_EXAMPLE = `{
   ]
 }`;
 
+const NOTHING_PARSED = { name: "—", language: "—", entryCount: "—" };
+const JSON_PREVIEW = {
+  empty: { status: "brak danych", className: "text-muted", isValid: false, ...NOTHING_PARSED },
+  invalid: { status: "niepoprawny", className: "text-danger", isValid: false, ...NOTHING_PARSED },
+  valid: { status: "poprawny", className: "text-success", isValid: true },
+};
+
 export function EvaluationImportPage() {
   useDocumentTitle("Import zbioru");
   const [rawJson, setRawJson] = useState("");
   const showFlash = useFlash();
 
-  const hasJsonText = rawJson.trim().length > 0;
-  // One parse for the preview and for the request, so the button can never be enabled for
-  // input the import would reject.
-  const parsedSet = useMemo(() => {
-    if (!rawJson.trim()) return null;
+  // Only the four values the strip shows: holding the parsed graph here would pin a
+  // multi-megabyte dataset for as long as the page is open.
+  const preview = useMemo(() => {
+    if (!rawJson.trim()) return JSON_PREVIEW.empty;
     try {
-      return JSON.parse(rawJson) as EvaluationSetImportRequest;
+      const parsed = JSON.parse(rawJson) as EvaluationSetImportRequest;
+      return {
+        ...JSON_PREVIEW.valid,
+        name: parsed.name,
+        language: parsed.language,
+        entryCount: parsed.entries.length,
+      };
     } catch {
-      return null;
+      return JSON_PREVIEW.invalid;
     }
   }, [rawJson]);
 
-  const importSet = useAsyncAction(createEvaluationSet, {
-    errorPrefix: "Nie udało się zaimportować zbioru",
-    successMessage: (created) =>
-      `Zaimportowano zbiór: ${created.name} (${created.entry_count} wpisów).`,
-    onSuccess: () => navigateTo(RESEARCH_SETS_PATH),
-    keepPendingOnSuccess: true,
-  });
+  // Parsing inside the action keeps the dataset out of the memo cell and lets a malformed
+  // payload surface as a failure flash like any other.
+  const importSet = useAsyncAction(
+    async (json: string) => createEvaluationSet(JSON.parse(json) as EvaluationSetImportRequest),
+    {
+      errorPrefix: "Nie udało się zaimportować zbioru",
+      successMessage: (created) =>
+        `Zaimportowano zbiór: ${created.name} (${created.entry_count} wpisów).`,
+      onSuccess: () => navigateTo(EVALUATION_SETS_PATH),
+      keepPendingOnSuccess: true,
+    },
+  );
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,15 +80,6 @@ export function EvaluationImportPage() {
 
     event.target.value = "";
   };
-
-  let jsonStatus = <span className="text-muted">JSON: brak danych</span>;
-  if (hasJsonText) {
-    jsonStatus = parsedSet ? (
-      <span className="text-success">JSON: poprawny</span>
-    ) : (
-      <span className="text-danger">JSON: niepoprawny</span>
-    );
-  }
 
   return (
     <PageShell>
@@ -96,18 +104,18 @@ export function EvaluationImportPage() {
             Wczytaj plik JSON
           </label>
           <Button
-            onClick={() => parsedSet && void importSet.run(parsedSet)}
-            disabled={!parsedSet || importSet.isPending}
+            onClick={() => void importSet.run(rawJson)}
+            disabled={!preview.isValid || importSet.isPending}
           >
             {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
           </Button>
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 border border-panel-border bg-panel-solid px-3 py-2">
-          {jsonStatus}
-          <span>Nazwa: {parsedSet?.name ?? "—"}</span>
-          <span>Język: {parsedSet?.language ?? "—"}</span>
-          <span>Wpisów: {parsedSet?.entries?.length ?? 0}</span>
+          <span className={preview.className}>JSON: {preview.status}</span>
+          <span>Nazwa: {preview.name}</span>
+          <span>Język: {preview.language}</span>
+          <span>Wpisów: {preview.entryCount}</span>
         </div>
 
         <Collapsible label="Wklej JSON ręcznie">

@@ -11,37 +11,29 @@ import { HomePage } from "./pages/HomePage";
 import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
 import { logger } from "./utils/logger";
-import {
-  getEvaluationSetIdFromPath,
-  getJobIdFromPath,
-  getRunIdFromPath,
-  RESEARCH_IMPORT_PATH,
-} from "./utils/routing";
+import { matchRoute, type Route } from "./utils/routing";
 import { useBackgroundWorkKeepalive } from "./utils/useBackgroundWorkKeepalive";
 
-type Route = "home" | "jobs" | "research";
-
-function getRoute(pathname: string): Route {
-  if (pathname.startsWith("/jobs")) return "jobs";
-  if (pathname.startsWith("/research")) return "research";
-  return "home";
-}
-
-function ResearchRouter({ pathname }: { pathname: string }) {
-  const runId = getRunIdFromPath(pathname);
-  if (runId) return <EvaluationRunPage runId={runId} />;
-
-  const setId = getEvaluationSetIdFromPath(pathname);
-  if (setId) return <EvaluationSetPage setId={setId} />;
-
-  if (pathname === RESEARCH_IMPORT_PATH) return <EvaluationImportPage />;
-
-  return <ResearchPage />;
+function CurrentPage({ route }: { route: Route }) {
+  switch (route.tab) {
+    case "new":
+      return <HomePage />;
+    case "all":
+      return <JobsPage jobId={route.jobId} />;
+    case "import":
+      return <EvaluationImportPage />;
+    case "sets":
+      return <ResearchPage />;
+    case "set":
+      return <EvaluationSetPage setId={route.setId} />;
+    case "run":
+      return <EvaluationRunPage runId={route.runId} />;
+  }
 }
 
 function App() {
   const [pathname, setPathname] = useState(window.location.pathname);
-  const route = getRoute(pathname);
+  const route = matchRoute(pathname);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
   const [backendSha, setBackendSha] = useState("");
@@ -79,19 +71,13 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-clip">
-      <NavDock
-        pathname={pathname}
-        isLoggedIn={isLoggedIn}
-        onOpenLogin={() => setIsLoginOpen(true)}
-      />
+      <NavDock route={route} isLoggedIn={isLoggedIn} onOpenLogin={() => setIsLoginOpen(true)} />
       <LoginOverlay
         isOpen={isLoginOpen}
         onSuccess={handleLoginSuccess}
         onClose={() => setIsLoginOpen(false)}
       />
-      {route === "home" && <HomePage />}
-      {route === "jobs" && <JobsPage jobId={getJobIdFromPath(pathname)} />}
-      {route === "research" && <ResearchRouter pathname={pathname} />}
+      <CurrentPage route={route} />
       <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
         front #{__COMMIT_HASH__} · back #{backendSha || "?"}
       </span>

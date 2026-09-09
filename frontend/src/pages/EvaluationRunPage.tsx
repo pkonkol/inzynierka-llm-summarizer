@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
-import { Breadcrumbs, EVALUATION_TRAIL } from "../components/Breadcrumbs";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
 import { InfoRow, InfoRowContent } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
+import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
@@ -18,6 +19,7 @@ import type {
   SummaryStatisticalMetrics,
 } from "../types/api.generated";
 import { formatDateMinute, formatMetricLabel, formatScore } from "../utils/format";
+import { evaluationSetPath } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -381,11 +383,13 @@ export function EvaluationRunPage({ runId }: Props) {
             run
               ? [
                   ...EVALUATION_TRAIL,
-                  { label: run.evaluation_set_name, href: `/research/${run.evaluation_set_id}` },
+                  {
+                    label: run.evaluation_set_name,
+                    href: evaluationSetPath(run.evaluation_set_id),
+                  },
                 ]
               : EVALUATION_TRAIL
           }
-          current={run ? `${run.model_provider}:${run.model_name}` : "…"}
         />
 
         <div className="flex flex-wrap items-start justify-between gap-3">

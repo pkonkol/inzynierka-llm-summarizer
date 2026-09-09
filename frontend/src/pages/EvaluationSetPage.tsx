@@ -8,11 +8,12 @@ import {
   getEvaluationSet,
   listEvaluationRuns,
 } from "../api/research";
-import { Breadcrumbs, EVALUATION_TRAIL } from "../components/Breadcrumbs";
+import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
 import { InputTextSection } from "../components/InputTextSection";
 import { MetricsSection } from "../components/MetricsSection";
+import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
@@ -260,7 +261,7 @@ export function EvaluationSetPage({ setId }: Props) {
   return (
     <PageShell>
       <section className="panel-shell grid min-w-0 gap-4">
-        <Breadcrumbs trail={EVALUATION_TRAIL} current={selectedSet ? selectedSet.name : "…"} />
+        <Breadcrumbs trail={EVALUATION_TRAIL} />
 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="flex flex-wrap items-baseline gap-x-2">

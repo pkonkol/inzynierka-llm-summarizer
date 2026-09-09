@@ -3,12 +3,13 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusLabel } from "../components/StatusLabel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { Alert } from "../components/ui/Alert";
+import { AppLink } from "../components/ui/AppLink";
 import { buttonClasses } from "../components/ui/Button";
 import { listItemClasses } from "../components/ui/listItem";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import type { JobListItemResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
-import { navigateTo, shouldInterceptClick } from "../utils/routing";
+import { jobPath, navigateTo, SUMMARIES_ALL_PATH } from "../utils/routing";
 import { useConfirmDelete } from "../utils/useConfirmDelete";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -53,7 +54,7 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
     },
     errorPrefix: "Nie udało się usunąć joba",
     afterConfirm: (job) => {
-      if (jobId === job.job_id) navigateTo("/jobs");
+      if (jobId === job.job_id) navigateTo(SUMMARIES_ALL_PATH);
       return jobsResource.reload();
     },
   });
@@ -81,15 +82,10 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
           <ul aria-live="polite" className="grid min-w-0 gap-2">
             {jobs.map((job) => (
               <li key={job.job_id} className="relative min-w-0">
-                <a
-                  href={`/jobs/${job.job_id}`}
+                <AppLink
+                  href={jobPath(job.job_id)}
                   className={listItemClasses(jobId === job.job_id)}
                   aria-current={jobId === job.job_id ? "page" : undefined}
-                  onClick={(event) => {
-                    if (!shouldInterceptClick(event)) return;
-                    event.preventDefault();
-                    navigateTo(`/jobs/${job.job_id}`);
-                  }}
                 >
                   <span className="mono-value block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-link">
                     {job.source_url}
@@ -102,7 +98,7 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
                     </span>
                     {job.updated_at && <span>{formatDateMinute(job.updated_at)}</span>}
                   </span>
-                </a>
+                </AppLink>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -129,7 +125,7 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
         sourceUrl={selectedJob?.source_url ?? null}
         jobs={selectedJob ? [selectedJob] : []}
         isLoading={selectedJobResource.isInitialLoading}
-        onClose={() => navigateTo("/jobs")}
+        onClose={() => navigateTo(SUMMARIES_ALL_PATH)}
         debugMode
       />
 

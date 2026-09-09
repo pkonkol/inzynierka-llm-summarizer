@@ -17,6 +17,10 @@ function splitMessage(text: string): { summary: string; details: string | null }
   return { summary: `${text.slice(0, cut).trimEnd()}…`, details: text.slice(cut).trim() };
 }
 
+// Colour alone would leave the tone invisible in greyscale, and to a reader who is only
+// glancing at the corner.
+const TONE_GLYPH = { success: "✓", danger: "✗" } as const;
+
 interface ToastProps {
   flash: FlashMessage | null;
   onDismiss: () => void;
@@ -33,9 +37,17 @@ export function Toast({ flash, onDismiss }: ToastProps) {
 
   const notification =
     flash && message ? (
-      <Alert tone={flash.tone} className="pointer-events-auto grid w-full max-w-sm gap-2 shadow-lg">
+      <Alert
+        tone={flash.tone}
+        className="pointer-events-auto grid w-full max-w-md gap-3 border-2 p-4 shadow-xl"
+      >
         <div className="flex items-start justify-between gap-3">
-          <p>{message.summary}</p>
+          <p className="flex items-baseline gap-2 font-semibold">
+            <span aria-hidden="true" className="text-lg leading-none">
+              {TONE_GLYPH[flash.tone]}
+            </span>
+            {message.summary}
+          </p>
           <Button size="xs" onClick={onDismiss} aria-label="Zamknij powiadomienie">
             ✕
           </Button>
@@ -53,7 +65,7 @@ export function Toast({ flash, onDismiss }: ToastProps) {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-end sm:inset-x-auto sm:right-4"
+      className="pointer-events-none fixed inset-x-4 top-below-nav-stacked z-50 flex justify-start sm:inset-x-auto sm:left-4 sm:top-below-nav"
     >
       {notification}
     </div>

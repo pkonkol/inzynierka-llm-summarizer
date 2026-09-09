@@ -1,4 +1,4 @@
-import { navigateTo, shouldInterceptClick } from "../../utils/routing";
+import { AppLink } from "./AppLink";
 import { type ButtonSize, buttonClasses } from "./Button";
 
 interface LinkButtonProps extends React.ComponentProps<"a"> {
@@ -6,21 +6,6 @@ interface LinkButtonProps extends React.ComponentProps<"a"> {
   size?: ButtonSize;
 }
 
-// A real <a href>, so the row can be opened in a new tab, middle-clicked or copied as a link.
-// Plain left-clicks are intercepted and routed client-side; every modifier click falls through
-// to the browser.
-export function LinkButton({ href, size = "md", className, onClick, ...props }: LinkButtonProps) {
-  return (
-    <a
-      href={href}
-      {...props}
-      className={buttonClasses("secondary", size, className)}
-      onClick={(event) => {
-        onClick?.(event);
-        if (!shouldInterceptClick(event)) return;
-        event.preventDefault();
-        navigateTo(href);
-      }}
-    />
-  );
+export function LinkButton({ href, size = "md", className, ...props }: LinkButtonProps) {
+  return <AppLink href={href} {...props} className={buttonClasses("secondary", size, className)} />;
 }

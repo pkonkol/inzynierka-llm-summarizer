@@ -1,122 +1,140 @@
-import { navigateTo, shouldInterceptClick } from "../utils/routing";
+import {
+  EVALUATION_IMPORT_PATH,
+  EVALUATION_SETS_PATH,
+  type Route,
+  SUMMARIES_ALL_PATH,
+  SUMMARIES_NEW_PATH,
+} from "../utils/routing";
+import type { Crumb } from "./Breadcrumbs";
+import { AppLink } from "./ui/AppLink";
 import { Tooltip } from "./ui/Tooltip";
 
-interface NavEntry {
-  id: string;
+interface NavTab {
+  tab: Route["tab"];
   label: string;
   href: string;
   description: string;
-  isActive: (pathname: string) => boolean;
 }
 
-interface NavModule extends NavEntry {
-  tabs: NavEntry[];
+interface NavModule {
+  label: string;
+  description: string;
+  tabs: NavTab[];
 }
 
-// Every module points at its own first tab, and the first tab of each module is the one that
-// creates while the second one browses. The pairs read the same way in both modules.
+// The first tab of each module creates, the second browses, and the module cell links to its
+// own first tab. Both modules read the same way round.
 const NAV_MODULES: NavModule[] = [
   {
-    id: "nav-podsumowania",
     label: "Podsumowania",
-    href: "/",
     description:
       "Pojedyncze artykuły. Wklejasz adres URL, system pobiera treść strony i generuje podsumowanie wybranym modelem LLM.",
-    isActive: (pathname) => !pathname.startsWith("/research"),
     tabs: [
       {
-        id: "nav-nowe",
+        tab: "new",
         label: "Nowe",
-        href: "/",
+        href: SUMMARIES_NEW_PATH,
         description:
           "Formularz nowego podsumowania, zadania które właśnie się liczą i lista dotychczas podsumowanych adresów.",
-        isActive: (pathname) => pathname === "/",
       },
       {
-        id: "nav-wszystkie",
+        tab: "all",
         label: "Wszystkie",
-        href: "/jobs",
+        href: SUMMARIES_ALL_PATH,
         description:
           "Pełna historia zadań: każde uruchomienie osobno, z modelem, trybem, statusem i pełnym wynikiem do pobrania.",
-        isActive: (pathname) => pathname.startsWith("/jobs"),
       },
     ],
   },
   {
-    id: "nav-ewaluacja",
     label: "Ewaluacja",
-    href: "/research/import",
     description:
       "Całe zbiory artykułów z gotowymi podsumowaniami wzorcowymi. Uruchamiasz model na całym zbiorze i porównujesz wynik z wzorcem metrykami ROUGE, METEOR i G-Eval.",
-    isActive: (pathname) => pathname.startsWith("/research"),
     tabs: [
       {
-        id: "nav-import",
+        tab: "import",
         label: "Import",
-        href: "/research/import",
+        href: EVALUATION_IMPORT_PATH,
         description:
           "Wgraj nowy zbiór jako JSON: artykuły wraz z podsumowaniami wzorcowymi, względem których liczone są metryki.",
-        isActive: (pathname) => pathname === "/research/import",
       },
       {
-        id: "nav-zbiory",
+        tab: "sets",
         label: "Zbiory",
-        href: "/research",
+        href: EVALUATION_SETS_PATH,
         description:
           "Lista zaimportowanych zbiorów ewaluacyjnych. Wejdź w zbiór, żeby obejrzeć jego wpisy i uruchomić na nim przebieg.",
-        // A set and a run are reached from this list, so they keep it lit rather than clearing the bar.
-        isActive: (pathname) => pathname.startsWith("/research") && pathname !== "/research/import",
       },
     ],
   },
 ];
 
-const NAV_CELL =
-  "flex w-full items-center justify-center whitespace-nowrap px-3 py-2 font-mono uppercase no-underline transition-colors duration-150 sm:px-5";
+const EVALUATION_MODULE = NAV_MODULES[1];
+
+// A set and a run are opened from the list, so they keep its tab lit.
+const NAV_TAB: Record<Route["tab"], NavTab["tab"]> = {
+  new: "new",
+  all: "all",
+  import: "import",
+  sets: "sets",
+  set: "sets",
+  run: "sets",
+};
+
+/** The breadcrumb ancestors of a set or a run, so the labels are written in one place only. */
+export const EVALUATION_TRAIL: Crumb[] = EVALUATION_MODULE.tabs.map((tab, index) => ({
+  label: index === 0 ? EVALUATION_MODULE.label : tab.label,
+  href: tab.href,
+}));
+
+const CELL = "flex items-center whitespace-nowrap px-3 font-mono uppercase sm:px-5";
+const NAV_CELL = `${CELL} w-full justify-center py-2 no-underline transition-colors duration-150`;
 const MODULE_CLASS = `${NAV_CELL} text-sm tracking-widest`;
 const TAB_CLASS = `${NAV_CELL} text-xs tracking-wider`;
-const AUTH_CELL =
-  "flex items-center whitespace-nowrap border-l border-panel-border px-3 font-mono text-sm uppercase tracking-widest sm:px-5";
+const AUTH_CELL = `${CELL} border-l border-panel-border text-sm tracking-widest`;
 
 function NavLink({
-  entry,
+  label,
+  href,
+  description,
   isActive,
   className,
 }: {
-  entry: NavEntry;
+  label: string;
+  href: string;
+  description: string;
   isActive: boolean;
   className: string;
 }) {
   return (
-    <Tooltip id={entry.id} description={entry.description}>
-      {/* The active entry keeps its href so it can still be copied or opened in a new tab;
-          aria-current and the inverted background are what mark it as current. */}
-      <a
-        href={entry.href}
-        aria-describedby={entry.id}
-        aria-current={isActive ? "page" : undefined}
-        className={`${className} ${
-          isActive ? "bg-ink text-panel-solid" : "bg-panel-solid text-ink hover:bg-subtle-hover"
-        }`}
-        onClick={(event) => {
-          if (!shouldInterceptClick(event)) return;
-          event.preventDefault();
-          navigateTo(entry.href);
-        }}
-      >
-        {entry.label}
-      </a>
+    <Tooltip description={description}>
+      {(describedBy) => (
+        // The active entry keeps its href so it can still be copied or opened in a new tab;
+        // aria-current and the inverted background are what mark it as current.
+        <AppLink
+          href={href}
+          aria-describedby={describedBy}
+          aria-current={isActive ? "page" : undefined}
+          className={`${className} ${
+            isActive ? "bg-ink text-panel-solid" : "bg-panel-solid text-ink hover:bg-subtle-hover"
+          }`}
+        >
+          {label}
+        </AppLink>
+      )}
     </Tooltip>
   );
 }
 
 interface NavDockProps {
-  pathname: string;
+  route: Route;
   isLoggedIn: boolean;
   onOpenLogin: () => void;
 }
 
-export function NavDock({ pathname, isLoggedIn, onOpenLogin }: NavDockProps) {
+export function NavDock({ route, isLoggedIn, onOpenLogin }: NavDockProps) {
+  const activeTab = NAV_TAB[route.tab];
+
   return (
     <div className="flex justify-center px-4 pt-4">
       <div className="inline-flex items-stretch border border-panel-border bg-panel-solid">
@@ -128,18 +146,22 @@ export function NavDock({ pathname, isLoggedIn, onOpenLogin }: NavDockProps) {
           aria-label="Nawigacja główna"
         >
           {NAV_MODULES.map((module) => (
-            <div key={module.id} className="grid gap-px">
+            <div key={module.label} className="grid gap-px">
               <NavLink
-                entry={module}
-                isActive={module.isActive(pathname)}
+                label={module.label}
+                href={module.tabs[0].href}
+                description={module.description}
+                isActive={module.tabs.some((tab) => tab.tab === activeTab)}
                 className={MODULE_CLASS}
               />
               <div className="grid grid-cols-2 gap-px">
                 {module.tabs.map((tab) => (
                   <NavLink
-                    key={tab.id}
-                    entry={tab}
-                    isActive={tab.isActive(pathname)}
+                    key={tab.tab}
+                    label={tab.label}
+                    href={tab.href}
+                    description={tab.description}
+                    isActive={tab.tab === activeTab}
                     className={TAB_CLASS}
                   />
                 ))}

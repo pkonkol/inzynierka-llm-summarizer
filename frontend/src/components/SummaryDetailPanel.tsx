@@ -11,6 +11,7 @@ import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration } from "../utils/format";
 import { useFetchOnMount } from "../utils/useFetchOnMount";
+import { isJobInProgress } from "../utils/utils";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
@@ -117,8 +118,8 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
 function statusBadge(status: JobStatusValue) {
   if (status === "failed")
     return <span className="mono-value ml-2 uppercase text-danger">failed</span>;
-  if (status === "pending")
-    return <span className="mono-value ml-2 uppercase text-warning">pending</span>;
+  if (isJobInProgress(status))
+    return <span className="mono-value ml-2 uppercase text-warning">{status}</span>;
   return null;
 }
 
@@ -188,7 +189,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
           <h4>Błąd</h4>
           <p className="text-danger">{job.error}</p>
         </section>
-      ) : job.status === "pending" ? null : (
+      ) : isJobInProgress(job.status) ? null : (
         <JobDetails job={job} />
       )}
     </div>

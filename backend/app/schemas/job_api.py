@@ -11,7 +11,7 @@ from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
 
 SummaryMode = Literal["simple", "sequential", "cascade"]
-JobStatusValue = Literal["pending", "completed", "failed"]
+JobStatusValue = Literal["pending", "running", "completed", "failed"]
 
 
 class JobCreateRequest(ApiModel):

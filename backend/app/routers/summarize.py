@@ -87,14 +87,16 @@ async def list_summarized_urls(
 ) -> list[UrlSummaryListItem]:
     jobs_collection = get_jobs_collection()
     pipeline = [
-        {"$match": {"status": {"$in": ["completed", "failed", "pending"]}}},
+        {"$match": {"status": {"$in": ["completed", "failed", "pending", "running"]}}},
         {"$sort": {"updated_at": -1}},
         {
             "$group": {
                 "_id": "$source_url",
                 "completed_count": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
                 "failed_count": {"$sum": {"$cond": [{"$eq": ["$status", "failed"]}, 1, 0]}},
-                "pending_count": {"$sum": {"$cond": [{"$eq": ["$status", "pending"]}, 1, 0]}},
+                "pending_count": {
+                    "$sum": {"$cond": [{"$in": ["$status", ["pending", "running"]]}, 1, 0]}
+                },
                 "latest_updated_at": {"$first": "$updated_at"},
                 # $$REMOVE drops the element, so only completed jobs contribute a title and a
                 # pending or failed job at the top of the sort cannot blank out the URL's label.

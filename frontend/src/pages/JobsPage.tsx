@@ -15,6 +15,7 @@ import { useConfirmDelete } from "../utils/useConfirmDelete";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
+import { isJobInProgress } from "../utils/utils";
 
 export function JobsPage() {
   useDocumentTitle("Zadania");
@@ -31,7 +32,7 @@ export function JobsPage() {
 
   useListPolling(
     jobsResource.reload,
-    jobs.some((job) => job.status === "pending"),
+    jobs.some((job) => isJobInProgress(job.status)),
   );
 
   const selectJob = useAsyncAction(

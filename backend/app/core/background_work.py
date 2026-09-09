@@ -8,8 +8,9 @@ answered from memory rather than from the database.
 """
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Coroutine
 from contextlib import asynccontextmanager, suppress
+from typing import Any
 
 import structlog
 
@@ -43,3 +44,21 @@ async def wait_until_no_work_remaining(timeout_seconds: float) -> int:
     with suppress(TimeoutError):
         await asyncio.wait_for(_no_work_remaining.wait(), timeout=timeout_seconds)
     return _active_work_count
+
+
+# asyncio keeps only a weak reference to a running task, so a fire-and-forget task can be
+# collected mid-flight and stop silently. Holding it here until it finishes is what prevents that.
+_spawned_tasks: set[asyncio.Task] = set()
+
+
+def spawn_tracked_task(coroutine: Coroutine[Any, Any, None], *, kind: str) -> None:
+    """Fire-and-forget for work with no request to hang off, such as a resume at startup."""
+    task = asyncio.create_task(coroutine)
+    _spawned_tasks.add(task)
+
+    def _forget(finished: asyncio.Task) -> None:
+        _spawned_tasks.discard(finished)
+        if not finished.cancelled() and (exc := finished.exception()) is not None:
+            log.error("spawned task failed", kind=kind, exc_info=exc)
+
+    task.add_done_callback(_forget)

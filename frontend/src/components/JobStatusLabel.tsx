@@ -5,6 +5,7 @@ const STATUS_STYLE: Record<JobStatusValue, { className: string; glyph: string }>
   completed: { className: "text-success", glyph: "✓" },
   failed: { className: "text-danger", glyph: "✗" },
   pending: { className: "text-warning", glyph: "⋯" },
+  running: { className: "text-warning", glyph: "▶" },
 };
 
 export function JobStatusLabel({ status, count }: { status: JobStatusValue; count?: number }) {

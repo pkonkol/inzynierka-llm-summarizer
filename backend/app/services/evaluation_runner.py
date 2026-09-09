@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 import structlog
 from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorCollection
 
 from ..core.background_work import track_background_work
 from ..core.mongo import (
@@ -44,6 +45,95 @@ async def fetch_source_entry(set_id: str, entry_id: str) -> dict:
     return entry
 
 
+async def _mark_run_failed(runs: AsyncIOMotorCollection, run_id: str, error: str) -> None:
+    await runs.update_one(
+        {"_id": ObjectId(run_id)},
+        {
+            "$set": {
+                "status": "failed",
+                "finished_at": datetime.now(UTC),
+                "aggregate_metrics.error": error,
+            }
+        },
+    )
+
+
+async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
+    """Everything written back about a single entry, including the failure case."""
+    entry_id = run_entry["entry_id"]
+    try:
+        source_entry = await fetch_source_entry(run_doc["evaluation_set_id"], entry_id)
+        summary = await generate_summary(
+            input={"text": source_entry["input_text"], "title": source_entry["title"]},
+            source_url=source_entry["url"],
+            model_name=run_doc["model_name"],
+            model_provider=run_doc["model_provider"],
+            language=run_doc["language"],
+            mode=run_doc["summary_mode"],
+            skip_takeaways=run_doc["skip_takeaways"],
+        )
+        ai_metrics, cross_metrics = await asyncio.gather(
+            compute_statistical_metrics(
+                summary_text=summary.summary,
+                takeaways_text=join_takeaways(summary.key_takeaways),
+                source_text=source_entry["input_text"],
+            ),
+            compute_cross_metrics(
+                reference_text=run_entry["golden_summary"],
+                summary_text=summary.summary,
+            ),
+        )
+    except Exception as exc:
+        log.exception("evaluation entry failed", entry_id=entry_id, run_id=str(run_doc["_id"]))
+        return {"status": "failed", "error": str(exc)}
+
+    return {
+        "status": "completed",
+        "error": None,
+        "ai_summary": summary.summary,
+        "ai_key_takeaways": summary.key_takeaways,
+        "ai_metrics": ai_metrics,
+        "cross_metrics": cross_metrics,
+    }
+
+
+async def _finalize_run(runs: AsyncIOMotorCollection, run_id: str) -> None:
+    """Counts from the stored document, because a resumed loop only touched what was left."""
+    final_doc = await runs.find_one({"_id": ObjectId(run_id)}, {"entries.status": 1})
+    if final_doc is None:
+        # Reachable: DELETE /runs/{run_id} can land while the loop is still working.
+        log.info("evaluation run deleted while running", run_id=run_id)
+        return
+
+    entry_statuses = [entry["status"] for entry in final_doc["entries"]]
+    if any(status not in _TERMINAL_ENTRY_STATUSES for status in entry_statuses):
+        log.warning("evaluation run ended with entries unfinished", run_id=run_id)
+        return
+
+    run_status, entry_count, completed, failed = summarize_entry_statuses(entry_statuses)
+    await runs.update_one(
+        {"_id": ObjectId(run_id)},
+        # Dotted keys, so finishing a run does not wipe aggregate_metrics.deepeval written by a
+        # GEval pass that already ran.
+        {
+            "$set": {
+                "status": run_status,
+                "finished_at": datetime.now(UTC),
+                "aggregate_metrics.entry_count": entry_count,
+                "aggregate_metrics.completed_entries": completed,
+                "aggregate_metrics.failed_entries": failed,
+            }
+        },
+    )
+    log.info(
+        "evaluation run finished",
+        run_id=run_id,
+        status=run_status,
+        completed_entries=completed,
+        failed_entries=failed,
+    )
+
+
 @track_background_work("evaluation_run")
 async def run_evaluation_batch(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
@@ -67,18 +157,8 @@ async def run_evaluation_batch(run_id: str) -> None:
     if run_doc is None:
         return
 
-    set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])}, {"_id": 1})
-    if set_doc is None:
-        await runs.update_one(
-            {"_id": ObjectId(run_id)},
-            {
-                "$set": {
-                    "status": "failed",
-                    "finished_at": datetime.now(UTC),
-                    "aggregate_metrics.error": "Evaluation set not found",
-                }
-            },
-        )
+    if await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])}, {"_id": 1}) is None:
+        await _mark_run_failed(runs, run_id, "Evaluation set not found")
         return
 
     await runs.update_one(
@@ -86,104 +166,34 @@ async def run_evaluation_batch(run_id: str) -> None:
         {"$set": {"status": "running", "finished_at": None, "heartbeat_at": datetime.now(UTC)}},
     )
 
-    delay_ms = run_doc["rate_limit_delay_ms"]
-    set_id = run_doc["evaluation_set_id"]
-
-    remaining_entries = [
-        entry for entry in run_doc["entries"] if entry["status"] not in _TERMINAL_ENTRY_STATUSES
-    ]
+    remaining = [e for e in run_doc["entries"] if e["status"] not in _TERMINAL_ENTRY_STATUSES]
     log.info(
         "evaluation run starting",
         run_id=run_id,
-        remaining_entries=len(remaining_entries),
+        remaining_entries=len(remaining),
         total_entries=len(run_doc["entries"]),
     )
 
-    for run_entry in remaining_entries:
+    for run_entry in remaining:
         entry_id = run_entry["entry_id"]
-        update: dict = {}
+        entry_filter = {"_id": ObjectId(run_id), "entries.entry_id": entry_id}
 
         await runs.update_one(
-            {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
+            entry_filter,
             {"$set": {"entries.$.status": "running", "heartbeat_at": datetime.now(UTC)}},
         )
 
-        try:
-            source_entry = await fetch_source_entry(set_id, entry_id)
-            summary = await generate_summary(
-                input={"text": source_entry["input_text"], "title": source_entry["title"]},
-                source_url=source_entry["url"],
-                model_name=run_doc["model_name"],
-                model_provider=run_doc["model_provider"],
-                language=run_doc["language"],
-                mode=run_doc["summary_mode"],
-                skip_takeaways=run_doc.get("skip_takeaways", False),
-            )
+        result = await _summarize_one_entry(run_doc, run_entry)
 
-            summary_text = summary.summary
-            takeaways = summary.key_takeaways
+        write = {f"entries.$.{key}": value for key, value in result.items()}
+        write["heartbeat_at"] = datetime.now(UTC)
+        if result["status"] == "completed":
+            # Progress earns the attempt budget back, so the cap counts attempts that achieved
+            # nothing rather than reclamations of a run that was working the whole time.
+            write["resume_attempts"] = 0
+        await runs.update_one(entry_filter, {"$set": write})
 
-            update["ai_summary"] = summary_text
-            update["ai_key_takeaways"] = takeaways
-            update["ai_metrics"], update["cross_metrics"] = await asyncio.gather(
-                compute_statistical_metrics(
-                    summary_text=summary_text,
-                    takeaways_text=join_takeaways(takeaways),
-                    source_text=source_entry["input_text"],
-                ),
-                compute_cross_metrics(
-                    reference_text=run_entry["golden_summary"],
-                    summary_text=summary_text,
-                ),
-            )
-            update["status"] = "completed"
-            update["error"] = None
-        except Exception as exc:
-            update["status"] = "failed"
-            update["error"] = str(exc)
-            log.exception("evaluation entry failed", entry_id=entry_id, run_id=run_id)
+        if run_doc["rate_limit_delay_ms"] > 0:
+            await asyncio.sleep(run_doc["rate_limit_delay_ms"] / 1000)
 
-        entry_write: dict = {f"entries.$.{key}": value for key, value in update.items()}
-        entry_write["heartbeat_at"] = datetime.now(UTC)
-        if update["status"] == "completed":
-            entry_write["resume_attempts"] = 0
-
-        await runs.update_one(
-            {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
-            {"$set": entry_write},
-        )
-
-        if delay_ms > 0:
-            await asyncio.sleep(delay_ms / 1000)
-
-    final_doc = await runs.find_one({"_id": ObjectId(run_id)}, {"entries.status": 1})
-    if final_doc is None:
-        log.info("evaluation run deleted while running", run_id=run_id)
-        return
-
-    entry_statuses = [entry["status"] for entry in final_doc["entries"]]
-    if any(status not in _TERMINAL_ENTRY_STATUSES for status in entry_statuses):
-        log.warning("evaluation run ended with entries unfinished", run_id=run_id)
-        return
-
-    run_status, entry_count, completed, failed = summarize_entry_statuses(entry_statuses)
-
-    await runs.update_one(
-        {"_id": ObjectId(run_id)},
-        {
-            "$set": {
-                "status": run_status,
-                "finished_at": datetime.now(UTC),
-                "aggregate_metrics.entry_count": entry_count,
-                "aggregate_metrics.completed_entries": completed,
-                "aggregate_metrics.failed_entries": failed,
-            }
-        },
-    )
-    log.info(
-        "evaluation run finished",
-        run_id=run_id,
-        status=run_status,
-        completed_entries=completed,
-        failed_entries=failed,
-    )
+    await _finalize_run(runs, run_id)

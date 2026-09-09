@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from bson import ObjectId
@@ -7,9 +7,16 @@ from app.core.config import settings
 from app.services import startup_resume
 
 
+def _empty_cursor() -> MagicMock:
+    cursor = MagicMock()
+    cursor.__aiter__.return_value = iter(())
+    return cursor
+
+
 @pytest.fixture
 def runs_collection(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     collection = AsyncMock()
+    collection.find = MagicMock(return_value=_empty_cursor())
     monkeypatch.setattr(startup_resume, "get_evaluation_runs_collection", lambda: collection)
     return collection
 
@@ -17,6 +24,7 @@ def runs_collection(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 @pytest.fixture
 def jobs_collection(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     collection = AsyncMock()
+    collection.find = MagicMock(return_value=_empty_cursor())
     monkeypatch.setattr(startup_resume, "get_jobs_collection", lambda: collection)
     return collection
 
@@ -31,7 +39,9 @@ async def test_claim_succeeds_only_when_the_conditional_update_matched(
     assert await startup_resume.claim_evaluation_run_for_resume(ObjectId()) is False
 
 
-async def test_claim_filters_on_staleness_and_the_attempt_cap(runs_collection: AsyncMock) -> None:
+async def test_claim_requires_a_stale_heartbeat_and_spends_an_attempt(
+    runs_collection: AsyncMock,
+) -> None:
     runs_collection.update_one.return_value.modified_count = 1
     await startup_resume.claim_evaluation_run_for_resume(ObjectId())
 
@@ -41,25 +51,36 @@ async def test_claim_filters_on_staleness_and_the_attempt_cap(runs_collection: A
     assert update["$inc"] == {"resume_attempts": 1}
 
 
-async def test_a_manual_resume_lifts_the_cap_but_keeps_the_staleness_check(
+async def test_a_manual_resume_lifts_the_cap_but_keeps_the_heartbeat_check(
     runs_collection: AsyncMock,
 ) -> None:
     runs_collection.update_one.return_value.modified_count = 1
     await startup_resume.claim_evaluation_run_for_resume(ObjectId(), reset_attempts=True)
 
     query, update = runs_collection.update_one.call_args.args
+    # Skipping this is how two loops end up writing the same entries.
     assert "heartbeat_at" in query
     assert "resume_attempts" not in query
     assert update["$set"]["resume_attempts"] == 0
     assert "$inc" not in update
 
 
-async def test_a_job_missing_the_stored_language_is_never_resumed(
-    jobs_collection: AsyncMock,
+async def test_startup_does_not_wait_out_a_staleness_window(
+    runs_collection: AsyncMock, jobs_collection: AsyncMock
 ) -> None:
-    jobs_collection.update_one.return_value.modified_count = 1
-    await startup_resume.claim_summarization_job_for_resume("job-1")
+    await startup_resume.resume_interrupted_work()
 
-    query, _ = jobs_collection.update_one.call_args.args
-    assert query["status"] == "pending"
-    assert query["resume_attempts"] == {"$lt": settings.max_resume_attempts}
+    run_query = runs_collection.find.call_args.args[0]
+    # A run killed a minute before the restart has a fresh heartbeat; requiring staleness here
+    # would leave it unresumed until some later boot.
+    assert "heartbeat_at" not in run_query
+    assert run_query["resume_attempts"] == {"$lt": settings.max_resume_attempts}
+
+
+async def test_jobs_predating_the_stored_language_are_not_restarted(
+    runs_collection: AsyncMock, jobs_collection: AsyncMock
+) -> None:
+    await startup_resume.resume_interrupted_work()
+
+    job_query = jobs_collection.find.call_args.args[0]
+    assert job_query["language"] == {"$exists": True}

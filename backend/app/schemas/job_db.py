@@ -32,7 +32,7 @@ class JobDocument(BaseModel):
     summary_mode: Literal["simple", "sequential", "cascade"]
     language: str
     run_deepeval: bool
-    status: Literal["pending", "completed", "failed"]
+    status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
     deepeval_metrics: list[DeepevalItem] = Field(default_factory=list)

@@ -873,7 +873,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "completed" | "failed";
+            status: "pending" | "running" | "completed" | "failed";
             /** Title */
             title: string;
             /** Summary */
@@ -912,7 +912,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "completed" | "failed";
+            status: "pending" | "running" | "completed" | "failed";
             /** Model Provider */
             model_provider: string;
             /** Model Name */

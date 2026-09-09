@@ -1,13 +1,12 @@
 # services/summarization_runner.py — the background job behind POST /api/v1/jobs/summarize
 
-import asyncio
 from collections.abc import Coroutine
 from datetime import UTC, datetime
 from typing import Any
 
 import structlog
 
-from ..core.background_work import track_background_work
+from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import SummaryMode
 from ..schemas.summary import SummaryResponse
@@ -24,26 +23,13 @@ from ..services.scraper import extract_text_from_url
 log = structlog.get_logger(__name__)
 
 
-# asyncio only weakly references running tasks, so a fire-and-forget create_task can be
-# garbage-collected mid-flight and stop silently. Hold a reference until it finishes.
-_metrics_tasks: set[asyncio.Task] = set()
-
-
-def _log_metrics_task_exception(task: asyncio.Task) -> None:
-    _metrics_tasks.discard(task)
-    if not task.cancelled() and (exc := task.exception()) is not None:
-        log.error("metrics task failed", exc_info=exc)
-
-
 @track_background_work("job_metrics")
 async def _tracked_metrics(coro: Coroutine[Any, Any, None]) -> None:
     await coro
 
 
 def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
-    task = asyncio.create_task(_tracked_metrics(coro))
-    _metrics_tasks.add(task)
-    task.add_done_callback(_log_metrics_task_exception)
+    spawn_tracked_task(_tracked_metrics(coro), kind="job_metrics")
 
 
 @track_background_work("summarization_job")
@@ -69,8 +55,20 @@ async def run_summarization_job(
     jobs_collection = get_jobs_collection()
     started_at = datetime.now(UTC)
 
+    # Both the visible state and the liveness signal: a job with a fresh heartbeat is owned by a
+    # process that is still alive, so nothing else may claim or expire it.
+    await jobs_collection.update_one(
+        {"job_id": job_id},
+        {"$set": {"status": "running", "started_at": started_at, "heartbeat_at": started_at}},
+    )
+
     try:
         data = await extract_text_from_url(url)
+        # The scrape is done and the model call is the long part, so this is the one checkpoint
+        # a job has to offer.
+        await jobs_collection.update_one(
+            {"job_id": job_id}, {"$set": {"heartbeat_at": datetime.now(UTC)}}
+        )
         spawn_metrics_task(store_source_metrics_for_job(job_id, data["text"]))
 
         summary = await generate_summary(

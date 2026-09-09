@@ -121,6 +121,7 @@ _MISSING_HEARTBEAT = {"heartbeat_at": {"$exists": False}}
 
 async def cleanup_stale_pending_jobs() -> int:
     jobs_collection = get_jobs_collection()
+    unfinished = {"status": {"$in": ["pending", "running"]}}
     update = {
         "$set": {
             "status": "failed",
@@ -129,9 +130,9 @@ async def cleanup_stale_pending_jobs() -> int:
         }
     }
     result = await jobs_collection.update_many(
-        {"status": "pending", "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
+        {**unfinished, "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
     )
-    legacy = await jobs_collection.update_many({"status": "pending", **_MISSING_HEARTBEAT}, update)
+    legacy = await jobs_collection.update_many({**unfinished, **_MISSING_HEARTBEAT}, update)
     return result.modified_count + legacy.modified_count
 
 

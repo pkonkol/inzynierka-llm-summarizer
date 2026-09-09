@@ -7,6 +7,7 @@ from typing import Any
 from deepeval.test_case import LLMTestCase
 
 from ..core.config import settings
+from ..core.executors import run_blocking
 from .metrics.deepeval import SUMMARY_INPUT_SPECS, SUMMARY_SPECS, evaluate_geval
 from .metrics.statistical import source_metrics, summary_metrics
 
@@ -27,7 +28,7 @@ async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str
     ]
     judged, stats = await asyncio.gather(
         evaluate_geval(settings, work),
-        asyncio.to_thread(statistical),
+        run_blocking(statistical),
     )
 
     return {**stats, "deepeval": [asdict(x) for x in judged]}

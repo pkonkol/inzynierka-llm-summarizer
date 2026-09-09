@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import asdict
 from typing import Any
 
@@ -6,6 +5,7 @@ import structlog
 from deepeval.test_case import LLMTestCase
 
 from ..core.config import settings
+from ..core.executors import run_blocking
 from ..core.mongo import get_jobs_collection
 from ..services.metrics.cross import (
     compute_cross_metrics as compute_cross_metrics_sync,
@@ -52,7 +52,7 @@ async def compute_statistical_metrics(
             "key_takeaways": key_takeaways_metrics(takeaways_text),
         }
 
-    return await asyncio.to_thread(compute)
+    return await run_blocking(compute)
 
 
 async def compute_deepeval_metrics(
@@ -94,7 +94,7 @@ async def compute_cross_metrics(
     reference_text: str,
     summary_text: str,
 ) -> dict[str, float]:
-    return await asyncio.to_thread(compute_cross_metrics_sync, reference_text, summary_text)
+    return await run_blocking(compute_cross_metrics_sync, reference_text, summary_text)
 
 
 async def compute_pairwise_cross_deepeval_metrics(
@@ -115,7 +115,7 @@ async def compute_pairwise_cross_deepeval_metrics(
 
 
 async def store_source_metrics_for_job(job_id: str, text: str) -> None:
-    metrics = await asyncio.to_thread(source_metrics, text)
+    metrics = await run_blocking(source_metrics, text)
     await store_job_metrics(job_id, {"metrics.source": metrics})
     log.debug("source metrics stored")
 

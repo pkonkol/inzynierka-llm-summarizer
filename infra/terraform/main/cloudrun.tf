@@ -28,7 +28,10 @@ resource "google_cloud_run_v2_service" "backend" {
     service_account = google_service_account.cloudrun_sa.email
     scaling {
       min_instance_count = 0
-      max_instance_count = 2
+      # Load-bearing at 1: /meta/keepalive answers from the answering instance's own memory,
+      # so with two instances a keepalive can land on the idle one and let the instance doing
+      # the work be reclaimed mid-job. Raising this needs a shared work counter first.
+      max_instance_count = 1
     }
 
     containers {
@@ -57,8 +60,8 @@ resource "google_cloud_run_v2_service" "backend" {
       }
 
       resources {
-        limits   = { cpu = "1", memory = "512Mi" }
-        cpu_idle = true
+        limits   = { cpu = "2", memory = "1024Mi" }
+        cpu_idle = false
       }
     }
   }

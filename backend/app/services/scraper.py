@@ -1,4 +1,3 @@
-import asyncio
 import ipaddress
 import socket
 from urllib.parse import urlsplit
@@ -7,6 +6,8 @@ import httpx
 import structlog
 import trafilatura
 from trafilatura.settings import Document
+
+from ..core.executors import run_blocking
 
 log = structlog.get_logger(__name__)
 
@@ -95,7 +96,7 @@ async def extract_text_from_url(url: str) -> dict:
     log.debug("scraper downloading", url=url)
 
     try:
-        downloaded = await asyncio.to_thread(_fetch_html, url)
+        downloaded = await run_blocking(_fetch_html, url)
     except UnsafeUrlError:
         log.warning("scraper url rejected", url=url)
         raise
@@ -110,7 +111,7 @@ async def extract_text_from_url(url: str) -> dict:
     log.debug("scraper download ok", url=url, bytes=len(downloaded))
 
     try:
-        data = await asyncio.to_thread(trafilatura.bare_extraction, downloaded, with_metadata=True)
+        data = await run_blocking(trafilatura.bare_extraction, downloaded, with_metadata=True)
         if not isinstance(data, Document):
             raise ValueError(f"Extraction returned {type(data).__name__}, expected a Document")
         d = data.as_dict()

@@ -11,6 +11,7 @@ import { JobsPage } from "./pages/JobsPage";
 import { ResearchPage } from "./pages/ResearchPage";
 import { logger } from "./utils/logger";
 import { getEvaluationSetIdFromPath, getRunIdFromPath } from "./utils/researchRouting";
+import { useBackgroundWorkKeepalive } from "./utils/useBackgroundWorkKeepalive";
 
 type Route = "home" | "jobs" | "research";
 
@@ -44,6 +45,7 @@ function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(getToken()));
   const [backendSha, setBackendSha] = useState("");
+  useBackgroundWorkKeepalive();
 
   useEffect(() => {
     const onPop = () => setRoute(getRoute());

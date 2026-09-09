@@ -4,6 +4,7 @@ import type {
   JobDeletedResponse,
   JobListItemResponse,
   JobStatusResponse,
+  KeepaliveResponse,
   TokenResponse,
   UrlSummaryListItem,
   VersionResponse,
@@ -129,3 +130,6 @@ export const getSupportedModes = (): Promise<Record<string, string>> =>
 
 export const getBackendVersion = (): Promise<VersionResponse> =>
   request<VersionResponse>("/api/v1/meta/version");
+
+export const getKeepalive = (signal?: AbortSignal): Promise<KeepaliveResponse> =>
+  request<KeepaliveResponse>("/api/v1/meta/keepalive", { signal });

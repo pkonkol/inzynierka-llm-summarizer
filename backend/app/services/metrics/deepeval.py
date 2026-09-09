@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,7 +12,8 @@ from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 
-from ...core.config import Settings, settings
+from ...core.config import Settings
+from ...core.executors import run_geval
 from ..llm._base import build_llm, extract_text_from_content
 
 log = structlog.get_logger(__name__)
@@ -92,14 +92,6 @@ def _build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
 
 
 _judge_model: DeepEvalBaseLLM | None = None
-
-# Judges run here rather than on the loop's default executor, which asyncio also uses for
-# getaddrinfo: a judge holds its thread for the whole LLM round-trip, so sharing the pool
-# would queue DNS for every other outbound call behind it. Its size is the concurrency
-# ceiling — each running judge holds a prompt carrying the full source text.
-_geval_executor = ThreadPoolExecutor(
-    max_workers=settings.eval_max_concurrent_geval, thread_name_prefix="geval"
-)
 
 
 def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
@@ -209,7 +201,7 @@ async def evaluate_geval(
 ) -> list[DeepEvalMetricResult]:
     """Run every (spec, test case) pair against a single judge model.
 
-    `_geval_executor` bounds how many judges are in flight at once, process-wide, so two
+    `run_geval` bounds how many judges are in flight at once, process-wide, so two
     concurrent callers cannot add up past the limit.
 
     Results come back in the order the pairs were given, so callers can rely on positions.
@@ -217,7 +209,6 @@ async def evaluate_geval(
     if not work:
         return []
     model = get_deepeval_judge_model(settings)
-    loop = asyncio.get_running_loop()
 
     def measure(spec: GEvalSpec, test_case: LLMTestCase) -> DeepEvalMetricResult:
         metric = GEval(
@@ -232,10 +223,5 @@ async def evaluate_geval(
         return run_metric(metric, test_case)
 
     return list(
-        await asyncio.gather(
-            *(
-                loop.run_in_executor(_geval_executor, measure, spec, test_case)
-                for spec, test_case in work
-            )
-        )
+        await asyncio.gather(*(run_geval(measure, spec, test_case) for spec, test_case in work))
     )

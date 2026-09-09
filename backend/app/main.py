@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -6,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
+from .core.executors import run_blocking
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
 from .core.nltk_data import ensure_wordnet_resources
@@ -16,7 +16,7 @@ setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    await asyncio.to_thread(ensure_wordnet_resources)
+    await run_blocking(ensure_wordnet_resources)
     await init_mongo()
     yield
     await close_mongo()

@@ -38,9 +38,9 @@ async def get_version() -> VersionResponse:
 async def keepalive() -> KeepaliveResponse:
     """Held open for as long as there is background work, up to a bounded window.
 
-    Cloud Run treats an instance with no request in flight as idle: it throttles the CPU and
-    may reclaim the instance. Summarisation and evaluation both run as background tasks after
-    their response was already sent, so this open connection is what keeps them running.
+    Cloud Run may reclaim an instance that has no request in flight. Summarisation and
+    evaluation both run as background tasks after their response was already sent, so this
+    open connection is what keeps the instance carrying them alive.
 
     Returns as soon as the work finishes, so callers loop on `active_work > 0` and an idle
     caller cannot pin an instance.

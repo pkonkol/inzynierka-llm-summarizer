@@ -27,6 +27,10 @@ async def _store_deepeval_status(run_id: str, deepeval_status: dict[str, Any]) -
     )
 
 
+async def mark_deepeval_pass_started(run_id: str) -> None:
+    await _store_deepeval_status(run_id, {"status": "running", "started_at": datetime.now(UTC)})
+
+
 @track_background_work("deepeval_pass")
 async def compute_run_deepeval_metrics(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
@@ -46,8 +50,6 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
     )
     if run_doc is None:
         return
-
-    await _store_deepeval_status(run_id, {"status": "running", "started_at": datetime.now(UTC)})
 
     set_id = run_doc["evaluation_set_id"]
     set_doc = await sets.find_one({"_id": ObjectId(set_id)}, {"_id": 1})

@@ -315,8 +315,7 @@ export function EvaluationRunPage({ runId }: Props) {
     run ? `${run.model_provider}:${run.model_name} · ${run.evaluation_set_name}` : null,
   );
 
-  // The backend owns the status, so a reload must be able to pick a run back up mid-flight.
-  useListPolling(runResource.reload, true, isRunInProgress || isDeepevalRunning);
+  useListPolling(runResource.reload, isRunInProgress || isDeepevalRunning);
   useListPolling(entriesResource.reload, true, isRunInProgress || isDeepevalRunning);
 
   useEffect(() => {
@@ -342,6 +341,7 @@ export function EvaluationRunPage({ runId }: Props) {
   const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
     errorPrefix: "Nie udało się uruchomić G-Eval",
     successMessage: () => "G-Eval zakolejkowany. Wyniki pojawią się automatycznie.",
+    onSuccess: () => runResource.reload(),
   });
 
   let runSummary = null;

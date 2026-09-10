@@ -21,7 +21,10 @@ from ..schemas.evaluation_run_api import (
     EvaluationRunResumeResponse,
 )
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
-from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
+from ..services.evaluation_run_metrics import (
+    compute_run_deepeval_metrics,
+    mark_deepeval_pass_started,
+)
 from ..services.evaluation_runner import run_evaluation_batch
 from ..services.startup_resume import claim_evaluation_run_for_resume
 from .evaluation_sets import find_evaluation_set_or_404
@@ -222,7 +225,9 @@ async def evaluate_run_deepeval(
             detail="Evaluation run must be finished before running GEval",
         )
 
+    await mark_deepeval_pass_started(run_id)
     background_tasks.add_task(compute_run_deepeval_metrics, run_id)
+    log.info("geval pass requested", run_id=run_id)
 
     return DeepevalQueuedResponse(status="queued", run_id=run_id)
 

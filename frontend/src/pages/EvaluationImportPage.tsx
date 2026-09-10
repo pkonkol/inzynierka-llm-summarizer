@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 
 import { errorText } from "../api/client";
 import { createEvaluationSet } from "../api/research";
-import { Collapsible } from "../components/Collapsible";
 import { useFlash } from "../components/FlashProvider";
 import { Button, buttonClasses } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Field";

@@ -60,16 +60,16 @@ export function UrlSubmitCard({ onSubmit, isSubmitting }: UrlSubmitCardProps) {
         <h1 className="hero-title text-balance">
           Praca Inżynierska - Podsumowanie Artykułów z LLM
         </h1>
-        <p className="max-w-measure text-muted">
-          Wklej adres artykułu i wybierz model — system pobierze treść, wygeneruje podsumowanie i
-          policzy metryki jakości.
-        </p>
       </div>
       <form
         className="grid gap-4 border border-panel-border bg-panel-solid p-6"
         onSubmit={handleSubmit}
       >
         <div className="grid gap-2">
+          <p className="max-w-measure text-muted">
+            Wklej adres artykułu i wybierz model — system pobierze treść, wygeneruje podsumowanie i
+            policzy metryki jakości.
+          </p>
           <FieldLabel htmlFor="article-url">Adres do analizy</FieldLabel>
           <div className="grid grid-cols-[1fr_auto] gap-3 max-lg:grid-cols-1">
             <Input

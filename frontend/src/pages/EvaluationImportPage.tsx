@@ -103,12 +103,9 @@ export function EvaluationImportPage() {
             />
             Wczytaj plik JSON
           </label>
-          <Button
-            onClick={() => void importSet.run(rawJson)}
-            disabled={!preview.isValid || importSet.isPending}
-          >
-            {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
-          </Button>
+            <Button size="sm" onClick={() => setRawJson(PRETTY_EXAMPLE)}>
+              Wstaw przykład
+            </Button>
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 border border-panel-border bg-panel-solid px-3 py-2">
@@ -118,7 +115,7 @@ export function EvaluationImportPage() {
           <span>Wpisów: {preview.entryCount}</span>
         </div>
 
-        <Collapsible label="Wklej JSON ręcznie">
+        {/* <Collapsible label="Wklej JSON ręcznie"> */}
           <div className="grid gap-2 p-3">
             <Textarea
               id="import-json"
@@ -128,12 +125,15 @@ export function EvaluationImportPage() {
               className="min-h-80"
             />
             <div>
-              <Button size="sm" onClick={() => setRawJson(PRETTY_EXAMPLE)}>
-                Wstaw przykład
+              <Button
+                onClick={() => void importSet.run(rawJson)}
+                disabled={!preview.isValid || importSet.isPending}
+              >
+                {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
               </Button>
             </div>
           </div>
-        </Collapsible>
+        {/* </Collapsible> */}
       </section>
     </PageShell>
   );

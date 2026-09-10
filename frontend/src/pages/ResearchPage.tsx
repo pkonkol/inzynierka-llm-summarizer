@@ -1,6 +1,5 @@
 import { listEvaluationSets } from "../api/research";
 import { Alert } from "../components/ui/Alert";
-import { Button } from "../components/ui/Button";
 import { LinkButton } from "../components/ui/LinkButton";
 import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
@@ -61,9 +60,6 @@ export function ResearchPage() {
       <section className="panel-shell grid min-w-0 gap-4">
         <div className="flex items-end justify-between gap-3">
           <h1>Zbiory ewaluacyjne</h1>
-          <Button size="sm" onClick={() => void setsResource.reload()}>
-            Odśwież
-          </Button>
         </div>
 
         {setsResource.errorMessage ? (

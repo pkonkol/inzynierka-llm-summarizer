@@ -256,11 +256,6 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
             ),
           },
           {
-            key: "rawOutput",
-            label: "Surowe wyjście",
-            content: fullJob ? <PreBlock>{fullJob.raw_output}</PreBlock> : placeholder,
-          },
-          {
             key: "prompt",
             label: "Prompt",
             content: fullJob ? <PromptSection job={fullJob} /> : placeholder,

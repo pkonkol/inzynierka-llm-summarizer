@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
@@ -172,7 +172,15 @@ interface EntryProgress {
   failedEntryCount: number;
 }
 
-function RunSummary({ run, progress }: { run: EvaluationRunResponse; progress: EntryProgress }) {
+function RunSummary({
+  run,
+  progress,
+  deepevalButton,
+}: {
+  run: EvaluationRunResponse;
+  progress: EntryProgress;
+  deepevalButton: ReactNode;
+}) {
   const { error, deepeval } = run.aggregate_metrics;
 
   return (
@@ -195,22 +203,33 @@ function RunSummary({ run, progress }: { run: EvaluationRunResponse; progress: E
         <InfoRow label="zakończono" value={formatDateMinute(run.finished_at)} />
       </div>
 
-      {deepeval ? (
-        <div className="grid gap-2 border-t border-panel-border pt-4">
-          <SectionHeading>G-Eval</SectionHeading>
-          <div className="metric-row">
-            <InfoRowContent label="status">
-              <StatusLabel status={deepeval.status} />
-            </InfoRowContent>
-            <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
-            <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
-            <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
-            <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
-            <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
+      <div className="grid gap-2 border-t border-panel-border pt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="metric-row items-baseline">
+            <SectionHeading>G-Eval</SectionHeading>
+            {deepeval ? (
+              <>
+                <InfoRowContent label="status">
+                  <StatusLabel status={deepeval.status} />
+                </InfoRowContent>
+                <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
+                <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
+                <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
+                <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
+                <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
+              </>
+            ) : (
+              // StatusLabel carries the four job statuses shared with jobs, runs and entries;
+              // "not started" is a fifth state that only this pass has.
+              <InfoRowContent label="status">
+                <span className="text-muted">nierozpoczęte</span>
+              </InfoRowContent>
+            )}
           </div>
-          {deepeval.error ? <p className="text-danger">{deepeval.error}</p> : null}
+          {deepevalButton}
         </div>
-      ) : null}
+        {deepeval?.error ? <p className="text-danger">{deepeval.error}</p> : null}
+      </div>
 
       {error ? <p className="text-danger">{error}</p> : null}
     </Panel>
@@ -340,13 +359,27 @@ export function EvaluationRunPage({ runId }: Props) {
 
   const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
     errorPrefix: "Nie udało się uruchomić G-Eval",
-    successMessage: () => "G-Eval zakolejkowany. Wyniki pojawią się automatycznie.",
     onSuccess: () => runResource.reload(),
   });
 
   let runSummary = null;
   if (run) {
-    runSummary = <RunSummary run={run} progress={entryProgress} />;
+    runSummary = (
+      <RunSummary
+        run={run}
+        progress={entryProgress}
+        deepevalButton={
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => void startDeepeval.run()}
+            disabled={isRunInProgress || isDeepevalRunning || startDeepeval.isPending}
+          >
+            {startDeepeval.isPending ? "Liczenie..." : "Policz G-Eval"}
+          </Button>
+        }
+      />
+    );
   } else if (runResource.isInitialLoading) {
     runSummary = <p className="text-muted">Ładowanie szczegółów runa...</p>;
   }
@@ -392,49 +425,30 @@ export function EvaluationRunPage({ runId }: Props) {
           }
         />
 
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-muted">Przebieg</span>
-            {run ? (
-              <>
-                <span className="mono-value">{run.evaluation_set_name}</span>
-                <span className="text-muted">·</span>
-                <span className="mono-value">
-                  {run.model_provider} – {run.model_name}
-                </span>
-                <span className="text-muted">·</span>
-                <span className="mono-value">{run.summary_mode}</span>
-              </>
-            ) : (
-              <span className="text-muted">ładowanie...</span>
-            )}
-          </h1>
-
-          <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void startDeepeval.run()}
-              disabled={!run || isRunInProgress || startDeepeval.isPending}
-            >
-              {startDeepeval.isPending ? "Liczenie..." : "Policz G-Eval"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Always mounted: a live region only announces content inserted after it exists. */}
-        <div aria-live="polite">
-          {isRunInProgress ? (
-            <Alert tone="warning">Przebieg w toku — status odświeża się sam.</Alert>
-          ) : null}
-        </div>
+        <h1 className="flex flex-wrap items-baseline gap-x-2">
+          <span className="text-muted">Przebieg</span>
+          {run ? (
+            <>
+              <span className="mono-value">{run.evaluation_set_name}</span>
+              <span className="text-muted">·</span>
+              <span className="mono-value">
+                {run.model_provider} – {run.model_name}
+              </span>
+              <span className="text-muted">·</span>
+              <span className="mono-value">{run.summary_mode}</span>
+            </>
+          ) : (
+            <span className="text-muted">ładowanie...</span>
+          )}
+        </h1>
 
         {runResource.errorMessage ? <Alert tone="danger">{runResource.errorMessage}</Alert> : null}
         {entriesResource.errorMessage ? (
           <Alert tone="danger">{entriesResource.errorMessage}</Alert>
         ) : null}
 
-        {runSummary}
+        {/* Always mounted: a live region only announces content inserted after it exists. */}
+        <div aria-live="polite">{runSummary}</div>
 
         {entriesSection}
       </section>

@@ -7,6 +7,7 @@ import {
 } from "../utils/routing";
 import type { Crumb } from "./Breadcrumbs";
 import { AppLink } from "./ui/AppLink";
+import { segmentedCellClasses } from "./ui/segmentedCell";
 import { Tooltip } from "./ui/Tooltip";
 
 interface NavTab {
@@ -88,9 +89,6 @@ export const EVALUATION_TRAIL: Crumb[] = EVALUATION_MODULE.tabs.map((tab, index)
 }));
 
 const CELL = "flex items-center whitespace-nowrap px-3 font-mono uppercase sm:px-5";
-const NAV_CELL = `${CELL} w-full justify-center py-2 no-underline transition-colors duration-150`;
-const MODULE_CLASS = `${NAV_CELL} text-sm tracking-widest`;
-const TAB_CLASS = `${NAV_CELL} text-xs tracking-wider`;
 const AUTH_CELL = `${CELL} border-l border-panel-border text-sm tracking-widest`;
 
 function NavLink({
@@ -115,9 +113,7 @@ function NavLink({
           href={href}
           aria-describedby={describedBy}
           aria-current={isActive ? "page" : undefined}
-          className={`${className} ${
-            isActive ? "bg-ink text-panel-solid" : "bg-panel-solid text-ink hover:bg-subtle-hover"
-          }`}
+          className={`no-underline ${segmentedCellClasses(isActive, className)}`}
         >
           {label}
         </AppLink>
@@ -152,7 +148,7 @@ export function NavDock({ route, isLoggedIn, onOpenLogin }: NavDockProps) {
                 href={module.tabs[0].href}
                 description={module.description}
                 isActive={module.tabs.some((tab) => tab.tab === activeTab)}
-                className={MODULE_CLASS}
+                className="w-full text-sm tracking-widest"
               />
               <div className="grid grid-cols-2 gap-px">
                 {module.tabs.map((tab) => (
@@ -162,7 +158,7 @@ export function NavDock({ route, isLoggedIn, onOpenLogin }: NavDockProps) {
                     href={tab.href}
                     description={tab.description}
                     isActive={tab.tab === activeTab}
-                    className={TAB_CLASS}
+                    className="w-full text-xs tracking-wider"
                   />
                 ))}
               </div>

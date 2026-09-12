@@ -2231,11 +2231,44 @@
             "title": "Model Provider"
           },
           "url": {
-            "type": "string",
-            "maxLength": 2083,
-            "minLength": 1,
-            "format": "uri",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Url"
+          },
+          "input_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Text"
+          },
+          "source_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Title"
           },
           "language": {
             "type": "string",
@@ -2261,8 +2294,7 @@
         "type": "object",
         "required": [
           "model_name",
-          "model_provider",
-          "url"
+          "model_provider"
         ],
         "title": "JobCreateRequest"
       },

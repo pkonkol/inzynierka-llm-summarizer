@@ -10,6 +10,7 @@ from ..core.auth import require_auth
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import (
+    MANUAL_SOURCE_PREFIX,
     JobCreatedResponse,
     JobCreateRequest,
     JobDeletedResponse,
@@ -46,7 +47,18 @@ async def create_summarize_job(
     job_id = str(uuid4())
     now = datetime.now(UTC)
 
-    source_url = str(payload.url)
+    if payload.url is not None:
+        source_url = str(payload.url)
+        input_text = ""
+    elif payload.source_title is not None and payload.input_text is not None:
+        source_url = f"{MANUAL_SOURCE_PREFIX}{payload.source_title.strip()}"
+        input_text = payload.input_text
+    else:
+        # Unreachable: JobCreateRequest._require_exactly_one_source already rejected this shape.
+        raise HTTPException(
+            status_code=422, detail="Provide either url, or input_text and source_title"
+        )
+
     log.debug("job queued", job_id=job_id, url=source_url, mode=payload.summary_mode)
 
     document = JobDocument(
@@ -58,6 +70,7 @@ async def create_summarize_job(
         language=payload.language,
         run_deepeval=payload.run_deepeval,
         status="pending",
+        input_text=input_text,
         created_at=now,
         heartbeat_at=now,
         updated_at=now,
@@ -68,16 +81,7 @@ async def create_summarize_job(
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
-    background_tasks.add_task(
-        run_summarization_job,
-        job_id,
-        source_url,
-        payload.model_name,
-        payload.model_provider,
-        payload.language,
-        payload.summary_mode,
-        payload.run_deepeval,
-    )
+    background_tasks.add_task(run_summarization_job, job_id)
     return JobCreatedResponse(job_id=job_id)
 
 

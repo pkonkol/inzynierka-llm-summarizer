@@ -1,6 +1,7 @@
 import type {
   AuthStatusResponse,
   JobCreatedResponse,
+  JobCreateRequest,
   JobDeletedResponse,
   JobListItemResponse,
   JobStatusResponse,
@@ -79,24 +80,10 @@ export const login = (password: string): Promise<TokenResponse> =>
     body: JSON.stringify({ password }),
   });
 
-export const createSummaryJob = (
-  url: string,
-  model_provider: string,
-  model_name: string,
-  language: string,
-  summary_mode: string,
-  run_deepeval: boolean,
-): Promise<JobCreatedResponse> =>
+export const createSummaryJob = (payload: JobCreateRequest): Promise<JobCreatedResponse> =>
   request<JobCreatedResponse>("/api/v1/jobs/summarize", {
     method: "POST",
-    body: JSON.stringify({
-      url,
-      model_provider,
-      model_name,
-      language,
-      summary_mode,
-      run_deepeval,
-    }),
+    body: JSON.stringify(payload),
   });
 
 export const listSummarizedUrls = (limit = 50): Promise<UrlSummaryListItem[]> =>

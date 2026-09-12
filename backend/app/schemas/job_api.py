@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, model_validator
 
 from .base import ApiModel
 from .job_db import JobMetrics
@@ -13,14 +13,35 @@ from .summary import SummaryResponse, UsageMetadata
 SummaryMode = Literal["simple", "sequential", "cascade"]
 JobStatusValue = Literal["pending", "running", "completed", "failed"]
 
+# Marks a job whose source_url carries a title rather than a fetchable address. HttpUrl only
+# ever accepts http/https, so this can never collide with a real scraped URL.
+MANUAL_SOURCE_PREFIX = "manual:"
+
+_MAX_PASTED_CHARS = 500_000  # ~125k tokens; leaves headroom under Mongo's 16 MB document limit
+
 
 class JobCreateRequest(ApiModel):
     model_name: str
     model_provider: str
-    url: HttpUrl
+    url: HttpUrl | None = None
+    input_text: str | None = Field(default=None, min_length=1, max_length=_MAX_PASTED_CHARS)
+    source_title: str | None = Field(default=None, min_length=1, max_length=200)
     language: str = "en"
     summary_mode: SummaryMode = "simple"
     run_deepeval: bool = False
+
+    @model_validator(mode="after")
+    def _require_exactly_one_source(self) -> JobCreateRequest:
+        has_url = self.url is not None
+        has_pasted_text = self.input_text is not None or self.source_title is not None
+        if has_url and has_pasted_text:
+            raise ValueError("Provide either url, or input_text and source_title, not both")
+        if not has_url:
+            if self.input_text is None or self.source_title is None:
+                raise ValueError("Provide either url, or both input_text and source_title")
+            if not self.source_title.strip():
+                raise ValueError("source_title must not be blank")
+        return self
 
 
 class JobStatusResponse(ApiModel):

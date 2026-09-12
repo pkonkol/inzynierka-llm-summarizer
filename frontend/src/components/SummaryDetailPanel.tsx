@@ -11,7 +11,7 @@ import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration } from "../utils/format";
 import { useFetchOnMount } from "../utils/useFetchOnMount";
-import { isJobInProgress } from "../utils/utils";
+import { isJobInProgress, isManualSource } from "../utils/utils";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
@@ -312,14 +312,16 @@ export function SummaryDetailPanel({
       <article className="grid gap-4 min-w-0">
         <h3>{title}</h3>
 
-        <a
-          href={sourceUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="mono-value wrap-anywhere font-semibold no-underline"
-        >
-          {sourceUrl}
-        </a>
+        {isManualSource(sourceUrl) ? null : (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mono-value wrap-anywhere font-semibold no-underline"
+          >
+            {sourceUrl}
+          </a>
+        )}
 
         <section className="grid content-start gap-3 border-t border-panel-border pt-4 min-w-0">
           <h4>{sectionTitle}</h4>

@@ -823,11 +823,12 @@ export interface components {
             model_name: string;
             /** Model Provider */
             model_provider: string;
-            /**
-             * Url
-             * Format: uri
-             */
-            url: string;
+            /** Url */
+            url?: string | null;
+            /** Input Text */
+            input_text?: string | null;
+            /** Source Title */
+            source_title?: string | null;
             /**
              * Language
              * @default en

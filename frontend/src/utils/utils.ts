@@ -1,5 +1,19 @@
 import type { JobStatusValue } from "../types/local";
 
+// Mirrors JobCreateRequest._MAX_PASTED_CHARS in backend/app/schemas/job_api.py.
+export const MAX_PASTED_CHARS = 500_000;
+
+// Jobs whose source is pasted text carry this prefix on source_url instead of a real address.
+const MANUAL_SOURCE_PREFIX = "manual:";
+
+export function isManualSource(sourceUrl: string): boolean {
+  return sourceUrl.startsWith(MANUAL_SOURCE_PREFIX);
+}
+
+export function manualSourceTitle(sourceUrl: string): string {
+  return sourceUrl.slice(MANUAL_SOURCE_PREFIX.length);
+}
+
 export function splitProviderModel(value: string): { provider: string; modelName: string } {
   const [provider, ...rest] = value.split(":");
   return {

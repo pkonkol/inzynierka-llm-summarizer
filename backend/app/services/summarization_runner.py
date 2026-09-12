@@ -8,7 +8,7 @@ import structlog
 
 from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.mongo import get_jobs_collection
-from ..schemas.job_api import SummaryMode
+from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.summary import SummaryResponse
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
@@ -33,15 +33,19 @@ def spawn_metrics_task(coro: Coroutine[Any, Any, None]) -> None:
 
 
 @track_background_work("summarization_job")
-async def run_summarization_job(
-    job_id: str,
-    url: str,
-    model_name: str,
-    model_provider: str,
-    language: str,
-    summary_mode: SummaryMode,
-    run_deepeval: bool,
-) -> None:
+async def run_summarization_job(job_id: str) -> None:
+    jobs_collection = get_jobs_collection()
+    job = await jobs_collection.find_one({"job_id": job_id})
+    if job is None:
+        raise ValueError(f"Job {job_id} not found")
+
+    source_url = job["source_url"]
+    model_name = job["model_name"]
+    model_provider = job["model_provider"]
+    language = job["language"]
+    summary_mode = job["summary_mode"]
+    run_deepeval = job["run_deepeval"]
+
     # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
     structlog.contextvars.bind_contextvars(
@@ -49,10 +53,9 @@ async def run_summarization_job(
         mode=summary_mode,
         provider=model_provider,
         model=model_name,
-        url=url,
+        url=source_url,
     )
 
-    jobs_collection = get_jobs_collection()
     started_at = datetime.now(UTC)
 
     # Both the visible state and the liveness signal: a job with a fresh heartbeat is owned by a
@@ -63,7 +66,13 @@ async def run_summarization_job(
     )
 
     try:
-        data = await extract_text_from_url(url)
+        if source_url.startswith(MANUAL_SOURCE_PREFIX):
+            data = {
+                "text": job["input_text"],
+                "title": source_url.removeprefix(MANUAL_SOURCE_PREFIX),
+            }
+        else:
+            data = await extract_text_from_url(source_url)
         # The scrape is done and the model call is the long part, so this is the one checkpoint
         # a job has to offer.
         await jobs_collection.update_one(
@@ -72,7 +81,7 @@ async def run_summarization_job(
         spawn_metrics_task(store_source_metrics_for_job(job_id, data["text"]))
 
         summary = await generate_summary(
-            data, url, model_name, model_provider, language, summary_mode
+            data, source_url, model_name, model_provider, language, summary_mode
         )
 
         finished_at = datetime.now(UTC)

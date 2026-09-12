@@ -12,11 +12,15 @@ import { CompletedJobsList } from "../components/CompletedJobsList";
 import { useFlash } from "../components/FlashProvider";
 import { JobActivityPanel } from "../components/JobActivityPanel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
-import { UrlSubmitCard } from "../components/UrlSubmitCard";
+import { SummarySubmitCard } from "../components/SummarySubmitCard";
 import { Alert } from "../components/ui/Alert";
 import { cn } from "../components/ui/cn";
 import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
-import type { JobListItemResponse, JobStatusResponse } from "../types/api.generated";
+import type {
+  JobCreateRequest,
+  JobListItemResponse,
+  JobStatusResponse,
+} from "../types/api.generated";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -62,24 +66,10 @@ export function HomePage() {
   );
 
   const submitSummary = useAsyncAction(
-    async (
-      url: string,
-      model_provider: string,
-      model_name: string,
-      language: string,
-      summary_mode: string,
-      run_deepeval: boolean,
-    ) => {
+    async (payload: JobCreateRequest) => {
       // Optimistic: it announces the queued job, so it cannot be a successMessage.
       showFlash("Zadanie zostało utworzone. Trwa analiza artykułu...");
-      return createSummaryJob(
-        url,
-        model_provider,
-        model_name,
-        language,
-        summary_mode,
-        run_deepeval,
-      );
+      return createSummaryJob(payload);
     },
     {
       errorPrefix: "Nie udało się utworzyć joba",
@@ -157,7 +147,7 @@ export function HomePage() {
         className={cn("grid content-start gap-6", hasDetailOpen ? STICKY_COLUMN : "min-w-0")}
       >
         {!hasDetailOpen ? (
-          <UrlSubmitCard onSubmit={submitSummary.run} isSubmitting={submitSummary.isPending} />
+          <SummarySubmitCard onSubmit={submitSummary.run} isSubmitting={submitSummary.isPending} />
         ) : null}
 
         <JobActivityPanel jobs={jobActivityRows} />

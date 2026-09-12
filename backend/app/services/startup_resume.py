@@ -28,15 +28,7 @@ log = structlog.get_logger(__name__)
 _UNFINISHED = {"status": {"$in": ["pending", "running"]}}
 _RESUMABLE = {**_UNFINISHED, "resume_attempts": {"$lt": settings.max_resume_attempts}}
 
-_JOB_RESUME_FIELDS = {
-    "job_id": 1,
-    "source_url": 1,
-    "model_name": 1,
-    "model_provider": 1,
-    "language": 1,
-    "summary_mode": 1,
-    "run_deepeval": 1,
-}
+_JOB_RESUME_FIELDS = {"job_id": 1}
 
 
 def _claim_update(*, reset_attempts: bool) -> dict[str, Any]:
@@ -91,18 +83,7 @@ async def resume_interrupted_work() -> None:
     # restarted; the stale-work cleanup reports them as failed instead.
     async for job in jobs.find({**_RESUMABLE, "language": {"$exists": True}}, _JOB_RESUME_FIELDS):
         await jobs.update_one({"job_id": job["job_id"]}, _claim_update(reset_attempts=False))
-        spawn_tracked_task(
-            run_summarization_job(
-                job["job_id"],
-                job["source_url"],
-                job["model_name"],
-                job["model_provider"],
-                job["language"],
-                job["summary_mode"],
-                job["run_deepeval"],
-            ),
-            kind="summarization_job",
-        )
+        spawn_tracked_task(run_summarization_job(job["job_id"]), kind="summarization_job")
         resumed_jobs += 1
 
     log.info("interrupted work resumed", resumed_runs=resumed_runs, resumed_jobs=resumed_jobs)

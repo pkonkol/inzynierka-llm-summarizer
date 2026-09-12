@@ -10,6 +10,7 @@ from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.summary import SummaryResponse
+from ..schemas.summary_spec import ExplicitLength, SummarySpec, resolve_target_length
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
 from ..services.run_metrics import (
@@ -43,14 +44,15 @@ async def run_summarization_job(job_id: str) -> None:
     model_name = job["model_name"]
     model_provider = job["model_provider"]
     language = job["language"]
-    summary_mode = job["summary_mode"]
+    processing_strategy = job["processing_strategy"]
+    spec = SummarySpec.model_validate(job["summary_spec"])
     run_deepeval = job["run_deepeval"]
 
     # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
     structlog.contextvars.bind_contextvars(
         job_id=job_id,
-        mode=summary_mode,
+        strategy=processing_strategy,
         provider=model_provider,
         model=model_name,
         url=source_url,
@@ -80,12 +82,31 @@ async def run_summarization_job(job_id: str) -> None:
         )
         spawn_metrics_task(store_source_metrics_for_job(job_id, data["text"]))
 
+        input_words = len(data["text"].split())
+        target_words, target_sentences = resolve_target_length(
+            spec.length, input_words=input_words, golden_summary=None
+        )
+        resolved_spec = spec.model_copy(
+            update={
+                "length": ExplicitLength(
+                    target_words=target_words, target_sentences=target_sentences
+                )
+            }
+        )
+
         summary = await generate_summary(
-            data, source_url, model_name, model_provider, language, summary_mode
+            data,
+            source_url,
+            model_name,
+            model_provider,
+            language,
+            resolved_spec,
+            strategy=processing_strategy,
         )
 
         finished_at = datetime.now(UTC)
         takeaways_text = join_takeaways(summary.key_takeaways)
+        summary_text = summary.summary if summary.summary is not None else ""
 
         await jobs_collection.update_one(
             {"job_id": job_id},
@@ -96,8 +117,13 @@ async def run_summarization_job(job_id: str) -> None:
                         title=summary.title,
                         summary=summary.summary,
                         key_takeaways=summary.key_takeaways,
+                        output_format=summary.output_format,
                         source_url=summary.source_url,
                     ).model_dump(),
+                    "resolved_length": {
+                        "target_words": target_words,
+                        "target_sentences": target_sentences,
+                    },
                     "usage": summary.usage.model_dump(),
                     "raw_metadata": summary.raw_metadata,
                     "raw_output": summary.raw_output,
@@ -113,17 +139,15 @@ async def run_summarization_job(job_id: str) -> None:
             },
         )
 
-        if summary.summary or takeaways_text:
+        if summary_text or takeaways_text:
             spawn_metrics_task(
                 store_statistical_metrics_for_job(
-                    job_id, summary.summary, takeaways_text, data["text"]
+                    job_id, summary_text, takeaways_text, data["text"]
                 )
             )
-        if run_deepeval and (summary.summary or takeaways_text):
+        if run_deepeval and (summary_text or takeaways_text):
             spawn_metrics_task(
-                store_deepeval_metrics_for_job(
-                    job_id, summary.summary, takeaways_text, data["text"]
-                )
+                store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"])
             )
 
     except Exception as exc:
@@ -152,4 +176,4 @@ async def run_summarization_job(job_id: str) -> None:
             },
         )
     finally:
-        structlog.contextvars.unbind_contextvars("job_id", "mode", "provider", "model", "url")
+        structlog.contextvars.unbind_contextvars("job_id", "strategy", "provider", "model", "url")

@@ -5,7 +5,8 @@ from fastapi import APIRouter
 
 from ..core.background_work import wait_until_no_work_remaining
 from ..core.config import settings
-from ..schemas.meta_api import KeepaliveResponse, VersionResponse
+from ..schemas.meta_api import KeepaliveResponse, SummaryPresetOut, VersionResponse
+from ..services.llm.presets import SUMMARY_PRESETS
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
 log = structlog.get_logger(__name__)
@@ -23,10 +24,18 @@ async def get_supported_languages() -> list[str]:
     return settings.supported_summary_languages
 
 
-@router.get("/modes", summary="Get supported summary modes")
+@router.get("/modes", summary="Get supported processing strategies")
 async def get_supported_modes() -> dict[str, str]:
-    """Returns {mode_key: human_readable_label}."""
+    """Returns {strategy_key: human_readable_label}."""
     return settings.supported_summary_modes
+
+
+@router.get("/summary-presets", summary="Get named SummarySpec presets")
+async def get_summary_presets() -> dict[str, SummaryPresetOut]:
+    return {
+        key: SummaryPresetOut(label=preset.label, spec=preset.spec)
+        for key, preset in SUMMARY_PRESETS.items()
+    }
 
 
 @router.get("/version", summary="Get the build this backend was deployed from")

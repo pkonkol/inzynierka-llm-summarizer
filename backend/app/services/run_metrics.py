@@ -30,7 +30,10 @@ from ..services.metrics.statistical import (
 log = structlog.get_logger(__name__)
 
 
-def join_takeaways(takeaways: list[str]) -> str:
+def join_takeaways(takeaways: list[str] | None) -> str:
+    """None means output_format was 'prose' — no takeaways were generated at all."""
+    if takeaways is None:
+        return ""
     return "\n".join(f"- {item}" for item in takeaways)
 
 

@@ -49,11 +49,10 @@ class Settings(BaseSettings):
             "~z-ai/glm-flash-latest",
         ],
     }
-    # mode -> human-readable label
+    # strategy -> human-readable label
     supported_summary_modes: dict[str, str] = {
-        "simple": "Prosty — jeden prompt (ekstraktor + abstraktor)",
-        "sequential": "Sekwencyjny — dwa niezależne prompty (najpierw punkty, potem podsumowanie)",
-        "cascade": "Kaskadowy — najpierw punkty, podsumowanie wyprowadzone z punktów",
+        "direct": "Bezpośredni — jeden prompt (ekstraktor + abstraktor)",
+        "extract_then_synthesize": "Ekstrakcja i synteza — najpierw punkty, wynik wyprowadzony z punktów",
     }
     auth_enabled: bool = False
     auth_secret: SecretStr = SecretStr("")

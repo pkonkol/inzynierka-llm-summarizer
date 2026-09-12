@@ -465,8 +465,8 @@
         "tags": [
           "meta"
         ],
-        "summary": "Get supported summary modes",
-        "description": "Returns {mode_key: human_readable_label}.",
+        "summary": "Get supported processing strategies",
+        "description": "Returns {strategy_key: human_readable_label}.",
         "operationId": "get_supported_modes_api_v1_meta_modes_get",
         "responses": {
           "200": {
@@ -479,6 +479,31 @@
                   },
                   "type": "object",
                   "title": "Response Get Supported Modes Api V1 Meta Modes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta/summary-presets": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Get named SummarySpec presets",
+        "operationId": "get_summary_presets_api_v1_meta_summary_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/SummaryPresetOut"
+                  },
+                  "type": "object",
+                  "title": "Response Get Summary Presets Api V1 Meta Summary Presets Get"
                 }
               }
             }
@@ -2159,6 +2184,44 @@
         ],
         "title": "EvaluationSetListItemResponse"
       },
+      "ExplicitLength": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "const": "explicit",
+            "title": "Policy",
+            "default": "explicit"
+          },
+          "target_words": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Words"
+          },
+          "target_sentences": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 50.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Sentences"
+          }
+        },
+        "type": "object",
+        "title": "ExplicitLength"
+      },
       "GoldenMetrics": {
         "properties": {
           "source": {
@@ -2275,15 +2338,17 @@
             "title": "Language",
             "default": "en"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
             "enum": [
-              "simple",
-              "sequential",
-              "cascade"
+              "direct",
+              "extract_then_synthesize"
             ],
-            "title": "Summary Mode",
-            "default": "simple"
+            "title": "Processing Strategy",
+            "default": "direct"
+          },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
           },
           "run_deepeval": {
             "type": "boolean",
@@ -2366,14 +2431,13 @@
             "type": "string",
             "title": "Model Name"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
             "enum": [
-              "simple",
-              "sequential",
-              "cascade"
+              "direct",
+              "extract_then_synthesize"
             ],
-            "title": "Summary Mode"
+            "title": "Processing Strategy"
           },
           "updated_at": {
             "type": "string",
@@ -2390,7 +2454,7 @@
           "summary",
           "model_provider",
           "model_name",
-          "summary_mode",
+          "processing_strategy",
           "updated_at"
         ],
         "title": "JobListItemResponse",
@@ -2466,14 +2530,30 @@
             "type": "string",
             "title": "Model Name"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
             "enum": [
-              "simple",
-              "sequential",
-              "cascade"
+              "direct",
+              "extract_then_synthesize"
             ],
-            "title": "Summary Mode"
+            "title": "Processing Strategy"
+          },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
+          },
+          "resolved_length": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Length"
           },
           "summary_data": {
             "anyOf": [
@@ -2531,9 +2611,7 @@
             "title": "Prompt Template"
           },
           "prompt_params": {
-            "additionalProperties": {
-              "type": "string"
-            },
+            "additionalProperties": true,
             "type": "object",
             "title": "Prompt Params"
           },
@@ -2589,7 +2667,9 @@
           "status",
           "model_provider",
           "model_name",
-          "summary_mode",
+          "processing_strategy",
+          "summary_spec",
+          "resolved_length",
           "summary_data",
           "metrics",
           "deepeval_metrics",
@@ -2643,6 +2723,26 @@
         ],
         "title": "KeyTakeawaysMetrics"
       },
+      "MatchReferenceLength": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "const": "match_reference",
+            "title": "Policy",
+            "default": "match_reference"
+          },
+          "tolerance_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Tolerance Pct",
+            "default": 15.0
+          }
+        },
+        "type": "object",
+        "title": "MatchReferenceLength",
+        "description": "Evaluation-only: target_words/target_sentences are derived from a golden_summary at\nresolve time, not stored here. tolerance_pct is not consumed by resolve_target_length \u2014\nit is metadata for later metrics/reporting on how far actual output drifted from the\n(exactly-matched) target, not an input to generation."
+      },
       "PairwiseDeepevalItem": {
         "properties": {
           "name": {
@@ -2667,6 +2767,27 @@
         "title": "PairwiseDeepevalItem",
         "description": "score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."
       },
+      "ScaledLength": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "const": "scaled_to_input",
+            "title": "Policy",
+            "default": "scaled_to_input"
+          },
+          "slider": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Slider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slider"
+        ],
+        "title": "ScaledLength"
+      },
       "SourceMetrics": {
         "properties": {
           "char_count": {
@@ -2685,6 +2806,23 @@
         ],
         "title": "SourceMetrics"
       },
+      "SummaryPresetOut": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/SummarySpec"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "spec"
+        ],
+        "title": "SummaryPresetOut"
+      },
       "SummaryResponse": {
         "properties": {
           "title": {
@@ -2692,15 +2830,37 @@
             "title": "Title"
           },
           "summary": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Summary"
           },
           "key_takeaways": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Key Takeaways"
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "prose",
+              "bullets"
+            ],
+            "title": "Output Format"
           },
           "source_url": {
             "type": "string",
@@ -2712,10 +2872,91 @@
           "title",
           "summary",
           "key_takeaways",
+          "output_format",
           "source_url"
         ],
         "title": "SummaryResponse",
-        "description": "Structured output the LLM is asked to produce."
+        "description": "Structured output the LLM is asked to produce.\n\nExactly one of summary/key_takeaways is populated, matching output_format \u2014 the other\nis None, not an empty placeholder, since \"not generated\" and \"generated as empty\" are\ndifferent states."
+      },
+      "SummarySpec": {
+        "properties": {
+          "narrative_stance": {
+            "type": "string",
+            "enum": [
+              "about_document",
+              "voice_of_document"
+            ],
+            "title": "Narrative Stance",
+            "default": "voice_of_document"
+          },
+          "summary_function": {
+            "type": "string",
+            "enum": [
+              "indicative",
+              "informative",
+              "mixed"
+            ],
+            "title": "Summary Function",
+            "default": "informative"
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "prose",
+              "bullets"
+            ],
+            "title": "Output Format",
+            "default": "prose"
+          },
+          "length": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ExplicitLength"
+              },
+              {
+                "$ref": "#/components/schemas/ScaledLength"
+              },
+              {
+                "$ref": "#/components/schemas/MatchReferenceLength"
+              }
+            ],
+            "title": "Length",
+            "discriminator": {
+              "propertyName": "policy",
+              "mapping": {
+                "explicit": "#/components/schemas/ExplicitLength",
+                "match_reference": "#/components/schemas/MatchReferenceLength",
+                "scaled_to_input": "#/components/schemas/ScaledLength"
+              }
+            }
+          },
+          "focus_query": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Query"
+          },
+          "extra_instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Instructions"
+          }
+        },
+        "type": "object",
+        "title": "SummarySpec"
       },
       "SummaryStatisticalMetrics": {
         "properties": {

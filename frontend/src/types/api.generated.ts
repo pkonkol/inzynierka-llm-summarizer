@@ -183,10 +183,27 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get supported summary modes
-         * @description Returns {mode_key: human_readable_label}.
+         * Get supported processing strategies
+         * @description Returns {strategy_key: human_readable_label}.
          */
         get: operations["get_supported_modes_api_v1_meta_modes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meta/summary-presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get named SummarySpec presets */
+        get: operations["get_summary_presets_api_v1_meta_summary_presets_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -793,6 +810,18 @@ export interface components {
              */
             created_at: string;
         };
+        /** ExplicitLength */
+        ExplicitLength: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            policy: "explicit";
+            /** Target Words */
+            target_words?: number | null;
+            /** Target Sentences */
+            target_sentences?: number | null;
+        };
         /** GoldenMetrics */
         GoldenMetrics: {
             source: components["schemas"]["SourceMetrics"];
@@ -835,11 +864,12 @@ export interface components {
              */
             language: string;
             /**
-             * Summary Mode
-             * @default simple
+             * Processing Strategy
+             * @default direct
              * @enum {string}
              */
-            summary_mode: "simple" | "sequential" | "cascade";
+            processing_strategy: "direct" | "extract_then_synthesize";
+            summary_spec?: components["schemas"]["SummarySpec"];
             /**
              * Run Deepeval
              * @default false
@@ -884,10 +914,10 @@ export interface components {
             /** Model Name */
             model_name: string;
             /**
-             * Summary Mode
+             * Processing Strategy
              * @enum {string}
              */
-            summary_mode: "simple" | "sequential" | "cascade";
+            processing_strategy: "direct" | "extract_then_synthesize";
             /**
              * Updated At
              * Format: date-time
@@ -919,10 +949,15 @@ export interface components {
             /** Model Name */
             model_name: string;
             /**
-             * Summary Mode
+             * Processing Strategy
              * @enum {string}
              */
-            summary_mode: "simple" | "sequential" | "cascade";
+            processing_strategy: "direct" | "extract_then_synthesize";
+            summary_spec: components["schemas"]["SummarySpec"];
+            /** Resolved Length */
+            resolved_length: {
+                [key: string]: number;
+            } | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
             /** Deepeval Metrics */
@@ -949,7 +984,7 @@ export interface components {
             ][];
             /** Prompt Params */
             prompt_params: {
-                [key: string]: string;
+                [key: string]: unknown;
             };
             /**
              * Created At
@@ -980,6 +1015,25 @@ export interface components {
             char_count: number;
         };
         /**
+         * MatchReferenceLength
+         * @description Evaluation-only: target_words/target_sentences are derived from a golden_summary at
+         *     resolve time, not stored here. tolerance_pct is not consumed by resolve_target_length —
+         *     it is metadata for later metrics/reporting on how far actual output drifted from the
+         *     (exactly-matched) target, not an input to generation.
+         */
+        MatchReferenceLength: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            policy: "match_reference";
+            /**
+             * Tolerance Pct
+             * @default 15
+             */
+            tolerance_pct: number;
+        };
+        /**
          * PairwiseDeepevalItem
          * @description score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output).
          */
@@ -991,6 +1045,16 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** ScaledLength */
+        ScaledLength: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            policy: "scaled_to_input";
+            /** Slider */
+            slider: number;
+        };
         /** SourceMetrics */
         SourceMetrics: {
             /** Char Count */
@@ -998,19 +1062,61 @@ export interface components {
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
         };
+        /** SummaryPresetOut */
+        SummaryPresetOut: {
+            /** Label */
+            label: string;
+            spec: components["schemas"]["SummarySpec"];
+        };
         /**
          * SummaryResponse
          * @description Structured output the LLM is asked to produce.
+         *
+         *     Exactly one of summary/key_takeaways is populated, matching output_format — the other
+         *     is None, not an empty placeholder, since "not generated" and "generated as empty" are
+         *     different states.
          */
         SummaryResponse: {
             /** Title */
             title: string;
             /** Summary */
-            summary: string;
+            summary: string | null;
             /** Key Takeaways */
-            key_takeaways: string[];
+            key_takeaways: string[] | null;
+            /**
+             * Output Format
+             * @enum {string}
+             */
+            output_format: "prose" | "bullets";
             /** Source Url */
             source_url: string;
+        };
+        /** SummarySpec */
+        SummarySpec: {
+            /**
+             * Narrative Stance
+             * @default voice_of_document
+             * @enum {string}
+             */
+            narrative_stance: "about_document" | "voice_of_document";
+            /**
+             * Summary Function
+             * @default informative
+             * @enum {string}
+             */
+            summary_function: "indicative" | "informative" | "mixed";
+            /**
+             * Output Format
+             * @default prose
+             * @enum {string}
+             */
+            output_format: "prose" | "bullets";
+            /** Length */
+            length?: components["schemas"]["ExplicitLength"] | components["schemas"]["ScaledLength"] | components["schemas"]["MatchReferenceLength"];
+            /** Focus Query */
+            focus_query?: string | null;
+            /** Extra Instructions */
+            extra_instructions?: string | null;
         };
         /** SummaryStatisticalMetrics */
         SummaryStatisticalMetrics: {
@@ -1125,6 +1231,7 @@ export type EvaluationSetEntryResponse = components['schemas']['EvaluationSetEnt
 export type EvaluationSetExportResponse = components['schemas']['EvaluationSetExportResponse'];
 export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImportRequest'];
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
+export type ExplicitLength = components['schemas']['ExplicitLength'];
 export type GoldenMetrics = components['schemas']['GoldenMetrics'];
 export type GoldenMetricsBackfillResponse = components['schemas']['GoldenMetricsBackfillResponse'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
@@ -1136,9 +1243,13 @@ export type JobMetrics = components['schemas']['JobMetrics'];
 export type JobStatusResponse = components['schemas']['JobStatusResponse'];
 export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
 export type KeyTakeawaysMetrics = components['schemas']['KeyTakeawaysMetrics'];
+export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
+export type ScaledLength = components['schemas']['ScaledLength'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
+export type SummaryPresetOut = components['schemas']['SummaryPresetOut'];
 export type SummaryResponse = components['schemas']['SummaryResponse'];
+export type SummarySpec = components['schemas']['SummarySpec'];
 export type SummaryStatisticalMetrics = components['schemas']['SummaryStatisticalMetrics'];
 export type TokenRequest = components['schemas']['TokenRequest'];
 export type TokenResponse = components['schemas']['TokenResponse'];
@@ -1474,6 +1585,28 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    get_summary_presets_api_v1_meta_summary_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["SummaryPresetOut"];
                     };
                 };
             };

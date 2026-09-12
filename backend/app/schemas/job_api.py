@@ -9,8 +9,8 @@ from .base import ApiModel
 from .job_db import JobMetrics
 from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
+from .summary_spec import ProcessingStrategy, SummarySpec
 
-SummaryMode = Literal["simple", "sequential", "cascade"]
 JobStatusValue = Literal["pending", "running", "completed", "failed"]
 
 # Marks a job whose source_url carries a title rather than a fetchable address. HttpUrl only
@@ -27,7 +27,8 @@ class JobCreateRequest(ApiModel):
     input_text: str | None = Field(default=None, min_length=1, max_length=_MAX_PASTED_CHARS)
     source_title: str | None = Field(default=None, min_length=1, max_length=200)
     language: str = "en"
-    summary_mode: SummaryMode = "simple"
+    processing_strategy: ProcessingStrategy = "direct"
+    summary_spec: SummarySpec = Field(default_factory=SummarySpec)
     run_deepeval: bool = False
 
     @model_validator(mode="after")
@@ -43,6 +44,13 @@ class JobCreateRequest(ApiModel):
                 raise ValueError("source_title must not be blank")
         return self
 
+    @model_validator(mode="after")
+    def _reject_match_reference_length(self) -> JobCreateRequest:
+        # match_reference needs a golden_summary, which jobs never have — only evaluation runs do.
+        if self.summary_spec.length.policy == "match_reference":
+            raise ValueError("length policy 'match_reference' is only valid for evaluation runs")
+        return self
+
 
 class JobStatusResponse(ApiModel):
     job_id: str
@@ -50,7 +58,9 @@ class JobStatusResponse(ApiModel):
     status: JobStatusValue
     model_provider: str
     model_name: str
-    summary_mode: SummaryMode
+    processing_strategy: ProcessingStrategy
+    summary_spec: SummarySpec
+    resolved_length: dict[str, int] | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics
     deepeval_metrics: list[DeepevalItem]
@@ -59,7 +69,7 @@ class JobStatusResponse(ApiModel):
     raw_output: str = ""
     input_text: str = ""
     prompt_template: list[tuple[str, str]]
-    prompt_params: dict[str, str] = Field(default_factory=dict)
+    prompt_params: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -77,7 +87,7 @@ class JobListItemResponse(ApiModel):
     summary: str
     model_provider: str
     model_name: str
-    summary_mode: SummaryMode
+    processing_strategy: ProcessingStrategy
     updated_at: datetime
 
 

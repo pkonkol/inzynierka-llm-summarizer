@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from ...core.config import settings
 from ...schemas.summary import UsageMetadata
+from ...schemas.summary_spec import NarrativeStance, SummaryFunction, SummarySpec
 
 log = structlog.get_logger(__name__)
 
@@ -74,12 +75,17 @@ def build_structured_llm(
 
 
 def prompt_texts(prompt: ChatPromptTemplate, label: str) -> list[tuple[str, str]]:
-    """The (role, template text) pairs behind a prompt, recorded on every LlmSummaryResult."""
-    system, human = prompt.messages
-    return [
-        (f"[{label}] system", cast(Any, system).prompt.template),
-        (f"[{label}] human", cast(Any, human).prompt.template),
-    ]
+    """The (role, template text) pairs behind a prompt, recorded on every LlmSummaryResult.
+
+    Generalized to N messages (not just system+human) because the reminder message added in
+    _prompts.py makes every template 3 messages long.
+    """
+    texts = []
+    for message in prompt.messages:
+        template = getattr(getattr(message, "prompt", None), "template", None)
+        role = type(message).__name__.removesuffix("MessagePromptTemplate").lower()
+        texts.append((f"[{label}] {role}", template if template is not None else str(message)))
+    return texts
 
 
 GENERIC_DETAIL_GUIDANCE = (
@@ -88,11 +94,42 @@ GENERIC_DETAIL_GUIDANCE = (
     "Do not add extra keys or explanatory text."
 )
 
-SUMMARY_DETAIL_GUIDANCE = (
-    "Write a fluent prose summary that stays coherent and easy to read. "
-    "Include all important facts from the source without introducing information that is not present. "
-    "Keep the result concise but complete."
-)
+_STANCE_GUIDANCE: dict[NarrativeStance, str] = {
+    "voice_of_document": (
+        "Write in the voice of the document: state its content directly as fact "
+        '(e.g. "Lehman Brothers collapsed in September 2008."), not as a description of '
+        'the document (e.g. "The article reports that...").'
+    ),
+    "about_document": (
+        "Write about the document, describing what it covers rather than restating its "
+        'content directly (e.g. "This article discusses..." / "This paper presents...").'
+    ),
+}
+
+_FUNCTION_GUIDANCE: dict[SummaryFunction, str] = {
+    "informative": (
+        "Write an informative summary: it must be able to substitute for the source — "
+        "include the actual facts, findings, and conclusions, not just the topics covered."
+    ),
+    "indicative": (
+        "Write an indicative summary: signal what topics and scope the source covers so a "
+        "reader can decide whether to read it, without restating its specific facts or findings."
+    ),
+    "mixed": ("Write a summary that both signals the source's scope and includes its key facts."),
+}
+
+
+def build_stance_guidance(stance: NarrativeStance) -> str:
+    return _STANCE_GUIDANCE[stance]
+
+
+def build_function_guidance(summary_function: SummaryFunction) -> str:
+    return _FUNCTION_GUIDANCE[summary_function]
+
+
+def build_length_guidance(target_words: int, target_sentences: int) -> str:
+    return f"Write approximately {target_words} words across {target_sentences} sentence(s)."
+
 
 TAKEAWAY_DETAIL_GUIDANCE = (
     "Write key_takeaways as a JSON array of strings (list[str]), one concise takeaway per array item. "
@@ -100,6 +137,27 @@ TAKEAWAY_DETAIL_GUIDANCE = (
     "Keep the points specific, content-rich, and non-redundant. "
     "Cover the important facts from the source without repeating the same idea."
 )
+
+
+def build_detail_guidance(spec: SummarySpec, target_words: int, target_sentences: int) -> str:
+    """The single string interpolated into every prompt's {detail_guidance} slot, and again
+    verbatim into the closing reminder message — see _prompts.py's _REMINDER_MESSAGE.
+    """
+    parts = [
+        GENERIC_DETAIL_GUIDANCE,
+        build_stance_guidance(spec.narrative_stance),
+        build_function_guidance(spec.summary_function),
+    ]
+    if spec.output_format == "bullets":
+        parts.append(TAKEAWAY_DETAIL_GUIDANCE)
+    parts.append(build_length_guidance(target_words, target_sentences))
+    if spec.extra_instructions:
+        parts.append(f"Additional instructions from the user: {spec.extra_instructions}")
+    return "\n".join(parts)
+
+
+def build_focus_query_clause(focus_query: str | None) -> str:
+    return f"\n\nFocus specifically on: {focus_query}" if focus_query else ""
 
 
 def as_dict(obj: Any) -> dict[str, Any]:

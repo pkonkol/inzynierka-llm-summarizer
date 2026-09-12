@@ -1,10 +1,16 @@
 # schemas/meta_api.py — request/response shapes for /api/v1/meta
 
 from .base import ApiModel
+from .summary_spec import SummarySpec
 
 
 class VersionResponse(ApiModel):
     git_sha: str
+
+
+class SummaryPresetOut(ApiModel):
+    label: str
+    spec: SummarySpec
 
 
 class KeepaliveResponse(ApiModel):

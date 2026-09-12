@@ -13,6 +13,13 @@ from ..core.mongo import (
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
+from ..schemas.summary_spec import (
+    ExplicitLength,
+    MatchReferenceLength,
+    ProcessingStrategy,
+    SummarySpec,
+    resolve_target_length,
+)
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
@@ -23,6 +30,17 @@ from .llm import generate_summary
 log = structlog.get_logger(__name__)
 
 _TERMINAL_ENTRY_STATUSES = frozenset({"completed", "failed"})
+
+# The evaluation run's own SummarySpec/processing_strategy fields land in Phase 2 (see
+# .scratch/claude_plans/dlugosc-i-rejestr-podsumowan-analiza.md and the approved implementation
+# plan). Until then, this maps the still-untouched summary_mode field to the new strategy names
+# and always resolves length against the entry's own golden_summary — operationally identical to
+# what the match_reference policy will formalize in the schema.
+_LEGACY_STRATEGY_MAP: dict[str, ProcessingStrategy] = {
+    "simple": "direct",
+    "sequential": "direct",
+    "cascade": "extract_then_synthesize",
+}
 
 
 def summarize_entry_statuses(entry_statuses: list[str]) -> tuple[str, int, int, int]:
@@ -63,24 +81,31 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
     entry_id = run_entry["entry_id"]
     try:
         source_entry = await fetch_source_entry(run_doc["evaluation_set_id"], entry_id)
+        target_words, target_sentences = resolve_target_length(
+            MatchReferenceLength(), input_words=0, golden_summary=run_entry["golden_summary"]
+        )
+        spec = SummarySpec(
+            length=ExplicitLength(target_words=target_words, target_sentences=target_sentences)
+        )
         summary = await generate_summary(
             input={"text": source_entry["input_text"], "title": source_entry["title"]},
             source_url=source_entry["url"],
             model_name=run_doc["model_name"],
             model_provider=run_doc["model_provider"],
             language=run_doc["language"],
-            mode=run_doc["summary_mode"],
-            skip_takeaways=run_doc["skip_takeaways"],
+            spec=spec,
+            strategy=_LEGACY_STRATEGY_MAP.get(run_doc["summary_mode"], "direct"),
         )
+        summary_text = summary.summary if summary.summary is not None else ""
         ai_metrics, cross_metrics = await asyncio.gather(
             compute_statistical_metrics(
-                summary_text=summary.summary,
+                summary_text=summary_text,
                 takeaways_text=join_takeaways(summary.key_takeaways),
                 source_text=source_entry["input_text"],
             ),
             compute_cross_metrics(
                 reference_text=run_entry["golden_summary"],
-                summary_text=summary.summary,
+                summary_text=summary_text,
             ),
         )
     except Exception as exc:

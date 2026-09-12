@@ -41,7 +41,7 @@ async def create_summarize_job(
         validate_model(payload.model_provider, payload.model_name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    _verify_mode(payload.summary_mode)
+    _verify_strategy(payload.processing_strategy)
 
     jobs_collection = get_jobs_collection()
     job_id = str(uuid4())
@@ -59,14 +59,15 @@ async def create_summarize_job(
             status_code=422, detail="Provide either url, or input_text and source_title"
         )
 
-    log.debug("job queued", job_id=job_id, url=source_url, mode=payload.summary_mode)
+    log.debug("job queued", job_id=job_id, url=source_url, strategy=payload.processing_strategy)
 
     document = JobDocument(
         job_id=job_id,
         source_url=source_url,
         model_provider=payload.model_provider,
         model_name=payload.model_name,
-        summary_mode=payload.summary_mode,
+        processing_strategy=payload.processing_strategy,
+        summary_spec=payload.summary_spec,
         language=payload.language,
         run_deepeval=payload.run_deepeval,
         status="pending",
@@ -168,10 +169,10 @@ async def list_all_jobs_flat(
                 source_url=doc["source_url"],
                 status=doc["status"],
                 title=summary_data["title"] if summary_data else "",
-                summary=summary_data["summary"] if summary_data else "",
+                summary=(summary_data["summary"] or "") if summary_data else "",
                 model_provider=doc["model_provider"],
                 model_name=doc["model_name"],
-                summary_mode=doc["summary_mode"],
+                processing_strategy=doc["processing_strategy"],
                 updated_at=doc["updated_at"],
             )
         )
@@ -209,6 +210,6 @@ async def delete_job(job_id: str) -> JobDeletedResponse:
     return JobDeletedResponse(status="deleted", job_id=job_id)
 
 
-def _verify_mode(mode: str) -> None:
-    if mode not in settings.supported_summary_modes:
-        raise HTTPException(status_code=400, detail=f"Unsupported summary mode: {mode}")
+def _verify_strategy(strategy: str) -> None:
+    if strategy not in settings.supported_summary_modes:
+        raise HTTPException(status_code=400, detail=f"Unsupported processing strategy: {strategy}")

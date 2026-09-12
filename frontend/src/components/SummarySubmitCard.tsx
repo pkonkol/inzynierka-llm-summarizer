@@ -85,9 +85,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       model_provider: provider,
       model_name: modelName,
       language: selectedLanguage,
-      // The select's options come straight from GET /meta/modes, so the value is always one of
-      // the three the backend supports — the hook just doesn't narrow the string literal.
-      summary_mode: selectedMode as JobCreateRequest["summary_mode"],
+      processing_strategy: selectedMode as JobCreateRequest["processing_strategy"],
       run_deepeval: runDeepeval,
     });
     setUrl("");

@@ -10,6 +10,9 @@ function toEntry(job: JobStatusResponse, sourceUrl: string): EvaluationSetEntryI
   if (!job.summary_data) {
     throw new Error(`Job ${job.job_id} has no summary to export`);
   }
+  if (job.summary_data.summary === null) {
+    throw new Error(`Job ${job.job_id} was generated as bullets, not a prose summary`);
+  }
 
   const { source, summary } = job.metrics;
   const modelLabel = `${job.model_provider}:${job.model_name}`;
@@ -18,7 +21,7 @@ function toEntry(job: JobStatusResponse, sourceUrl: string): EvaluationSetEntryI
   return {
     input_text: job.input_text,
     golden_summary: job.summary_data.summary,
-    title: `${modelLabel}:${job.summary_mode}:${timestamp}:${job.summary_data.title}`,
+    title: `${modelLabel}:${job.processing_strategy}:${timestamp}:${job.summary_data.title}`,
     url: sourceUrl,
     golden_metrics: source && summary ? { source, summary, deepeval: job.deepeval_metrics } : null,
   };

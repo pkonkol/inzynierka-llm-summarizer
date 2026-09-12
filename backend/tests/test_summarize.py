@@ -14,7 +14,7 @@ def _job_document(job_id: str, status: str) -> dict:
         "summary_data": None,
         "model_provider": "ollama",
         "model_name": "llama3",
-        "summary_mode": "simple",
+        "processing_strategy": "direct",
         "updated_at": datetime.now(UTC),
     }
 

@@ -2,16 +2,15 @@
 
 import structlog
 
-from ...schemas.job_api import SummaryMode
 from ...schemas.summary import LlmSummaryResult
-from . import summary_cascade, summary_sequential, summary_simple
+from ...schemas.summary_spec import ProcessingStrategy, SummarySpec
+from . import direct, extract_then_synthesize
 
 log = structlog.get_logger(__name__)
 
 _RUNNERS = {
-    "simple": summary_simple.run,
-    "sequential": summary_sequential.run,
-    "cascade": summary_cascade.run,
+    "direct": direct.run,
+    "extract_then_synthesize": extract_then_synthesize.run,
 }
 
 
@@ -21,31 +20,29 @@ async def generate_summary(
     model_name: str,
     model_provider: str,
     language: str,
-    mode: SummaryMode = "simple",
-    skip_takeaways: bool = False,
+    spec: SummarySpec,
+    strategy: ProcessingStrategy = "direct",
 ) -> LlmSummaryResult:
     """
-    Router — delegates to the requested summarization strategy.
+    Router — delegates to the requested processing strategy.
 
-    Modes:
-        simple     — single prompt, extractor + abstractor in one LLM call (default)
-        sequential — two independent prompts: takeaways first, then summary
-        cascade    — takeaways first, summary derived from takeaways
+    Strategies:
+        direct                  — single prompt, extractor + abstractor in one LLM call (default)
+        extract_then_synthesize — takeaways first, final output derived from takeaways
 
-    skip_takeaways saves an LLM call only in sequential mode — in simple it only shortens
-    the prompt/response, and in cascade the takeaways call is unavoidable (it feeds call 2).
+    spec.length must already be a resolved ExplicitLength (scaled_to_input/match_reference are
+    resolved by the caller before this point — neither strategy module knows about them).
     """
     log.info(
         "generating summary",
-        mode=mode,
+        strategy=strategy,
+        spec=spec,
         provider=model_provider,
         model=model_name,
-        skip_takeaways=skip_takeaways,
+        output_format=spec.output_format,
     )
 
-    if mode not in _RUNNERS:
-        raise NotImplementedError(f"Summary mode '{mode}' is not implemented")
+    if strategy not in _RUNNERS:
+        raise NotImplementedError(f"Processing strategy '{strategy}' is not implemented")
 
-    return await _RUNNERS[mode](
-        input, source_url, model_name, model_provider, language, skip_takeaways
-    )
+    return await _RUNNERS[strategy](input, source_url, model_name, model_provider, language, spec)

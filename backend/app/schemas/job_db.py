@@ -13,6 +13,7 @@ from .shared_metrics import (
     SummaryStatisticalMetrics,
 )
 from .summary import SummaryResponse, UsageMetadata
+from .summary_spec import ProcessingStrategy, SummarySpec
 
 
 # In job_db.py but reachable from a response: JobStatusResponse.metrics exposes it.
@@ -29,7 +30,9 @@ class JobDocument(BaseModel):
     source_url: str
     model_provider: str
     model_name: str
-    summary_mode: Literal["simple", "sequential", "cascade"]
+    processing_strategy: ProcessingStrategy
+    summary_spec: SummarySpec
+    resolved_length: dict[str, int] | None = None
     language: str
     run_deepeval: bool
     status: Literal["pending", "running", "completed", "failed"]
@@ -41,7 +44,7 @@ class JobDocument(BaseModel):
     raw_output: str = ""
     input_text: str = ""
     prompt_template: list[tuple[str, str]] = Field(default_factory=list)
-    prompt_params: dict[str, str] = Field(default_factory=dict)
+    prompt_params: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     heartbeat_at: datetime
     resume_attempts: int = 0

@@ -231,7 +231,7 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
           <InfoRow label="Tokeny rozumowania" value={job.usage.thinking_tokens} />
         ) : null}
         <InfoRow label="Tokeny łącznie" value={job.usage.total_tokens} />
-        <InfoRow label="Tryb podsumowania" value={job.summary_mode} />
+        <InfoRow label="Strategia przetwarzania" value={job.processing_strategy} />
       </div>
 
       <section>

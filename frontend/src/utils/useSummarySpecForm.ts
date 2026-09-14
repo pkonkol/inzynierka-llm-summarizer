@@ -13,6 +13,9 @@ export const DEFAULT_EXPLICIT_LENGTH: LengthSpec = {
   target_sentences: null,
 };
 
+// Examples shown on hover next to the narration/function selects — kept next to the form state
+// since both the form and SummarySpecFields read from the same vocabulary.
+
 interface SummarySpecFormOptions {
   // Evaluation runs start matched to each entry's golden summary; the home page has no reference.
   offerMatchReference: boolean;
@@ -27,7 +30,6 @@ export function useSummarySpecForm(
   const [presetKey, setPresetKey] = useState(DEFAULT_PRESET_KEY);
   const [customSpec, setCustomSpec] = useState<SummarySpec | null>(null);
   const [matchReference, setMatchReference] = useState(offerMatchReference);
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const isCustom = presetKey === CUSTOM_PRESET_KEY;
   const spec: SummarySpec | undefined = isCustom
@@ -71,8 +73,6 @@ export function useSummarySpecForm(
     offerMatchReference,
     matchReference,
     setMatchReference,
-    isAdvancedOpen,
-    toggleAdvanced: () => setIsAdvancedOpen((open) => !open),
     validationError,
     buildSpec,
   };

@@ -14,11 +14,9 @@ import {
   type LengthSpec,
   type SummarySpecForm,
 } from "../utils/useSummarySpecForm";
-import { DisclosureButton } from "./ui/DisclosureButton";
 import { FieldLabel, Input, RangeInput, Select, Textarea } from "./ui/Field";
 
 // Keep in sync with backend/app/schemas/summary_spec.py — the backend owns the defaults.
-const MAX_FOCUS_QUERY_CHARS = 300;
 const MAX_EXTRA_INSTRUCTIONS_CHARS = 2000;
 
 function densityLabel(slider: number): string {
@@ -130,15 +128,7 @@ export function SummarySpecFields({
       ) : null}
 
       <div className="grid gap-4">
-        <div className="justify-self-start">
-          <DisclosureButton
-            label="Zaawansowane"
-            isOpen={form.isAdvancedOpen}
-            onToggle={form.toggleAdvanced}
-          />
-        </div>
-
-        {form.isAdvancedOpen && spec ? (
+        {spec ? (
           <div className="grid gap-4 border border-panel-border p-4">
             {form.isLocked ? (
               <p className="text-muted">
@@ -165,7 +155,18 @@ export function SummarySpecFields({
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor={fieldId("stance")}>Narracja</FieldLabel>
+                <FieldLabel htmlFor={fieldId("stance")}>
+                  Narracja{" "}
+                  <span
+                    className="cursor-help text-muted"
+                    title={
+                      "Głosem dokumentu: „Lehman Brothers upadł we wrześniu 2008.” " +
+                      "O dokumencie: „Ten artykuł omawia upadek Lehman Brothers.”"
+                    }
+                  >
+                    ⓘ
+                  </span>
+                </FieldLabel>
                 <Select
                   id={fieldId("stance")}
                   value={spec.narrative_stance}
@@ -185,7 +186,18 @@ export function SummarySpecFields({
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor={fieldId("function")}>Funkcja</FieldLabel>
+                <FieldLabel htmlFor={fieldId("function")}>
+                  Funkcja{" "}
+                  <span
+                    className="cursor-help text-muted"
+                    title={
+                      "Informacyjne: podaje fakty i wnioski, zastępuje tekst. " +
+                      "Wskazujące: sygnalizuje temat bez faktów, np. „Tekst dotyczy...”."
+                    }
+                  >
+                    ⓘ
+                  </span>
+                </FieldLabel>
                 <Select
                   id={fieldId("function")}
                   value={spec.summary_function}
@@ -299,21 +311,6 @@ export function SummarySpecFields({
                 ) : null}
               </div>
             )}
-
-            <div className="grid gap-2">
-              <FieldLabel htmlFor={fieldId("focus")}>Na czym się skupić (opcjonalnie)</FieldLabel>
-              <Input
-                id={fieldId("focus")}
-                value={spec.focus_query ?? ""}
-                maxLength={MAX_FOCUS_QUERY_CHARS}
-                onChange={(event) =>
-                  form.updateSpec({
-                    focus_query: event.target.value === "" ? null : event.target.value,
-                  })
-                }
-                disabled={specFieldsDisabled}
-              />
-            </div>
 
             <div className="grid gap-2">
               <FieldLabel htmlFor={fieldId("extra")}>

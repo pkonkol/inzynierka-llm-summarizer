@@ -165,7 +165,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             >
               {languages.map((lang) => (
                 <option key={lang} value={lang}>
-                  {lang.toUpperCase()}
+                  {lang === "auto" ? "Automatyczny (jak źródło)" : lang.toUpperCase()}
                 </option>
               ))}
             </Select>

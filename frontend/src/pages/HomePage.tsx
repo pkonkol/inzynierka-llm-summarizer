@@ -152,11 +152,11 @@ export function HomePage() {
 
         <JobActivityPanel jobs={jobActivityRows} />
 
-        {urlListResource.errorMessage ? (
-          <Alert tone="danger">{urlListResource.errorMessage}</Alert>
-        ) : null}
-        {activeJobsResource.errorMessage ? (
-          <Alert tone="danger">{activeJobsResource.errorMessage}</Alert>
+        {urlListResource.errorMessage || activeJobsResource.errorMessage ? (
+          <Alert tone="danger" className="grid gap-1">
+            {urlListResource.errorMessage ? <p>{urlListResource.errorMessage}</p> : null}
+            {activeJobsResource.errorMessage ? <p>{activeJobsResource.errorMessage}</p> : null}
+          </Alert>
         ) : null}
 
         <CompletedJobsList

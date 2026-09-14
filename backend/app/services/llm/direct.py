@@ -7,7 +7,7 @@ from ...schemas.summary import LlmSummaryResult
 from ...schemas.summary_spec import ExplicitLength, SummarySpec
 from ._base import (
     build_detail_guidance,
-    build_focus_query_clause,
+    build_language_instruction,
     build_structured_llm,
     parse_structured_output,
     prompt_texts,
@@ -55,10 +55,9 @@ async def run(
 
     text = input["text"]
     invoke_params = {
-        "language": language,
+        "language_instruction": build_language_instruction(language),
         "what_to_generate": what_to_generate,
         "detail_guidance": build_detail_guidance(spec, target_words, target_sentences),
-        "focus_query_clause": build_focus_query_clause(spec.focus_query),
         "text": text.strip(),
     }
 

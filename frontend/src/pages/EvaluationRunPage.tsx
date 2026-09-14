@@ -217,7 +217,6 @@ function RunSummary({
         {run.summary_spec.length ? (
           <InfoRow label="długość" value={LENGTH_POLICY_LABELS[run.summary_spec.length.policy]} />
         ) : null}
-        <InfoRow label="fokus" value={run.summary_spec.focus_query} />
       </div>
 
       <div className="grid gap-2 border-t border-panel-border pt-4">

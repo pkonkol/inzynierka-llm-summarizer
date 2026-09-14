@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db_name: str = "web_summarization"
     mongodb_jobs_collection: str = "jobs"
-    supported_summary_languages: list[str] = ["en", "pl"]
+    # "auto" asks the model to match the source content's own language instead of naming one.
+    supported_summary_languages: list[str] = ["auto", "en", "pl"]
     supported_models: dict[str, list[str]] = {
         "gemini": [
             "gemini-flash-lite-latest",

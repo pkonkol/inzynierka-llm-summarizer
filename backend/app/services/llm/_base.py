@@ -38,6 +38,12 @@ def validate_model(model_provider: str, model_name: str) -> None:
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")
 
 
+def build_language_instruction(language: str) -> str:
+    if language == "auto":
+        return "Write the entire output in the same language as the source content."
+    return f"Write the entire output in language code: {language}."
+
+
 def validate_processing_strategy(strategy: str) -> None:
     """Raises ValueError when the strategy is not in settings.supported_processing_strategies."""
     if strategy not in settings.supported_processing_strategies:
@@ -160,10 +166,6 @@ def build_detail_guidance(spec: SummarySpec, target_words: int, target_sentences
     if spec.extra_instructions:
         parts.append(f"Additional instructions from the user: {spec.extra_instructions}")
     return "\n".join(parts)
-
-
-def build_focus_query_clause(focus_query: str | None) -> str:
-    return f"\n\nFocus specifically on: {focus_query}" if focus_query else ""
 
 
 def as_dict(obj: Any) -> dict[str, Any]:

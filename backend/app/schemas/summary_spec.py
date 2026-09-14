@@ -12,14 +12,13 @@ SummaryFunction = Literal["indicative", "informative", "mixed"]
 OutputFormat = Literal["prose", "bullets"]
 ProcessingStrategy = Literal["direct", "extract_then_synthesize"]
 
-_MAX_FOCUS_QUERY_CHARS = 300
 _MAX_EXTRA_INSTRUCTIONS_CHARS = 2000
 
 # Density-slider calibration for the "scaled_to_input" length policy: target_words =
 # A_LOW * (A_HIGH/A_LOW)**slider * input_words**0.2, geometric interpolation of the
 # coefficient so each slider step is a constant percentage change in density. See
-# .scratch/claude_plans/dlugosc-i-rejestr-podsumowan-analiza.md (Aneks C) for the derivation.
-# TODO ADR i wywalic ten komentarz
+# .scratch/claude_plans/dlugosc-i-rejestr-podsumowan-analiza.md (Aneks C) for the derivation,
+# and docs/adr/0003-summary-spec-and-processing-strategy.md for why this lives on SummarySpec.
 SCALED_LENGTH_EXPONENT = 0.2
 SCALED_LENGTH_A_LOW = 4.8
 SCALED_LENGTH_A_HIGH = 66.0
@@ -66,7 +65,8 @@ class SummarySpec(BaseModel):
     summary_function: SummaryFunction = "informative"
     output_format: OutputFormat = "prose"
     length: LengthSpec = Field(default_factory=ExplicitLength)
-    focus_query: str | None = Field(default=None, max_length=_MAX_FOCUS_QUERY_CHARS)
+    # One free-text field, not two: "focus on X" is just one kind of extra instruction, and a
+    # second box for it was never worth the extra decision for the user or the extra prompt slot.
     extra_instructions: str | None = Field(default=None, max_length=_MAX_EXTRA_INSTRUCTIONS_CHARS)
 
 

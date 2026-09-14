@@ -2961,18 +2961,6 @@
               }
             }
           },
-          "focus_query": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 300
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Focus Query"
-          },
           "extra_instructions": {
             "anyOf": [
               {

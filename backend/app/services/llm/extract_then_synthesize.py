@@ -18,6 +18,7 @@ from ._base import (
     GENERIC_DETAIL_GUIDANCE,
     TAKEAWAY_DETAIL_GUIDANCE,
     build_detail_guidance,
+    build_language_instruction,
     build_structured_llm,
     parse_structured_output,
     prompt_texts,
@@ -55,11 +56,10 @@ async def _extract_takeaways(
 
     raw = await chain.ainvoke(
         {
-            "language": language,
+            "language_instruction": build_language_instruction(language),
             "text": input["text"].strip(),
             "what_to_generate": "key_takeaways",
             "detail_guidance": guidance,
-            "focus_query_clause": "",
         }
     )
     parsed, raw_str, usage, raw_metadata = parse_structured_output(
@@ -99,7 +99,7 @@ async def _synthesize(
     chain = SYNTHESIZE_FROM_TAKEAWAYS | llm
 
     invoke_params = {
-        "language": language,
+        "language_instruction": build_language_instruction(language),
         "takeaways": "\n".join(f"- {item}" for item in takeaways.key_takeaways),
         "detail_guidance": build_detail_guidance(spec, target_words, target_sentences),
     }

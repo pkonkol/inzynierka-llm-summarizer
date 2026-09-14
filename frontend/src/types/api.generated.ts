@@ -1119,8 +1119,6 @@ export interface components {
             output_format: "prose" | "bullets";
             /** Length */
             length?: components["schemas"]["ExplicitLength"] | components["schemas"]["ScaledLength"] | components["schemas"]["MatchReferenceLength"];
-            /** Focus Query */
-            focus_query?: string | null;
             /** Extra Instructions */
             extra_instructions?: string | null;
         };

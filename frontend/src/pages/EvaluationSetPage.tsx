@@ -199,7 +199,7 @@ export function EvaluationSetPage({ setId }: Props) {
         processing_strategy:
           newRunProcessingStrategy as EvaluationRunCreateRequest["processing_strategy"],
         summary_spec: newRunSpecForm.buildSpec(),
-        language: "en",
+        language: "auto",
         rate_limit_delay_ms: newRunDelayMs,
       });
     },

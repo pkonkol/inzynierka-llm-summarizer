@@ -7,7 +7,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
 from ..core.auth import require_auth
-from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import (
     MANUAL_SOURCE_PREFIX,
@@ -20,7 +19,7 @@ from ..schemas.job_api import (
     UrlSummaryListItem,
 )
 from ..schemas.job_db import JobDocument
-from ..services.llm._base import validate_model
+from ..services.llm._base import validate_model, validate_processing_strategy
 from ..services.summarization_runner import run_summarization_job
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -39,9 +38,9 @@ async def create_summarize_job(
 ) -> JobCreatedResponse:
     try:
         validate_model(payload.model_provider, payload.model_name)
+        validate_processing_strategy(payload.processing_strategy)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    _verify_strategy(payload.processing_strategy)
 
     jobs_collection = get_jobs_collection()
     job_id = str(uuid4())
@@ -208,8 +207,3 @@ async def delete_job(job_id: str) -> JobDeletedResponse:
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Job not found")
     return JobDeletedResponse(status="deleted", job_id=job_id)
-
-
-def _verify_strategy(strategy: str) -> None:
-    if strategy not in settings.supported_summary_modes:
-        raise HTTPException(status_code=400, detail=f"Unsupported processing strategy: {strategy}")

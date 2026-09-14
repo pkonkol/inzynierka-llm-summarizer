@@ -25,6 +25,7 @@ import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Table, Td, Tr } from "../components/ui/Table";
 import type {
+  EvaluationRunCreateRequest,
   EvaluationRunListItemResponse,
   EvaluationSetEntryResponse,
 } from "../types/api.generated";
@@ -39,8 +40,8 @@ import { useReloadableResource } from "../utils/useReloadableResource";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { splitProviderModel } from "../utils/utils";
 
-// One row: model, mode, delay, the skip toggle and the submit button.
-const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto_auto]";
+// One row: model, processing strategy, delay and the submit button.
+const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto]";
 
 function EntryCard({
   index,
@@ -109,7 +110,7 @@ function RunsTable({
         <Tr key={run.evaluation_run_id}>
           <Td>{run.model_provider}</Td>
           <Td>{run.model_name}</Td>
-          <Td>{run.summary_mode}</Td>
+          <Td>{run.processing_strategy}</Td>
           <Td>
             <StatusLabel status={run.status} />
           </Td>
@@ -150,7 +151,6 @@ export function EvaluationSetPage({ setId }: Props) {
   // null means "no answer yet" — a real third state, not a missing value.
   const existingRuns = runs.data ?? [];
 
-  const [newRunSkipTakeaways, setNewRunSkipTakeaways] = useState(false);
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const {
     models: newRunAvailableModels,
@@ -190,10 +190,9 @@ export function EvaluationSetPage({ setId }: Props) {
       return createEvaluationRun(setId, {
         model_provider: provider,
         model_name: modelName,
-        summary_mode: newRunSummaryMode,
+        processing_strategy: newRunSummaryMode as EvaluationRunCreateRequest["processing_strategy"],
         language: "en",
         rate_limit_delay_ms: newRunDelayMs,
-        skip_takeaways: newRunSkipTakeaways,
       });
     },
     {
@@ -349,17 +348,6 @@ export function EvaluationSetPage({ setId }: Props) {
                   onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
                 />
               </div>
-
-              <label className="flex items-center gap-2 whitespace-nowrap text-muted sm:h-control">
-                <input
-                  type="checkbox"
-                  checked={newRunSkipTakeaways}
-                  onChange={(event) => setNewRunSkipTakeaways(event.target.checked)}
-                  disabled={submitNewRun.isPending}
-                  className="h-4 w-4 border border-input-border"
-                />
-                Pomiń punkty kluczowe
-              </label>
 
               <Button
                 variant="primary"

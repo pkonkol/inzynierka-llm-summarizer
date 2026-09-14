@@ -281,17 +281,21 @@ function RunEntryCard({
             content: <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />,
           },
           { key: "metrics", label: "Metryki", content: <EntryMetrics entry={entry} /> },
-          {
-            key: "takeaways",
-            label: "Punkty kluczowe AI",
-            content: (
-              <ul className="list-disc py-3 pl-8 pr-3 text-ink">
-                {entry.ai_key_takeaways.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            ),
-          },
+          ...(entry.ai_key_takeaways === null
+            ? []
+            : [
+                {
+                  key: "takeaways",
+                  label: "Punkty kluczowe AI",
+                  content: (
+                    <ul className="list-disc py-3 pl-8 pr-3 text-ink">
+                      {entry.ai_key_takeaways.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ),
+                },
+              ]),
         ]}
       />
     </article>
@@ -435,7 +439,7 @@ export function EvaluationRunPage({ runId }: Props) {
                 {run.model_provider} – {run.model_name}
               </span>
               <span className="text-muted">·</span>
-              <span className="mono-value">{run.summary_mode}</span>
+              <span className="mono-value">{run.processing_strategy}</span>
             </>
           ) : (
             <span className="text-muted">ładowanie...</span>

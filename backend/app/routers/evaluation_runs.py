@@ -26,6 +26,7 @@ from ..services.evaluation_run_metrics import (
     mark_deepeval_pass_started,
 )
 from ..services.evaluation_runner import run_evaluation_batch
+from ..services.llm._base import validate_model, validate_processing_strategy
 from ..services.startup_resume import claim_evaluation_run_for_resume
 from .evaluation_sets import find_evaluation_set_or_404
 
@@ -53,6 +54,12 @@ async def create_evaluation_run(
     payload: EvaluationRunCreateRequest,
     background_tasks: BackgroundTasks,
 ) -> EvaluationRunCreateResponse:
+    try:
+        validate_model(payload.model_provider, payload.model_name)
+        validate_processing_strategy(payload.processing_strategy)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     runs = get_evaluation_runs_collection()
 
     set_document = await find_evaluation_set_or_404(
@@ -74,10 +81,10 @@ async def create_evaluation_run(
         evaluation_set_name=set_document["name"],
         model_provider=payload.model_provider,
         model_name=payload.model_name,
-        summary_mode=payload.summary_mode,
+        processing_strategy=payload.processing_strategy,
+        summary_spec=payload.summary_spec,
         language=payload.language,
         rate_limit_delay_ms=payload.rate_limit_delay_ms,
-        skip_takeaways=payload.skip_takeaways,
         status="pending",
         created_at=created_at,
         heartbeat_at=created_at,
@@ -115,7 +122,7 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
                     "evaluation_set_name": 1,
                     "model_provider": 1,
                     "model_name": 1,
-                    "summary_mode": 1,
+                    "processing_strategy": 1,
                     "language": 1,
                     "status": 1,
                     "created_at": 1,
@@ -145,13 +152,13 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
                         "evaluation_set_name": 1,
                         "model_provider": 1,
                         "model_name": 1,
-                        "summary_mode": 1,
+                        "processing_strategy": 1,
+                        "summary_spec": 1,
                         "language": 1,
                         "status": 1,
                         "created_at": 1,
                         "finished_at": 1,
                         "aggregate_metrics": 1,
-                        "skip_takeaways": 1,
                         "entry_count": {"$size": "$entries"},
                     }
                 },
@@ -171,13 +178,13 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         evaluation_set_name=document["evaluation_set_name"],
         model_provider=document["model_provider"],
         model_name=document["model_name"],
-        summary_mode=document["summary_mode"],
+        processing_strategy=document["processing_strategy"],
+        summary_spec=document["summary_spec"],
         language=document["language"],
         status=document["status"],
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
         entry_count=document["entry_count"],
-        skip_takeaways=document.get("skip_takeaways", False),
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
 

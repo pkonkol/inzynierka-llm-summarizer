@@ -3,7 +3,7 @@ import {
   errorText,
   getSupportedLanguages,
   getSupportedModels,
-  getSupportedModes,
+  getSupportedProcessingStrategies,
 } from "../api/client";
 
 // The three /meta endpoints and the "first entry wins" default, shared by every form that
@@ -13,14 +13,14 @@ export function useSummarizationOptions() {
   const [modes, setModes] = useState<Record<string, string>>({});
   const [languages, setLanguages] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
-  const [selectedMode, setSelectedMode] = useState("simple");
+  const [selectedMode, setSelectedMode] = useState("direct");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([getSupportedModels(), getSupportedModes(), getSupportedLanguages()])
+    Promise.all([getSupportedModels(), getSupportedProcessingStrategies(), getSupportedLanguages()])
       .then(([modelMap, modeMap, languageList]) => {
         if (!isMounted) return;
         setModels(modelMap);

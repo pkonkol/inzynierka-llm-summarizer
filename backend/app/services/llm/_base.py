@@ -38,6 +38,12 @@ def validate_model(model_provider: str, model_name: str) -> None:
         raise ValueError(f"Unsupported model name: {model_name} for provider {model_provider}")
 
 
+def validate_processing_strategy(strategy: str) -> None:
+    """Raises ValueError when the strategy is not in settings.supported_processing_strategies."""
+    if strategy not in settings.supported_processing_strategies:
+        raise ValueError(f"Unsupported processing strategy: {strategy}")
+
+
 def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
     validate_model(model_provider, model_name)
     provider = model_provider.lower()

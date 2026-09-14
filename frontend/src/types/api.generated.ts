@@ -175,7 +175,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/meta/modes": {
+    "/api/v1/meta/processing-strategies": {
         parameters: {
             query?: never;
             header?: never;
@@ -186,7 +186,7 @@ export interface paths {
          * Get supported processing strategies
          * @description Returns {strategy_key: human_readable_label}.
          */
-        get: operations["get_supported_modes_api_v1_meta_modes_get"];
+        get: operations["get_supported_processing_strategies_api_v1_meta_processing_strategies_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -522,10 +522,12 @@ export interface components {
             /** Model Name */
             model_name: string;
             /**
-             * Summary Mode
-             * @default simple
+             * Processing Strategy
+             * @default direct
+             * @enum {string}
              */
-            summary_mode: string;
+            processing_strategy: "direct" | "extract_then_synthesize";
+            summary_spec?: components["schemas"]["SummarySpec"];
             /**
              * Language
              * @default en
@@ -536,11 +538,6 @@ export interface components {
              * @default 0
              */
             rate_limit_delay_ms: number;
-            /**
-             * Skip Takeaways
-             * @default false
-             */
-            skip_takeaways: boolean;
         };
         /** EvaluationRunCreateResponse */
         EvaluationRunCreateResponse: {
@@ -589,7 +586,11 @@ export interface components {
             /** Ai Summary */
             ai_summary: string | null;
             /** Ai Key Takeaways */
-            ai_key_takeaways: string[];
+            ai_key_takeaways: string[] | null;
+            /** Resolved Length */
+            resolved_length: {
+                [key: string]: number;
+            } | null;
             ai_metrics: components["schemas"]["AiMetrics"] | null;
             cross_metrics: components["schemas"]["CrossMetrics"] | null;
             /**
@@ -613,8 +614,11 @@ export interface components {
             model_provider: string;
             /** Model Name */
             model_name: string;
-            /** Summary Mode */
-            summary_mode: string;
+            /**
+             * Processing Strategy
+             * @enum {string}
+             */
+            processing_strategy: "direct" | "extract_then_synthesize";
             /** Language */
             language: string;
             /**
@@ -644,8 +648,12 @@ export interface components {
             model_provider: string;
             /** Model Name */
             model_name: string;
-            /** Summary Mode */
-            summary_mode: string;
+            /**
+             * Processing Strategy
+             * @enum {string}
+             */
+            processing_strategy: "direct" | "extract_then_synthesize";
+            summary_spec: components["schemas"]["SummarySpec"];
             /** Language */
             language: string;
             /**
@@ -662,8 +670,6 @@ export interface components {
             finished_at: string | null;
             /** Entry Count */
             entry_count: number;
-            /** Skip Takeaways */
-            skip_takeaways: boolean;
             aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
         };
         /** EvaluationRunResumeResponse */
@@ -1568,7 +1574,7 @@ export interface operations {
             };
         };
     };
-    get_supported_modes_api_v1_meta_modes_get: {
+    get_supported_processing_strategies_api_v1_meta_processing_strategies_get: {
         parameters: {
             query?: never;
             header?: never;

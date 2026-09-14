@@ -50,7 +50,7 @@ class Settings(BaseSettings):
         ],
     }
     # strategy -> human-readable label
-    supported_summary_modes: dict[str, str] = {
+    supported_processing_strategies: dict[str, str] = {
         "direct": "Bezpośredni — jeden prompt (ekstraktor + abstraktor)",
         "extract_then_synthesize": "Ekstrakcja i synteza — najpierw punkty, wynik wyprowadzony z punktów",
     }

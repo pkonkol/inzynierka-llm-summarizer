@@ -13,16 +13,11 @@ from ..core.mongo import (
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
-from ..schemas.summary_spec import (
-    ExplicitLength,
-    MatchReferenceLength,
-    ProcessingStrategy,
-    SummarySpec,
-    resolve_target_length,
-)
+from ..schemas.summary_spec import ExplicitLength, SummarySpec, resolve_target_length
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
+    evaluated_output_text,
     join_takeaways,
 )
 from .llm import generate_summary
@@ -30,17 +25,6 @@ from .llm import generate_summary
 log = structlog.get_logger(__name__)
 
 _TERMINAL_ENTRY_STATUSES = frozenset({"completed", "failed"})
-
-# The evaluation run's own SummarySpec/processing_strategy fields land in Phase 2 (see
-# .scratch/claude_plans/dlugosc-i-rejestr-podsumowan-analiza.md and the approved implementation
-# plan). Until then, this maps the still-untouched summary_mode field to the new strategy names
-# and always resolves length against the entry's own golden_summary — operationally identical to
-# what the match_reference policy will formalize in the schema.
-_LEGACY_STRATEGY_MAP: dict[str, ProcessingStrategy] = {
-    "simple": "direct",
-    "sequential": "direct",
-    "cascade": "extract_then_synthesize",
-}
 
 
 def summarize_entry_statuses(entry_statuses: list[str]) -> tuple[str, int, int, int]:
@@ -81,11 +65,18 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
     entry_id = run_entry["entry_id"]
     try:
         source_entry = await fetch_source_entry(run_doc["evaluation_set_id"], entry_id)
+        spec = SummarySpec.model_validate(run_doc["summary_spec"])
         target_words, target_sentences = resolve_target_length(
-            MatchReferenceLength(), input_words=0, golden_summary=run_entry["golden_summary"]
+            spec.length,
+            input_words=len(source_entry["input_text"].split()),
+            golden_summary=run_entry["golden_summary"],
         )
-        spec = SummarySpec(
-            length=ExplicitLength(target_words=target_words, target_sentences=target_sentences)
+        resolved_spec = spec.model_copy(
+            update={
+                "length": ExplicitLength(
+                    target_words=target_words, target_sentences=target_sentences
+                )
+            }
         )
         summary = await generate_summary(
             input={"text": source_entry["input_text"], "title": source_entry["title"]},
@@ -93,19 +84,18 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
             model_name=run_doc["model_name"],
             model_provider=run_doc["model_provider"],
             language=run_doc["language"],
-            spec=spec,
-            strategy=_LEGACY_STRATEGY_MAP.get(run_doc["summary_mode"], "direct"),
+            spec=resolved_spec,
+            strategy=run_doc["processing_strategy"],
         )
-        summary_text = summary.summary if summary.summary is not None else ""
         ai_metrics, cross_metrics = await asyncio.gather(
             compute_statistical_metrics(
-                summary_text=summary_text,
+                summary_text=summary.summary if summary.summary is not None else "",
                 takeaways_text=join_takeaways(summary.key_takeaways),
                 source_text=source_entry["input_text"],
             ),
             compute_cross_metrics(
                 reference_text=run_entry["golden_summary"],
-                summary_text=summary_text,
+                summary_text=evaluated_output_text(summary.summary, summary.key_takeaways),
             ),
         )
     except Exception as exc:
@@ -117,6 +107,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
         "error": None,
         "ai_summary": summary.summary,
         "ai_key_takeaways": summary.key_takeaways,
+        "resolved_length": {"target_words": target_words, "target_sentences": target_sentences},
         "ai_metrics": ai_metrics,
         "cross_metrics": cross_metrics,
     }
@@ -171,8 +162,8 @@ async def run_evaluation_batch(run_id: str) -> None:
             "model_name": 1,
             "model_provider": 1,
             "language": 1,
-            "summary_mode": 1,
-            "skip_takeaways": 1,
+            "processing_strategy": 1,
+            "summary_spec": 1,
             "rate_limit_delay_ms": 1,
             "entries.entry_id": 1,
             "entries.golden_summary": 1,

@@ -37,6 +37,17 @@ def join_takeaways(takeaways: list[str] | None) -> str:
     return "\n".join(f"- {item}" for item in takeaways)
 
 
+def evaluated_output_text(summary: str | None, key_takeaways: list[str] | None) -> str:
+    """The text reference-based metrics judge: the prose summary, or the bullets joined when the
+    output_format was 'bullets' and no prose was generated.
+    """
+    if summary is not None:
+        return summary
+    if key_takeaways is None:
+        raise ValueError("a summary result carries neither summary nor key_takeaways")
+    return join_takeaways(key_takeaways)
+
+
 async def store_job_metrics(job_id: str, update: dict) -> None:
     try:
         await get_jobs_collection().update_one({"job_id": job_id}, {"$set": update})

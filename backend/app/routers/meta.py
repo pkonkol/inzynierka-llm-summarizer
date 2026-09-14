@@ -24,10 +24,10 @@ async def get_supported_languages() -> list[str]:
     return settings.supported_summary_languages
 
 
-@router.get("/modes", summary="Get supported processing strategies")
-async def get_supported_modes() -> dict[str, str]:
+@router.get("/processing-strategies", summary="Get supported processing strategies")
+async def get_supported_processing_strategies() -> dict[str, str]:
     """Returns {strategy_key: human_readable_label}."""
-    return settings.supported_summary_modes
+    return settings.supported_processing_strategies
 
 
 @router.get("/summary-presets", summary="Get named SummarySpec presets")

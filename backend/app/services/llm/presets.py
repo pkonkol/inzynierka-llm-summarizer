@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from ...schemas.summary_spec import ExplicitLength, SummarySpec
+from ...schemas.summary_spec import ExplicitLength, ScaledLength, SummarySpec
 
 
 class SummaryPreset(BaseModel):
@@ -13,7 +13,7 @@ class SummaryPreset(BaseModel):
 SUMMARY_PRESETS: dict[str, SummaryPreset] = {
     "standard": SummaryPreset(
         label="Standardowy",
-        spec=SummarySpec(length=ExplicitLength(target_words=120, target_sentences=6)),
+        spec=SummarySpec(length=ScaledLength(slider=0.5)),
     ),
     "news_highlights": SummaryPreset(
         label="Newsowe podsumowanie",

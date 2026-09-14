@@ -7,6 +7,7 @@ from pydantic import Field
 
 from .base import ApiModel
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
+from .summary_spec import MatchReferenceLength, ProcessingStrategy, SummarySpec
 
 RunStatus = Literal["pending", "running", "completed", "failed"]
 EntryStatus = Literal["pending", "running", "completed", "failed"]
@@ -43,7 +44,8 @@ class EvaluationRunEntryResponse(ApiModel):
     golden_summary: str
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None
-    ai_key_takeaways: list[str] = Field(default_factory=list)
+    ai_key_takeaways: list[str] | None = None
+    resolved_length: dict[str, int] | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None
     status: EntryStatus = "pending"
@@ -53,10 +55,12 @@ class EvaluationRunEntryResponse(ApiModel):
 class EvaluationRunCreateRequest(ApiModel):
     model_provider: str
     model_name: str
-    summary_mode: str = "simple"
+    processing_strategy: ProcessingStrategy = "direct"
+    summary_spec: SummarySpec = Field(
+        default_factory=lambda: SummarySpec(length=MatchReferenceLength())
+    )
     language: str = "en"
     rate_limit_delay_ms: int = 0
-    skip_takeaways: bool = False
 
 
 class EvaluationRunResponse(ApiModel):
@@ -65,13 +69,13 @@ class EvaluationRunResponse(ApiModel):
     evaluation_set_name: str
     model_provider: str
     model_name: str
-    summary_mode: str
+    processing_strategy: ProcessingStrategy
+    summary_spec: SummarySpec
     language: str
     status: RunStatus
     created_at: datetime
     finished_at: datetime | None = None
     entry_count: int
-    skip_takeaways: bool
     aggregate_metrics: EvaluationRunAggregateMetrics = Field(
         default_factory=EvaluationRunAggregateMetrics
     )
@@ -87,7 +91,7 @@ class EvaluationRunListItemResponse(ApiModel):
     evaluation_set_name: str
     model_provider: str
     model_name: str
-    summary_mode: str
+    processing_strategy: ProcessingStrategy
     language: str
     status: RunStatus
     created_at: datetime

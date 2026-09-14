@@ -460,14 +460,14 @@
         }
       }
     },
-    "/api/v1/meta/modes": {
+    "/api/v1/meta/processing-strategies": {
       "get": {
         "tags": [
           "meta"
         ],
         "summary": "Get supported processing strategies",
         "description": "Returns {strategy_key: human_readable_label}.",
-        "operationId": "get_supported_modes_api_v1_meta_modes_get",
+        "operationId": "get_supported_processing_strategies_api_v1_meta_processing_strategies_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -478,7 +478,7 @@
                     "type": "string"
                   },
                   "type": "object",
-                  "title": "Response Get Supported Modes Api V1 Meta Modes Get"
+                  "title": "Response Get Supported Processing Strategies Api V1 Meta Processing Strategies Get"
                 }
               }
             }
@@ -1474,10 +1474,17 @@
             "type": "string",
             "title": "Model Name"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
-            "title": "Summary Mode",
-            "default": "simple"
+            "enum": [
+              "direct",
+              "extract_then_synthesize"
+            ],
+            "title": "Processing Strategy",
+            "default": "direct"
+          },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
           },
           "language": {
             "type": "string",
@@ -1488,11 +1495,6 @@
             "type": "integer",
             "title": "Rate Limit Delay Ms",
             "default": 0
-          },
-          "skip_takeaways": {
-            "type": "boolean",
-            "title": "Skip Takeaways",
-            "default": false
           }
         },
         "type": "object",
@@ -1607,11 +1609,32 @@
             "title": "Ai Summary"
           },
           "ai_key_takeaways": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Ai Key Takeaways"
+          },
+          "resolved_length": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Length"
           },
           "ai_metrics": {
             "anyOf": [
@@ -1665,6 +1688,7 @@
           "golden_metrics",
           "ai_summary",
           "ai_key_takeaways",
+          "resolved_length",
           "ai_metrics",
           "cross_metrics",
           "status",
@@ -1695,9 +1719,13 @@
             "type": "string",
             "title": "Model Name"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
-            "title": "Summary Mode"
+            "enum": [
+              "direct",
+              "extract_then_synthesize"
+            ],
+            "title": "Processing Strategy"
           },
           "language": {
             "type": "string",
@@ -1742,7 +1770,7 @@
           "evaluation_set_name",
           "model_provider",
           "model_name",
-          "summary_mode",
+          "processing_strategy",
           "language",
           "status",
           "created_at",
@@ -1773,9 +1801,16 @@
             "type": "string",
             "title": "Model Name"
           },
-          "summary_mode": {
+          "processing_strategy": {
             "type": "string",
-            "title": "Summary Mode"
+            "enum": [
+              "direct",
+              "extract_then_synthesize"
+            ],
+            "title": "Processing Strategy"
+          },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
           },
           "language": {
             "type": "string",
@@ -1812,10 +1847,6 @@
             "type": "integer",
             "title": "Entry Count"
           },
-          "skip_takeaways": {
-            "type": "boolean",
-            "title": "Skip Takeaways"
-          },
           "aggregate_metrics": {
             "$ref": "#/components/schemas/EvaluationRunAggregateMetrics"
           }
@@ -1827,13 +1858,13 @@
           "evaluation_set_name",
           "model_provider",
           "model_name",
-          "summary_mode",
+          "processing_strategy",
+          "summary_spec",
           "language",
           "status",
           "created_at",
           "finished_at",
           "entry_count",
-          "skip_takeaways",
           "aggregate_metrics"
         ],
         "title": "EvaluationRunResponse"

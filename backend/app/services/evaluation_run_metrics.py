@@ -14,6 +14,7 @@ from .run_metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
     compute_pairwise_cross_deepeval_metrics,
+    evaluated_output_text,
     join_takeaways,
 )
 
@@ -79,7 +80,9 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
                 continue
 
             entry_id = entry["entry_id"]
-            summary_text = entry["ai_summary"].strip()
+            summary_text = evaluated_output_text(
+                entry["ai_summary"], entry["ai_key_takeaways"]
+            ).strip()
             takeaways_text = join_takeaways(entry["ai_key_takeaways"])
             source_text = (await fetch_source_entry(set_id, entry_id))["input_text"]
 

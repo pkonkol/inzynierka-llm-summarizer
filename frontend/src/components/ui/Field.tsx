@@ -11,6 +11,19 @@ export function Select({ className, ...props }: React.ComponentProps<"select">) 
   return <select {...props} className={cn(FIELD, "h-control", className)} />;
 }
 
+export function RangeInput({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
+  return (
+    <input
+      {...props}
+      type="range"
+      className={cn(
+        "h-control w-full accent-input-focus disabled:cursor-not-allowed disabled:opacity-60",
+        className,
+      )}
+    />
+  );
+}
+
 export function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return <textarea {...props} className={cn(FIELD, "py-2 font-mono text-sm", className)} />;
 }

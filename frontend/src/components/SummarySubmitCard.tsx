@@ -2,9 +2,11 @@ import type { FormEvent } from "react";
 import { useId, useState } from "react";
 import type { JobCreateRequest } from "../types/api.generated";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
+import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
 import { PastedTextSourceFields } from "./PastedTextSourceFields";
 import { type SourceMode, SourceTabs, sourceTabId } from "./SourceTabs";
+import { SummarySpecFields } from "./SummarySpecFields";
 import { UrlSourceFields } from "./UrlSourceFields";
 import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
@@ -52,17 +54,19 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
   const panelId = useId();
   const {
     models,
-    modes,
+    processingStrategies,
     languages,
+    presets,
     selectedModel,
     setSelectedModel,
-    selectedMode,
-    setSelectedMode,
+    selectedProcessingStrategy,
+    setSelectedProcessingStrategy,
     selectedLanguage,
     setSelectedLanguage,
     isLoading: isLoadingMeta,
     errorMessage: optionsError,
   } = useSummarizationOptions();
+  const specForm = useSummarySpecForm(presets, { offerMatchReference: false });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -78,6 +82,11 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       setError(validationError);
       return;
     }
+    const specError = specForm.validationError();
+    if (specError) {
+      setError(specError);
+      return;
+    }
 
     const { provider, modelName } = splitProviderModel(selectedModel);
     await onSubmit({
@@ -85,7 +94,10 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       model_provider: provider,
       model_name: modelName,
       language: selectedLanguage,
-      processing_strategy: selectedMode as JobCreateRequest["processing_strategy"],
+      // The select's options come straight from GET /meta/processing-strategies, so the value is
+      // always one the backend supports — the hook just doesn't narrow the string literal.
+      processing_strategy: selectedProcessingStrategy as JobCreateRequest["processing_strategy"],
+      summary_spec: specForm.buildSpec(),
       run_deepeval: runDeepeval,
     });
     setUrl("");
@@ -130,7 +142,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div className="grid gap-2">
             <FieldLabel htmlFor="model-select">Model</FieldLabel>
             <Select
@@ -159,22 +171,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="mode-select">Tryb podsumowania</FieldLabel>
-            <Select
-              id="mode-select"
-              value={selectedMode}
-              onChange={(e) => setSelectedMode(e.target.value)}
-              disabled={isSubmitting || isLoadingMeta}
-            >
-              {Object.entries(modes).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {key} — {label.split(" — ")[1] ?? label}
-                </option>
-              ))}
-            </Select>
-          </div>
-
           <label className="flex items-center gap-2 self-end text-muted sm:h-control">
             <input
               type="checkbox"
@@ -187,13 +183,22 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
           </label>
         </div>
 
+        <SummarySpecFields
+          form={specForm}
+          presets={presets}
+          processingStrategies={processingStrategies}
+          selectedProcessingStrategy={selectedProcessingStrategy}
+          onProcessingStrategyChange={setSelectedProcessingStrategy}
+          disabled={isSubmitting || isLoadingMeta}
+        />
+
         {error || optionsError ? <p className="text-danger">{error ?? optionsError}</p> : null}
 
         <Button
           type="submit"
           variant="primary"
           size="lg"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isLoadingMeta}
           className="justify-self-start"
         >
           {isSubmitting ? "Przetwarzanie..." : "Start"}

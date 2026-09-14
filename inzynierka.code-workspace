@@ -9,6 +9,11 @@
 	],
 	"settings": {
 		"python.analysis.autoFormatStrings": true,
-		"python-envs.defaultEnvManager": "ms-python.python:venv"
+		"python-envs.defaultEnvManager": "ms-python.python:venv",
+		"chat.tools.terminal.autoApprove": {
+			"git check-ignore": true,
+			"git init": true,
+			"git add": true
+		}
 	}
 }

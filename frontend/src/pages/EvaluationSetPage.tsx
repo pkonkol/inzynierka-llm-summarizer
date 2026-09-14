@@ -15,6 +15,7 @@ import { InputTextSection } from "../components/InputTextSection";
 import { MetricsSection } from "../components/MetricsSection";
 import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
+import { SummarySpecFields } from "../components/SummarySpecFields";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
@@ -38,10 +39,11 @@ import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
+import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
 
-// One row: model, processing strategy, delay and the submit button.
-const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,1.5fr)_7rem_auto]";
+// One row: model, delay and the submit button; the summary spec fields sit below it.
+const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(12rem,1fr)_7rem_auto]";
 
 function EntryCard({
   index,
@@ -154,14 +156,16 @@ export function EvaluationSetPage({ setId }: Props) {
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const {
     models: newRunAvailableModels,
-    modes: newRunAvailableModes,
+    processingStrategies: newRunAvailableStrategies,
+    presets: newRunPresets,
     selectedModel: newRunSelectedModel,
     setSelectedModel: setNewRunSelectedModel,
-    selectedMode: newRunSummaryMode,
-    setSelectedMode: setNewRunSummaryMode,
+    selectedProcessingStrategy: newRunProcessingStrategy,
+    setSelectedProcessingStrategy: setNewRunProcessingStrategy,
     isLoading: isLoadingNewRunOptions,
     errorMessage,
   } = useSummarizationOptions();
+  const newRunSpecForm = useSummarySpecForm(newRunPresets, { offerMatchReference: true });
 
   useDocumentTitle(selectedSet?.name ?? null);
 
@@ -186,11 +190,15 @@ export function EvaluationSetPage({ setId }: Props) {
 
   const submitNewRun = useAsyncAction(
     () => {
+      const specError = newRunSpecForm.validationError();
+      if (specError) throw new Error(specError);
       const { provider, modelName } = splitProviderModel(newRunSelectedModel);
       return createEvaluationRun(setId, {
         model_provider: provider,
         model_name: modelName,
-        processing_strategy: newRunSummaryMode as EvaluationRunCreateRequest["processing_strategy"],
+        processing_strategy:
+          newRunProcessingStrategy as EvaluationRunCreateRequest["processing_strategy"],
+        summary_spec: newRunSpecForm.buildSpec(),
         language: "en",
         rate_limit_delay_ms: newRunDelayMs,
       });
@@ -322,22 +330,6 @@ export function EvaluationSetPage({ setId }: Props) {
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor="new-run-mode">Tryb podsumowania</FieldLabel>
-                <Select
-                  id="new-run-mode"
-                  value={newRunSummaryMode}
-                  onChange={(event) => setNewRunSummaryMode(event.target.value)}
-                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-                >
-                  {Object.entries(newRunAvailableModes).map(([modeKey, modeLabel]) => (
-                    <option key={modeKey} value={modeKey}>
-                      {modeLabel}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="grid gap-2">
                 <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
                 <Input
                   id="new-run-delay"
@@ -358,6 +350,15 @@ export function EvaluationSetPage({ setId }: Props) {
                 {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
               </Button>
             </div>
+
+            <SummarySpecFields
+              form={newRunSpecForm}
+              presets={newRunPresets}
+              processingStrategies={newRunAvailableStrategies}
+              selectedProcessingStrategy={newRunProcessingStrategy}
+              onProcessingStrategyChange={setNewRunProcessingStrategy}
+              disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+            />
           </Panel>
         ) : null}
 

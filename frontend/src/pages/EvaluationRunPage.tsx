@@ -20,6 +20,13 @@ import type {
 } from "../types/api.generated";
 import { formatDateMinute, formatMetricLabel, formatScore } from "../utils/format";
 import { evaluationSetPath } from "../utils/routing";
+import {
+  FUNCTION_LABELS,
+  formatResolvedLength,
+  LENGTH_POLICY_LABELS,
+  OUTPUT_FORMAT_LABELS,
+  STANCE_LABELS,
+} from "../utils/summarySpecLabels";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -203,6 +210,16 @@ function RunSummary({
         <InfoRow label="zakończono" value={formatDateMinute(run.finished_at)} />
       </div>
 
+      <div className="metric-row">
+        <InfoRow label="format" value={OUTPUT_FORMAT_LABELS[run.summary_spec.output_format]} />
+        <InfoRow label="narracja" value={STANCE_LABELS[run.summary_spec.narrative_stance]} />
+        <InfoRow label="funkcja" value={FUNCTION_LABELS[run.summary_spec.summary_function]} />
+        {run.summary_spec.length ? (
+          <InfoRow label="długość" value={LENGTH_POLICY_LABELS[run.summary_spec.length.policy]} />
+        ) : null}
+        <InfoRow label="fokus" value={run.summary_spec.focus_query} />
+      </div>
+
       <div className="grid gap-2 border-t border-panel-border pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="metric-row items-baseline">
@@ -268,7 +285,15 @@ function RunEntryCard({
         </div>
 
         <div className="grid content-start gap-2">
-          <h4>Podsumowanie AI</h4>
+          <h4>
+            Podsumowanie AI
+            {entry.resolved_length ? (
+              <span className="font-normal text-muted">
+                {" · cel: "}
+                {formatResolvedLength(entry.resolved_length)}
+              </span>
+            ) : null}
+          </h4>
           <p className="whitespace-pre-wrap text-ink">{entry.ai_summary ?? "—"}</p>
         </div>
       </div>

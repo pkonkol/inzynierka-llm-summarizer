@@ -1,7 +1,7 @@
 {
   "gemini": [
-    "gemini-flash-lite-latest",
     "gemini-flash-latest",
+    "gemini-flash-lite-latest",
     "gemini-pro-latest",
     "gemma-4-31b-it"
   ],
@@ -11,6 +11,7 @@
     "nvidia/nemotron-3.5-lightning:free",
     "nvidia/nemotron-3-ultra-550b-a55b:free",
     "~deepseek/deepseek-v4-flash-latest",
+    "deepseek/deepseek-v4.1-flash",
     "deepseek/deepseek-v3.2",
     "deepseek/deepseek-v4-pro",
     "~anthropic/claude-haiku-latest",

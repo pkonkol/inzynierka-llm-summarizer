@@ -6,6 +6,7 @@ import type {
   JobListItemResponse,
   JobStatusResponse,
   KeepaliveResponse,
+  SummaryPresetOut,
   TokenResponse,
   UrlSummaryListItem,
   VersionResponse,
@@ -122,6 +123,9 @@ export const getSupportedLanguages = (): Promise<string[]> =>
 
 export const getSupportedProcessingStrategies = (): Promise<Record<string, string>> =>
   request<Record<string, string>>("/api/v1/meta/processing-strategies");
+
+export const getSummaryPresets = (): Promise<Record<string, SummaryPresetOut>> =>
+  request<Record<string, SummaryPresetOut>>("/api/v1/meta/summary-presets");
 
 export const getBackendVersion = (): Promise<VersionResponse> =>
   request<VersionResponse>("/api/v1/meta/version");

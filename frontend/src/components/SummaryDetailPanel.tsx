@@ -10,6 +10,12 @@ import type { JobStatusValue, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration } from "../utils/format";
+import {
+  FUNCTION_LABELS,
+  formatResolvedLength,
+  OUTPUT_FORMAT_LABELS,
+  STANCE_LABELS,
+} from "../utils/summarySpecLabels";
 import { useFetchOnMount } from "../utils/useFetchOnMount";
 import { isJobInProgress, isManualSource } from "../utils/utils";
 import { DeepevalItems } from "./DeepevalItems";
@@ -216,9 +222,8 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
     <p className="p-3 text-muted">Ładowanie...</p>
   );
 
-  const takeawaysMarkdown = (job.summary_data?.key_takeaways ?? [])
-    .map((item) => `- ${item}`)
-    .join("\n");
+  const summaryText = job.summary_data?.summary ?? null;
+  const keyTakeaways = job.summary_data?.key_takeaways ?? null;
 
   return (
     <>
@@ -232,19 +237,31 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
         ) : null}
         <InfoRow label="Tokeny łącznie" value={job.usage.total_tokens} />
         <InfoRow label="Strategia przetwarzania" value={job.processing_strategy} />
+        <InfoRow label="Format" value={OUTPUT_FORMAT_LABELS[job.summary_spec.output_format]} />
+        <InfoRow label="Narracja" value={STANCE_LABELS[job.summary_spec.narrative_stance]} />
+        <InfoRow label="Funkcja" value={FUNCTION_LABELS[job.summary_spec.summary_function]} />
+        {job.resolved_length ? (
+          <InfoRow label="Cel długości" value={formatResolvedLength(job.resolved_length)} />
+        ) : null}
       </div>
 
-      <section>
-        <h4>Krótkie podsumowanie</h4>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.summary_data?.summary}</ReactMarkdown>
-      </section>
+      {summaryText === null ? null : (
+        <section>
+          <h4>Krótkie podsumowanie</h4>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryText}</ReactMarkdown>
+        </section>
+      )}
 
-      <section>
-        <h4>Najważniejsze punkty</h4>
-        <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{takeawaysMarkdown}</ReactMarkdown>
-        </div>
-      </section>
+      {keyTakeaways === null ? null : (
+        <section>
+          <h4>Najważniejsze punkty</h4>
+          <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {keyTakeaways.map((item) => `- ${item}`).join("\n")}
+            </ReactMarkdown>
+          </div>
+        </section>
+      )}
 
       <DisclosureSections
         sections={[

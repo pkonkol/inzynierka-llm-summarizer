@@ -49,7 +49,7 @@ export function SourceField({
           placeholder="https://example.com/artykul albo wklejony tekst artykułu..."
           disabled={disabled}
           required
-          rows={isPastedText ? 8 : 1}
+          rows={8}
           maxLength={MAX_PASTED_CHARS}
         />
       </div>

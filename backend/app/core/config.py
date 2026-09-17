@@ -1,7 +1,11 @@
 from pathlib import Path
 
 from pydantic import SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,6 +18,21 @@ class Settings(BaseSettings):
         # leading characters of API keys — into the traceback and on into Cloud Logging.
         hide_input_in_errors=True,
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # pydantic-settings defaults to env vars over .env, so an unrelated global export (e.g.
+        # GEMINI_API_KEY set for another CLI tool in ~/.profile) silently shadows this project's
+        # backend/.env with no error. Production sets no .env file, so this only ever changes
+        # local dev, where the project's own .env is meant to be authoritative.
+        return init_settings, dotenv_settings, env_settings, file_secret_settings
 
     app_name: str = "Piotr Konkol - Praca inżynierska - Podsumowania z użyciem LLM"
     git_sha: str = ""

@@ -1,7 +1,6 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { Collapsible } from "../components/Collapsible";
 import { useFlash } from "../components/FlashProvider";
-import { type SourceMode, SourceTabs } from "../components/SourceTabs";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
@@ -102,8 +101,6 @@ function ButtonRow({ variant }: { variant: (typeof BUTTON_VARIANTS)[number] }) {
 export function DesignPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDisclosureOpen, setIsDisclosureOpen] = useState(false);
-  const [sourceMode, setSourceMode] = useState<SourceMode>("url");
-  const sourceTabsPanelId = useId();
   const showFlash = useFlash();
 
   return (
@@ -218,14 +215,6 @@ export function DesignPage() {
             danger, długi
           </Button>
         </div>
-      </Section>
-
-      <Section title="Segmented tabs">
-        <p className="text-muted">
-          SourceTabs — same cell builder as NavDock's segments, reused for a two-way switch.
-        </p>
-        <SourceTabs activeMode={sourceMode} onChange={setSourceMode} panelId={sourceTabsPanelId} />
-        <p className="text-muted">Active: {sourceMode}</p>
       </Section>
 
       <Section title="Links and disclosure">

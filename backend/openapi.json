@@ -1489,7 +1489,7 @@
           "language": {
             "type": "string",
             "title": "Language",
-            "default": "en"
+            "default": "auto"
           },
           "rate_limit_delay_ms": {
             "type": "integer",

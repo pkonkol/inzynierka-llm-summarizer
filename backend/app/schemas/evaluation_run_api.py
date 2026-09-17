@@ -59,7 +59,7 @@ class EvaluationRunCreateRequest(ApiModel):
     summary_spec: SummarySpec = Field(
         default_factory=lambda: SummarySpec(length=MatchReferenceLength())
     )
-    language: str = "en"
+    language: str = "auto"
     rate_limit_delay_ms: int = 0
 
 

@@ -530,7 +530,7 @@ export interface components {
             summary_spec?: components["schemas"]["SummarySpec"];
             /**
              * Language
-             * @default en
+             * @default auto
              */
             language: string;
             /**

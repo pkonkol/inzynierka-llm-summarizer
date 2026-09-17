@@ -1,13 +1,11 @@
 import type { FormEvent } from "react";
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { JobCreateRequest } from "../types/api.generated";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
-import { PastedTextSourceFields } from "./PastedTextSourceFields";
-import { type SourceMode, SourceTabs, sourceTabId } from "./SourceTabs";
+import { detectSourceMode, SourceField } from "./SourceField";
 import { SummarySpecFields } from "./SummarySpecFields";
-import { UrlSourceFields } from "./UrlSourceFields";
 import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
@@ -20,39 +18,35 @@ interface SummarySubmitCardProps {
 type SourcePayload = Pick<JobCreateRequest, "url" | "input_text" | "source_title">;
 
 function buildSourcePayload(
-  sourceMode: SourceMode,
-  url: string,
+  content: string,
   pastedTitle: string,
-  pastedText: string,
 ): { payload: SourcePayload | null; error: string | null } {
-  if (sourceMode === "url") {
+  if (detectSourceMode(content) === "url") {
     try {
-      const parsed = new URL(url);
+      const parsed = new URL(content.trim());
       if (!["http:", "https:"].includes(parsed.protocol)) {
         return { payload: null, error: "Adres musi zaczynać się od http:// lub https://" };
       }
     } catch {
       return { payload: null, error: "Wprowadź poprawny adres URL artykułu" };
     }
-    return { payload: { url: url.trim() }, error: null };
+    return { payload: { url: content.trim() }, error: null };
   }
 
+  if (!content.trim())
+    return { payload: null, error: "Podaj adres artykułu albo wklej jego treść" };
   if (!pastedTitle.trim()) return { payload: null, error: "Podaj tytuł" };
-  if (!pastedText.trim()) return { payload: null, error: "Wklej treść do podsumowania" };
   return {
-    payload: { source_title: pastedTitle.trim(), input_text: pastedText },
+    payload: { source_title: pastedTitle.trim(), input_text: content },
     error: null,
   };
 }
 
 export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardProps) {
-  const [sourceMode, setSourceMode] = useState<SourceMode>("url");
-  const [url, setUrl] = useState("");
+  const [content, setContent] = useState("");
   const [pastedTitle, setPastedTitle] = useState("");
-  const [pastedText, setPastedText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [runDeepeval, setRunDeepeval] = useState(false);
-  const panelId = useId();
   const {
     models,
     processingStrategies,
@@ -74,10 +68,8 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     setError(null);
 
     const { payload: sourcePayload, error: validationError } = buildSourcePayload(
-      sourceMode,
-      url,
+      content,
       pastedTitle,
-      pastedText,
     );
     if (!sourcePayload) {
       setError(validationError);
@@ -102,9 +94,8 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       run_deepeval: runDeepeval,
     });
     if (!isCreated) return;
-    setUrl("");
+    setContent("");
     setPastedTitle("");
-    setPastedText("");
   };
 
   return (
@@ -123,25 +114,13 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             Podaj adres artykułu albo wklej gotowy tekst i wybierz model — system wygeneruje
             podsumowanie i policzy metryki jakości.
           </p>
-          <SourceTabs activeMode={sourceMode} onChange={setSourceMode} panelId={panelId} />
-          <div
-            id={panelId}
-            role="tabpanel"
-            aria-labelledby={sourceTabId(panelId, sourceMode)}
-            className="grid gap-3"
-          >
-            {sourceMode === "url" ? (
-              <UrlSourceFields url={url} onUrlChange={setUrl} disabled={isSubmitting} />
-            ) : (
-              <PastedTextSourceFields
-                title={pastedTitle}
-                onTitleChange={setPastedTitle}
-                text={pastedText}
-                onTextChange={setPastedText}
-                disabled={isSubmitting}
-              />
-            )}
-          </div>
+          <SourceField
+            content={content}
+            onContentChange={setContent}
+            pastedTitle={pastedTitle}
+            onPastedTitleChange={setPastedTitle}
+            disabled={isSubmitting}
+          />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">

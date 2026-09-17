@@ -12,7 +12,8 @@ import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
 interface SummarySubmitCardProps {
-  onSubmit: (payload: JobCreateRequest) => Promise<void>;
+  /** Resolves false when the request failed, so the typed source is kept for a retry. */
+  onSubmit: (payload: JobCreateRequest) => Promise<boolean>;
   isSubmitting: boolean;
 }
 
@@ -89,7 +90,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     }
 
     const { provider, modelName } = splitProviderModel(selectedModel);
-    await onSubmit({
+    const isCreated = await onSubmit({
       ...sourcePayload,
       model_provider: provider,
       model_name: modelName,
@@ -100,6 +101,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       summary_spec: specForm.buildSpec(),
       run_deepeval: runDeepeval,
     });
+    if (!isCreated) return;
     setUrl("");
     setPastedTitle("");
     setPastedText("");

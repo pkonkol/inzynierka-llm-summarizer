@@ -13,7 +13,7 @@ from .shared_metrics import (
     SummaryStatisticalMetrics,
 )
 from .summary import SummaryResponse, UsageMetadata
-from .summary_spec import ProcessingStrategy, SummarySpec
+from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 
 
 # In job_db.py but reachable from a response: JobStatusResponse.metrics exposes it.
@@ -32,7 +32,7 @@ class JobDocument(BaseModel):
     model_name: str
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
-    resolved_length: dict[str, int] | None = None
+    resolved_length: ResolvedLength | None = None
     language: str
     run_deepeval: bool
     status: Literal["pending", "running", "completed", "failed"]

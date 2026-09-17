@@ -13,9 +13,6 @@ export const DEFAULT_EXPLICIT_LENGTH: LengthSpec = {
   target_sentences: null,
 };
 
-// Examples shown on hover next to the narration/function selects — kept next to the form state
-// since both the form and SummarySpecFields read from the same vocabulary.
-
 interface SummarySpecFormOptions {
   // Evaluation runs start matched to each entry's golden summary; the home page has no reference.
   offerMatchReference: boolean;

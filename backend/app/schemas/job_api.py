@@ -1,7 +1,7 @@
 # schemas/job_api.py — request/response shapes for /api/v1/jobs
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import Field, HttpUrl, model_validator
 
@@ -9,7 +9,7 @@ from .base import ApiModel
 from .job_db import JobMetrics
 from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
-from .summary_spec import ProcessingStrategy, SummarySpec
+from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 
 JobStatusValue = Literal["pending", "running", "completed", "failed"]
 
@@ -44,6 +44,13 @@ class JobCreateRequest(ApiModel):
                 raise ValueError("source_title must not be blank")
         return self
 
+    def source_url_and_text(self) -> tuple[str, str]:
+        """-> (source_url, input_text); a URL job has its text scraped later, so it starts empty."""
+        if self.url is not None:
+            return str(self.url), ""
+        title = cast(str, self.source_title).strip()
+        return f"{MANUAL_SOURCE_PREFIX}{title}", cast(str, self.input_text)
+
     @model_validator(mode="after")
     def _reject_match_reference_length(self) -> JobCreateRequest:
         # match_reference needs a golden_summary, which jobs never have — only evaluation runs do.
@@ -60,7 +67,7 @@ class JobStatusResponse(ApiModel):
     model_name: str
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
-    resolved_length: dict[str, int] | None = None
+    resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics
     deepeval_metrics: list[DeepevalItem]

@@ -19,7 +19,7 @@ interface AsyncActionOptions<Args extends unknown[], Result> {
 export function useAsyncAction<Args extends unknown[], Result>(
   action: (...args: Args) => Promise<Result>,
   options: AsyncActionOptions<Args, Result>,
-): { run: (...args: Args) => Promise<void>; isPending: boolean } {
+): { run: (...args: Args) => Promise<boolean>; isPending: boolean } {
   const [isPending, setIsPending] = useState(false);
   const showFlash = useFlash();
 
@@ -39,9 +39,11 @@ export function useAsyncAction<Args extends unknown[], Result>(
         if (successMessage) showFlash(successMessage(result, ...args));
         await onSuccess?.(result, ...args);
         if (!keepPendingOnSuccess) setIsPending(false);
+        return true;
       } catch (error) {
         showFlash(`${errorPrefix}: ${errorText(error)}`, "danger");
         setIsPending(false);
+        return false;
       }
     },
     [showFlash],

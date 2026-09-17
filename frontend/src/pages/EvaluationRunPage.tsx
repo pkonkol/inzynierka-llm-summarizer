@@ -22,7 +22,7 @@ import { formatDateMinute, formatMetricLabel, formatScore } from "../utils/forma
 import { evaluationSetPath } from "../utils/routing";
 import {
   FUNCTION_LABELS,
-  formatResolvedLength,
+  formatLengthTarget,
   LENGTH_POLICY_LABELS,
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
@@ -289,7 +289,10 @@ function RunEntryCard({
             {entry.resolved_length ? (
               <span className="font-normal text-muted">
                 {" · cel: "}
-                {formatResolvedLength(entry.resolved_length)}
+                {formatLengthTarget(
+                  entry.resolved_length.target_words,
+                  entry.resolved_length.target_sentences,
+                )}
               </span>
             ) : null}
           </h4>

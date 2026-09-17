@@ -13,7 +13,7 @@ from ..core.mongo import (
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
-from ..schemas.summary_spec import ExplicitLength, SummarySpec, resolve_target_length
+from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
@@ -66,17 +66,10 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
     try:
         source_entry = await fetch_source_entry(run_doc["evaluation_set_id"], entry_id)
         spec = SummarySpec.model_validate(run_doc["summary_spec"])
-        target_words, target_sentences = resolve_target_length(
+        length = resolve_target_length(
             spec.length,
             input_words=len(source_entry["input_text"].split()),
             golden_summary=run_entry["golden_summary"],
-        )
-        resolved_spec = spec.model_copy(
-            update={
-                "length": ExplicitLength(
-                    target_words=target_words, target_sentences=target_sentences
-                )
-            }
         )
         summary = await generate_summary(
             input={"text": source_entry["input_text"], "title": source_entry["title"]},
@@ -84,7 +77,8 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
             model_name=run_doc["model_name"],
             model_provider=run_doc["model_provider"],
             language=run_doc["language"],
-            spec=resolved_spec,
+            spec=spec,
+            length=length,
             strategy=run_doc["processing_strategy"],
         )
         ai_metrics, cross_metrics = await asyncio.gather(
@@ -107,7 +101,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
         "error": None,
         "ai_summary": summary.summary,
         "ai_key_takeaways": summary.key_takeaways,
-        "resolved_length": {"target_words": target_words, "target_sentences": target_sentences},
+        "resolved_length": length.model_dump(),
         "ai_metrics": ai_metrics,
         "cross_metrics": cross_metrics,
     }

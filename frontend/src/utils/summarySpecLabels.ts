@@ -37,7 +37,3 @@ export function formatLengthTarget(words: number, sentences: number | null | und
   if (!sentences) return wordsText;
   return `${wordsText}, ${sentences} ${pluralPl(sentences, "zdanie", "zdania", "zdań")}`;
 }
-
-export function formatResolvedLength(resolvedLength: Record<string, number>): string {
-  return formatLengthTarget(resolvedLength.target_words, resolvedLength.target_sentences);
-}

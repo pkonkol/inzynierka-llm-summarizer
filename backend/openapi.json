@@ -1625,16 +1625,12 @@
           "resolved_length": {
             "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "integer"
-                },
-                "type": "object"
+                "$ref": "#/components/schemas/ResolvedLength"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Resolved Length"
+            ]
           },
           "ai_metrics": {
             "anyOf": [
@@ -2224,16 +2220,9 @@
             "default": "explicit"
           },
           "target_words": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 3000.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "maximum": 3000.0,
+            "minimum": 1.0,
             "title": "Target Words"
           },
           "target_sentences": {
@@ -2251,6 +2240,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "target_words"
+        ],
         "title": "ExplicitLength"
       },
       "GoldenMetrics": {
@@ -2575,16 +2567,12 @@
           "resolved_length": {
             "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "integer"
-                },
-                "type": "object"
+                "$ref": "#/components/schemas/ResolvedLength"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Resolved Length"
+            ]
           },
           "summary_data": {
             "anyOf": [
@@ -2797,6 +2785,24 @@
         ],
         "title": "PairwiseDeepevalItem",
         "description": "score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."
+      },
+      "ResolvedLength": {
+        "properties": {
+          "target_words": {
+            "type": "integer",
+            "title": "Target Words"
+          },
+          "target_sentences": {
+            "type": "integer",
+            "title": "Target Sentences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_words",
+          "target_sentences"
+        ],
+        "title": "ResolvedLength"
       },
       "ScaledLength": {
         "properties": {

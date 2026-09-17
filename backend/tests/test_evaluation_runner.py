@@ -90,7 +90,7 @@ def test_a_new_run_matches_the_reference_length_by_default() -> None:
         pytest.param({"policy": "scaled_to_input", "slider": 0.0}, (17, 1), id="scaled"),
     ],
 )
-async def test_each_length_policy_reaches_the_model_as_a_resolved_explicit_length(
+async def test_each_length_policy_reaches_the_model_as_a_resolved_length(
     mocked_entry_pipeline: dict[str, AsyncMock], length: dict, expected: tuple[int, int]
 ) -> None:
     spec = SummarySpec.model_validate({"length": length})
@@ -99,9 +99,8 @@ async def test_each_length_policy_reaches_the_model_as_a_resolved_explicit_lengt
         _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}
     )
 
-    passed_spec = mocked_entry_pipeline["generate_summary"].call_args.kwargs["spec"]
-    assert passed_spec.length.policy == "explicit"
-    assert (passed_spec.length.target_words, passed_spec.length.target_sentences) == expected
+    passed_length = mocked_entry_pipeline["generate_summary"].call_args.kwargs["length"]
+    assert (passed_length.target_words, passed_length.target_sentences) == expected
     assert result["resolved_length"] == {
         "target_words": expected[0],
         "target_sentences": expected[1],

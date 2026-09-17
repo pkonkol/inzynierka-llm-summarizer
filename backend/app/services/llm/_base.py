@@ -13,9 +13,18 @@ from pydantic import BaseModel
 
 from ...core.config import settings
 from ...schemas.summary import UsageMetadata
-from ...schemas.summary_spec import NarrativeStance, SummaryFunction, SummarySpec
+from ...schemas.summary_spec import (
+    NarrativeStance,
+    OutputFormat,
+    ResolvedLength,
+    SummaryFunction,
+    SummarySpec,
+)
 
 log = structlog.get_logger(__name__)
+
+# (parsed model, raw text, token usage, raw provider metadata)
+StructuredOutput = tuple[Any, str, UsageMetadata, dict[str, Any]]
 
 
 class LlmOutputError(ValueError):
@@ -87,11 +96,7 @@ def build_structured_llm(
 
 
 def prompt_texts(prompt: ChatPromptTemplate, label: str) -> list[tuple[str, str]]:
-    """The (role, template text) pairs behind a prompt, recorded on every LlmSummaryResult.
-
-    Generalized to N messages (not just system+human) because the reminder message added in
-    _prompts.py makes every template 3 messages long.
-    """
+    """The (role, template text) pairs behind a prompt, recorded on every LlmSummaryResult."""
     texts = []
     for message in prompt.messages:
         template = getattr(getattr(message, "prompt", None), "template", None)
@@ -131,16 +136,11 @@ _FUNCTION_GUIDANCE: dict[SummaryFunction, str] = {
 }
 
 
-def build_stance_guidance(stance: NarrativeStance) -> str:
-    return _STANCE_GUIDANCE[stance]
-
-
-def build_function_guidance(summary_function: SummaryFunction) -> str:
-    return _FUNCTION_GUIDANCE[summary_function]
-
-
-def build_length_guidance(target_words: int, target_sentences: int) -> str:
-    return f"Write approximately {target_words} words across {target_sentences} sentence(s)."
+def build_length_guidance(length: ResolvedLength) -> str:
+    return (
+        f"Write approximately {length.target_words} words "
+        f"across {length.target_sentences} sentence(s)."
+    )
 
 
 TAKEAWAY_DETAIL_GUIDANCE = (
@@ -151,18 +151,39 @@ TAKEAWAY_DETAIL_GUIDANCE = (
 )
 
 
-def build_detail_guidance(spec: SummarySpec, target_words: int, target_sentences: int) -> str:
+class ProseResponse(BaseModel):
+    summary: str
+
+
+class BulletsResponse(BaseModel):
+    key_takeaways: list[str]
+
+
+OUTPUT_SCHEMAS: dict[OutputFormat, type[ProseResponse | BulletsResponse]] = {
+    "prose": ProseResponse,
+    "bullets": BulletsResponse,
+}
+
+
+def split_output(parsed: ProseResponse | BulletsResponse) -> tuple[str | None, list[str] | None]:
+    """-> (summary, key_takeaways); exactly one is set, matching the schema the model answered."""
+    if isinstance(parsed, BulletsResponse):
+        return None, parsed.key_takeaways
+    return parsed.summary, None
+
+
+def build_detail_guidance(spec: SummarySpec, length: ResolvedLength) -> str:
     """The single string interpolated into every prompt's {detail_guidance} slot, and again
     verbatim into the closing reminder message — see _prompts.py's _REMINDER_MESSAGE.
     """
     parts = [
         GENERIC_DETAIL_GUIDANCE,
-        build_stance_guidance(spec.narrative_stance),
-        build_function_guidance(spec.summary_function),
+        _STANCE_GUIDANCE[spec.narrative_stance],
+        _FUNCTION_GUIDANCE[spec.summary_function],
     ]
     if spec.output_format == "bullets":
         parts.append(TAKEAWAY_DETAIL_GUIDANCE)
-    parts.append(build_length_guidance(target_words, target_sentences))
+    parts.append(build_length_guidance(length))
     if spec.extra_instructions:
         parts.append(f"Additional instructions from the user: {spec.extra_instructions}")
     return "\n".join(parts)
@@ -240,7 +261,7 @@ def raw_output_str(raw_invoke_output: dict[str, Any]) -> str:
 
 def parse_structured_output(
     raw_invoke_output: dict[str, Any] | BaseModel, mode: str, stage: str
-) -> tuple[Any, str, UsageMetadata, dict[str, Any]]:
+) -> StructuredOutput:
     if isinstance(raw_invoke_output, BaseModel):
         raw_invoke_output = raw_invoke_output.model_dump()
 

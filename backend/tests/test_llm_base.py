@@ -9,7 +9,7 @@ import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-from app.schemas.summary_spec import SummarySpec
+from app.schemas.summary_spec import ResolvedLength, SummarySpec
 from app.services.llm._base import build_detail_guidance, extract_usage, prompt_texts
 
 GEMINI = {
@@ -25,6 +25,7 @@ OPENAI = {
     "total_tokens": 1100,
     "output_token_details": {"reasoning": 120, "audio": 0},
 }
+_LENGTH = ResolvedLength(target_words=50, target_sentences=3)
 OLLAMA = {"input_tokens": 10, "output_tokens": 3615, "total_tokens": 3625}
 
 
@@ -76,14 +77,14 @@ def test_prompt_texts_handles_a_three_message_template() -> None:
 
 def test_detail_guidance_repeats_the_length_target_and_extra_instructions() -> None:
     spec = SummarySpec(extra_instructions="Mention the CEO by name.")
-    guidance = build_detail_guidance(spec, target_words=50, target_sentences=3)
+    guidance = build_detail_guidance(spec, _LENGTH)
     assert "50 words" in guidance
     assert "3 sentence" in guidance
     assert "Mention the CEO by name." in guidance
 
 
 def test_detail_guidance_includes_takeaway_instructions_only_for_bullets_output() -> None:
-    prose_guidance = build_detail_guidance(SummarySpec(output_format="prose"), 50, 3)
-    bullets_guidance = build_detail_guidance(SummarySpec(output_format="bullets"), 50, 3)
+    prose_guidance = build_detail_guidance(SummarySpec(output_format="prose"), _LENGTH)
+    bullets_guidance = build_detail_guidance(SummarySpec(output_format="bullets"), _LENGTH)
     assert "key_takeaways" not in prose_guidance
     assert "key_takeaways" in bullets_guidance

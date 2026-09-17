@@ -3,7 +3,7 @@
 import structlog
 
 from ...schemas.summary import LlmSummaryResult
-from ...schemas.summary_spec import ProcessingStrategy, SummarySpec
+from ...schemas.summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 from . import direct, extract_then_synthesize
 
 log = structlog.get_logger(__name__)
@@ -21,6 +21,7 @@ async def generate_summary(
     model_provider: str,
     language: str,
     spec: SummarySpec,
+    length: ResolvedLength,
     strategy: ProcessingStrategy = "direct",
 ) -> LlmSummaryResult:
     """
@@ -30,8 +31,7 @@ async def generate_summary(
         direct                  — single prompt, extractor + abstractor in one LLM call (default)
         extract_then_synthesize — takeaways first, final output derived from takeaways
 
-    spec.length must already be a resolved ExplicitLength (scaled_to_input/match_reference are
-    resolved by the caller before this point — neither strategy module knows about them).
+    length is the concrete target the caller resolved from spec.length; strategies ignore spec.length.
     """
     log.info(
         "generating summary",
@@ -39,10 +39,11 @@ async def generate_summary(
         spec=spec,
         provider=model_provider,
         model=model_name,
-        output_format=spec.output_format,
     )
 
     if strategy not in _RUNNERS:
         raise NotImplementedError(f"Processing strategy '{strategy}' is not implemented")
 
-    return await _RUNNERS[strategy](input, source_url, model_name, model_provider, language, spec)
+    return await _RUNNERS[strategy](
+        input, source_url, model_name, model_provider, language, spec, length
+    )

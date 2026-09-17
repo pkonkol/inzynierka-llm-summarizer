@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from .evaluation_run_api import EntryStatus, EvaluationRunAggregateMetrics, RunStatus
 from .shared_metrics import AiMetrics, CrossMetrics
-from .summary_spec import ProcessingStrategy, SummarySpec
+from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 
 
 class EvaluationRunEntryDocument(BaseModel):
@@ -20,7 +20,7 @@ class EvaluationRunEntryDocument(BaseModel):
     golden_summary: str
     ai_summary: str | None = None
     ai_key_takeaways: list[str] | None = None
-    resolved_length: dict[str, int] | None = None
+    resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None
     status: EntryStatus = "pending"

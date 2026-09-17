@@ -30,7 +30,7 @@ function describeLength(length: LengthSpec): string {
     return `gęstość: ${densityLabel(length.slider)} (${Math.round(length.slider * 100)}%)`;
   }
   if (length.policy === "explicit") {
-    return `~${formatLengthTarget(length.target_words ?? 0, length.target_sentences)}`;
+    return `~${formatLengthTarget(length.target_words, length.target_sentences)}`;
   }
   return "dopasowana do wzorca";
 }
@@ -59,6 +59,7 @@ export function SummarySpecFields({
   const lengthMatchesReference = form.offerMatchReference && form.matchReference;
 
   const setLength = (length: LengthSpec) => form.updateSpec({ length });
+  const explicitLength = spec?.length?.policy === "explicit" ? spec.length : null;
 
   return (
     <div className="grid gap-4">
@@ -263,7 +264,7 @@ export function SummarySpecFields({
                   </Select>
                 </div>
 
-                {spec.length?.policy === "explicit" ? (
+                {explicitLength ? (
                   <>
                     <div className="grid gap-2">
                       <FieldLabel htmlFor={fieldId("target-words")}>
@@ -274,13 +275,11 @@ export function SummarySpecFields({
                         type="number"
                         min={1}
                         max={3000}
-                        value={spec.length.target_words ?? ""}
+                        value={explicitLength.target_words}
                         onChange={(event) =>
                           setLength({
-                            ...spec.length,
-                            policy: "explicit",
-                            target_words:
-                              event.target.value === "" ? null : Number(event.target.value),
+                            ...explicitLength,
+                            target_words: Number(event.target.value),
                           })
                         }
                         disabled={specFieldsDisabled}
@@ -295,11 +294,10 @@ export function SummarySpecFields({
                         type="number"
                         min={1}
                         max={50}
-                        value={spec.length.target_sentences ?? ""}
+                        value={explicitLength.target_sentences ?? ""}
                         onChange={(event) =>
                           setLength({
-                            ...spec.length,
-                            policy: "explicit",
+                            ...explicitLength,
                             target_sentences:
                               event.target.value === "" ? null : Number(event.target.value),
                           })

@@ -7,7 +7,7 @@ from pydantic import Field
 
 from .base import ApiModel
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
-from .summary_spec import MatchReferenceLength, ProcessingStrategy, SummarySpec
+from .summary_spec import MatchReferenceLength, ProcessingStrategy, ResolvedLength, SummarySpec
 
 RunStatus = Literal["pending", "running", "completed", "failed"]
 EntryStatus = Literal["pending", "running", "completed", "failed"]
@@ -45,7 +45,7 @@ class EvaluationRunEntryResponse(ApiModel):
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None
     ai_key_takeaways: list[str] | None = None
-    resolved_length: dict[str, int] | None = None
+    resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None
     status: EntryStatus = "pending"

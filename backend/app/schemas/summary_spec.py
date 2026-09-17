@@ -34,7 +34,7 @@ _MAX_SENTENCES = 20
 
 class ExplicitLength(BaseModel):
     policy: Literal["explicit"] = "explicit"
-    target_words: int | None = Field(default=None, ge=1, le=SCALED_LENGTH_SAFETY_CEILING_WORDS)
+    target_words: int = Field(ge=1, le=SCALED_LENGTH_SAFETY_CEILING_WORDS)
     target_sentences: int | None = Field(default=None, ge=1, le=50)
 
 
@@ -64,10 +64,13 @@ class SummarySpec(BaseModel):
     narrative_stance: NarrativeStance = "voice_of_document"
     summary_function: SummaryFunction = "informative"
     output_format: OutputFormat = "prose"
-    length: LengthSpec = Field(default_factory=ExplicitLength)
-    # One free-text field, not two: "focus on X" is just one kind of extra instruction, and a
-    # second box for it was never worth the extra decision for the user or the extra prompt slot.
+    length: LengthSpec = Field(default_factory=lambda: ScaledLength(slider=0.5))
     extra_instructions: str | None = Field(default=None, max_length=_MAX_EXTRA_INSTRUCTIONS_CHARS)
+
+
+class ResolvedLength(BaseModel):
+    target_words: int
+    target_sentences: int
 
 
 def _sentences_for(words: int) -> int:
@@ -76,18 +79,11 @@ def _sentences_for(words: int) -> int:
 
 def resolve_target_length(
     length: LengthSpec, *, input_words: int, golden_summary: str | None
-) -> tuple[int, int]:
-    """-> (target_words, target_sentences), always concrete numbers regardless of policy."""
+) -> ResolvedLength:
     if isinstance(length, ExplicitLength):
-        if length.target_words is None:
-            raise ValueError("ExplicitLength.target_words must be set to resolve a length")
         words = length.target_words
-        sentences = (
-            length.target_sentences
-            if length.target_sentences is not None
-            else _sentences_for(words)
-        )
-        return words, sentences
+        sentences = length.target_sentences or _sentences_for(words)
+        return ResolvedLength(target_words=words, target_sentences=sentences)
 
     if isinstance(length, ScaledLength):
         coefficient = (
@@ -95,7 +91,7 @@ def resolve_target_length(
         )
         words = round(coefficient * input_words**SCALED_LENGTH_EXPONENT)
         words = max(SCALED_LENGTH_FLOOR_WORDS, min(SCALED_LENGTH_SAFETY_CEILING_WORDS, words))
-        return words, _sentences_for(words)
+        return ResolvedLength(target_words=words, target_sentences=_sentences_for(words))
 
     if isinstance(length, MatchReferenceLength):
         if golden_summary is None:
@@ -104,7 +100,8 @@ def resolve_target_length(
         sentence_fragments = [
             s for s in _SENTENCE_SPLIT_RE.split(golden_summary.strip()) if s.strip()
         ]
-        sentences = max(_MIN_SENTENCES, len(sentence_fragments))
-        return words, sentences
+        return ResolvedLength(
+            target_words=words, target_sentences=max(_MIN_SENTENCES, len(sentence_fragments))
+        )
 
     raise NotImplementedError(f"Unhandled length policy: {length!r}")

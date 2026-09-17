@@ -10,7 +10,7 @@ from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.summary import SummaryResponse
-from ..schemas.summary_spec import ExplicitLength, SummarySpec, resolve_target_length
+from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
 from ..services.run_metrics import (
@@ -43,10 +43,8 @@ async def run_summarization_job(job_id: str) -> None:
     source_url = job["source_url"]
     model_name = job["model_name"]
     model_provider = job["model_provider"]
-    language = job["language"]
     processing_strategy = job["processing_strategy"]
     spec = SummarySpec.model_validate(job["summary_spec"])
-    run_deepeval = job["run_deepeval"]
 
     # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
@@ -82,25 +80,17 @@ async def run_summarization_job(job_id: str) -> None:
         )
         spawn_metrics_task(store_source_metrics_for_job(job_id, data["text"]))
 
-        input_words = len(data["text"].split())
-        target_words, target_sentences = resolve_target_length(
-            spec.length, input_words=input_words, golden_summary=None
+        length = resolve_target_length(
+            spec.length, input_words=len(data["text"].split()), golden_summary=None
         )
-        resolved_spec = spec.model_copy(
-            update={
-                "length": ExplicitLength(
-                    target_words=target_words, target_sentences=target_sentences
-                )
-            }
-        )
-
         summary = await generate_summary(
             data,
             source_url,
             model_name,
             model_provider,
-            language,
-            resolved_spec,
+            job["language"],
+            spec,
+            length,
             strategy=processing_strategy,
         )
 
@@ -113,17 +103,10 @@ async def run_summarization_job(job_id: str) -> None:
             {
                 "$set": {
                     "status": "completed",
-                    "summary_data": SummaryResponse(
-                        title=summary.title,
-                        summary=summary.summary,
-                        key_takeaways=summary.key_takeaways,
-                        output_format=summary.output_format,
-                        source_url=summary.source_url,
+                    "summary_data": SummaryResponse.model_validate(
+                        summary.model_dump(include=set(SummaryResponse.model_fields))
                     ).model_dump(),
-                    "resolved_length": {
-                        "target_words": target_words,
-                        "target_sentences": target_sentences,
-                    },
+                    "resolved_length": length.model_dump(),
                     "usage": summary.usage.model_dump(),
                     "raw_metadata": summary.raw_metadata,
                     "raw_output": summary.raw_output,
@@ -140,15 +123,10 @@ async def run_summarization_job(job_id: str) -> None:
         )
 
         if summary_text or takeaways_text:
-            spawn_metrics_task(
-                store_statistical_metrics_for_job(
-                    job_id, summary_text, takeaways_text, data["text"]
-                )
-            )
-        if run_deepeval and (summary_text or takeaways_text):
-            spawn_metrics_task(
-                store_deepeval_metrics_for_job(job_id, summary_text, takeaways_text, data["text"])
-            )
+            metrics_args = (job_id, summary_text, takeaways_text, data["text"])
+            spawn_metrics_task(store_statistical_metrics_for_job(*metrics_args))
+            if job["run_deepeval"]:
+                spawn_metrics_task(store_deepeval_metrics_for_job(*metrics_args))
 
     except Exception as exc:
         finished_at = datetime.now(UTC)

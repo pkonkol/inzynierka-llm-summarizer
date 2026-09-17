@@ -587,10 +587,7 @@ export interface components {
             ai_summary: string | null;
             /** Ai Key Takeaways */
             ai_key_takeaways: string[] | null;
-            /** Resolved Length */
-            resolved_length: {
-                [key: string]: number;
-            } | null;
+            resolved_length: components["schemas"]["ResolvedLength"] | null;
             ai_metrics: components["schemas"]["AiMetrics"] | null;
             cross_metrics: components["schemas"]["CrossMetrics"] | null;
             /**
@@ -824,7 +821,7 @@ export interface components {
              */
             policy: "explicit";
             /** Target Words */
-            target_words?: number | null;
+            target_words: number;
             /** Target Sentences */
             target_sentences?: number | null;
         };
@@ -960,10 +957,7 @@ export interface components {
              */
             processing_strategy: "direct" | "extract_then_synthesize";
             summary_spec: components["schemas"]["SummarySpec"];
-            /** Resolved Length */
-            resolved_length: {
-                [key: string]: number;
-            } | null;
+            resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
             /** Deepeval Metrics */
@@ -1050,6 +1044,13 @@ export interface components {
             score: number;
             /** Reason */
             reason: string;
+        };
+        /** ResolvedLength */
+        ResolvedLength: {
+            /** Target Words */
+            target_words: number;
+            /** Target Sentences */
+            target_sentences: number;
         };
         /** ScaledLength */
         ScaledLength: {
@@ -1249,6 +1250,7 @@ export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
 export type KeyTakeawaysMetrics = components['schemas']['KeyTakeawaysMetrics'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
+export type ResolvedLength = components['schemas']['ResolvedLength'];
 export type ScaledLength = components['schemas']['ScaledLength'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
 export type SummaryPresetOut = components['schemas']['SummaryPresetOut'];

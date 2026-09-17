@@ -12,7 +12,7 @@ import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport
 import { formatDateMinute, formatDuration } from "../utils/format";
 import {
   FUNCTION_LABELS,
-  formatResolvedLength,
+  formatLengthTarget,
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
@@ -241,7 +241,13 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
         <InfoRow label="Narracja" value={STANCE_LABELS[job.summary_spec.narrative_stance]} />
         <InfoRow label="Funkcja" value={FUNCTION_LABELS[job.summary_spec.summary_function]} />
         {job.resolved_length ? (
-          <InfoRow label="Cel długości" value={formatResolvedLength(job.resolved_length)} />
+          <InfoRow
+            label="Cel długości"
+            value={formatLengthTarget(
+              job.resolved_length.target_words,
+              job.resolved_length.target_sentences,
+            )}
+          />
         ) : null}
       </div>
 

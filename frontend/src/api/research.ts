@@ -13,7 +13,8 @@ import type {
   EvaluationSetExportResponse,
   EvaluationSetImportRequest,
   EvaluationSetListItemResponse,
-  GoldenMetricsBackfillResponse,
+  GoldenMetricsPassQueuedResponse,
+  GoldenMetricsPassResponse,
 } from "../types/api.generated";
 import { request } from "./client";
 
@@ -57,10 +58,11 @@ export const getEvaluationSetEntryInputText = (
   return result;
 };
 
-export const evaluateMissingGoldenMetrics = (
-  setId: string,
-): Promise<GoldenMetricsBackfillResponse> =>
-  request<GoldenMetricsBackfillResponse>(
+export const getGoldenMetricsPass = (setId: string): Promise<GoldenMetricsPassResponse> =>
+  request<GoldenMetricsPassResponse>(`/api/v1/research/evaluation-sets/${setId}/golden-metrics`);
+
+export const queueGoldenMetricsPass = (setId: string): Promise<GoldenMetricsPassQueuedResponse> =>
+  request<GoldenMetricsPassQueuedResponse>(
     `/api/v1/research/evaluation-sets/${setId}/golden-metrics`,
     { method: "POST" },
   );

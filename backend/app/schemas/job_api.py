@@ -67,6 +67,7 @@ class JobStatusResponse(ApiModel):
     model_name: str
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
+    language: str
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics

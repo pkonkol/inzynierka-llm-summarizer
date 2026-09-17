@@ -804,12 +804,53 @@
       }
     },
     "/api/v1/research/evaluation-sets/{set_id}/golden-metrics": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Golden Metrics Pass",
+        "description": "Progress only \u2014 no metric values, so this is cheap to poll.",
+        "operationId": "get_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_get",
+        "parameters": [
+          {
+            "name": "set_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Set Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoldenMetricsPassResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "research"
         ],
-        "summary": "Evaluate Missing Golden Metrics",
-        "operationId": "evaluate_missing_golden_metrics_api_v1_research_evaluation_sets__set_id__golden_metrics_post",
+        "summary": "Queue Golden Metrics Pass",
+        "operationId": "queue_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_post",
         "security": [
           {
             "HTTPBearer": []
@@ -832,7 +873,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GoldenMetricsBackfillResponse"
+                  "$ref": "#/components/schemas/GoldenMetricsPassQueuedResponse"
                 }
               }
             }
@@ -2163,6 +2204,11 @@
             },
             "type": "array",
             "title": "Entries"
+          },
+          "compute_golden_metrics": {
+            "type": "boolean",
+            "title": "Compute Golden Metrics",
+            "default": true
           }
         },
         "type": "object",
@@ -2198,6 +2244,28 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "golden_metrics_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "skipped",
+                  "pending",
+                  "running",
+                  "completed",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Golden Metrics Status"
+          },
+          "entries_with_metrics": {
+            "type": "integer",
+            "title": "Entries With Metrics"
           }
         },
         "type": "object",
@@ -2207,7 +2275,9 @@
           "language",
           "entry_count",
           "run_count",
-          "created_at"
+          "created_at",
+          "golden_metrics_status",
+          "entries_with_metrics"
         ],
         "title": "EvaluationSetListItemResponse"
       },
@@ -2269,29 +2339,100 @@
         ],
         "title": "GoldenMetrics"
       },
-      "GoldenMetricsBackfillResponse": {
+      "GoldenMetricsPassQueuedResponse": {
         "properties": {
           "status": {
             "type": "string",
-            "const": "ok",
+            "const": "queued",
             "title": "Status"
           },
-          "updated_entries": {
-            "type": "integer",
-            "title": "Updated Entries"
-          },
-          "total_entries": {
-            "type": "integer",
-            "title": "Total Entries"
+          "evaluation_set_id": {
+            "type": "string",
+            "title": "Evaluation Set Id"
           }
         },
         "type": "object",
         "required": [
           "status",
-          "updated_entries",
-          "total_entries"
+          "evaluation_set_id"
         ],
-        "title": "GoldenMetricsBackfillResponse"
+        "title": "GoldenMetricsPassQueuedResponse"
+      },
+      "GoldenMetricsPassResponse": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "skipped",
+                  "pending",
+                  "running",
+                  "completed",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "entry_count": {
+            "type": "integer",
+            "title": "Entry Count"
+          },
+          "entries_with_metrics": {
+            "type": "integer",
+            "title": "Entries With Metrics"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "entry_count",
+          "entries_with_metrics",
+          "started_at",
+          "finished_at",
+          "error"
+        ],
+        "title": "GoldenMetricsPassResponse",
+        "description": "GET-only progress view \u2014 no metric values, just enough to render a progress bar."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2564,6 +2705,10 @@
           "summary_spec": {
             "$ref": "#/components/schemas/SummarySpec"
           },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
           "resolved_length": {
             "anyOf": [
               {
@@ -2688,6 +2833,7 @@
           "model_name",
           "processing_strategy",
           "summary_spec",
+          "language",
           "resolved_length",
           "summary_data",
           "metrics",

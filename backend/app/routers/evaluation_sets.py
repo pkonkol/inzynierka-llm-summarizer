@@ -3,8 +3,9 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import structlog
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pymongo import DESCENDING
 
 from ..core.auth import require_auth
@@ -12,6 +13,7 @@ from ..core.mongo import (
     find_evaluation_set_entry,
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
+    stale_work_cutoff,
 )
 from ..schemas.evaluation_set_api import (
     EvaluationSetCreateResponse,
@@ -23,12 +25,37 @@ from ..schemas.evaluation_set_api import (
     EvaluationSetExportResponse,
     EvaluationSetImportRequest,
     EvaluationSetListItemResponse,
-    GoldenMetricsBackfillResponse,
+    GoldenMetricsPassQueuedResponse,
+    GoldenMetricsPassResponse,
 )
-from ..schemas.evaluation_set_db import EvaluationSetDocument, EvaluationSetEntryDocument
-from ..services.evaluation_set_metrics import build_golden_metrics
+from ..schemas.evaluation_set_db import (
+    EvaluationSetDocument,
+    EvaluationSetEntryDocument,
+    GoldenMetricsPassDocument,
+    GoldenMetricsPassStatus,
+)
+from ..services.evaluation_set_metrics import run_golden_metrics_pass
+
+log = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
+
+_ENTRIES_WITH_METRICS_EXPR = {
+    "$size": {
+        "$filter": {
+            "input": "$entries",
+            "as": "entry",
+            "cond": {"$ne": ["$$entry.golden_metrics", None]},
+        }
+    }
+}
+
+
+def _golden_metrics_status(document: dict) -> GoldenMetricsPassStatus | None:
+    """None both for a set imported before this field existed and for one Mongo omitted from
+    a $project because the field was never set — same meaning either way."""
+    golden_metrics_pass = document.get("golden_metrics_pass")
+    return golden_metrics_pass["status"] if golden_metrics_pass else None
 
 
 async def find_evaluation_set_or_404(set_id: str, projection: dict | None = None) -> dict:
@@ -47,6 +74,7 @@ async def find_evaluation_set_or_404(set_id: str, projection: dict | None = None
 )
 async def create_evaluation_set(
     payload: EvaluationSetImportRequest,
+    background_tasks: BackgroundTasks,
 ) -> EvaluationSetCreateResponse:
     collection = get_evaluation_sets_collection()
     created_at = datetime.now(UTC)
@@ -62,18 +90,29 @@ async def create_evaluation_set(
         )
         for entry in payload.entries
     ]
+    needs_golden_metrics_pass = payload.compute_golden_metrics and any(
+        entry.golden_metrics is None for entry in entries
+    )
 
     document = EvaluationSetDocument(
         name=payload.name,
         language=payload.language,
         created_at=created_at,
         entries=entries,
+        golden_metrics_pass=GoldenMetricsPassDocument(
+            status="pending" if needs_golden_metrics_pass else "skipped",
+            heartbeat_at=created_at,
+        ),
     )
 
     result = await collection.insert_one(document.model_dump())
+    evaluation_set_id = str(result.inserted_id)
+
+    if needs_golden_metrics_pass:
+        background_tasks.add_task(run_golden_metrics_pass, evaluation_set_id)
 
     return EvaluationSetCreateResponse(
-        evaluation_set_id=str(result.inserted_id),
+        evaluation_set_id=evaluation_set_id,
         name=payload.name,
         language=payload.language,
         entry_count=len(entries),
@@ -93,7 +132,9 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
                     "name": 1,
                     "language": 1,
                     "created_at": 1,
+                    "golden_metrics_pass": 1,
                     "entry_count": {"$size": "$entries"},
+                    "entries_with_metrics": _ENTRIES_WITH_METRICS_EXPR,
                 }
             },
         ]
@@ -112,6 +153,8 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
             name=doc["name"],
             language=doc["language"],
             entry_count=doc["entry_count"],
+            entries_with_metrics=doc["entries_with_metrics"],
+            golden_metrics_status=_golden_metrics_status(doc),
             run_count=run_counts.get(str(doc["_id"]), 0),
             created_at=doc["created_at"],
         )
@@ -161,37 +204,81 @@ async def get_evaluation_set_entry_input_text(
     )
 
 
+@router.get(
+    "/evaluation-sets/{set_id}/golden-metrics",
+    response_model=GoldenMetricsPassResponse,
+)
+async def get_golden_metrics_pass(set_id: str) -> GoldenMetricsPassResponse:
+    """Progress only — no metric values, so this is cheap to poll."""
+    documents = (
+        await get_evaluation_sets_collection()
+        .aggregate(
+            [
+                {"$match": {"_id": ObjectId(set_id)}},
+                {
+                    "$project": {
+                        "golden_metrics_pass": 1,
+                        "entry_count": {"$size": "$entries"},
+                        "entries_with_metrics": _ENTRIES_WITH_METRICS_EXPR,
+                    }
+                },
+            ]
+        )
+        .to_list(length=1)
+    )
+    if not documents:
+        raise HTTPException(status_code=404, detail="Evaluation set not found")
+
+    document = documents[0]
+    golden_metrics_pass = document.get("golden_metrics_pass")
+    return GoldenMetricsPassResponse(
+        status=_golden_metrics_status(document),
+        entry_count=document["entry_count"],
+        entries_with_metrics=document["entries_with_metrics"],
+        started_at=golden_metrics_pass["started_at"] if golden_metrics_pass else None,
+        finished_at=golden_metrics_pass["finished_at"] if golden_metrics_pass else None,
+        error=golden_metrics_pass["error"] if golden_metrics_pass else None,
+    )
+
+
 @router.post(
     "/evaluation-sets/{set_id}/golden-metrics",
-    response_model=GoldenMetricsBackfillResponse,
+    response_model=GoldenMetricsPassQueuedResponse,
     dependencies=[Depends(require_auth)],
 )
-async def evaluate_missing_golden_metrics(set_id: str) -> GoldenMetricsBackfillResponse:
-    document = await find_evaluation_set_or_404(set_id)
-    entries = document["entries"]
-    updated_count = 0
+async def queue_golden_metrics_pass(
+    set_id: str,
+    background_tasks: BackgroundTasks,
+) -> GoldenMetricsPassQueuedResponse:
+    document = await find_evaluation_set_or_404(set_id, {"golden_metrics_pass": 1})
+    golden_metrics_pass = document.get("golden_metrics_pass")
 
-    for entry in entries:
-        golden_metrics = entry.get("golden_metrics")
-        if golden_metrics is not None and "char_count" in golden_metrics.get("source", {}):
-            continue
-
-        entry["golden_metrics"] = await build_golden_metrics(
-            input_text=entry["input_text"],
-            golden_summary=entry["golden_summary"],
-        )
-        updated_count += 1
+    if golden_metrics_pass and golden_metrics_pass["status"] == "completed":
+        raise HTTPException(status_code=409, detail="Golden metrics already computed")
+    if golden_metrics_pass and golden_metrics_pass["status"] == "skipped":
+        raise HTTPException(status_code=409, detail="Golden metrics were skipped at import")
+    if (
+        golden_metrics_pass
+        and golden_metrics_pass["status"] in {"pending", "running"}
+        and golden_metrics_pass["heartbeat_at"] >= stale_work_cutoff()
+    ):
+        raise HTTPException(status_code=409, detail="Golden metrics pass is already running")
 
     await get_evaluation_sets_collection().update_one(
-        {"_id": document["_id"]},
-        {"$set": {"entries": entries}},
+        {"_id": ObjectId(set_id)},
+        {
+            "$set": {
+                "golden_metrics_pass.status": "pending",
+                "golden_metrics_pass.heartbeat_at": datetime.now(UTC),
+                "golden_metrics_pass.resume_attempts": 0,
+                "golden_metrics_pass.error": None,
+            }
+        },
     )
+    background_tasks.add_task(run_golden_metrics_pass, set_id)
+    log.info("golden metrics pass queued", set_id=set_id)
 
-    return GoldenMetricsBackfillResponse(
-        status="ok",
-        updated_entries=updated_count,
-        total_entries=len(entries),
-    )
+    return GoldenMetricsPassQueuedResponse(status="queued", evaluation_set_id=set_id)
 
 
 @router.delete(

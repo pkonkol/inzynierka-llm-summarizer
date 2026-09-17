@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { errorText, getToken } from "../api/client";
 import {
   createEvaluationRun,
   deleteEvaluationRun,
   deleteEvaluationSet,
-  evaluateMissingGoldenMetrics,
   exportEvaluationSet,
   getEvaluationSet,
+  getGoldenMetricsPass,
   listEvaluationRuns,
+  queueGoldenMetricsPass,
 } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DeepevalItems } from "../components/DeepevalItems";
+import { useFlash } from "../components/FlashProvider";
 import { InputTextSection } from "../components/InputTextSection";
 import { MetricsSection } from "../components/MetricsSection";
 import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
 import {
+  MatchReferenceCheckbox,
   PresetSelect,
   ProcessingStrategySelect,
   SummarySpecFields,
@@ -32,9 +36,11 @@ import type {
   EvaluationRunCreateRequest,
   EvaluationRunListItemResponse,
   EvaluationSetEntryResponse,
+  EvaluationSetListItemResponse,
 } from "../types/api.generated";
 import { downloadJson } from "../utils/download";
 import { formatDateMinute } from "../utils/format";
+import { logger } from "../utils/logger";
 import { navigateTo } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useConfirmDelete } from "../utils/useConfirmDelete";
@@ -45,14 +51,36 @@ import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
 
+type GoldenMetricsPassStatus = NonNullable<EvaluationSetListItemResponse["golden_metrics_status"]>;
+
+// The set's own status table (backend routers/evaluation_sets.py): only these statuses ever need
+// a fresh queue attempt on page load — "pending"/"completed"/"skipped" are left alone. "running"
+// is included because the frontend cannot tell a fresh pass from a stalled one; the backend's own
+// staleness check (409 otherwise) is what actually decides.
+const RESUMABLE_GOLDEN_METRICS_STATUSES: (GoldenMetricsPassStatus | null)[] = [
+  null,
+  "failed",
+  "running",
+];
+
+const GOLDEN_METRICS_STATUS_LABEL: Record<GoldenMetricsPassStatus, string> = {
+  pending: "w kolejce",
+  running: "liczenie w toku",
+  completed: "gotowe",
+  failed: "błąd",
+  skipped: "pominięte przy imporcie",
+};
+
 function EntryCard({
   index,
   entry,
   setId,
+  goldenMetricsStatus,
 }: {
   index: number;
   entry: EvaluationSetEntryResponse;
   setId: string;
+  goldenMetricsStatus: GoldenMetricsPassStatus | null;
 }) {
   return (
     <div className="grid gap-3 border-t border-panel-border p-4">
@@ -88,7 +116,13 @@ function EntryCard({
                 ) : null}
               </div>
             ) : (
-              <p className="p-3 text-muted">Metryki jeszcze nie policzone.</p>
+              <p className="p-3 text-muted">
+                Metryki wzorcowe:{" "}
+                {goldenMetricsStatus
+                  ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
+                  : "jeszcze nie policzone"}
+                .
+              </p>
             ),
           },
         ]}
@@ -139,6 +173,7 @@ type Props = {
 };
 
 export function EvaluationSetPage({ setId }: Props) {
+  const showFlash = useFlash();
   const setDetail = useReloadableResource(
     () => getEvaluationSet(setId),
     setId,
@@ -149,9 +184,58 @@ export function EvaluationSetPage({ setId }: Props) {
     setId,
     "Nie udało się wczytać przebiegów",
   );
+  const goldenMetricsPass = useReloadableResource(
+    () => getGoldenMetricsPass(setId),
+    setId,
+    "Nie udało się pobrać statusu metryk wzorcowych",
+  );
   const selectedSet = setDetail.data;
   // null means "no answer yet" — a real third state, not a missing value.
   const existingRuns = runs.data ?? [];
+  const goldenMetricsStatus = goldenMetricsPass.data?.status ?? null;
+  const isGoldenMetricsPassInProgress =
+    goldenMetricsStatus === "pending" || goldenMetricsStatus === "running";
+
+  useListPolling(goldenMetricsPass.reload, isGoldenMetricsPassInProgress);
+
+  // Announce the pass leaving pending/running, the same shape as the run-status effect below.
+  const previousGoldenMetricsStatus = useRef<GoldenMetricsPassStatus | null>(null);
+  useEffect(() => {
+    const previousStatus = previousGoldenMetricsStatus.current;
+    previousGoldenMetricsStatus.current = goldenMetricsStatus;
+    if (
+      previousStatus &&
+      previousStatus !== goldenMetricsStatus &&
+      !isGoldenMetricsPassInProgress
+    ) {
+      showFlash(
+        `Metryki wzorcowe: ${GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus ?? "failed"]}.`,
+      );
+      void setDetail.reload();
+    }
+  }, [goldenMetricsStatus, isGoldenMetricsPassInProgress, setDetail.reload, showFlash]);
+
+  // Once per mount: a set left "pending"/"running" by a process that died, or "failed", gets
+  // queued again without the reader having to click anything. The backend's own staleness and
+  // status checks (409) are what actually decide whether this attempt does anything.
+  const hasAttemptedGoldenMetricsResume = useRef(false);
+  useEffect(() => {
+    if (hasAttemptedGoldenMetricsResume.current) return;
+    if (goldenMetricsPass.data === null) return; // wait for the first answer
+    hasAttemptedGoldenMetricsResume.current = true;
+    if (getToken() === null) return;
+    if (!RESUMABLE_GOLDEN_METRICS_STATUSES.includes(goldenMetricsStatus)) return;
+
+    queueGoldenMetricsPass(setId)
+      .then(() => goldenMetricsPass.reload())
+      .catch((error: unknown) => {
+        // A 409 (already running/completed/skipped) is the expected outcome most of the time —
+        // this is a background nicety, not a user action, so it never surfaces as a flash.
+        logger.debug("golden metrics pass resume attempt did not start a new pass", {
+          error: errorText(error),
+        });
+      });
+  }, [goldenMetricsPass.data, goldenMetricsPass.reload, goldenMetricsStatus, setId]);
 
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const {
@@ -180,13 +264,6 @@ export function EvaluationSetPage({ setId }: Props) {
       successMessage: (setName) => `Wyeksportowano EvaluationSet: ${setName}.`,
     },
   );
-
-  const evaluateMetrics = useAsyncAction(() => evaluateMissingGoldenMetrics(setId), {
-    errorPrefix: "Nie udało się policzyć metryk wzorca",
-    successMessage: (result) =>
-      `Policzono metryki wzorcowe dla ${result.updated_entries} z ${result.total_entries} wpisów.`,
-    onSuccess: () => setDetail.reload(),
-  });
 
   const submitNewRun = useAsyncAction(
     () => {
@@ -247,7 +324,13 @@ export function EvaluationSetPage({ setId }: Props) {
     entriesSection = (
       <div className="grid">
         {selectedSet.entries.map((entry, index) => (
-          <EntryCard key={entry.entry_id} index={index} entry={entry} setId={setId} />
+          <EntryCard
+            key={entry.entry_id}
+            index={index}
+            entry={entry}
+            setId={setId}
+            goldenMetricsStatus={goldenMetricsStatus}
+          />
         ))}
       </div>
     );
@@ -288,14 +371,6 @@ export function EvaluationSetPage({ setId }: Props) {
 
           <div className="flex gap-2">
             <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void evaluateMetrics.run()}
-              disabled={!selectedSet || evaluateMetrics.isPending}
-            >
-              {evaluateMetrics.isPending ? "Liczenie..." : "Policz metryki"}
-            </Button>
-            <Button
               size="sm"
               onClick={() => selectedSet && void exportSet.run(selectedSet.name)}
               disabled={!selectedSet || exportSet.isPending}
@@ -310,7 +385,40 @@ export function EvaluationSetPage({ setId }: Props) {
 
         {setDetail.errorMessage ? <Alert tone="danger">{setDetail.errorMessage}</Alert> : null}
         {runs.errorMessage ? <Alert tone="danger">{runs.errorMessage}</Alert> : null}
+        {goldenMetricsPass.errorMessage ? (
+          <Alert tone="danger">{goldenMetricsPass.errorMessage}</Alert>
+        ) : null}
         {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
+
+        {selectedSet ? (
+          <Alert
+            tone={
+              goldenMetricsStatus === "failed"
+                ? "danger"
+                : goldenMetricsStatus === "completed" || goldenMetricsStatus === "skipped"
+                  ? "success"
+                  : "warning"
+            }
+            aria-live="polite"
+          >
+            {goldenMetricsPass.data ? (
+              <>
+                Metryki wzorcowe:{" "}
+                {goldenMetricsStatus
+                  ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
+                  : "jeszcze nie policzone"}
+                {" · "}
+                {goldenMetricsPass.data.entries_with_metrics} / {goldenMetricsPass.data.entry_count}{" "}
+                wpisów
+                {goldenMetricsPass.data.error ? (
+                  <span className="block">{goldenMetricsPass.data.error}</span>
+                ) : null}
+              </>
+            ) : (
+              "Sprawdzanie statusu metryk wzorcowych…"
+            )}
+          </Alert>
+        ) : null}
 
         {selectedSet ? (
           <Panel as="section" padding="sm" className="grid gap-3">
@@ -353,6 +461,11 @@ export function EvaluationSetPage({ setId }: Props) {
               <PresetSelect
                 form={newRunSpecForm}
                 presets={newRunPresets}
+                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+              />
+
+              <MatchReferenceCheckbox
+                form={newRunSpecForm}
                 disabled={submitNewRun.isPending || isLoadingNewRunOptions}
               />
             </div>

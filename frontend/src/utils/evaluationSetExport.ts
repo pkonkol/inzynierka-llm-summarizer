@@ -33,10 +33,12 @@ export function buildExportPayload(
 ): EvaluationSetImportRequest {
   return {
     name: `summarization_output:${sourceUrl}`,
-    // TODO: a job summarised in another language still exports as "en". The value is in
-    // prompt_params.language; resolving this means promoting it to a field on JobDocument.
-    language: "en",
+    // All exported jobs share one source_url and one summarization session, so one language.
+    language: jobs[0].language,
     entries: jobs.map((job) => toEntry(job, sourceUrl)),
+    // Each entry already carries golden_metrics computed from the job's own statistics, so this
+    // has nothing left to compute — set for consistency with the schema's actual default.
+    compute_golden_metrics: true,
   };
 }
 

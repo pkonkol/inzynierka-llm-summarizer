@@ -89,6 +89,36 @@ export function ProcessingStrategySelect({
   );
 }
 
+interface MatchReferenceCheckboxProps {
+  form: SummarySpecForm;
+  disabled: boolean;
+}
+
+// Placed by the caller in the same row as the other always-editable controls — it decides
+// whether the length row below even renders, so it belongs next to what it controls, not on
+// its own line.
+export function MatchReferenceCheckbox({ form, disabled }: MatchReferenceCheckboxProps) {
+  if (!form.offerMatchReference) return null;
+  return (
+    <label className="flex h-control shrink-0 items-center gap-2 text-muted">
+      <input
+        type="checkbox"
+        checked={form.matchReference}
+        onChange={(event) => form.setMatchReference(event.target.checked)}
+        disabled={disabled}
+        className="h-4 w-4 border border-input-border"
+      />
+      Wyrównaj długość{" "}
+      <span
+        className="cursor-help"
+        title="Docelowa liczba słów i zdań brana z każdego złotego podsumowania z osobna."
+      >
+        ⓘ
+      </span>
+    </label>
+  );
+}
+
 interface SummarySpecFieldsProps {
   form: SummarySpecForm;
   disabled: boolean;
@@ -109,25 +139,6 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
 
   return (
     <div className="grid gap-3">
-      {form.offerMatchReference ? (
-        <label className="flex items-center gap-2 text-muted">
-          <input
-            type="checkbox"
-            checked={form.matchReference}
-            onChange={(event) => form.setMatchReference(event.target.checked)}
-            disabled={disabled}
-            className="h-4 w-4 border border-input-border"
-          />
-          Wyrównaj długość{" "}
-          <span
-            className="cursor-help"
-            title="Docelowa liczba słów i zdań brana z każdego złotego podsumowania z osobna."
-          >
-            ⓘ
-          </span>
-        </label>
-      ) : null}
-
       {spec ? (
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
           <div className="grid shrink-0 gap-2">

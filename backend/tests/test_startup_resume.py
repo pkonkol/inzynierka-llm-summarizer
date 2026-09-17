@@ -29,6 +29,14 @@ def jobs_collection(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return collection
 
 
+@pytest.fixture
+def sets_collection(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    collection = AsyncMock()
+    collection.find = MagicMock(return_value=_empty_cursor())
+    monkeypatch.setattr(startup_resume, "get_evaluation_sets_collection", lambda: collection)
+    return collection
+
+
 async def test_claim_succeeds_only_when_the_conditional_update_matched(
     runs_collection: AsyncMock,
 ) -> None:
@@ -66,7 +74,7 @@ async def test_a_manual_resume_lifts_the_cap_but_keeps_the_heartbeat_check(
 
 
 async def test_startup_does_not_wait_out_a_staleness_window(
-    runs_collection: AsyncMock, jobs_collection: AsyncMock
+    runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
     await startup_resume.resume_interrupted_work()
 
@@ -78,9 +86,19 @@ async def test_startup_does_not_wait_out_a_staleness_window(
 
 
 async def test_jobs_predating_the_stored_language_are_not_restarted(
-    runs_collection: AsyncMock, jobs_collection: AsyncMock
+    runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
     await startup_resume.resume_interrupted_work()
 
     job_query = jobs_collection.find.call_args.args[0]
     assert job_query["language"] == {"$exists": True}
+
+
+async def test_golden_metrics_passes_are_resumed_by_attempt_budget_not_heartbeat(
+    runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
+) -> None:
+    await startup_resume.resume_interrupted_work()
+
+    set_query = sets_collection.find.call_args.args[0]
+    assert set_query["golden_metrics_pass.status"] == {"$in": ["pending", "running"]}
+    assert set_query["golden_metrics_pass.resume_attempts"] == {"$lt": settings.max_resume_attempts}

@@ -333,10 +333,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Golden Metrics Pass
+         * @description Progress only — no metric values, so this is cheap to poll.
+         */
+        get: operations["get_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_get"];
         put?: never;
-        /** Evaluate Missing Golden Metrics */
-        post: operations["evaluate_missing_golden_metrics_api_v1_research_evaluation_sets__set_id__golden_metrics_post"];
+        /** Queue Golden Metrics Pass */
+        post: operations["queue_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -794,6 +798,11 @@ export interface components {
             language: string;
             /** Entries */
             entries: components["schemas"]["EvaluationSetEntryImport-Input"][];
+            /**
+             * Compute Golden Metrics
+             * @default true
+             */
+            compute_golden_metrics: boolean;
         };
         /** EvaluationSetListItemResponse */
         EvaluationSetListItemResponse: {
@@ -812,6 +821,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Golden Metrics Status */
+            golden_metrics_status: ("skipped" | "pending" | "running" | "completed" | "failed") | null;
+            /** Entries With Metrics */
+            entries_with_metrics: number;
         };
         /** ExplicitLength */
         ExplicitLength: {
@@ -832,17 +845,33 @@ export interface components {
             /** Deepeval */
             deepeval: components["schemas"]["DeepevalItem"][];
         };
-        /** GoldenMetricsBackfillResponse */
-        GoldenMetricsBackfillResponse: {
+        /** GoldenMetricsPassQueuedResponse */
+        GoldenMetricsPassQueuedResponse: {
             /**
              * Status
              * @constant
              */
-            status: "ok";
-            /** Updated Entries */
-            updated_entries: number;
-            /** Total Entries */
-            total_entries: number;
+            status: "queued";
+            /** Evaluation Set Id */
+            evaluation_set_id: string;
+        };
+        /**
+         * GoldenMetricsPassResponse
+         * @description GET-only progress view — no metric values, just enough to render a progress bar.
+         */
+        GoldenMetricsPassResponse: {
+            /** Status */
+            status: ("skipped" | "pending" | "running" | "completed" | "failed") | null;
+            /** Entry Count */
+            entry_count: number;
+            /** Entries With Metrics */
+            entries_with_metrics: number;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Error */
+            error: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -957,6 +986,8 @@ export interface components {
              */
             processing_strategy: "direct" | "extract_then_synthesize";
             summary_spec: components["schemas"]["SummarySpec"];
+            /** Language */
+            language: string;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
@@ -1238,7 +1269,8 @@ export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImp
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
 export type GoldenMetrics = components['schemas']['GoldenMetrics'];
-export type GoldenMetricsBackfillResponse = components['schemas']['GoldenMetricsBackfillResponse'];
+export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];
+export type GoldenMetricsPassResponse = components['schemas']['GoldenMetricsPassResponse'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type JobCreateRequest = components['schemas']['JobCreateRequest'];
 export type JobCreatedResponse = components['schemas']['JobCreatedResponse'];
@@ -1836,7 +1868,7 @@ export interface operations {
             };
         };
     };
-    evaluate_missing_golden_metrics_api_v1_research_evaluation_sets__set_id__golden_metrics_post: {
+    get_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1853,7 +1885,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GoldenMetricsBackfillResponse"];
+                    "application/json": components["schemas"]["GoldenMetricsPassResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    queue_golden_metrics_pass_api_v1_research_evaluation_sets__set_id__golden_metrics_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                set_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoldenMetricsPassQueuedResponse"];
                 };
             };
             /** @description Validation Error */

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from .base import ApiModel
+from .evaluation_set_db import GoldenMetricsPassStatus
 from .shared_metrics import GoldenMetrics
 
 
@@ -19,6 +20,9 @@ class EvaluationSetImportRequest(ApiModel):
     name: str
     language: str = "en"
     entries: list[EvaluationSetEntryImport]
+    # Judge calls cost money and time, so importing raw text without golden metrics yet is a
+    # real use case — this is how that request opts out of the automatic background pass.
+    compute_golden_metrics: bool = True
 
 
 class EvaluationSetEntryResponse(ApiModel):
@@ -43,6 +47,8 @@ class EvaluationSetListItemResponse(ApiModel):
     entry_count: int
     run_count: int
     created_at: datetime
+    golden_metrics_status: GoldenMetricsPassStatus | None = None
+    entries_with_metrics: int
 
 
 class EvaluationSetCreateResponse(ApiModel):
@@ -75,7 +81,17 @@ class EvaluationSetDeletedResponse(ApiModel):
     deleted_runs: int
 
 
-class GoldenMetricsBackfillResponse(ApiModel):
-    status: Literal["ok"]
-    updated_entries: int
-    total_entries: int
+class GoldenMetricsPassResponse(ApiModel):
+    """GET-only progress view — no metric values, just enough to render a progress bar."""
+
+    status: GoldenMetricsPassStatus | None
+    entry_count: int
+    entries_with_metrics: int
+    started_at: datetime | None
+    finished_at: datetime | None
+    error: str | None
+
+
+class GoldenMetricsPassQueuedResponse(ApiModel):
+    status: Literal["queued"]
+    evaluation_set_id: str

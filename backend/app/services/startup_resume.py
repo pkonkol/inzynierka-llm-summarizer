@@ -19,8 +19,14 @@ from bson import ObjectId
 
 from ..core.background_work import spawn_tracked_task
 from ..core.config import settings
-from ..core.mongo import get_evaluation_runs_collection, get_jobs_collection, stale_work_cutoff
+from ..core.mongo import (
+    get_evaluation_runs_collection,
+    get_evaluation_sets_collection,
+    get_jobs_collection,
+    stale_work_cutoff,
+)
 from .evaluation_runner import run_evaluation_batch
+from .evaluation_set_metrics import run_golden_metrics_pass
 from .summarization_runner import run_summarization_job
 
 log = structlog.get_logger(__name__)
@@ -29,6 +35,12 @@ _UNFINISHED = {"status": {"$in": ["pending", "running"]}}
 _RESUMABLE = {**_UNFINISHED, "resume_attempts": {"$lt": settings.max_resume_attempts}}
 
 _JOB_RESUME_FIELDS = {"job_id": 1}
+
+_UNFINISHED_GOLDEN_METRICS = {"golden_metrics_pass.status": {"$in": ["pending", "running"]}}
+_RESUMABLE_GOLDEN_METRICS = {
+    **_UNFINISHED_GOLDEN_METRICS,
+    "golden_metrics_pass.resume_attempts": {"$lt": settings.max_resume_attempts},
+}
 
 
 def _claim_update(*, reset_attempts: bool) -> dict[str, Any]:
@@ -86,4 +98,23 @@ async def resume_interrupted_work() -> None:
         spawn_tracked_task(run_summarization_job(job["job_id"]), kind="summarization_job")
         resumed_jobs += 1
 
-    log.info("interrupted work resumed", resumed_runs=resumed_runs, resumed_jobs=resumed_jobs)
+    resumed_golden_metrics_passes = 0
+    sets = get_evaluation_sets_collection()
+    async for evaluation_set in sets.find(_RESUMABLE_GOLDEN_METRICS, {"_id": 1}):
+        set_id = str(evaluation_set["_id"])
+        await sets.update_one(
+            {"_id": evaluation_set["_id"]},
+            {
+                "$set": {"golden_metrics_pass.heartbeat_at": datetime.now(UTC)},
+                "$inc": {"golden_metrics_pass.resume_attempts": 1},
+            },
+        )
+        spawn_tracked_task(run_golden_metrics_pass(set_id), kind="golden_metrics_pass")
+        resumed_golden_metrics_passes += 1
+
+    log.info(
+        "interrupted work resumed",
+        resumed_runs=resumed_runs,
+        resumed_jobs=resumed_jobs,
+        resumed_golden_metrics_passes=resumed_golden_metrics_passes,
+    )

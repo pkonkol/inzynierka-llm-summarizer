@@ -7,7 +7,7 @@ import { Button, buttonClasses } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Field";
 import { PageShell } from "../components/ui/PageShell";
 import type { EvaluationSetImportRequest } from "../types/api.generated";
-import { EVALUATION_SETS_PATH, navigateTo } from "../utils/routing";
+import { evaluationSetPath, navigateTo } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 
@@ -32,9 +32,14 @@ const JSON_PREVIEW = {
   valid: { status: "poprawny", className: "text-success", isValid: true },
 };
 
+// Three GEval specs run per entry (see services/evaluation_set_metrics.py) — shown before the
+// import starts, since that's the cost the checkbox below is trading off.
+const JUDGE_SPECS_PER_ENTRY = 3;
+
 export function EvaluationImportPage() {
   useDocumentTitle("Import zbioru");
   const [rawJson, setRawJson] = useState("");
+  const [computeGoldenMetrics, setComputeGoldenMetrics] = useState(true);
   const showFlash = useFlash();
 
   // Only the four values the strip shows: holding the parsed graph here would pin a
@@ -57,12 +62,16 @@ export function EvaluationImportPage() {
   // Parsing inside the action keeps the dataset out of the memo cell and lets a malformed
   // payload surface as a failure flash like any other.
   const importSet = useAsyncAction(
-    async (json: string) => createEvaluationSet(JSON.parse(json) as EvaluationSetImportRequest),
+    async (json: string) => {
+      const parsed = JSON.parse(json) as EvaluationSetImportRequest;
+      return createEvaluationSet({ ...parsed, compute_golden_metrics: computeGoldenMetrics });
+    },
     {
       errorPrefix: "Nie udało się zaimportować zbioru",
       successMessage: (created) =>
-        `Zaimportowano zbiór: ${created.name} (${created.entry_count} wpisów).`,
-      onSuccess: () => navigateTo(EVALUATION_SETS_PATH),
+        `Zaimportowano zbiór: ${created.name} (${created.entry_count} wpisów).` +
+        (computeGoldenMetrics ? " Metryki wzorcowe liczą się w tle." : ""),
+      onSuccess: (created) => navigateTo(evaluationSetPath(created.evaluation_set_id)),
       keepPendingOnSuccess: true,
     },
   );
@@ -107,11 +116,24 @@ export function EvaluationImportPage() {
           </Button>
         </div>
 
+        <label className="flex items-center gap-2 text-muted">
+          <input
+            type="checkbox"
+            checked={computeGoldenMetrics}
+            onChange={(event) => setComputeGoldenMetrics(event.target.checked)}
+            className="h-4 w-4 border border-input-border"
+          />
+          Policz metryki wzorcowe
+        </label>
+
         <div className="flex flex-wrap gap-x-4 gap-y-1 border border-panel-border bg-panel-solid px-3 py-2">
           <span className={preview.className}>JSON: {preview.status}</span>
           <span>Nazwa: {preview.name}</span>
           <span>Język: {preview.language}</span>
           <span>Wpisów: {preview.entryCount}</span>
+          {computeGoldenMetrics && typeof preview.entryCount === "number" ? (
+            <span>Wywołania sędziego: {JUDGE_SPECS_PER_ENTRY * preview.entryCount}</span>
+          ) : null}
         </div>
 
         {/* <Collapsible label="Wklej JSON ręcznie"> */}

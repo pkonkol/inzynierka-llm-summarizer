@@ -84,6 +84,9 @@ async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
 async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index("name")
     await collection.create_index([("created_at", -1)])
+    await collection.create_index(
+        [("golden_metrics_pass.status", 1), ("golden_metrics_pass.heartbeat_at", 1)]
+    )
 
 
 async def ensure_evaluation_runs_indexes(collection: AsyncIOMotorCollection) -> None:
@@ -152,3 +155,19 @@ async def cleanup_stale_evaluation_runs() -> int:
     )
     legacy = await runs_collection.update_many({**unfinished, **_MISSING_HEARTBEAT}, update)
     return result.modified_count + legacy.modified_count
+
+
+async def cleanup_stale_golden_metrics_passes() -> int:
+    sets_collection = get_evaluation_sets_collection()
+    unfinished = {"golden_metrics_pass.status": {"$in": ["pending", "running"]}}
+    result = await sets_collection.update_many(
+        {**unfinished, "golden_metrics_pass.heartbeat_at": {"$lt": stale_work_cutoff()}},
+        {
+            "$set": {
+                "golden_metrics_pass.status": "failed",
+                "golden_metrics_pass.finished_at": datetime.now(UTC),
+                "golden_metrics_pass.error": "Golden metrics pass stopped responding",
+            }
+        },
+    )
+    return result.modified_count

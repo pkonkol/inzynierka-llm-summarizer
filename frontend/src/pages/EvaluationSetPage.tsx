@@ -15,10 +15,13 @@ import { InputTextSection } from "../components/InputTextSection";
 import { MetricsSection } from "../components/MetricsSection";
 import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
-import { SummarySpecFields } from "../components/SummarySpecFields";
+import {
+  PresetSelect,
+  ProcessingStrategySelect,
+  SummarySpecFields,
+} from "../components/SummarySpecFields";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { cn } from "../components/ui/cn";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { FieldLabel, Input, ModelOptions, Select } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
@@ -41,9 +44,6 @@ import { useReloadableResource } from "../utils/useReloadableResource";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
-
-// One row: model, delay and the submit button; the summary spec fields sit below it.
-const NEW_RUN_COLUMNS = "sm:grid-cols-[minmax(12rem,1fr)_7rem_auto]";
 
 function EntryCard({
   index,
@@ -316,49 +316,61 @@ export function EvaluationSetPage({ setId }: Props) {
           <Panel as="section" padding="sm" className="grid gap-3">
             <h2>Nowy przebieg</h2>
 
-            <div className={cn("grid gap-3 sm:items-end", NEW_RUN_COLUMNS)}>
-              <div className="grid gap-2">
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <div className="grid shrink-0 gap-2">
                 <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
                 <Select
                   id="new-run-model"
                   value={newRunSelectedModel}
                   onChange={(event) => setNewRunSelectedModel(event.target.value)}
                   disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+                  className="max-w-56 truncate"
                 >
                   <ModelOptions models={newRunAvailableModels} />
                 </Select>
               </div>
 
-              <div className="grid gap-2">
+              <ProcessingStrategySelect
+                processingStrategies={newRunAvailableStrategies}
+                selectedProcessingStrategy={newRunProcessingStrategy}
+                onProcessingStrategyChange={setNewRunProcessingStrategy}
+                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+              />
+
+              <div className="grid shrink-0 gap-2">
                 <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
                 <Input
                   id="new-run-delay"
                   type="number"
                   min={0}
                   step={100}
+                  className="max-w-24"
                   value={newRunDelayMs}
                   onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
                 />
               </div>
 
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => void submitNewRun.run()}
-                disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
-              >
-                {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
-              </Button>
+              <PresetSelect
+                form={newRunSpecForm}
+                presets={newRunPresets}
+                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+              />
             </div>
 
             <SummarySpecFields
               form={newRunSpecForm}
-              presets={newRunPresets}
-              processingStrategies={newRunAvailableStrategies}
-              selectedProcessingStrategy={newRunProcessingStrategy}
-              onProcessingStrategyChange={setNewRunProcessingStrategy}
               disabled={submitNewRun.isPending || isLoadingNewRunOptions}
             />
+
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => void submitNewRun.run()}
+              disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
+              className="justify-self-start"
+            >
+              {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
+            </Button>
           </Panel>
         ) : null}
 

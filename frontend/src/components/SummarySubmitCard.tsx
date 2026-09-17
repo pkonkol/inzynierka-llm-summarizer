@@ -5,7 +5,7 @@ import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { splitProviderModel } from "../utils/utils";
 import { detectSourceMode, SourceField } from "./SourceField";
-import { SummarySpecFields } from "./SummarySpecFields";
+import { PresetSelect, ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
 import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
@@ -110,10 +110,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
         onSubmit={handleSubmit}
       >
         <div className="grid gap-3">
-          <p className="max-w-full text-muted">
-            Podaj adres artykułu albo wklej gotowy tekst i wybierz model — system wygeneruje
-            podsumowanie i policzy metryki jakości.
-          </p>
           <SourceField
             content={content}
             onContentChange={setContent}
@@ -123,21 +119,29 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="grid gap-2">
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+          <div className="grid shrink-0 gap-2">
             <FieldLabel htmlFor="model-select">Model</FieldLabel>
             <Select
               id="model-select"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={isSubmitting || isLoadingMeta}
+              className="max-w-56 truncate"
             >
               <ModelOptions models={models} />
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <FieldLabel htmlFor="language-select">Język podsumowania</FieldLabel>
+          <ProcessingStrategySelect
+            processingStrategies={processingStrategies}
+            selectedProcessingStrategy={selectedProcessingStrategy}
+            onProcessingStrategyChange={setSelectedProcessingStrategy}
+            disabled={isSubmitting || isLoadingMeta}
+          />
+
+          <div className="grid shrink-0 gap-2">
+            <FieldLabel htmlFor="language-select">Język</FieldLabel>
             <Select
               id="language-select"
               value={selectedLanguage}
@@ -146,13 +150,13 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             >
               {languages.map((lang) => (
                 <option key={lang} value={lang}>
-                  {lang === "auto" ? "Automatyczny (jak źródło)" : lang.toUpperCase()}
+                  {lang === "auto" ? "auto" : lang.toUpperCase()}
                 </option>
               ))}
             </Select>
           </div>
 
-          <label className="flex items-center gap-2 self-end text-muted sm:h-control">
+          <label className="flex h-control shrink-0 items-center gap-2 text-muted">
             <input
               type="checkbox"
               checked={runDeepeval}
@@ -162,16 +166,15 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             />
             Policz G-Eval
           </label>
+
+          <PresetSelect
+            form={specForm}
+            presets={presets}
+            disabled={isSubmitting || isLoadingMeta}
+          />
         </div>
 
-        <SummarySpecFields
-          form={specForm}
-          presets={presets}
-          processingStrategies={processingStrategies}
-          selectedProcessingStrategy={selectedProcessingStrategy}
-          onProcessingStrategyChange={setSelectedProcessingStrategy}
-          disabled={isSubmitting || isLoadingMeta}
-        />
+        <SummarySpecFields form={specForm} disabled={isSubmitting || isLoadingMeta} />
 
         {error || optionsError ? <p className="text-danger">{error ?? optionsError}</p> : null}
 
@@ -182,7 +185,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
           disabled={isSubmitting || isLoadingMeta}
           className="justify-self-start"
         >
-          {isSubmitting ? "Przetwarzanie..." : "Start"}
+          {isSubmitting ? "Przetwarzanie..." : "Podsumuj"}
         </Button>
       </form>
     </section>

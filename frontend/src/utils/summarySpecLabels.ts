@@ -18,7 +18,7 @@ export const OUTPUT_FORMAT_LABELS: Record<SummarySpec["output_format"], string> 
 };
 
 export const LENGTH_POLICY_LABELS: Record<NonNullable<SummarySpec["length"]>["policy"], string> = {
-  scaled_to_input: "Suwak gęstości (skaluje się z tekstem)",
+  scaled_to_input: "Suwak",
   explicit: "Ręcznie: słowa i zdania",
   match_reference: "Dopasowana do wzorca",
 };

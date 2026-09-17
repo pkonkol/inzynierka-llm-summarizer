@@ -115,7 +115,7 @@ export function EvaluationImportPage() {
         </div>
 
         {/* <Collapsible label="Wklej JSON ręcznie"> */}
-        <div className="grid gap-2 p-3">
+        <div className="grid gap-2">
           <Textarea
             id="import-json"
             value={rawJson}

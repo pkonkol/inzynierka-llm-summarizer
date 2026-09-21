@@ -72,7 +72,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
             golden_summary=run_entry["golden_summary"],
         )
         summary = await generate_summary(
-            input={"text": source_entry["input_text"], "title": source_entry["title"]},
+            input={"text": source_entry["input_text"]},
             source_url=source_entry["url"],
             model_name=run_doc["model_name"],
             model_provider=run_doc["model_provider"],

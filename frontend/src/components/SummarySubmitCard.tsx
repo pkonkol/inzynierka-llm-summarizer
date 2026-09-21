@@ -15,12 +15,12 @@ interface SummarySubmitCardProps {
   isSubmitting: boolean;
 }
 
-type SourcePayload = Pick<JobCreateRequest, "url" | "input_text" | "source_title">;
+type SourcePayload = Pick<JobCreateRequest, "url" | "input_text">;
 
-function buildSourcePayload(
-  content: string,
-  pastedTitle: string,
-): { payload: SourcePayload | null; error: string | null } {
+function buildSourcePayload(content: string): {
+  payload: SourcePayload | null;
+  error: string | null;
+} {
   if (detectSourceMode(content) === "url") {
     try {
       const parsed = new URL(content.trim());
@@ -35,16 +35,11 @@ function buildSourcePayload(
 
   if (!content.trim())
     return { payload: null, error: "Podaj adres artykułu albo wklej jego treść" };
-  if (!pastedTitle.trim()) return { payload: null, error: "Podaj tytuł" };
-  return {
-    payload: { source_title: pastedTitle.trim(), input_text: content },
-    error: null,
-  };
+  return { payload: { input_text: content }, error: null };
 }
 
 export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardProps) {
   const [content, setContent] = useState("");
-  const [pastedTitle, setPastedTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [runDeepeval, setRunDeepeval] = useState(false);
   const {
@@ -67,10 +62,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     event.preventDefault();
     setError(null);
 
-    const { payload: sourcePayload, error: validationError } = buildSourcePayload(
-      content,
-      pastedTitle,
-    );
+    const { payload: sourcePayload, error: validationError } = buildSourcePayload(content);
     if (!sourcePayload) {
       setError(validationError);
       return;
@@ -95,7 +87,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     });
     if (!isCreated) return;
     setContent("");
-    setPastedTitle("");
   };
 
   return (
@@ -110,13 +101,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
         onSubmit={handleSubmit}
       >
         <div className="grid gap-3">
-          <SourceField
-            content={content}
-            onContentChange={setContent}
-            pastedTitle={pastedTitle}
-            onPastedTitleChange={setPastedTitle}
-            disabled={isSubmitting}
-          />
+          <SourceField content={content} onContentChange={setContent} disabled={isSubmitting} />
         </div>
 
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">

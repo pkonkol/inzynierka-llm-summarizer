@@ -44,7 +44,6 @@ async def run(
     summary, key_takeaways = split_output(parsed)
 
     return LlmSummaryResult(
-        title=input["title"],
         summary=summary,
         key_takeaways=key_takeaways,
         output_format=spec.output_format,

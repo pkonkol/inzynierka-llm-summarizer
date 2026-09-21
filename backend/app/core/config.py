@@ -82,6 +82,10 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
     }
+    title_model: dict[str, str] = {
+        "model_provider": "gemini",
+        "model_name": "gemini-flash-latest",
+    }
     deepeval_timeout_seconds: int | None = None
     eval_max_concurrent_geval: int = 3
     blocking_work_max_threads: int = 5

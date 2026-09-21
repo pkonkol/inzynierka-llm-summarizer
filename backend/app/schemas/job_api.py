@@ -1,5 +1,6 @@
 # schemas/job_api.py — request/response shapes for /api/v1/jobs
 
+import re
 from datetime import datetime
 from typing import Any, Literal, cast
 
@@ -13,11 +14,18 @@ from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 
 JobStatusValue = Literal["pending", "running", "completed", "failed"]
 
-# Marks a job whose source_url carries a title rather than a fetchable address. HttpUrl only
-# ever accepts http/https, so this can never collide with a real scraped URL.
+# Marks a job whose source_url is a key derived from the pasted text rather than a fetchable
+# address. HttpUrl only ever accepts http/https, so this can never collide with a real scraped URL.
 MANUAL_SOURCE_PREFIX = "manual:"
 
 _MAX_PASTED_CHARS = 500_000  # ~125k tokens; leaves headroom under Mongo's 16 MB document limit
+_MAX_SOURCE_KEY_CHARS = 200
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s")
+
+
+def _first_sentence(text: str) -> str:
+    normalized = " ".join(text.split())
+    return _SENTENCE_END.split(normalized, maxsplit=1)[0][:_MAX_SOURCE_KEY_CHARS]
 
 
 class JobCreateRequest(ApiModel):
@@ -25,7 +33,6 @@ class JobCreateRequest(ApiModel):
     model_provider: str
     url: HttpUrl | None = None
     input_text: str | None = Field(default=None, min_length=1, max_length=_MAX_PASTED_CHARS)
-    source_title: str | None = Field(default=None, min_length=1, max_length=200)
     language: str = "en"
     processing_strategy: ProcessingStrategy = "direct"
     summary_spec: SummarySpec = Field(default_factory=SummarySpec)
@@ -33,23 +40,25 @@ class JobCreateRequest(ApiModel):
 
     @model_validator(mode="after")
     def _require_exactly_one_source(self) -> JobCreateRequest:
-        has_url = self.url is not None
-        has_pasted_text = self.input_text is not None or self.source_title is not None
-        if has_url and has_pasted_text:
-            raise ValueError("Provide either url, or input_text and source_title, not both")
-        if not has_url:
-            if self.input_text is None or self.source_title is None:
-                raise ValueError("Provide either url, or both input_text and source_title")
-            if not self.source_title.strip():
-                raise ValueError("source_title must not be blank")
+        if self.url is not None and self.input_text is not None:
+            raise ValueError("Provide either url or input_text, not both")
+        if self.url is None:
+            if self.input_text is None:
+                raise ValueError("Provide either url or input_text")
+            if not self.input_text.strip():
+                raise ValueError("input_text must not be blank")
         return self
 
     def source_url_and_text(self) -> tuple[str, str]:
-        """-> (source_url, input_text); a URL job has its text scraped later, so it starts empty."""
+        """-> (source_url, input_text); a URL job has its text scraped later, so it starts empty.
+
+        A pasted text is keyed by its first sentence: the same text always lands under the same
+        source_url, whatever title the model later gives it.
+        """
         if self.url is not None:
             return str(self.url), ""
-        title = cast(str, self.source_title).strip()
-        return f"{MANUAL_SOURCE_PREFIX}{title}", cast(str, self.input_text)
+        text = cast(str, self.input_text)
+        return f"{MANUAL_SOURCE_PREFIX}{_first_sentence(text)}", text
 
     @model_validator(mode="after")
     def _reject_match_reference_length(self) -> JobCreateRequest:

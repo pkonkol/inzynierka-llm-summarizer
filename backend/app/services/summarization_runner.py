@@ -1,5 +1,6 @@
 # services/summarization_runner.py — the background job behind POST /api/v1/jobs/summarize
 
+import asyncio
 from collections.abc import Coroutine
 from datetime import UTC, datetime
 from typing import Any
@@ -13,6 +14,7 @@ from ..schemas.summary import SummaryResponse
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
+from ..services.llm.title import generate_title
 from ..services.run_metrics import (
     join_takeaways,
     store_deepeval_metrics_for_job,
@@ -67,10 +69,7 @@ async def run_summarization_job(job_id: str) -> None:
 
     try:
         if source_url.startswith(MANUAL_SOURCE_PREFIX):
-            data = {
-                "text": job["input_text"],
-                "title": source_url.removeprefix(MANUAL_SOURCE_PREFIX),
-            }
+            data = {"text": job["input_text"]}
         else:
             data = await extract_text_from_url(source_url)
         # The scrape is done and the model call is the long part, so this is the one checkpoint
@@ -83,15 +82,18 @@ async def run_summarization_job(job_id: str) -> None:
         length = resolve_target_length(
             spec.length, input_words=len(data["text"].split()), golden_summary=None
         )
-        summary = await generate_summary(
-            data,
-            source_url,
-            model_name,
-            model_provider,
-            job["language"],
-            spec,
-            length,
-            strategy=processing_strategy,
+        summary, title = await asyncio.gather(
+            generate_summary(
+                data,
+                source_url,
+                model_name,
+                model_provider,
+                job["language"],
+                spec,
+                length,
+                strategy=processing_strategy,
+            ),
+            generate_title(data["text"], job["language"]),
         )
 
         finished_at = datetime.now(UTC)
@@ -104,7 +106,10 @@ async def run_summarization_job(job_id: str) -> None:
                 "$set": {
                     "status": "completed",
                     "summary_data": SummaryResponse.model_validate(
-                        summary.model_dump(include=set(SummaryResponse.model_fields))
+                        {
+                            **summary.model_dump(include=set(SummaryResponse.model_fields)),
+                            "title": title,
+                        }
                     ).model_dump(),
                     "resolved_length": length.model_dump(),
                     "usage": summary.usage.model_dump(),

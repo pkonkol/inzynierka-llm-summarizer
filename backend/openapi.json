@@ -2484,19 +2484,6 @@
             ],
             "title": "Input Text"
           },
-          "source_title": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Title"
-          },
           "language": {
             "type": "string",
             "title": "Language",
@@ -3059,7 +3046,7 @@
           "source_url"
         ],
         "title": "SummaryResponse",
-        "description": "Structured output the LLM is asked to produce.\n\nExactly one of summary/key_takeaways is populated, matching output_format \u2014 the other\nis None, not an empty placeholder, since \"not generated\" and \"generated as empty\" are\ndifferent states."
+        "description": "What a completed job stores and the API returns.\n\nExactly one of summary/key_takeaways is populated, matching output_format \u2014 the other\nis None, not an empty placeholder, since \"not generated\" and \"generated as empty\" are\ndifferent states. title comes from its own model call and source_url from the job."
       },
       "SummarySpec": {
         "properties": {

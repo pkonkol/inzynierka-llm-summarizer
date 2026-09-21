@@ -9,11 +9,11 @@ from .summary_spec import OutputFormat
 
 
 class SummaryResponse(ApiModel):
-    """Structured output the LLM is asked to produce.
+    """What a completed job stores and the API returns.
 
     Exactly one of summary/key_takeaways is populated, matching output_format — the other
     is None, not an empty placeholder, since "not generated" and "generated as empty" are
-    different states.
+    different states. title comes from its own model call and source_url from the job.
     """
 
     title: str
@@ -42,7 +42,6 @@ class UsageMetadata(ApiModel):
 class LlmSummaryResult(BaseModel):
     """Full result of a summarization run — the summary plus call metadata."""
 
-    title: str
     summary: str | None
     key_takeaways: list[str] | None
     output_format: OutputFormat

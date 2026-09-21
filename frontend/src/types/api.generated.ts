@@ -888,8 +888,6 @@ export interface components {
             url?: string | null;
             /** Input Text */
             input_text?: string | null;
-            /** Source Title */
-            source_title?: string | null;
             /**
              * Language
              * @default en
@@ -1108,11 +1106,11 @@ export interface components {
         };
         /**
          * SummaryResponse
-         * @description Structured output the LLM is asked to produce.
+         * @description What a completed job stores and the API returns.
          *
          *     Exactly one of summary/key_takeaways is populated, matching output_format — the other
          *     is None, not an empty placeholder, since "not generated" and "generated as empty" are
-         *     different states.
+         *     different states. title comes from its own model call and source_url from the job.
          */
         SummaryResponse: {
             /** Title */

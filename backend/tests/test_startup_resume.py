@@ -102,3 +102,33 @@ async def test_golden_metrics_passes_are_resumed_by_attempt_budget_not_heartbeat
     set_query = sets_collection.find.call_args.args[0]
     assert set_query["golden_metrics_pass.status"] == {"$in": ["pending", "running"]}
     assert set_query["golden_metrics_pass.resume_attempts"] == {"$lt": settings.max_resume_attempts}
+
+
+async def test_golden_metrics_queue_claim_succeeds_only_when_the_update_matched(
+    sets_collection: AsyncMock,
+) -> None:
+    sets_collection.update_one.return_value.modified_count = 1
+    assert await startup_resume.claim_golden_metrics_pass_for_queue(ObjectId()) is True
+
+    sets_collection.update_one.return_value.modified_count = 0
+    assert await startup_resume.claim_golden_metrics_pass_for_queue(ObjectId()) is False
+
+
+async def test_golden_metrics_queue_claim_allows_missing_failed_or_stale(
+    sets_collection: AsyncMock,
+) -> None:
+    sets_collection.update_one.return_value.modified_count = 1
+    await startup_resume.claim_golden_metrics_pass_for_queue(ObjectId())
+
+    query, update = sets_collection.update_one.call_args.args
+    conditions = query["$or"]
+    assert {"golden_metrics_pass": None} in conditions
+    assert {"golden_metrics_pass.status": "failed"} in conditions
+    assert any(
+        cond.get("golden_metrics_pass.status") == {"$in": ["pending", "running"]}
+        and "golden_metrics_pass.heartbeat_at" in cond
+        for cond in conditions
+    )
+    assert update["$set"]["golden_metrics_pass.status"] == "pending"
+    assert update["$set"]["golden_metrics_pass.resume_attempts"] == 0
+    assert update["$set"]["golden_metrics_pass.error"] is None

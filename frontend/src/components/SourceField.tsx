@@ -8,7 +8,7 @@ export type SourceMode = "url" | "pastedText";
 // this cheap — no URL parsing, just the shape a real pasted article never has.
 export function detectSourceMode(content: string): SourceMode {
   const trimmed = content.trim();
-  return /^https?:\/\/\S+$/.test(trimmed) ? "url" : "pastedText";
+  return /^https?:\/\/\S*[^\s.,;:!?)]$/.test(trimmed) ? "url" : "pastedText";
 }
 
 interface SourceFieldProps {

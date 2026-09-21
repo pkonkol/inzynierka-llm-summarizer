@@ -54,12 +54,14 @@ import { splitProviderModel } from "../utils/utils";
 type GoldenMetricsPassStatus = NonNullable<EvaluationSetListItemResponse["golden_metrics_status"]>;
 
 // The set's own status table (backend routers/evaluation_sets.py): only these statuses ever need
-// a fresh queue attempt on page load — "pending"/"completed"/"skipped" are left alone. "running"
-// is included because the frontend cannot tell a fresh pass from a stalled one; the backend's own
-// staleness check (409 otherwise) is what actually decides.
+// a fresh queue attempt on page load — "completed"/"skipped" are left alone. "pending" and
+// "running" are both included because a process can die between writing "pending" and the
+// background task actually starting; the backend's own staleness check (409 otherwise) is what
+// actually decides whether a queue attempt is accepted.
 const RESUMABLE_GOLDEN_METRICS_STATUSES: (GoldenMetricsPassStatus | null)[] = [
   null,
   "failed",
+  "pending",
   "running",
 ];
 

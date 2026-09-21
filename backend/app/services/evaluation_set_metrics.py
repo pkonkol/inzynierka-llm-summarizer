@@ -71,6 +71,9 @@ async def run_golden_metrics_pass(set_id: str) -> None:
 
         for entry_id in pending_entry_ids:
             entry = await find_evaluation_set_entry(set_id, entry_id)
+            # TODO: only reachable today via a whole-set delete mid-pass — and then the set is
+            # gone, so nothing can observe entries_with_metrics staying below entry_count. Revisit
+            # if entries ever get their own delete endpoint, since that would make it observable.
             if entry is None:
                 continue
             metrics = await build_golden_metrics(

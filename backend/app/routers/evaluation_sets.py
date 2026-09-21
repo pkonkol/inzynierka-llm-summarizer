@@ -13,7 +13,6 @@ from ..core.mongo import (
     find_evaluation_set_entry,
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
-    stale_work_cutoff,
 )
 from ..schemas.evaluation_set_api import (
     EvaluationSetCreateResponse,
@@ -35,6 +34,7 @@ from ..schemas.evaluation_set_db import (
     GoldenMetricsPassStatus,
 )
 from ..services.evaluation_set_metrics import run_golden_metrics_pass
+from ..services.startup_resume import claim_golden_metrics_pass_for_queue
 
 log = structlog.get_logger(__name__)
 
@@ -250,31 +250,13 @@ async def queue_golden_metrics_pass(
     set_id: str,
     background_tasks: BackgroundTasks,
 ) -> GoldenMetricsPassQueuedResponse:
-    document = await find_evaluation_set_or_404(set_id, {"golden_metrics_pass": 1})
-    golden_metrics_pass = document.get("golden_metrics_pass")
+    await find_evaluation_set_or_404(set_id, {"_id": 1})
 
-    if golden_metrics_pass and golden_metrics_pass["status"] == "completed":
-        raise HTTPException(status_code=409, detail="Golden metrics already computed")
-    if golden_metrics_pass and golden_metrics_pass["status"] == "skipped":
-        raise HTTPException(status_code=409, detail="Golden metrics were skipped at import")
-    if (
-        golden_metrics_pass
-        and golden_metrics_pass["status"] in {"pending", "running"}
-        and golden_metrics_pass["heartbeat_at"] >= stale_work_cutoff()
-    ):
-        raise HTTPException(status_code=409, detail="Golden metrics pass is already running")
+    if not await claim_golden_metrics_pass_for_queue(ObjectId(set_id)):
+        raise HTTPException(
+            status_code=409, detail="Golden metrics pass is already running or completed"
+        )
 
-    await get_evaluation_sets_collection().update_one(
-        {"_id": ObjectId(set_id)},
-        {
-            "$set": {
-                "golden_metrics_pass.status": "pending",
-                "golden_metrics_pass.heartbeat_at": datetime.now(UTC),
-                "golden_metrics_pass.resume_attempts": 0,
-                "golden_metrics_pass.error": None,
-            }
-        },
-    )
     background_tasks.add_task(run_golden_metrics_pass, set_id)
     log.info("golden metrics pass queued", set_id=set_id)
 

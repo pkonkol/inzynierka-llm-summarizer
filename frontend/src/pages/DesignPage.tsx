@@ -10,6 +10,7 @@ import { Modal } from "../components/ui/Modal";
 import { PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Panel } from "../components/ui/Panel";
 import { Tooltip } from "../components/ui/Tooltip";
+import { EVALUATION_SETS_PATH } from "../utils/routing";
 
 // Tailwind only emits classes it can find as literal strings, so every swatch is spelled out.
 const SWATCHES = [
@@ -223,7 +224,7 @@ export function DesignPage() {
           aria-expanded.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <LinkButton size="sm" href="/research">
+          <LinkButton size="sm" href={EVALUATION_SETS_PATH}>
             LinkButton
           </LinkButton>
           <Tooltip description="Tooltip is CSS only, so it also opens on keyboard focus. It owns the description id and hands it to the trigger.">

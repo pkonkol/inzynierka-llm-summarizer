@@ -316,8 +316,9 @@ export function SummaryDetailPanel({
 }: JobDetailPanelProps) {
   if (!isOpen) return null;
 
-  const title = jobs[0]?.summary_data?.title || "";
   const completedJobs = jobs.filter((job) => job.status === "completed");
+  // Each job gets its own title from the title model, so the heading follows the first one that has one.
+  const title = completedJobs[0]?.summary_data?.title;
   const jobsFilteredSorted = debugMode ? jobs : completedJobs;
 
   const sectionTitle = debugMode ? "Wynik" : "Wyniki dla modeli";
@@ -333,7 +334,7 @@ export function SummaryDetailPanel({
   } else {
     body = (
       <article className="grid gap-4 min-w-0">
-        <h3>{title}</h3>
+        {title ? <h3>{title}</h3> : null}
 
         {isManualSource(sourceUrl) ? null : (
           <a

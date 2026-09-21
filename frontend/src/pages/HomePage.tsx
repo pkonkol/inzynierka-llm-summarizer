@@ -21,6 +21,7 @@ import type {
   JobListItemResponse,
   JobStatusResponse,
 } from "../types/api.generated";
+import { jobPath } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
@@ -84,7 +85,7 @@ export function HomePage() {
         try {
           const status = await getJobStatus(jobId);
           setFinishedJobsThisVisit((rows) => [...rows, { ...finishedJob, status: status.status }]);
-          const openJobAction = { label: "Zobacz podsumowanie", href: `/jobs/${jobId}` };
+          const openJobAction = { label: "Zobacz podsumowanie", href: jobPath(jobId) };
           // An article URL is long enough that the notification would fold it out of sight.
           const jobLabel = status.summary_data?.title || status.source_url;
           if (status.status === "completed") {

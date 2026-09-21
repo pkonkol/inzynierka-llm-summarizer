@@ -41,7 +41,7 @@ import type {
 import { downloadJson } from "../utils/download";
 import { formatDateMinute } from "../utils/format";
 import { logger } from "../utils/logger";
-import { navigateTo } from "../utils/routing";
+import { EVALUATION_SETS_PATH, evaluationRunPath, navigateTo } from "../utils/routing";
 import { useAsyncAction } from "../utils/useAsyncAction";
 import { useConfirmDelete } from "../utils/useConfirmDelete";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
@@ -156,7 +156,7 @@ function RunsTable({
           <Td>{formatDateMinute(run.created_at)}</Td>
           <Td className="text-right">
             <div className="flex justify-end gap-2">
-              <LinkButton size="sm" href={`/research/runs/${run.evaluation_run_id}`}>
+              <LinkButton size="sm" href={evaluationRunPath(run.evaluation_run_id)}>
                 Otwórz
               </LinkButton>
               <Button variant="dangerOutline" size="sm" onClick={() => onDelete(run)}>
@@ -298,7 +298,7 @@ export function EvaluationSetPage({ setId }: Props) {
     },
     errorPrefix: "Nie udało się usunąć EvaluationSetu",
     successMessage: () => `Usunięto EvaluationSet: ${selectedSet?.name ?? setId}.`,
-    afterConfirm: () => navigateTo("/research"),
+    afterConfirm: () => navigateTo(EVALUATION_SETS_PATH),
     keepOpenOnSuccess: true,
   });
 

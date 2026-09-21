@@ -39,14 +39,28 @@ export function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const tokenListeners = new Set<() => void>();
+
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
+  for (const listener of tokenListeners) listener();
 }
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+  for (const listener of tokenListeners) listener();
+}
+
+/** The `storage` event only fires in other tabs, so same-tab changes notify through the set. */
+export function subscribeToToken(listener: () => void): () => void {
+  tokenListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    tokenListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
 }
 
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {

@@ -1,7 +1,8 @@
 import {
+  type AdminRoute,
   EVALUATION_IMPORT_PATH,
   EVALUATION_SETS_PATH,
-  type Route,
+  LOGIN_PATH,
   SUMMARIES_ALL_PATH,
   SUMMARIES_NEW_PATH,
 } from "../utils/routing";
@@ -11,7 +12,7 @@ import { segmentedCellClasses } from "./ui/segmentedCell";
 import { Tooltip } from "./ui/Tooltip";
 
 interface NavTab {
-  tab: Route["tab"];
+  tab: AdminRoute["tab"];
   label: string;
   href: string;
   description: string;
@@ -73,7 +74,7 @@ const NAV_MODULES: NavModule[] = [
 const EVALUATION_MODULE = NAV_MODULES[1];
 
 // A set and a run are opened from the list, so they keep its tab lit.
-const NAV_TAB: Record<Route["tab"], NavTab["tab"]> = {
+const NAV_TAB: Record<AdminRoute["tab"], NavTab["tab"]> = {
   new: "new",
   all: "all",
   import: "import",
@@ -123,12 +124,11 @@ function NavLink({
 }
 
 interface NavDockProps {
-  route: Route;
+  route: AdminRoute;
   isLoggedIn: boolean;
-  onOpenLogin: () => void;
 }
 
-export function NavDock({ route, isLoggedIn, onOpenLogin }: NavDockProps) {
+export function NavDock({ route, isLoggedIn }: NavDockProps) {
   const activeTab = NAV_TAB[route.tab];
 
   return (
@@ -171,13 +171,12 @@ export function NavDock({ route, isLoggedIn, onOpenLogin }: NavDockProps) {
             Zalogowano
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={onOpenLogin}
-            className={`${AUTH_CELL} cursor-pointer text-ink hover:bg-subtle`}
+          <AppLink
+            href={LOGIN_PATH}
+            className={`${AUTH_CELL} text-ink no-underline hover:bg-subtle`}
           >
             Zaloguj
-          </button>
+          </AppLink>
         )}
       </div>
     </div>

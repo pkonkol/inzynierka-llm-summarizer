@@ -6,7 +6,7 @@ import { PageShell } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
 import type { EvaluationSetListItemResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
-import { EVALUATION_IMPORT_PATH } from "../utils/routing";
+import { EVALUATION_IMPORT_PATH, evaluationSetPath } from "../utils/routing";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
@@ -44,7 +44,7 @@ function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
           <Td>{set.run_count}</Td>
           <Td>{formatDateMinute(set.created_at)}</Td>
           <Td className="text-right">
-            <LinkButton size="sm" href={`/research/${set.evaluation_set_id}`}>
+            <LinkButton size="sm" href={evaluationSetPath(set.evaluation_set_id)}>
               Otwórz
             </LinkButton>
           </Td>

@@ -8,7 +8,7 @@ from motor.motor_asyncio import (
     AsyncIOMotorDatabase,
 )
 
-from .config import settings
+from .config import RATE_LIMIT_RETENTION_SECONDS, settings
 
 log = structlog.get_logger(__name__)
 
@@ -37,6 +37,7 @@ async def init_mongo() -> None:
     evaluation_runs_collection = get_evaluation_runs_collection()
 
     await ensure_jobs_indexes(jobs_collection)
+    await ensure_rate_limit_indexes(get_rate_limits_collection())
     await ensure_evaluation_sets_indexes(evaluation_sets_collection)
     await ensure_evaluation_runs_indexes(evaluation_runs_collection)
 
@@ -65,6 +66,10 @@ def get_jobs_collection() -> AsyncIOMotorCollection:
     return get_database()[settings.mongodb_jobs_collection]
 
 
+def get_rate_limits_collection() -> AsyncIOMotorCollection:
+    return get_database()["rate_limits"]
+
+
 def get_evaluation_sets_collection() -> AsyncIOMotorCollection:
     return get_database()["evaluation_sets"]
 
@@ -79,6 +84,14 @@ async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index("source_url")
     await collection.create_index([("created_at", -1)])
     await collection.create_index([("updated_at", -1)])
+    await collection.create_index([("origin", 1), ("created_at", -1)])
+
+
+async def ensure_rate_limit_indexes(collection: AsyncIOMotorCollection) -> None:
+    await collection.create_index([("key", 1), ("at", -1)])
+    # Fixed retention: changing an existing TTL index's expiry means dropping it, so the window
+    # setting is bounded by this constant instead (see Settings).
+    await collection.create_index("at", expireAfterSeconds=RATE_LIMIT_RETENTION_SECONDS)
 
 
 async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> None:

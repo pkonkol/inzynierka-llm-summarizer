@@ -9,6 +9,9 @@ from pydantic_settings import (
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
+# How long rate-limit hits are kept; core/mongo.py builds the TTL index from the same number.
+RATE_LIMIT_RETENTION_SECONDS = 24 * 60 * 60
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -82,6 +85,12 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
     }
+    public_summary_model: dict[str, str] = {
+        "model_provider": "gemini",
+        "model_name": "gemini-flash-latest",
+    }
+    public_rate_limit_requests: int = 5
+    public_rate_limit_window_minutes: int = 60
     title_model: dict[str, str] = {
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
@@ -96,6 +105,20 @@ class Settings(BaseSettings):
     def _require_secrets_when_auth_enabled(self) -> Settings:
         if self.auth_enabled and not (self.auth_secret and self.jwt_secret):
             raise ValueError("AUTH_ENABLED=true requires both AUTH_SECRET and JWT_SECRET")
+        return self
+
+    @model_validator(mode="after")
+    def _require_supported_public_model(self) -> Settings:
+        provider = self.public_summary_model["model_provider"]
+        name = self.public_summary_model["model_name"]
+        if name not in self.supported_models.get(provider, []):
+            raise ValueError(f"PUBLIC_SUMMARY_MODEL {provider}:{name} is not in supported_models")
+        return self
+
+    @model_validator(mode="after")
+    def _require_rate_limit_window_within_retention(self) -> Settings:
+        if self.public_rate_limit_window_minutes * 60 > RATE_LIMIT_RETENTION_SECONDS:
+            raise ValueError("PUBLIC_RATE_LIMIT_WINDOW_MINUTES must not exceed 24 hours")
         return self
 
 

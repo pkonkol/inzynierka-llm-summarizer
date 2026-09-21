@@ -16,7 +16,15 @@ from .core.mongo import (
     init_mongo,
 )
 from .core.nltk_data import ensure_wordnet_resources
-from .routers import auth, evaluation_runs, evaluation_sets, health, meta, summarize
+from .routers import (
+    auth,
+    evaluation_runs,
+    evaluation_sets,
+    health,
+    meta,
+    public_summarize,
+    summarize,
+)
 from .services.startup_resume import resume_interrupted_work
 
 setup_logging()
@@ -56,6 +64,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(summarize.router)
+app.include_router(public_summarize.router)
 app.include_router(meta.router)
 app.include_router(evaluation_sets.router)
 app.include_router(evaluation_runs.router)

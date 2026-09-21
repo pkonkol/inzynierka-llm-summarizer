@@ -33,7 +33,7 @@ async def get_supported_processing_strategies() -> dict[str, str]:
 @router.get("/summary-presets", summary="Get named SummarySpec presets")
 async def get_summary_presets() -> dict[str, SummaryPresetOut]:
     return {
-        key: SummaryPresetOut(label=preset.label, spec=preset.spec)
+        key: SummaryPresetOut(label=preset.label, description=preset.description, spec=preset.spec)
         for key, preset in SUMMARY_PRESETS.items()
     }
 

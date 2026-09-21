@@ -157,6 +157,26 @@
               "default": 50,
               "title": "Limit"
             }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "admin",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin"
+            }
           }
         ],
         "responses": {
@@ -230,6 +250,26 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "admin",
+                    "public"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origin"
             }
           }
         ],
@@ -390,6 +430,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JobDeletedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/summarize": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Create a summarize job without logging in (rate limited)",
+        "operationId": "create_public_summarize_job_api_v1_public_summarize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSummarizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobCreatedResponse"
                 }
               }
             }
@@ -2449,14 +2530,6 @@
       },
       "JobCreateRequest": {
         "properties": {
-          "model_name": {
-            "type": "string",
-            "title": "Model Name"
-          },
-          "model_provider": {
-            "type": "string",
-            "title": "Model Provider"
-          },
           "url": {
             "anyOf": [
               {
@@ -2484,6 +2557,17 @@
             ],
             "title": "Input Text"
           },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "model_provider": {
+            "type": "string",
+            "title": "Model Provider"
+          },
           "language": {
             "type": "string",
             "title": "Language",
@@ -2497,9 +2581,6 @@
             ],
             "title": "Processing Strategy",
             "default": "direct"
-          },
-          "summary_spec": {
-            "$ref": "#/components/schemas/SummarySpec"
           },
           "run_deepeval": {
             "type": "boolean",
@@ -2696,6 +2777,15 @@
             "type": "string",
             "title": "Language"
           },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "public"
+            ],
+            "title": "Origin",
+            "default": "admin"
+          },
           "resolved_length": {
             "anyOf": [
               {
@@ -2821,6 +2911,7 @@
           "processing_strategy",
           "summary_spec",
           "language",
+          "origin",
           "resolved_length",
           "summary_data",
           "metrics",
@@ -2919,6 +3010,47 @@
         "title": "PairwiseDeepevalItem",
         "description": "score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."
       },
+      "PublicSummarizeRequest": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "input_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Text"
+          },
+          "summary_spec": {
+            "$ref": "#/components/schemas/SummarySpec"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "auto"
+          }
+        },
+        "type": "object",
+        "title": "PublicSummarizeRequest"
+      },
       "ResolvedLength": {
         "properties": {
           "target_words": {
@@ -2982,6 +3114,10 @@
             "type": "string",
             "title": "Label"
           },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
           "spec": {
             "$ref": "#/components/schemas/SummarySpec"
           }
@@ -2989,6 +3125,7 @@
         "type": "object",
         "required": [
           "label",
+          "description",
           "spec"
         ],
         "title": "SummaryPresetOut"

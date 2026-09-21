@@ -13,11 +13,14 @@ from ..schemas.job_api import (
     JobCreateRequest,
     JobDeletedResponse,
     JobListItemResponse,
+    JobOrigin,
     JobStatusResponse,
     JobStatusValue,
+    SummarizeSourceRequest,
     UrlSummaryListItem,
 )
 from ..schemas.job_db import JobDocument
+from ..schemas.summary_spec import ProcessingStrategy
 from ..services.llm._base import validate_model, validate_processing_strategy
 from ..services.summarization_runner import run_summarization_job
 
@@ -41,23 +44,47 @@ async def create_summarize_job(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    jobs_collection = get_jobs_collection()
+    return await queue_summarization_job(
+        payload,
+        background_tasks,
+        model_provider=payload.model_provider,
+        model_name=payload.model_name,
+        language=payload.language,
+        processing_strategy=payload.processing_strategy,
+        run_deepeval=payload.run_deepeval,
+        origin="admin",
+    )
+
+
+async def queue_summarization_job(
+    source: SummarizeSourceRequest,
+    background_tasks: BackgroundTasks,
+    *,
+    model_provider: str,
+    model_name: str,
+    language: str,
+    processing_strategy: ProcessingStrategy,
+    run_deepeval: bool,
+    origin: JobOrigin,
+) -> JobCreatedResponse:
     job_id = str(uuid4())
     now = datetime.now(UTC)
+    source_url, input_text = source.source_url_and_text()
 
-    source_url, input_text = payload.source_url_and_text()
-
-    log.debug("job queued", job_id=job_id, url=source_url, strategy=payload.processing_strategy)
+    log.debug(
+        "job queued", job_id=job_id, url=source_url, strategy=processing_strategy, origin=origin
+    )
 
     document = JobDocument(
         job_id=job_id,
         source_url=source_url,
-        model_provider=payload.model_provider,
-        model_name=payload.model_name,
-        processing_strategy=payload.processing_strategy,
-        summary_spec=payload.summary_spec,
-        language=payload.language,
-        run_deepeval=payload.run_deepeval,
+        model_provider=model_provider,
+        model_name=model_name,
+        processing_strategy=processing_strategy,
+        summary_spec=source.summary_spec,
+        language=language,
+        origin=origin,
+        run_deepeval=run_deepeval,
         status="pending",
         input_text=input_text,
         created_at=now,
@@ -66,7 +93,7 @@ async def create_summarize_job(
     )
 
     try:
-        await jobs_collection.insert_one(document.model_dump())
+        await get_jobs_collection().insert_one(document.model_dump())
     except DuplicateKeyError as exc:
         raise HTTPException(status_code=409, detail="Job already exists") from exc
 
@@ -74,15 +101,30 @@ async def create_summarize_job(
     return JobCreatedResponse(job_id=job_id)
 
 
+def _origin_filter(origin: JobOrigin | None) -> dict:
+    """Jobs stored before origin existed have no such field and were all created by the admin."""
+    if origin is None:
+        return {}
+    if origin == "public":
+        return {"origin": "public"}
+    return {"origin": {"$ne": "public"}}
+
+
 @router.get(
     "", response_model=list[UrlSummaryListItem], summary="List summarized URLs (grouped, home page)"
 )
 async def list_summarized_urls(
     limit: int = Query(default=50, ge=1, le=200),
+    origin: Annotated[JobOrigin | None, Query()] = None,
 ) -> list[UrlSummaryListItem]:
     jobs_collection = get_jobs_collection()
     pipeline = [
-        {"$match": {"status": {"$in": ["completed", "failed", "pending", "running"]}}},
+        {
+            "$match": {
+                "status": {"$in": ["completed", "failed", "pending", "running"]},
+                **_origin_filter(origin),
+            }
+        },
         {"$sort": {"updated_at": -1}},
         {
             "$group": {
@@ -129,11 +171,12 @@ async def list_summarized_urls(
 async def list_all_jobs_flat(
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     status: Annotated[list[JobStatusValue] | None, Query()] = None,
+    origin: Annotated[JobOrigin | None, Query()] = None,
 ) -> list[JobListItemResponse]:
     jobs_collection = get_jobs_collection()
     cursor = (
         jobs_collection.find(
-            {"status": {"$in": status}} if status else {},
+            {**({"status": {"$in": status}} if status else {}), **_origin_filter(origin)},
             {
                 "_id": 0,
                 "input_text": 0,

@@ -34,6 +34,7 @@ class JobDocument(BaseModel):
     summary_spec: SummarySpec
     resolved_length: ResolvedLength | None = None
     language: str
+    origin: Literal["admin", "public"] = "admin"
     run_deepeval: bool
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None

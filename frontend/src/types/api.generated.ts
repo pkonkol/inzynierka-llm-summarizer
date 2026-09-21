@@ -141,6 +141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/summarize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a summarize job without logging in (rate limited) */
+        post: operations["create_public_summarize_job_api_v1_public_summarize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meta/models": {
         parameters: {
             query?: never;
@@ -880,14 +897,15 @@ export interface components {
         };
         /** JobCreateRequest */
         JobCreateRequest: {
-            /** Model Name */
-            model_name: string;
-            /** Model Provider */
-            model_provider: string;
             /** Url */
             url?: string | null;
             /** Input Text */
             input_text?: string | null;
+            summary_spec?: components["schemas"]["SummarySpec"];
+            /** Model Name */
+            model_name: string;
+            /** Model Provider */
+            model_provider: string;
             /**
              * Language
              * @default en
@@ -899,7 +917,6 @@ export interface components {
              * @enum {string}
              */
             processing_strategy: "direct" | "extract_then_synthesize";
-            summary_spec?: components["schemas"]["SummarySpec"];
             /**
              * Run Deepeval
              * @default false
@@ -986,6 +1003,12 @@ export interface components {
             summary_spec: components["schemas"]["SummarySpec"];
             /** Language */
             language: string;
+            /**
+             * Origin
+             * @default admin
+             * @enum {string}
+             */
+            origin: "admin" | "public";
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
@@ -1074,6 +1097,19 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** PublicSummarizeRequest */
+        PublicSummarizeRequest: {
+            /** Url */
+            url?: string | null;
+            /** Input Text */
+            input_text?: string | null;
+            summary_spec?: components["schemas"]["SummarySpec"];
+            /**
+             * Language
+             * @default auto
+             */
+            language: string;
+        };
         /** ResolvedLength */
         ResolvedLength: {
             /** Target Words */
@@ -1102,6 +1138,8 @@ export interface components {
         SummaryPresetOut: {
             /** Label */
             label: string;
+            /** Description */
+            description: string;
             spec: components["schemas"]["SummarySpec"];
         };
         /**
@@ -1280,6 +1318,7 @@ export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
 export type KeyTakeawaysMetrics = components['schemas']['KeyTakeawaysMetrics'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
+export type PublicSummarizeRequest = components['schemas']['PublicSummarizeRequest'];
 export type ResolvedLength = components['schemas']['ResolvedLength'];
 export type ScaledLength = components['schemas']['ScaledLength'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
@@ -1407,6 +1446,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                origin?: ("admin" | "public") | null;
             };
             header?: never;
             path?: never;
@@ -1439,6 +1479,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 status?: ("pending" | "running" | "completed" | "failed")[] | null;
+                origin?: ("admin" | "public") | null;
             };
             header?: never;
             path?: never;
@@ -1549,6 +1590,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobDeletedResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_public_summarize_job_api_v1_public_summarize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicSummarizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobCreatedResponse"];
                 };
             };
             /** @description Validation Error */

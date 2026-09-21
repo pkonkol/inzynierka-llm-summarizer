@@ -8,6 +8,7 @@ imported into the root `CLAUDE.md`, so keep each row to one line.
 | [0001](0001-static-analysis-and-cicd-toolchain.md) | Static analysis and CI/CD toolchain | ruff, Biome, Trivy, gitleaks, `just`; no CodeQL, no branch protection | Accepted |
 | [0002](0002-structured-logging-with-structlog.md) | Structured logging | structlog with named fields and contextvars; own formatters deleted | Accepted |
 | [0003](0003-summary-spec-and-processing-strategy.md) | SummarySpec vs. processing strategy | Output contract (SummarySpec) kept independent of execution strategy (direct/extract_then_synthesize) | Accepted |
+| [0004](0004-public-homepage-and-admin-split.md) | Public homepage vs. /admin | Separate rate-limited public endpoint (Mongo sliding window), console moved under /admin | Accepted |
 
 ## Granularity
 

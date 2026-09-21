@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime
-from typing import Any, Literal, cast
+from typing import Any, Literal, Self, cast
 
 from pydantic import Field, HttpUrl, model_validator
 
@@ -28,18 +28,18 @@ def _first_sentence(text: str) -> str:
     return _SENTENCE_END.split(normalized, maxsplit=1)[0][:_MAX_SOURCE_KEY_CHARS]
 
 
-class JobCreateRequest(ApiModel):
-    model_name: str
-    model_provider: str
+JobOrigin = Literal["admin", "public"]
+
+
+class SummarizeSourceRequest(ApiModel):
+    """What every summarize endpoint accepts: one source and how to summarize it."""
+
     url: HttpUrl | None = None
     input_text: str | None = Field(default=None, min_length=1, max_length=_MAX_PASTED_CHARS)
-    language: str = "en"
-    processing_strategy: ProcessingStrategy = "direct"
     summary_spec: SummarySpec = Field(default_factory=SummarySpec)
-    run_deepeval: bool = False
 
     @model_validator(mode="after")
-    def _require_exactly_one_source(self) -> JobCreateRequest:
+    def _require_exactly_one_source(self) -> Self:
         if self.url is not None and self.input_text is not None:
             raise ValueError("Provide either url or input_text, not both")
         if self.url is None:
@@ -61,11 +61,19 @@ class JobCreateRequest(ApiModel):
         return f"{MANUAL_SOURCE_PREFIX}{_first_sentence(text)}", text
 
     @model_validator(mode="after")
-    def _reject_match_reference_length(self) -> JobCreateRequest:
+    def _reject_match_reference_length(self) -> Self:
         # match_reference needs a golden_summary, which jobs never have — only evaluation runs do.
         if self.summary_spec.length.policy == "match_reference":
             raise ValueError("length policy 'match_reference' is only valid for evaluation runs")
         return self
+
+
+class JobCreateRequest(SummarizeSourceRequest):
+    model_name: str
+    model_provider: str
+    language: str = "en"
+    processing_strategy: ProcessingStrategy = "direct"
+    run_deepeval: bool = False
 
 
 class JobStatusResponse(ApiModel):
@@ -77,6 +85,7 @@ class JobStatusResponse(ApiModel):
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
     language: str
+    origin: JobOrigin = "admin"
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics

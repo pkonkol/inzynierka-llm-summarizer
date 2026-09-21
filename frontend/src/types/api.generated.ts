@@ -219,7 +219,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get named SummarySpec presets */
+        /** Get the summary kinds offered on the public page */
         get: operations["get_summary_presets_api_v1_meta_summary_presets_get"];
         put?: never;
         post?: never;
@@ -1117,7 +1117,12 @@ export interface components {
             /** Target Sentences */
             target_sentences: number;
         };
-        /** ScaledLength */
+        /**
+         * ScaledLength
+         * @description max_sentences pins the sentence count instead of deriving it from the words, and
+         *     words_multiplier shrinks the whole word range: a one-sentence summary still gets a slider,
+         *     but over roughly a tenth of the words a multi-sentence one spans.
+         */
         ScaledLength: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1126,6 +1131,13 @@ export interface components {
             policy: "scaled_to_input";
             /** Slider */
             slider: number;
+            /** Max Sentences */
+            max_sentences?: number | null;
+            /**
+             * Words Multiplier
+             * @default 1
+             */
+            words_multiplier: number;
         };
         /** SourceMetrics */
         SourceMetrics: {
@@ -1140,6 +1152,8 @@ export interface components {
             label: string;
             /** Description */
             description: string;
+            /** Example */
+            example: string;
             spec: components["schemas"]["SummarySpec"];
         };
         /**

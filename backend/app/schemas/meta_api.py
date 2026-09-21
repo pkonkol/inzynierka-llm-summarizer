@@ -11,6 +11,7 @@ class VersionResponse(ApiModel):
 class SummaryPresetOut(ApiModel):
     label: str
     description: str
+    example: str
     spec: SummarySpec
 
 

@@ -66,8 +66,8 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
 // it exists, so rendering it together with its first message would announce nothing.
 export function PublicSummaryResult({ state }: { state: PublicSummaryState }) {
   return (
-    <Panel padding="xl" className="min-h-64">
-      <div aria-live="polite" className="grid content-start gap-4">
+    <Panel className="min-h-64 lg:h-full">
+      <div aria-live="polite" className="grid h-full content-start gap-4 overflow-y-auto">
         <h3 className="label-caps text-sm text-muted">Podsumowanie</h3>
         <ResultBody state={state} />
       </div>

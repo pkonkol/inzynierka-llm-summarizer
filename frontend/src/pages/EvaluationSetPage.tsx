@@ -20,7 +20,6 @@ import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
 import {
   MatchReferenceCheckbox,
-  PresetSelect,
   ProcessingStrategySelect,
   SummarySpecFields,
 } from "../components/SummarySpecFields";
@@ -243,7 +242,6 @@ export function EvaluationSetPage({ setId }: Props) {
   const {
     models: newRunAvailableModels,
     processingStrategies: newRunAvailableStrategies,
-    presets: newRunPresets,
     selectedModel: newRunSelectedModel,
     setSelectedModel: setNewRunSelectedModel,
     selectedProcessingStrategy: newRunProcessingStrategy,
@@ -251,7 +249,7 @@ export function EvaluationSetPage({ setId }: Props) {
     isLoading: isLoadingNewRunOptions,
     errorMessage,
   } = useSummarizationOptions();
-  const newRunSpecForm = useSummarySpecForm(newRunPresets, { offerMatchReference: true });
+  const newRunSpecForm = useSummarySpecForm({ offerMatchReference: true });
 
   useDocumentTitle(selectedSet?.name ?? null);
 
@@ -459,12 +457,6 @@ export function EvaluationSetPage({ setId }: Props) {
                   onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
                 />
               </div>
-
-              <PresetSelect
-                form={newRunSpecForm}
-                presets={newRunPresets}
-                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-              />
 
               <MatchReferenceCheckbox
                 form={newRunSpecForm}

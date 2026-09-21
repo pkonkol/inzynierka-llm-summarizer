@@ -2,12 +2,12 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 
 import { getSummaryPresets, getSupportedLanguages } from "../api/client";
-import { PresetCards } from "../components/public/PresetCards";
+import { PresetTabs } from "../components/public/PresetTabs";
 import { PublicSummaryResult } from "../components/public/PublicSummaryResult";
 import { buildSourcePayload, SourceField } from "../components/SourceField";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { FieldLabel, RangeInput, Select } from "../components/ui/Field";
+import { FieldLabel, RangeInput } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { Panel } from "../components/ui/Panel";
 import type { SummarySpec } from "../types/api.generated";
@@ -26,7 +26,8 @@ function densityLabel(density: number): string {
   return "długo";
 }
 
-const LINE = "bg-ink h-6 w-px lg:h-px lg:w-8";
+// One stroke of the arrow; the same element is horizontal beside the panels and vertical below.
+const ARROW_STEM = "h-8 w-px bg-ink lg:h-px lg:w-auto lg:flex-1";
 
 export function PublicHomePage() {
   useDocumentTitle("Podsumuj artykuł");
@@ -58,16 +59,22 @@ export function PublicHomePage() {
     setValidationError(error);
     if (source === null) return;
 
-    // The preset supplies the character of the summary; the slider always decides its length.
+    // The preset supplies the character of the summary and whatever shape its length takes (a
+    // sentence cap, a word scale); the slider only moves the position along that length.
+    const presetSpec = presets.data[presetKey].spec;
+    const presetLength = presetSpec.length;
+    if (presetLength?.policy !== "scaled_to_input") {
+      throw new Error(`summary kind "${presetKey}" does not scale with the slider`);
+    }
     const summarySpec: SummarySpec = {
-      ...presets.data[presetKey].spec,
-      length: { policy: "scaled_to_input", slider: density },
+      ...presetSpec,
+      length: { ...presetLength, slider: density },
     };
     void submit({ ...source, language, summary_spec: summarySpec });
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-app gap-8 px-3 py-4">
+    <div className="mx-auto grid w-full max-w-app gap-4 px-3 py-4">
       <header className="flex items-center justify-between gap-4">
         <span className="font-semibold">Podsumowania</span>
         <LinkButton href={LOGIN_PATH} size="sm">
@@ -75,80 +82,96 @@ export function PublicHomePage() {
         </LinkButton>
       </header>
 
-      <main className="grid gap-8">
-        <div className="grid gap-2 text-center">
+      <main className="grid gap-4">
+        <div className="grid gap-1 text-center">
           <h1 className="hero-title text-balance">Podsumuj dowolny artykuł</h1>
           <p className="text-muted">Wklej adres albo treść. Bez konta, bez instalacji.</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+          className="grid gap-4 lg:h-[calc(100vh-17rem)] lg:min-h-[34rem] lg:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)_minmax(0,1fr)]"
         >
-          <Panel padding="xl" className="grid gap-6">
+          <Panel className="grid gap-4 lg:h-full lg:grid-rows-[1fr_auto]">
             <SourceField
               content={content}
               onContentChange={setContent}
               maxLength={MAX_PUBLIC_PASTED_CHARS}
               disabled={isWorking}
+              fillHeight
             />
 
-            {presetKey === null ? (
-              <p className="text-muted">Ładowanie...</p>
-            ) : (
-              <PresetCards
-                options={presetEntries.map(([key, preset]) => ({
-                  key,
-                  label: preset.label,
-                  description: preset.description,
-                }))}
-                selectedKey={presetKey}
-                onSelect={setSelectedPresetKey}
-                disabled={isWorking}
-              />
-            )}
+            <div className="grid gap-3">
+              {presetKey === null ? (
+                <p className="text-muted">Ładowanie...</p>
+              ) : (
+                <PresetTabs
+                  options={presetEntries.map(([key, preset]) => ({
+                    key,
+                    label: preset.label,
+                    description: preset.description,
+                    example: preset.example,
+                  }))}
+                  selectedKey={presetKey}
+                  onSelect={setSelectedPresetKey}
+                  disabled={isWorking}
+                />
+              )}
 
-            <div className="grid gap-2">
-              <FieldLabel htmlFor="density">Długość: {densityLabel(density)}</FieldLabel>
-              <RangeInput
-                id="density"
-                min={0}
-                max={1}
-                step={0.05}
-                value={density}
-                onChange={(event) => setDensity(Number(event.target.value))}
-                aria-valuetext={densityLabel(density)}
-                disabled={isWorking}
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 text-sm text-muted">
-              <label htmlFor="language">Język podsumowania</label>
-              <Select
-                id="language"
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                disabled={isWorking || languages.data === null}
-                className="h-auto w-auto py-1 text-sm"
-              >
-                {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
-                  <option key={code} value={code}>
-                    {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <FieldLabel htmlFor="density" className="whitespace-nowrap">
+                  Długość: {densityLabel(density)}
+                </FieldLabel>
+                <RangeInput
+                  id="density"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={density}
+                  onChange={(event) => setDensity(Number(event.target.value))}
+                  aria-valuetext={densityLabel(density)}
+                  disabled={isWorking}
+                  className="min-w-32 flex-1"
+                />
+                <label htmlFor="language" className="flex items-center gap-2 text-sm text-muted">
+                  Język
+                  <select
+                    id="language"
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value)}
+                    disabled={isWorking || languages.data === null}
+                    className="border border-input-border bg-subtle px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
+                      <option key={code} value={code}>
+                        {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
           </Panel>
 
-          <div className="flex flex-col items-center gap-0 lg:flex-row">
-            <span aria-hidden="true" className={LINE} />
-            <Button type="submit" variant="primary" size="lg" disabled={isWorking || !isReady}>
+          <div className="flex flex-col items-center lg:flex-row">
+            <span aria-hidden="true" className={ARROW_STEM} />
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={isWorking || !isReady}
+              className="min-w-36 shrink-0"
+            >
               {isWorking ? "Przetwarzanie..." : "Podsumuj"}
             </Button>
-            <span aria-hidden="true" className="flex flex-col items-center lg:flex-row">
-              <span className={LINE} />
-              <span className="rotate-90 leading-none lg:rotate-0">▶</span>
-            </span>
+            <span aria-hidden="true" className={ARROW_STEM} />
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 12 16"
+              className="h-4 w-3 shrink-0 rotate-90 text-ink lg:rotate-0"
+            >
+              <path d="M0 0L12 8L0 16Z" fill="currentColor" />
+            </svg>
           </div>
 
           <PublicSummaryResult state={state} />

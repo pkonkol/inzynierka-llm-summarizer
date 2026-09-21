@@ -89,3 +89,31 @@ def test_match_reference_length_counts_the_golden_summarys_own_words_and_sentenc
 def test_match_reference_length_requires_a_golden_summary() -> None:
     with pytest.raises(ValueError, match="golden_summary"):
         resolve_target_length(MatchReferenceLength(), input_words=999, golden_summary=None)
+
+
+def test_a_words_multiplier_shrinks_the_scaled_word_target() -> None:
+    full = resolve_target_length(ScaledLength(slider=1.0), input_words=1000, golden_summary=None)
+    tenth = resolve_target_length(
+        ScaledLength(slider=1.0, words_multiplier=0.1), input_words=1000, golden_summary=None
+    )
+
+    assert tenth.target_words == round(0.1 * SCALED_LENGTH_A_HIGH * 1000**0.2)
+    assert tenth.target_words < full.target_words
+
+
+def test_max_sentences_pins_the_sentence_count_whatever_the_slider_says() -> None:
+    resolved = resolve_target_length(
+        ScaledLength(slider=1.0, max_sentences=1), input_words=1000, golden_summary=None
+    )
+
+    assert resolved.target_sentences == 1
+    assert (
+        resolved.target_words > 20
+    )  # the words still follow the slider, only the sentences are pinned
+
+
+def test_the_multiplier_and_sentence_cap_default_to_no_effect() -> None:
+    plain = ScaledLength(slider=0.5)
+
+    assert plain.max_sentences is None
+    assert plain.words_multiplier == 1.0

@@ -572,7 +572,7 @@
         "tags": [
           "meta"
         ],
-        "summary": "Get named SummarySpec presets",
+        "summary": "Get the summary kinds offered on the public page",
         "operationId": "get_summary_presets_api_v1_meta_summary_presets_get",
         "responses": {
           "200": {
@@ -3082,13 +3082,34 @@
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Slider"
+          },
+          "max_sentences": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sentences"
+          },
+          "words_multiplier": {
+            "type": "number",
+            "maximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Words Multiplier",
+            "default": 1.0
           }
         },
         "type": "object",
         "required": [
           "slider"
         ],
-        "title": "ScaledLength"
+        "title": "ScaledLength",
+        "description": "max_sentences pins the sentence count instead of deriving it from the words, and\nwords_multiplier shrinks the whole word range: a one-sentence summary still gets a slider,\nbut over roughly a tenth of the words a multi-sentence one spans."
       },
       "SourceMetrics": {
         "properties": {
@@ -3118,6 +3139,10 @@
             "type": "string",
             "title": "Description"
           },
+          "example": {
+            "type": "string",
+            "title": "Example"
+          },
           "spec": {
             "$ref": "#/components/schemas/SummarySpec"
           }
@@ -3126,6 +3151,7 @@
         "required": [
           "label",
           "description",
+          "example",
           "spec"
         ],
         "title": "SummaryPresetOut"

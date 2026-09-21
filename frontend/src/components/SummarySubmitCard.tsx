@@ -5,7 +5,7 @@ import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
 import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/utils";
 import { buildSourcePayload, SourceField } from "./SourceField";
-import { PresetSelect, ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
+import { ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
 import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
@@ -23,7 +23,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     models,
     processingStrategies,
     languages,
-    presets,
     selectedModel,
     setSelectedModel,
     selectedProcessingStrategy,
@@ -33,7 +32,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
     isLoading: isLoadingMeta,
     errorMessage: optionsError,
   } = useSummarizationOptions();
-  const specForm = useSummarySpecForm(presets, { offerMatchReference: false });
+  const specForm = useSummarySpecForm({ offerMatchReference: false });
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -133,12 +132,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             />
             Policz G-Eval
           </label>
-
-          <PresetSelect
-            form={specForm}
-            presets={presets}
-            disabled={isSubmitting || isLoadingMeta}
-          />
         </div>
 
         <SummarySpecFields form={specForm} disabled={isSubmitting || isLoadingMeta} />

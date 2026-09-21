@@ -39,8 +39,14 @@ class ExplicitLength(BaseModel):
 
 
 class ScaledLength(BaseModel):
+    """max_sentences pins the sentence count instead of deriving it from the words, and
+    words_multiplier shrinks the whole word range: a one-sentence summary still gets a slider,
+    but over roughly a tenth of the words a multi-sentence one spans."""
+
     policy: Literal["scaled_to_input"] = "scaled_to_input"
     slider: float = Field(ge=0.0, le=1.0)
+    max_sentences: int | None = Field(default=None, ge=_MIN_SENTENCES, le=_MAX_SENTENCES)
+    words_multiplier: float = Field(default=1.0, gt=0.0, le=1.0)
 
 
 class MatchReferenceLength(BaseModel):
@@ -89,9 +95,12 @@ def resolve_target_length(
         coefficient = (
             SCALED_LENGTH_A_LOW * (SCALED_LENGTH_A_HIGH / SCALED_LENGTH_A_LOW) ** length.slider
         )
-        words = round(coefficient * input_words**SCALED_LENGTH_EXPONENT)
+        words = round(length.words_multiplier * coefficient * input_words**SCALED_LENGTH_EXPONENT)
         words = max(SCALED_LENGTH_FLOOR_WORDS, min(SCALED_LENGTH_SAFETY_CEILING_WORDS, words))
-        return ResolvedLength(target_words=words, target_sentences=_sentences_for(words))
+        return ResolvedLength(
+            target_words=words,
+            target_sentences=length.max_sentences or _sentences_for(words),
+        )
 
     if isinstance(length, MatchReferenceLength):
         if golden_summary is None:

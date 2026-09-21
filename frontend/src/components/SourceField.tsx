@@ -1,4 +1,5 @@
 import type { JobCreateRequest } from "../types/api.generated";
+import { cn } from "./ui/cn";
 import { FieldLabel, Textarea } from "./ui/Field";
 
 export type SourceMode = "url" | "pastedText";
@@ -39,15 +40,23 @@ interface SourceFieldProps {
   onContentChange: (content: string) => void;
   maxLength: number;
   disabled: boolean;
+  // Stretch the text field over the height the parent gives it, instead of a fixed row count.
+  fillHeight?: boolean;
 }
 
 // One field instead of a URL/pasted-text tab switch: paste a link and it's scraped, paste an
 // article and it's summarized directly.
-export function SourceField({ content, onContentChange, maxLength, disabled }: SourceFieldProps) {
+export function SourceField({
+  content,
+  onContentChange,
+  maxLength,
+  disabled,
+  fillHeight = false,
+}: SourceFieldProps) {
   const isPastedText = detectSourceMode(content) === "pastedText" && content.trim().length > 0;
 
   return (
-    <div className="grid gap-2">
+    <div className={cn("grid gap-2", fillHeight && "h-full grid-rows-[auto_1fr]")}>
       <div className="flex items-baseline justify-between gap-2">
         <FieldLabel htmlFor="source-content">Adres artykułu albo jego treść</FieldLabel>
         {isPastedText ? (
@@ -64,6 +73,7 @@ export function SourceField({ content, onContentChange, maxLength, disabled }: S
         disabled={disabled}
         required
         rows={8}
+        className={cn(fillHeight && "h-full min-h-64 resize-none")}
         maxLength={maxLength}
       />
     </div>

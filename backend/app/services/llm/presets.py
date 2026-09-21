@@ -1,40 +1,40 @@
-# services/llm/presets.py — named SummarySpec bundles served to the frontend
+# services/llm/presets.py — the summary kinds offered on the public page
 
 from pydantic import BaseModel
 
-from ...schemas.summary_spec import ExplicitLength, ScaledLength, SummarySpec
+from ...schemas.summary_spec import ScaledLength, SummarySpec
 
 
 class SummaryPreset(BaseModel):
     label: str
     description: str  # one plain-language sentence for a visitor who knows no summarization terms
+    example: str  # a sentence of the kind of output this preset produces
     spec: SummarySpec
 
 
-# Dict order is the display order: JSON objects keep it on the way to the frontend.
+# Every preset scales with the visitor's length slider, which overrides only `slider`; the other
+# ScaledLength fields travel with the preset. Dict order is the display order.
 SUMMARY_PRESETS: dict[str, SummaryPreset] = {
-    "standard": SummaryPreset(
-        label="Standardowy",
-        description="Zwięzłe podsumowanie z najważniejszymi faktami, napisane tak, jakby mówił je sam tekst.",
+    "facts": SummaryPreset(
+        label="Fakty i wnioski",
+        description="Podaje konkretne fakty i wnioski z artykułu, więc można go nie czytać.",
+        example="Lehman Brothers upadł we wrześniu 2008. Rząd USA odmówił ratunku, co uruchomiło globalny kryzys.",
         spec=SummarySpec(length=ScaledLength(slider=0.5)),
     ),
-    "news_highlights": SummaryPreset(
-        label="Newsowe podsumowanie",
-        description="Kilka krótkich zdań z najważniejszymi informacjami, jak w serwisie informacyjnym.",
-        spec=SummarySpec(length=ExplicitLength(target_words=35, target_sentences=3)),
-    ),
-    "journalistic_abstract": SummaryPreset(
-        label="Abstrakt dziennikarski",
-        description="Krótki akapit, który wystarcza, żeby nie czytać całego tekstu.",
-        spec=SummarySpec(length=ExplicitLength(target_words=85, target_sentences=4)),
-    ),
-    "indicative_one_sentence": SummaryPreset(
-        label="Jedno zdanie o czym jest tekst",
-        description="Jedno zdanie o tym, czego dotyczy tekst, bez szczegółów. Pomaga zdecydować, czy warto czytać.",
+    "topics": SummaryPreset(
+        label="O czym jest tekst",
+        description="Wymienia tylko tematy, które artykuł porusza, bez faktów i wniosków. Pomaga zdecydować, czy warto czytać.",
+        example="Artykuł omawia upadek Lehman Brothers i jego skutki dla rynków.",
         spec=SummarySpec(
             narrative_stance="about_document",
             summary_function="indicative",
-            length=ExplicitLength(target_words=45, target_sentences=1),
+            length=ScaledLength(slider=0.5),
         ),
+    ),
+    "one_sentence": SummaryPreset(
+        label="Jedno zdanie",
+        description="Sedno artykułu w jednym zdaniu, z najważniejszym faktem.",
+        example="Upadek Lehman Brothers w 2008 roku wywołał globalny kryzys finansowy.",
+        spec=SummarySpec(length=ScaledLength(slider=0.5, max_sentences=1, words_multiplier=0.2)),
     ),
 }

@@ -3,6 +3,9 @@ import type { JobStatusValue } from "../types/local";
 // Mirrors JobCreateRequest._MAX_PASTED_CHARS in backend/app/schemas/job_api.py.
 export const MAX_PASTED_CHARS = 500_000;
 
+// Mirrors _MAX_PUBLIC_CHARS in backend/app/routers/public_summarize.py.
+export const MAX_PUBLIC_PASTED_CHARS = 30_000;
+
 // Jobs whose source is pasted text carry this prefix on source_url instead of a real address.
 const MANUAL_SOURCE_PREFIX = "manual:";
 

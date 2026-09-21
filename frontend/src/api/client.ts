@@ -6,6 +6,7 @@ import type {
   JobListItemResponse,
   JobStatusResponse,
   KeepaliveResponse,
+  PublicSummarizeRequest,
   SummaryPresetOut,
   TokenResponse,
   UrlSummaryListItem,
@@ -97,6 +98,14 @@ export const login = (password: string): Promise<TokenResponse> =>
 
 export const createSummaryJob = (payload: JobCreateRequest): Promise<JobCreatedResponse> =>
   request<JobCreatedResponse>("/api/v1/jobs/summarize", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const createPublicSummaryJob = (
+  payload: PublicSummarizeRequest,
+): Promise<JobCreatedResponse> =>
+  request<JobCreatedResponse>("/api/v1/public/summarize", {
     method: "POST",
     body: JSON.stringify(payload),
   });

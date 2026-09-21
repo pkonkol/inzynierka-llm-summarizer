@@ -1,4 +1,4 @@
-import { MAX_PASTED_CHARS } from "../utils/utils";
+import type { JobCreateRequest } from "../types/api.generated";
 import { FieldLabel, Textarea } from "./ui/Field";
 
 export type SourceMode = "url" | "pastedText";
@@ -11,15 +11,39 @@ export function detectSourceMode(content: string): SourceMode {
   return /^https?:\/\/\S*[^\s.,;:!?)]$/.test(trimmed) ? "url" : "pastedText";
 }
 
+export type SourcePayload = Pick<JobCreateRequest, "url" | "input_text">;
+
+export function buildSourcePayload(content: string): {
+  payload: SourcePayload | null;
+  error: string | null;
+} {
+  if (detectSourceMode(content) === "url") {
+    try {
+      const parsed = new URL(content.trim());
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return { payload: null, error: "Adres musi zaczynać się od http:// lub https://" };
+      }
+    } catch {
+      return { payload: null, error: "Wprowadź poprawny adres URL artykułu" };
+    }
+    return { payload: { url: content.trim() }, error: null };
+  }
+
+  if (!content.trim())
+    return { payload: null, error: "Podaj adres artykułu albo wklej jego treść" };
+  return { payload: { input_text: content }, error: null };
+}
+
 interface SourceFieldProps {
   content: string;
   onContentChange: (content: string) => void;
+  maxLength: number;
   disabled: boolean;
 }
 
 // One field instead of a URL/pasted-text tab switch: paste a link and it's scraped, paste an
 // article and it's summarized directly.
-export function SourceField({ content, onContentChange, disabled }: SourceFieldProps) {
+export function SourceField({ content, onContentChange, maxLength, disabled }: SourceFieldProps) {
   const isPastedText = detectSourceMode(content) === "pastedText" && content.trim().length > 0;
 
   return (
@@ -28,7 +52,7 @@ export function SourceField({ content, onContentChange, disabled }: SourceFieldP
         <FieldLabel htmlFor="source-content">Adres artykułu albo jego treść</FieldLabel>
         {isPastedText ? (
           <span className="text-xs text-muted">
-            {content.length.toLocaleString("pl-PL")} / {MAX_PASTED_CHARS.toLocaleString("pl-PL")}
+            {content.length.toLocaleString("pl-PL")} / {maxLength.toLocaleString("pl-PL")}
           </span>
         ) : null}
       </div>
@@ -40,7 +64,7 @@ export function SourceField({ content, onContentChange, disabled }: SourceFieldP
         disabled={disabled}
         required
         rows={8}
-        maxLength={MAX_PASTED_CHARS}
+        maxLength={maxLength}
       />
     </div>
   );

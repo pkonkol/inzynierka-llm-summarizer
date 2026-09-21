@@ -3,8 +3,8 @@ import { useState } from "react";
 import type { JobCreateRequest } from "../types/api.generated";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
-import { splitProviderModel } from "../utils/utils";
-import { detectSourceMode, SourceField } from "./SourceField";
+import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/utils";
+import { buildSourcePayload, SourceField } from "./SourceField";
 import { PresetSelect, ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
 import { Button } from "./ui/Button";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
@@ -13,29 +13,6 @@ interface SummarySubmitCardProps {
   /** Resolves false when the request failed, so the typed source is kept for a retry. */
   onSubmit: (payload: JobCreateRequest) => Promise<boolean>;
   isSubmitting: boolean;
-}
-
-type SourcePayload = Pick<JobCreateRequest, "url" | "input_text">;
-
-function buildSourcePayload(content: string): {
-  payload: SourcePayload | null;
-  error: string | null;
-} {
-  if (detectSourceMode(content) === "url") {
-    try {
-      const parsed = new URL(content.trim());
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        return { payload: null, error: "Adres musi zaczynać się od http:// lub https://" };
-      }
-    } catch {
-      return { payload: null, error: "Wprowadź poprawny adres URL artykułu" };
-    }
-    return { payload: { url: content.trim() }, error: null };
-  }
-
-  if (!content.trim())
-    return { payload: null, error: "Podaj adres artykułu albo wklej jego treść" };
-  return { payload: { input_text: content }, error: null };
 }
 
 export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardProps) {
@@ -101,7 +78,12 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
         onSubmit={handleSubmit}
       >
         <div className="grid gap-3">
-          <SourceField content={content} onContentChange={setContent} disabled={isSubmitting} />
+          <SourceField
+            content={content}
+            onContentChange={setContent}
+            maxLength={MAX_PASTED_CHARS}
+            disabled={isSubmitting}
+          />
         </div>
 
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">

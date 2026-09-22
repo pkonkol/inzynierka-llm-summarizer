@@ -1304,9 +1304,6 @@
           "summary": {
             "$ref": "#/components/schemas/SummaryStatisticalMetrics"
           },
-          "key_takeaways": {
-            "$ref": "#/components/schemas/KeyTakeawaysMetrics"
-          },
           "deepeval": {
             "anyOf": [
               {
@@ -1325,7 +1322,6 @@
         "type": "object",
         "required": [
           "summary",
-          "key_takeaways",
           "deepeval"
         ],
         "title": "AiMetrics"
@@ -1730,20 +1726,6 @@
             ],
             "title": "Ai Summary"
           },
-          "ai_key_takeaways": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ai Key Takeaways"
-          },
           "resolved_length": {
             "anyOf": [
               {
@@ -1805,7 +1787,6 @@
           "golden_summary",
           "golden_metrics",
           "ai_summary",
-          "ai_key_takeaways",
           "resolved_length",
           "ai_metrics",
           "cross_metrics",
@@ -2671,6 +2652,14 @@
             ],
             "title": "Processing Strategy"
           },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "public"
+            ],
+            "title": "Origin"
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -2687,6 +2676,7 @@
           "model_provider",
           "model_name",
           "processing_strategy",
+          "origin",
           "updated_at"
         ],
         "title": "JobListItemResponse",
@@ -2713,23 +2703,12 @@
                 "type": "null"
               }
             ]
-          },
-          "key_takeaways": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/KeyTakeawaysMetrics"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "type": "object",
         "required": [
           "source",
-          "summary",
-          "key_takeaways"
+          "summary"
         ],
         "title": "JobMetrics",
         "description": "All None at insert time \u2014 metrics are computed asynchronously after the job starts."
@@ -2783,8 +2762,7 @@
               "admin",
               "public"
             ],
-            "title": "Origin",
-            "default": "admin"
+            "title": "Origin"
           },
           "resolved_length": {
             "anyOf": [
@@ -2899,6 +2877,18 @@
               }
             ],
             "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "source_too_long"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
           }
         },
         "type": "object",
@@ -2926,7 +2916,8 @@
           "started_at",
           "finished_at",
           "duration_ms",
-          "error"
+          "error",
+          "error_code"
         ],
         "title": "JobStatusResponse"
       },
@@ -2947,24 +2938,6 @@
           "held_seconds"
         ],
         "title": "KeepaliveResponse"
-      },
-      "KeyTakeawaysMetrics": {
-        "properties": {
-          "bullet_count": {
-            "type": "integer",
-            "title": "Bullet Count"
-          },
-          "char_count": {
-            "type": "integer",
-            "title": "Char Count"
-          }
-        },
-        "type": "object",
-        "required": [
-          "bullet_count",
-          "char_count"
-        ],
-        "title": "KeyTakeawaysMetrics"
       },
       "MatchReferenceLength": {
         "properties": {
@@ -3163,37 +3136,8 @@
             "title": "Title"
           },
           "summary": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Summary"
-          },
-          "key_takeaways": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Key Takeaways"
-          },
-          "output_format": {
             "type": "string",
-            "enum": [
-              "prose",
-              "bullets"
-            ],
-            "title": "Output Format"
+            "title": "Summary"
           },
           "source_url": {
             "type": "string",
@@ -3204,12 +3148,10 @@
         "required": [
           "title",
           "summary",
-          "key_takeaways",
-          "output_format",
           "source_url"
         ],
         "title": "SummaryResponse",
-        "description": "What a completed job stores and the API returns.\n\nExactly one of summary/key_takeaways is populated, matching output_format \u2014 the other\nis None, not an empty placeholder, since \"not generated\" and \"generated as empty\" are\ndifferent states. title comes from its own model call and source_url from the job."
+        "description": "What a completed job stores and the API returns.\n\nsummary is markdown: prose, or a bullet list when the spec asked for bullets. title comes\nfrom its own model call and source_url from the job."
       },
       "SummarySpec": {
         "properties": {

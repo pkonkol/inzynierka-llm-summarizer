@@ -12,12 +12,11 @@ from .summarize import queue_summarization_job
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
 log = structlog.get_logger(__name__)
 
-# Half of the 10k words the longest supported article is sized against (~6 characters a word).
-_MAX_PUBLIC_CHARS = 30_000
-
 
 class PublicSummarizeRequest(SummarizeSourceRequest):
-    input_text: str | None = Field(default=None, min_length=1, max_length=_MAX_PUBLIC_CHARS)
+    input_text: str | None = Field(
+        default=None, min_length=1, max_length=settings.public_max_input_chars
+    )
     language: str = "auto"
 
     @model_validator(mode="after")

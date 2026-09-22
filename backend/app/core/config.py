@@ -89,6 +89,8 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
     }
+    # Characters of source text a public job may carry, whether pasted or scraped from a URL.
+    public_max_input_chars: int = 30_000
     public_rate_limit_requests: int = 5
     public_rate_limit_window_minutes: int = 60
     title_model: dict[str, str] = {

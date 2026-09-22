@@ -9,13 +9,12 @@ from langchain_core.runnables import Runnable
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ...core.config import settings
 from ...schemas.summary import UsageMetadata
 from ...schemas.summary_spec import (
     NarrativeStance,
-    OutputFormat,
     ResolvedLength,
     SummaryFunction,
     SummarySpec,
@@ -151,25 +150,22 @@ TAKEAWAY_DETAIL_GUIDANCE = (
 )
 
 
-class ProseResponse(BaseModel):
-    summary: str
+BULLETS_FORMAT_GUIDANCE = (
+    "Format the summary as a markdown bullet list: one concise, specific fact per line, each line "
+    "starting with '- '. Do not write paragraphs and do not repeat the same idea."
+)
+
+
+class SummaryOutput(BaseModel):
+    """The final answer of every strategy. A bullet list is markdown inside `summary`."""
+
+    summary: str = Field(min_length=1)
 
 
 class BulletsResponse(BaseModel):
+    """Only the extraction stage of extract_then_synthesize answers with a list."""
+
     key_takeaways: list[str]
-
-
-OUTPUT_SCHEMAS: dict[OutputFormat, type[ProseResponse | BulletsResponse]] = {
-    "prose": ProseResponse,
-    "bullets": BulletsResponse,
-}
-
-
-def split_output(parsed: ProseResponse | BulletsResponse) -> tuple[str | None, list[str] | None]:
-    """-> (summary, key_takeaways); exactly one is set, matching the schema the model answered."""
-    if isinstance(parsed, BulletsResponse):
-        return None, parsed.key_takeaways
-    return parsed.summary, None
 
 
 def build_detail_guidance(spec: SummarySpec, length: ResolvedLength) -> str:
@@ -182,7 +178,7 @@ def build_detail_guidance(spec: SummarySpec, length: ResolvedLength) -> str:
         _FUNCTION_GUIDANCE[spec.summary_function],
     ]
     if spec.output_format == "bullets":
-        parts.append(TAKEAWAY_DETAIL_GUIDANCE)
+        parts.append(BULLETS_FORMAT_GUIDANCE)
     parts.append(build_length_guidance(length))
     if spec.extra_instructions:
         parts.append(f"Additional instructions from the user: {spec.extra_instructions}")

@@ -4,7 +4,7 @@ import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
 import type { PublicSummarizeRequest, SummaryResponse } from "../types/api.generated";
 import { logger } from "./logger";
 import { useListPolling } from "./useListPolling";
-import { isJobInProgress } from "./utils";
+import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "./utils";
 
 export type PublicSummaryState =
   | { phase: "idle" }
@@ -42,7 +42,13 @@ export function usePublicSummary() {
         return;
       }
       logger.warn("public summary job did not complete", { jobId, status: job.status });
-      setState({ phase: "error", message: GENERATION_FAILED_MESSAGE });
+      setState({
+        phase: "error",
+        message:
+          job.error_code === "source_too_long"
+            ? `Artykuł jest za długi. Limit to ${MAX_PUBLIC_PASTED_CHARS.toLocaleString("pl-PL")} znaków.`
+            : GENERATION_FAILED_MESSAGE,
+      });
     } catch (error) {
       setJobId(null);
       setState({

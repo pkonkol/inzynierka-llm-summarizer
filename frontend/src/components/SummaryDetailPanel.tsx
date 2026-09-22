@@ -33,10 +33,14 @@ interface JobDetailPanelProps {
   debugMode?: boolean;
 }
 
+const ORIGIN_LABELS: Record<JobStatusResponse["origin"], string> = {
+  admin: "Konsola",
+  public: "Strona publiczna",
+};
+
 const METRIC_SECTIONS = [
   { key: "source", label: "Źródło", field: "source" as const },
   { key: "summary", label: "Podsumowanie", field: "summary" as const },
-  { key: "key_takeaways", label: "Punkty kluczowe", field: "key_takeaways" as const },
 ] as const;
 
 function JobMetricsPanel({
@@ -223,12 +227,12 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
   );
 
   const summaryText = job.summary_data?.summary ?? null;
-  const keyTakeaways = job.summary_data?.key_takeaways ?? null;
 
   return (
     <>
       <div className="metric-row">
         <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
+        <InfoRow label="Pochodzenie" value={ORIGIN_LABELS[job.origin]} />
         <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
         <InfoRow label="Tokeny wejściowe" value={job.usage.input_tokens} />
         <InfoRow label="Tokeny wyjściowe" value={job.usage.output_tokens} />
@@ -253,18 +257,9 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
 
       {summaryText === null ? null : (
         <section>
-          <h4>Krótkie podsumowanie</h4>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryText}</ReactMarkdown>
-        </section>
-      )}
-
-      {keyTakeaways === null ? null : (
-        <section>
-          <h4>Najważniejsze punkty</h4>
-          <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_p]:whitespace-pre-wrap">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {keyTakeaways.map((item) => `- ${item}`).join("\n")}
-            </ReactMarkdown>
+          <h4>Podsumowanie</h4>
+          <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryText}</ReactMarkdown>
           </div>
         </section>
       )}

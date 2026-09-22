@@ -10,7 +10,12 @@ from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.schemas.summary_spec import ResolvedLength, SummarySpec
-from app.services.llm._base import build_detail_guidance, extract_usage, prompt_texts
+from app.services.llm._base import (
+    BULLETS_FORMAT_GUIDANCE,
+    build_detail_guidance,
+    extract_usage,
+    prompt_texts,
+)
 
 GEMINI = {
     "input_tokens": 1000,
@@ -83,8 +88,9 @@ def test_detail_guidance_repeats_the_length_target_and_extra_instructions() -> N
     assert "Mention the CEO by name." in guidance
 
 
-def test_detail_guidance_includes_takeaway_instructions_only_for_bullets_output() -> None:
+def test_detail_guidance_asks_for_a_markdown_list_only_for_bullets_output() -> None:
     prose_guidance = build_detail_guidance(SummarySpec(output_format="prose"), _LENGTH)
     bullets_guidance = build_detail_guidance(SummarySpec(output_format="bullets"), _LENGTH)
-    assert "key_takeaways" not in prose_guidance
-    assert "key_takeaways" in bullets_guidance
+    assert BULLETS_FORMAT_GUIDANCE not in prose_guidance
+    assert BULLETS_FORMAT_GUIDANCE in bullets_guidance
+    assert "key_takeaways" not in bullets_guidance  # the final answer is a summary, not a JSON list

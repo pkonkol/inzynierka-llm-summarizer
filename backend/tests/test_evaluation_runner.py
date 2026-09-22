@@ -36,12 +36,9 @@ _SOURCE_ENTRY = {"input_text": "word " * 500, "title": "T", "url": "https://exam
 _GOLDEN = "One sentence here. And a second one."
 
 
-def _llm_result(summary: str | None, key_takeaways: list[str] | None) -> LlmSummaryResult:
+def _llm_result(summary: str) -> LlmSummaryResult:
     return LlmSummaryResult(
-        title="T",
         summary=summary,
-        key_takeaways=key_takeaways,
-        output_format="prose" if summary is not None else "bullets",
         source_url="https://example.com/a",
         usage=UsageMetadata(),
         raw_metadata={},
@@ -56,7 +53,7 @@ def _llm_result(summary: str | None, key_takeaways: list[str] | None) -> LlmSumm
 def mocked_entry_pipeline(monkeypatch: pytest.MonkeyPatch) -> dict[str, AsyncMock]:
     mocks = {
         "fetch_source_entry": AsyncMock(return_value=_SOURCE_ENTRY),
-        "generate_summary": AsyncMock(return_value=_llm_result("AI summary.", None)),
+        "generate_summary": AsyncMock(return_value=_llm_result("AI summary.")),
         "compute_statistical_metrics": AsyncMock(return_value={}),
         "compute_cross_metrics": AsyncMock(return_value={}),
     }
@@ -110,10 +107,10 @@ async def test_each_length_policy_reaches_the_model_as_a_resolved_length(
     )
 
 
-async def test_bullets_output_is_judged_against_the_reference_as_joined_points(
+async def test_a_markdown_bullet_list_is_stored_and_judged_as_the_summary_itself(
     mocked_entry_pipeline: dict[str, AsyncMock],
 ) -> None:
-    mocked_entry_pipeline["generate_summary"].return_value = _llm_result(None, ["a", "b"])
+    mocked_entry_pipeline["generate_summary"].return_value = _llm_result("- a\n- b")
     spec = SummarySpec.model_validate(
         {"output_format": "bullets", "length": {"policy": "explicit", "target_words": 30}}
     )
@@ -123,6 +120,6 @@ async def test_bullets_output_is_judged_against_the_reference_as_joined_points(
     )
 
     assert result["status"] == "completed"
-    assert result["ai_key_takeaways"] == ["a", "b"]
+    assert result["ai_summary"] == "- a\n- b"
     cross_kwargs = mocked_entry_pipeline["compute_cross_metrics"].call_args.kwargs
     assert cross_kwargs["summary_text"] == "- a\n- b"

@@ -5,21 +5,17 @@ from typing import Any
 from pydantic import BaseModel
 
 from .base import ApiModel
-from .summary_spec import OutputFormat
 
 
 class SummaryResponse(ApiModel):
     """What a completed job stores and the API returns.
 
-    Exactly one of summary/key_takeaways is populated, matching output_format — the other
-    is None, not an empty placeholder, since "not generated" and "generated as empty" are
-    different states. title comes from its own model call and source_url from the job.
+    summary is markdown: prose, or a bullet list when the spec asked for bullets. title comes
+    from its own model call and source_url from the job.
     """
 
     title: str
-    summary: str | None = None
-    key_takeaways: list[str] | None = None
-    output_format: OutputFormat
+    summary: str
     source_url: str
 
 
@@ -42,9 +38,7 @@ class UsageMetadata(ApiModel):
 class LlmSummaryResult(BaseModel):
     """Full result of a summarization run — the summary plus call metadata."""
 
-    summary: str | None
-    key_takeaways: list[str] | None
-    output_format: OutputFormat
+    summary: str
     source_url: str
     usage: UsageMetadata
     raw_metadata: dict[str, Any]

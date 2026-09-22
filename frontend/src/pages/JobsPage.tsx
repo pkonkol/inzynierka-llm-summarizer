@@ -93,6 +93,11 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
                   <span className="block text-ink line-clamp-1">{job.title}</span>
                   <span className="flex gap-3 text-xs text-muted">
                     <StatusLabel status={job.status} />
+                    {job.origin === "public" ? (
+                      <span>
+                        <span aria-hidden="true">◌ </span>publiczne
+                      </span>
+                    ) : null}
                     <span>
                       {job.model_provider}:{job.model_name}
                     </span>

@@ -23,7 +23,7 @@ export function PresetTabs({ options, selectedKey, onSelect, disabled }: PresetT
   return (
     <fieldset className="grid gap-2" disabled={disabled}>
       <legend className="sr-only">Rodzaj podsumowania</legend>
-      <div className="grid grid-cols-1 gap-px border border-panel-border bg-panel-border sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-px border border-panel-border bg-panel-border sm:grid-cols-4">
         {options.map((option) => {
           const isActive = option.key === selectedKey;
           return (

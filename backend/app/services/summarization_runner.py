@@ -8,15 +8,16 @@ from typing import Any
 import structlog
 
 from ..core.background_work import spawn_tracked_task, track_background_work
+from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import MANUAL_SOURCE_PREFIX
+from ..schemas.job_db import JobErrorCode
 from ..schemas.summary import SummaryResponse
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.llm import generate_summary
 from ..services.llm._base import LlmOutputError
 from ..services.llm.title import generate_title
 from ..services.run_metrics import (
-    join_takeaways,
     store_deepeval_metrics_for_job,
     store_source_metrics_for_job,
     store_statistical_metrics_for_job,
@@ -24,6 +25,10 @@ from ..services.run_metrics import (
 from ..services.scraper import extract_text_from_url
 
 log = structlog.get_logger(__name__)
+
+
+class SourceTooLongError(ValueError):
+    code: JobErrorCode = "source_too_long"
 
 
 @track_background_work("job_metrics")
@@ -72,6 +77,12 @@ async def run_summarization_job(job_id: str) -> None:
             data = {"text": job["input_text"]}
         else:
             data = await extract_text_from_url(source_url)
+        # Not truncated: a summary of the first part of an article would pass for the whole.
+        if job["origin"] == "public" and len(data["text"]) > settings.public_max_input_chars:
+            raise SourceTooLongError(
+                f"source text has {len(data['text'])} characters, "
+                f"the public limit is {settings.public_max_input_chars}"
+            )
         # The scrape is done and the model call is the long part, so this is the one checkpoint
         # a job has to offer.
         await jobs_collection.update_one(
@@ -97,9 +108,6 @@ async def run_summarization_job(job_id: str) -> None:
         )
 
         finished_at = datetime.now(UTC)
-        takeaways_text = join_takeaways(summary.key_takeaways)
-        summary_text = summary.summary if summary.summary is not None else ""
-
         await jobs_collection.update_one(
             {"job_id": job_id},
             {
@@ -127,11 +135,13 @@ async def run_summarization_job(job_id: str) -> None:
             },
         )
 
-        if summary_text or takeaways_text:
-            metrics_args = (job_id, summary_text, takeaways_text, data["text"])
-            spawn_metrics_task(store_statistical_metrics_for_job(*metrics_args))
-            if job["run_deepeval"]:
-                spawn_metrics_task(store_deepeval_metrics_for_job(*metrics_args))
+        spawn_metrics_task(store_statistical_metrics_for_job(job_id, summary.summary, data["text"]))
+        if job["run_deepeval"]:
+            spawn_metrics_task(
+                store_deepeval_metrics_for_job(
+                    job_id, summary.summary, data["text"], spec.output_format
+                )
+            )
 
     except Exception as exc:
         finished_at = datetime.now(UTC)
@@ -154,6 +164,7 @@ async def run_summarization_job(job_id: str) -> None:
                     "finished_at": finished_at,
                     "duration_ms": duration_ms,
                     "error": str(exc),
+                    "error_code": exc.code if isinstance(exc, SourceTooLongError) else None,
                     "updated_at": finished_at,
                 }
             },

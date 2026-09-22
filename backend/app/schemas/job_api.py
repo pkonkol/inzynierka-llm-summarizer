@@ -7,7 +7,7 @@ from typing import Any, Literal, Self, cast
 from pydantic import Field, HttpUrl, model_validator
 
 from .base import ApiModel
-from .job_db import JobMetrics
+from .job_db import JobErrorCode, JobMetrics
 from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
 from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
@@ -85,7 +85,7 @@ class JobStatusResponse(ApiModel):
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
     language: str
-    origin: JobOrigin = "admin"
+    origin: JobOrigin
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics
@@ -101,6 +101,7 @@ class JobStatusResponse(ApiModel):
     finished_at: datetime | None = None
     duration_ms: int
     error: str | None = None
+    error_code: JobErrorCode | None = None
 
 
 class JobListItemResponse(ApiModel):
@@ -114,6 +115,7 @@ class JobListItemResponse(ApiModel):
     model_provider: str
     model_name: str
     processing_strategy: ProcessingStrategy
+    origin: JobOrigin
     updated_at: datetime
 
 

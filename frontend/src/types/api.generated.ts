@@ -458,7 +458,6 @@ export interface components {
         /** AiMetrics */
         AiMetrics: {
             summary: components["schemas"]["SummaryStatisticalMetrics"];
-            key_takeaways: components["schemas"]["KeyTakeawaysMetrics"];
             /** Deepeval */
             deepeval: components["schemas"]["DeepevalItem"][] | null;
         };
@@ -606,8 +605,6 @@ export interface components {
             golden_metrics: components["schemas"]["GoldenMetrics"] | null;
             /** Ai Summary */
             ai_summary: string | null;
-            /** Ai Key Takeaways */
-            ai_key_takeaways: string[] | null;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             ai_metrics: components["schemas"]["AiMetrics"] | null;
             cross_metrics: components["schemas"]["CrossMetrics"] | null;
@@ -966,6 +963,11 @@ export interface components {
              */
             processing_strategy: "direct" | "extract_then_synthesize";
             /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "admin" | "public";
+            /**
              * Updated At
              * Format: date-time
              */
@@ -978,7 +980,6 @@ export interface components {
         JobMetrics: {
             source: components["schemas"]["SourceMetrics"] | null;
             summary: components["schemas"]["SummaryStatisticalMetrics"] | null;
-            key_takeaways: components["schemas"]["KeyTakeawaysMetrics"] | null;
         };
         /** JobStatusResponse */
         JobStatusResponse: {
@@ -1005,7 +1006,6 @@ export interface components {
             language: string;
             /**
              * Origin
-             * @default admin
              * @enum {string}
              */
             origin: "admin" | "public";
@@ -1051,6 +1051,8 @@ export interface components {
             duration_ms: number;
             /** Error */
             error: string | null;
+            /** Error Code */
+            error_code: "source_too_long" | null;
         };
         /** KeepaliveResponse */
         KeepaliveResponse: {
@@ -1058,13 +1060,6 @@ export interface components {
             active_work: number;
             /** Held Seconds */
             held_seconds: number;
-        };
-        /** KeyTakeawaysMetrics */
-        KeyTakeawaysMetrics: {
-            /** Bullet Count */
-            bullet_count: number;
-            /** Char Count */
-            char_count: number;
         };
         /**
          * MatchReferenceLength
@@ -1160,22 +1155,14 @@ export interface components {
          * SummaryResponse
          * @description What a completed job stores and the API returns.
          *
-         *     Exactly one of summary/key_takeaways is populated, matching output_format — the other
-         *     is None, not an empty placeholder, since "not generated" and "generated as empty" are
-         *     different states. title comes from its own model call and source_url from the job.
+         *     summary is markdown: prose, or a bullet list when the spec asked for bullets. title comes
+         *     from its own model call and source_url from the job.
          */
         SummaryResponse: {
             /** Title */
             title: string;
             /** Summary */
-            summary: string | null;
-            /** Key Takeaways */
-            key_takeaways: string[] | null;
-            /**
-             * Output Format
-             * @enum {string}
-             */
-            output_format: "prose" | "bullets";
+            summary: string;
             /** Source Url */
             source_url: string;
         };
@@ -1329,7 +1316,6 @@ export type JobListItemResponse = components['schemas']['JobListItemResponse'];
 export type JobMetrics = components['schemas']['JobMetrics'];
 export type JobStatusResponse = components['schemas']['JobStatusResponse'];
 export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
-export type KeyTakeawaysMetrics = components['schemas']['KeyTakeawaysMetrics'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
 export type PublicSummarizeRequest = components['schemas']['PublicSummarizeRequest'];

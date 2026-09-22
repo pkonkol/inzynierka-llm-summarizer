@@ -29,11 +29,3 @@ def summary_metrics(text: str, source_text: str) -> dict[str, Any]:
         "flesch_kincaid_grade": flesch_kincaid_grade(text),
         "length_ratio": round(len(text) / len(source_text), 4),
     }
-
-
-def key_takeaways_metrics(text: str) -> dict[str, Any]:
-    # Always fed by join_takeaways, so every non-blank line is exactly one takeaway.
-    return {
-        "bullet_count": sum(1 for line in text.splitlines() if line.strip()),
-        "char_count": len(text),
-    }

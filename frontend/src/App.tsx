@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { getBackendVersion } from "./api/client";
+import { AdminGate } from "./components/AdminGate";
 import { NavDock } from "./components/NavDock";
 import { DesignPage } from "./pages/DesignPage";
 import { EvaluationImportPage } from "./pages/EvaluationImportPage";
@@ -71,13 +72,17 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-clip">
-      {isAdminRoute(route) ? <NavDock route={route} isLoggedIn={isLoggedIn} /> : null}
-      <CurrentPage route={route} />
       {isAdminRoute(route) ? (
-        <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
-          front #{__COMMIT_HASH__} · back #{backendSha || "?"}
-        </span>
-      ) : null}
+        <AdminGate>
+          <NavDock route={route} isLoggedIn={isLoggedIn} />
+          <CurrentPage route={route} />
+          <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
+            front #{__COMMIT_HASH__} · back #{backendSha || "?"}
+          </span>
+        </AdminGate>
+      ) : (
+        <CurrentPage route={route} />
+      )}
     </div>
   );
 }

@@ -10,14 +10,8 @@ import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { Panel } from "../ui/Panel";
 
-function summaryBody(summary: SummaryResponse): string {
-  if (summary.key_takeaways !== null)
-    return summary.key_takeaways.map((item) => `- ${item}`).join("\n");
-  return summary.summary ?? "";
-}
-
 function summaryPlainText(summary: SummaryResponse): string {
-  return `${summary.title}\n\n${summaryBody(summary)}\n`;
+  return `${summary.title}\n\n${summary.summary}\n`;
 }
 
 function ResultBody({ state }: { state: PublicSummaryState }) {
@@ -42,7 +36,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
         <article className="grid gap-4">
           <h2>{summary.title}</h2>
           <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryBody(summary)}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
           </div>
           <p className="text-sm text-muted">Wygenerowano w {formatDuration(durationMs)}</p>
           <div className="flex flex-wrap gap-2">

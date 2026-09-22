@@ -102,12 +102,7 @@ async def queue_summarization_job(
 
 
 def _origin_filter(origin: JobOrigin | None) -> dict:
-    """Jobs stored before origin existed have no such field and were all created by the admin."""
-    if origin is None:
-        return {}
-    if origin == "public":
-        return {"origin": "public"}
-    return {"origin": {"$ne": "public"}}
+    return {} if origin is None else {"origin": origin}
 
 
 @router.get(
@@ -183,7 +178,6 @@ async def list_all_jobs_flat(
                 "prompt_template": 0,
                 "prompt_params": 0,
                 "raw_metadata": 0,
-                "summary_data.key_takeaways": 0,
             },
         )
         .sort("updated_at", -1)
@@ -200,10 +194,11 @@ async def list_all_jobs_flat(
                 source_url=doc["source_url"],
                 status=doc["status"],
                 title=summary_data["title"] if summary_data else "",
-                summary=(summary_data["summary"] or "") if summary_data else "",
+                summary=summary_data["summary"] if summary_data else "",
                 model_provider=doc["model_provider"],
                 model_name=doc["model_name"],
                 processing_strategy=doc["processing_strategy"],
+                origin=doc["origin"],
                 updated_at=doc["updated_at"],
             )
         )

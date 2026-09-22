@@ -19,7 +19,6 @@ class EvaluationRunEntryDocument(BaseModel):
     entry_id: str
     golden_summary: str
     ai_summary: str | None = None
-    ai_key_takeaways: list[str] | None = None
     resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None

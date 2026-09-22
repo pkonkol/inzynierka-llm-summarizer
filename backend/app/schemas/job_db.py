@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from .base import ApiModel
 from .shared_metrics import (
     DeepevalItem,
-    KeyTakeawaysMetrics,
     SourceMetrics,
     SummaryStatisticalMetrics,
 )
@@ -22,7 +21,9 @@ class JobMetrics(ApiModel):
 
     source: SourceMetrics | None = None
     summary: SummaryStatisticalMetrics | None = None
-    key_takeaways: KeyTakeawaysMetrics | None = None
+
+
+JobErrorCode = Literal["source_too_long"]
 
 
 class JobDocument(BaseModel):
@@ -34,7 +35,7 @@ class JobDocument(BaseModel):
     summary_spec: SummarySpec
     resolved_length: ResolvedLength | None = None
     language: str
-    origin: Literal["admin", "public"] = "admin"
+    origin: Literal["admin", "public"]
     run_deepeval: bool
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
@@ -53,4 +54,5 @@ class JobDocument(BaseModel):
     finished_at: datetime | None = None
     duration_ms: int = 0
     error: str | None = None
+    error_code: JobErrorCode | None = None  # set only for failures a visitor can act on
     updated_at: datetime

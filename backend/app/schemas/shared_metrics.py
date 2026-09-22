@@ -39,11 +39,6 @@ class SummaryStatisticalMetrics(ApiModel):
     length_ratio: float  # summary chars / source chars
 
 
-class KeyTakeawaysMetrics(ApiModel):
-    bullet_count: int
-    char_count: int
-
-
 class GoldenMetrics(ApiModel):
     source: SourceMetrics
     summary: SummaryStatisticalMetrics
@@ -52,5 +47,4 @@ class GoldenMetrics(ApiModel):
 
 class AiMetrics(ApiModel):
     summary: SummaryStatisticalMetrics
-    key_takeaways: KeyTakeawaysMetrics
     deepeval: list[DeepevalItem] | None = None  # None until the separate GEval pass runs

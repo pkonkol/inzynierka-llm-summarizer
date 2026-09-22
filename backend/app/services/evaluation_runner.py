@@ -17,8 +17,6 @@ from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.run_metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
-    evaluated_output_text,
-    join_takeaways,
 )
 from .llm import generate_summary
 
@@ -83,13 +81,12 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
         )
         ai_metrics, cross_metrics = await asyncio.gather(
             compute_statistical_metrics(
-                summary_text=summary.summary if summary.summary is not None else "",
-                takeaways_text=join_takeaways(summary.key_takeaways),
+                summary_text=summary.summary,
                 source_text=source_entry["input_text"],
             ),
             compute_cross_metrics(
                 reference_text=run_entry["golden_summary"],
-                summary_text=evaluated_output_text(summary.summary, summary.key_takeaways),
+                summary_text=summary.summary,
             ),
         )
     except Exception as exc:
@@ -100,7 +97,6 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
         "status": "completed",
         "error": None,
         "ai_summary": summary.summary,
-        "ai_key_takeaways": summary.key_takeaways,
         "resolved_length": length.model_dump(),
         "ai_metrics": ai_metrics,
         "cross_metrics": cross_metrics,

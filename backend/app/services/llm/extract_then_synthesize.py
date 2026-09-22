@@ -11,16 +11,15 @@ from ...schemas.summary import LlmSummaryResult
 from ...schemas.summary_spec import ResolvedLength, SummarySpec
 from ._base import (
     GENERIC_DETAIL_GUIDANCE,
-    OUTPUT_SCHEMAS,
     TAKEAWAY_DETAIL_GUIDANCE,
     BulletsResponse,
     StructuredOutput,
+    SummaryOutput,
     build_detail_guidance,
     build_language_instruction,
     build_structured_llm,
     parse_structured_output,
     prompt_texts,
-    split_output,
 )
 from ._prompts import EXTRACT_FROM_CONTENT, SYNTHESIZE_FROM_TAKEAWAYS
 
@@ -50,7 +49,7 @@ async def _synthesize(
     model_name: str,
     model_provider: str,
 ) -> tuple[*StructuredOutput, dict[str, str]]:
-    llm = build_structured_llm(OUTPUT_SCHEMAS[spec.output_format], model_provider, model_name)
+    llm = build_structured_llm(SummaryOutput, model_provider, model_name)
     invoke_params = {
         "language_instruction": build_language_instruction(language),
         "takeaways": "\n".join(f"- {item}" for item in key_takeaways),
@@ -80,12 +79,9 @@ async def run(
     parsed, raw_str, usage, raw_metadata, prompt_params = await _synthesize(
         takeaways.key_takeaways, spec, length, language, model_name, model_provider
     )
-    summary, key_takeaways = split_output(parsed)
 
     return LlmSummaryResult(
-        summary=summary,
-        key_takeaways=key_takeaways,
-        output_format=spec.output_format,
+        summary=parsed.summary,
         source_url=source_url,
         usage=takeaways_usage + usage,
         raw_metadata={"takeaways": takeaways_metadata, "synthesis": raw_metadata},

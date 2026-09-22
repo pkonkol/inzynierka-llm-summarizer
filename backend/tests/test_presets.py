@@ -20,3 +20,11 @@ def test_the_one_sentence_preset_keeps_a_single_sentence_at_every_slider_positio
 
     assert isinstance(length, ScaledLength)
     assert length.max_sentences == 1
+
+
+def test_the_kinds_appear_in_the_order_the_page_lists_them() -> None:
+    assert list(SUMMARY_PRESETS) == ["facts", "key_points", "topics", "one_sentence"]
+
+
+def test_the_key_points_kind_asks_for_a_bullet_list() -> None:
+    assert SUMMARY_PRESETS["key_points"].spec.output_format == "bullets"

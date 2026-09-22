@@ -3,6 +3,12 @@ export function navigateTo(path: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
+// Replaces the current history entry, so Back does not return to a page that only redirects.
+export function redirectTo(path: string) {
+  window.history.replaceState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 // A modifier click means the visitor asked the browser for something we cannot do here —
 // a new tab, a new window, a download — so it has to fall through untouched.
 export function shouldInterceptClick(event: React.MouseEvent): boolean {

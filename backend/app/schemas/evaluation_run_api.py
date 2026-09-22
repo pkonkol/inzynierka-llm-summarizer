@@ -44,7 +44,6 @@ class EvaluationRunEntryResponse(ApiModel):
     golden_summary: str
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None
-    ai_key_takeaways: list[str] | None = None
     resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None

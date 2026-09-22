@@ -21,6 +21,12 @@ SUMMARY_PRESETS: dict[str, SummaryPreset] = {
         example="Lehman Brothers upadł we wrześniu 2008. Rząd USA odmówił ratunku, co uruchomiło globalny kryzys.",
         spec=SummarySpec(length=ScaledLength(slider=0.5)),
     ),
+    "key_points": SummaryPreset(
+        label="Kluczowe punkty",
+        description="Najważniejsze fakty z artykułu w formie listy punktów.",
+        example="Lehman Brothers upadł we wrześniu 2008 • Rząd USA odmówił ratunku • Kryzys rozlał się na cały świat",
+        spec=SummarySpec(output_format="bullets", length=ScaledLength(slider=0.5)),
+    ),
     "topics": SummaryPreset(
         label="O czym jest tekst",
         description="Wymienia tylko tematy, które artykuł porusza, bez faktów i wniosków. Pomaga zdecydować, czy warto czytać.",

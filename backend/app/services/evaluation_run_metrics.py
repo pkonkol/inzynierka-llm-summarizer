@@ -9,13 +9,12 @@ from bson import ObjectId
 
 from ..core.background_work import track_background_work
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from ..schemas.summary_spec import SummarySpec
 from .evaluation_runner import fetch_source_entry
 from .run_metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
     compute_pairwise_cross_deepeval_metrics,
-    evaluated_output_text,
-    join_takeaways,
 )
 
 log = structlog.get_logger(__name__)
@@ -41,11 +40,11 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         {"_id": ObjectId(run_id)},
         {
             "evaluation_set_id": 1,
+            "summary_spec": 1,
             "entries.entry_id": 1,
             "entries.status": 1,
             "entries.golden_summary": 1,
             "entries.ai_summary": 1,
-            "entries.ai_key_takeaways": 1,
             "entries.ai_metrics": 1,
         },
     )
@@ -65,6 +64,8 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         )
         return
 
+    output_format = SummarySpec.model_validate(run_doc["summary_spec"]).output_format
+
     updated_entries = 0
     skipped_entries = 0
     already_scored_entries = 0
@@ -80,17 +81,14 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
                 continue
 
             entry_id = entry["entry_id"]
-            summary_text = evaluated_output_text(
-                entry["ai_summary"], entry["ai_key_takeaways"]
-            ).strip()
-            takeaways_text = join_takeaways(entry["ai_key_takeaways"])
+            summary_text = entry["ai_summary"].strip()
             source_text = (await fetch_source_entry(set_id, entry_id))["input_text"]
 
             deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
                 compute_deepeval_metrics(
                     summary_text=summary_text,
-                    takeaways_text=takeaways_text,
                     source_text=source_text,
+                    output_format=output_format,
                 ),
                 compute_cross_metrics(
                     reference_text=entry["golden_summary"],

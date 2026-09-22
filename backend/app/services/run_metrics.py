@@ -7,6 +7,7 @@ from deepeval.test_case import LLMTestCase
 from ..core.config import settings
 from ..core.executors import run_blocking
 from ..core.mongo import get_jobs_collection
+from ..schemas.summary_spec import OutputFormat
 from ..services.metrics.cross import (
     compute_cross_metrics as compute_cross_metrics_sync,
 )
@@ -16,36 +17,16 @@ from ..services.metrics.cross import (
 from ..services.metrics.deepeval import (
     SUMMARY_INPUT_SPECS,
     SUMMARY_SPECS,
-    SUMMARY_TAKEAWAYS_SPECS,
     TAKEAWAYS_INPUT_SPECS,
     TAKEAWAYS_SPECS,
     evaluate_geval,
 )
 from ..services.metrics.statistical import (
-    key_takeaways_metrics,
     source_metrics,
     summary_metrics,
 )
 
 log = structlog.get_logger(__name__)
-
-
-def join_takeaways(takeaways: list[str] | None) -> str:
-    """None means output_format was 'prose' — no takeaways were generated at all."""
-    if takeaways is None:
-        return ""
-    return "\n".join(f"- {item}" for item in takeaways)
-
-
-def evaluated_output_text(summary: str | None, key_takeaways: list[str] | None) -> str:
-    """The text reference-based metrics judge: the prose summary, or the bullets joined when the
-    output_format was 'bullets' and no prose was generated.
-    """
-    if summary is not None:
-        return summary
-    if key_takeaways is None:
-        raise ValueError("a summary result carries neither summary nor key_takeaways")
-    return join_takeaways(key_takeaways)
 
 
 async def store_job_metrics(job_id: str, update: dict) -> None:
@@ -57,28 +38,23 @@ async def store_job_metrics(job_id: str, update: dict) -> None:
 
 async def compute_statistical_metrics(
     summary_text: str,
-    takeaways_text: str,
     source_text: str,
 ) -> dict:
     def compute() -> dict:
-        return {
-            "summary": summary_metrics(summary_text, source_text),
-            "key_takeaways": key_takeaways_metrics(takeaways_text),
-        }
+        return {"summary": summary_metrics(summary_text, source_text)}
 
     return await run_blocking(compute)
 
 
 async def compute_deepeval_metrics(
     summary_text: str,
-    takeaways_text: str,
     source_text: str,
+    output_format: OutputFormat,
 ) -> list[dict]:
     """summary_text/source_text are always non-empty (AI summary, required input_text).
 
-    Takeaways-quality GEval judges only run if takeaways_text is non-empty — the LLM
-    may return zero key takeaways, and judging an empty actual/expected_output would
-    produce a meaningless score rather than a real evaluation.
+    The list-quality judges (redundancy, coverage) only make sense for a bullet list, so they
+    run when the spec asked for one.
     """
     summary_case = LLMTestCase(input="", actual_output=summary_text)
     summary_input_case = LLMTestCase(input=source_text, actual_output=summary_text)
@@ -87,18 +63,10 @@ async def compute_deepeval_metrics(
         *((spec, summary_case) for spec in SUMMARY_SPECS),
         *((spec, summary_input_case) for spec in SUMMARY_INPUT_SPECS),
     ]
-    if takeaways_text:
-        takeaways_case = LLMTestCase(input="", actual_output=takeaways_text)
-        takeaways_input_case = LLMTestCase(input=source_text, actual_output=takeaways_text)
-        summary_takeaways_case = LLMTestCase(
-            input=source_text,
-            actual_output=summary_text,
-            expected_output=takeaways_text,
-        )
+    if output_format == "bullets":
         work += [
-            *((spec, takeaways_case) for spec in TAKEAWAYS_SPECS),
-            *((spec, takeaways_input_case) for spec in TAKEAWAYS_INPUT_SPECS),
-            *((spec, summary_takeaways_case) for spec in SUMMARY_TAKEAWAYS_SPECS),
+            *((spec, summary_case) for spec in TAKEAWAYS_SPECS),
+            *((spec, summary_input_case) for spec in TAKEAWAYS_INPUT_SPECS),
         ]
 
     return [asdict(x) for x in await evaluate_geval(settings, work)]
@@ -137,26 +105,19 @@ async def store_source_metrics_for_job(job_id: str, text: str) -> None:
 async def store_statistical_metrics_for_job(
     job_id: str,
     summary_text: str,
-    takeaways_text: str,
     source_text: str,
 ) -> None:
-    metrics = await compute_statistical_metrics(summary_text, takeaways_text, source_text)
-    await store_job_metrics(
-        job_id,
-        {
-            "metrics.summary": metrics["summary"],
-            "metrics.key_takeaways": metrics["key_takeaways"],
-        },
-    )
+    metrics = await compute_statistical_metrics(summary_text, source_text)
+    await store_job_metrics(job_id, {"metrics.summary": metrics["summary"]})
     log.debug("statistical metrics stored")
 
 
 async def store_deepeval_metrics_for_job(
     job_id: str,
     summary_text: str,
-    takeaways_text: str,
     source_text: str,
+    output_format: OutputFormat,
 ) -> None:
-    metrics = await compute_deepeval_metrics(summary_text, takeaways_text, source_text)
+    metrics = await compute_deepeval_metrics(summary_text, source_text, output_format)
     await store_job_metrics(job_id, {"deepeval_metrics": metrics})
     log.debug("deepeval metrics stored")

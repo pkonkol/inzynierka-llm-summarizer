@@ -183,18 +183,6 @@ TAKEAWAYS_INPUT_SPECS = [
     ),
 ]
 
-SUMMARY_TAKEAWAYS_SPECS = [
-    GEvalSpec(
-        name="summary_covers_takeaways",
-        criteria=(
-            "Assess whether the summary covers the factual content expressed in the key takeaways. "
-            "Penalize omission of major takeaway points, contradictions, and summaries that are "
-            "too generic relative to the takeaways."
-        ),
-        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-]
-
 
 async def evaluate_geval(
     settings: Settings, work: list[tuple[GEvalSpec, LLMTestCase]]

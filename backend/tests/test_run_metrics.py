@@ -1,16 +1,32 @@
 import pytest
 
-from app.services.run_metrics import evaluated_output_text
+from app.services import run_metrics
 
 
-def test_prose_output_is_judged_as_the_summary_itself() -> None:
-    assert evaluated_output_text("A summary.", None) == "A summary."
+@pytest.fixture
+def geval_names(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    names: list[str] = []
+
+    async def record(settings: object, work: list) -> list:
+        names.extend(spec.name for spec, _ in work)
+        return []
+
+    monkeypatch.setattr(run_metrics, "evaluate_geval", record)
+    return names
 
 
-def test_bullets_output_is_judged_as_the_joined_points() -> None:
-    assert evaluated_output_text(None, ["first", "second"]) == "- first\n- second"
+async def test_a_prose_summary_gets_only_the_general_judges(geval_names: list[str]) -> None:
+    await run_metrics.compute_deepeval_metrics("A summary.", "The source.", "prose")
+
+    assert "summary_completeness" in geval_names
+    assert "takeaways_non_redundancy" not in geval_names
+    assert "takeaways_coverage" not in geval_names
 
 
-def test_a_result_with_neither_output_is_a_bug() -> None:
-    with pytest.raises(ValueError, match="neither"):
-        evaluated_output_text(None, None)
+async def test_a_bullet_list_also_gets_the_list_quality_judges(geval_names: list[str]) -> None:
+    await run_metrics.compute_deepeval_metrics("- a\n- b", "The source.", "bullets")
+
+    assert "summary_completeness" in geval_names
+    assert "takeaways_non_redundancy" in geval_names
+    assert "takeaways_coverage" in geval_names
+    assert "summary_covers_takeaways" not in geval_names

@@ -130,12 +130,6 @@ def stale_work_cutoff() -> datetime:
     return datetime.now(UTC) - timedelta(minutes=settings.stale_work_timeout_minutes)
 
 
-# MIGRATION: until 2026-03, documents created before heartbeats existed have no heartbeat_at.
-# Range operators in MongoDB are type-bracketed, so the query above cannot see them and they
-# would hang forever. Delete this once no such documents remain.
-_MISSING_HEARTBEAT = {"heartbeat_at": {"$exists": False}}
-
-
 async def cleanup_stale_pending_jobs() -> int:
     jobs_collection = get_jobs_collection()
     unfinished = {"status": {"$in": ["pending", "running"]}}
@@ -149,8 +143,7 @@ async def cleanup_stale_pending_jobs() -> int:
     result = await jobs_collection.update_many(
         {**unfinished, "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
     )
-    legacy = await jobs_collection.update_many({**unfinished, **_MISSING_HEARTBEAT}, update)
-    return result.modified_count + legacy.modified_count
+    return result.modified_count
 
 
 async def cleanup_stale_evaluation_runs() -> int:
@@ -166,8 +159,7 @@ async def cleanup_stale_evaluation_runs() -> int:
     result = await runs_collection.update_many(
         {**unfinished, "heartbeat_at": {"$lt": stale_work_cutoff()}}, update
     )
-    legacy = await runs_collection.update_many({**unfinished, **_MISSING_HEARTBEAT}, update)
-    return result.modified_count + legacy.modified_count
+    return result.modified_count
 
 
 async def cleanup_stale_golden_metrics_passes() -> int:

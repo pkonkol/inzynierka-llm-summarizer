@@ -3,6 +3,7 @@ import {
   EVALUATION_IMPORT_PATH,
   EVALUATION_SETS_PATH,
   LOGIN_PATH,
+  PUBLIC_HOME_PATH,
   SUMMARIES_ALL_PATH,
   SUMMARIES_NEW_PATH,
 } from "../utils/routing";
@@ -91,6 +92,7 @@ export const EVALUATION_TRAIL: Crumb[] = EVALUATION_MODULE.tabs.map((tab, index)
 
 const CELL = "flex items-center whitespace-nowrap px-3 font-mono uppercase sm:px-5";
 const AUTH_CELL = `${CELL} border-l border-panel-border text-sm tracking-widest`;
+const HOME_CELL = `${CELL} border-r border-panel-border text-sm tracking-widest`;
 
 function NavLink({
   label,
@@ -134,6 +136,13 @@ export function NavDock({ route, isLoggedIn }: NavDockProps) {
   return (
     <div className="flex justify-center px-4 pt-4">
       <div className="inline-flex items-stretch border border-panel-border bg-panel-solid">
+        <AppLink
+          href={PUBLIC_HOME_PATH}
+          className={`${HOME_CELL} text-ink no-underline hover:bg-subtle`}
+        >
+          ← Portal
+        </AppLink>
+
         {/* Every divider is a 1px gap showing the container colour behind the opaque cells.
             The modules stack below sm so the bar always fits: an ancestor carrying any overflow
             value to scroll it would clip the tooltips. */}

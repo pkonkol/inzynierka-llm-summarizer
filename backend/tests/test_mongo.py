@@ -32,15 +32,6 @@ async def test_runs_expire_on_the_heartbeat_rather_than_creation_time(
     assert "created_at" not in query
 
 
-async def test_documents_predating_heartbeats_are_swept_separately(
-    runs_collection: AsyncMock,
-) -> None:
-    await mongo.cleanup_stale_evaluation_runs()
-
-    legacy_query, _ = runs_collection.update_many.call_args_list[1].args
-    assert legacy_query["heartbeat_at"] == {"$exists": False}
-
-
-async def test_stale_jobs_are_counted_across_both_sweeps(jobs_collection: AsyncMock) -> None:
+async def test_stale_jobs_are_counted(jobs_collection: AsyncMock) -> None:
     jobs_collection.update_many.return_value.modified_count = 2
-    assert await mongo.cleanup_stale_pending_jobs() == 4
+    assert await mongo.cleanup_stale_pending_jobs() == 2

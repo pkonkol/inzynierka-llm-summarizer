@@ -42,8 +42,22 @@ export function errorText(error: unknown): string {
 
 const tokenListeners = new Set<() => void>();
 
+// A token we cannot read is a token we cannot use.
+function isTokenUsable(token: string): boolean {
+  try {
+    const { exp } = JSON.parse(atob(token.split(".")[1])) as { exp: number };
+    return exp * 1000 > Date.now();
+  } catch {
+    logger.warn("stored auth token is unreadable");
+    return false;
+  }
+}
+
+// Reads only: this runs inside getSnapshot for useIsLoggedIn, where notifying listeners would
+// loop. An expired string left behind is inert and the next login overwrites it.
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token && isTokenUsable(token) ? token : null;
 }
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);

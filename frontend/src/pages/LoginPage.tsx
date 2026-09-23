@@ -1,19 +1,25 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { login, setToken } from "../api/client";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { FieldLabel, Input } from "../components/ui/Field";
 import { Panel } from "../components/ui/Panel";
-import { navigateTo, SUMMARIES_NEW_PATH } from "../utils/routing";
+import { navigateTo, redirectTo, SUMMARIES_NEW_PATH } from "../utils/routing";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
+import { useIsLoggedIn } from "../utils/useIsLoggedIn";
 
 export function LoginPage() {
   useDocumentTitle("Logowanie");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const isLoggedIn = useIsLoggedIn();
+
+  useEffect(() => {
+    if (isLoggedIn) redirectTo(SUMMARIES_NEW_PATH);
+  }, [isLoggedIn]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -29,6 +35,10 @@ export function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  // The redirect above is already on its way; rendering the form would flash it at someone
+  // who is signed in.
+  if (isLoggedIn) return null;
 
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-sm content-center px-3 py-8">

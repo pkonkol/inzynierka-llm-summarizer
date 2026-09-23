@@ -122,9 +122,7 @@ async def resume_interrupted_work() -> None:
         resumed_runs += 1
 
     resumed_jobs = 0
-    # Jobs created before language and run_deepeval were stored carry neither, so they cannot be
-    # restarted; the stale-work cleanup reports them as failed instead.
-    async for job in jobs.find({**_RESUMABLE, "language": {"$exists": True}}, _JOB_RESUME_FIELDS):
+    async for job in jobs.find(_RESUMABLE, _JOB_RESUME_FIELDS):
         await jobs.update_one({"job_id": job["job_id"]}, _claim_update(reset_attempts=False))
         spawn_tracked_task(run_summarization_job(job["job_id"]), kind="summarization_job")
         resumed_jobs += 1

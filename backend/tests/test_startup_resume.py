@@ -85,15 +85,6 @@ async def test_startup_does_not_wait_out_a_staleness_window(
     assert run_query["resume_attempts"] == {"$lt": settings.max_resume_attempts}
 
 
-async def test_jobs_predating_the_stored_language_are_not_restarted(
-    runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
-) -> None:
-    await startup_resume.resume_interrupted_work()
-
-    job_query = jobs_collection.find.call_args.args[0]
-    assert job_query["language"] == {"$exists": True}
-
-
 async def test_golden_metrics_passes_are_resumed_by_attempt_budget_not_heartbeat(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:

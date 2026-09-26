@@ -9,6 +9,7 @@ from .core.config import settings
 from .core.executors import run_blocking
 from .core.logging import setup_logging
 from .core.mongo import (
+    cleanup_stale_deepeval_passes,
     cleanup_stale_evaluation_runs,
     cleanup_stale_golden_metrics_passes,
     cleanup_stale_pending_jobs,
@@ -40,11 +41,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     stale_jobs = await cleanup_stale_pending_jobs()
     stale_runs = await cleanup_stale_evaluation_runs()
     stale_golden_metrics_passes = await cleanup_stale_golden_metrics_passes()
+    stale_deepeval_passes = await cleanup_stale_deepeval_passes()
     log.info(
         "stale work cleaned",
         stale_jobs=stale_jobs,
         stale_runs=stale_runs,
         stale_golden_metrics_passes=stale_golden_metrics_passes,
+        stale_deepeval_passes=stale_deepeval_passes,
     )
     yield
     await close_mongo()

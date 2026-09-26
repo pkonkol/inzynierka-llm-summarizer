@@ -25,6 +25,7 @@ from ..core.mongo import (
     get_jobs_collection,
     stale_work_cutoff,
 )
+from .evaluation_run_metrics import compute_run_deepeval_metrics
 from .evaluation_runner import run_evaluation_batch
 from .evaluation_set_metrics import run_golden_metrics_pass
 from .summarization_runner import run_summarization_job
@@ -40,6 +41,12 @@ _UNFINISHED_GOLDEN_METRICS = {"golden_metrics_pass.status": {"$in": ["pending", 
 _RESUMABLE_GOLDEN_METRICS = {
     **_UNFINISHED_GOLDEN_METRICS,
     "golden_metrics_pass.resume_attempts": {"$lt": settings.max_resume_attempts},
+}
+
+_UNFINISHED_DEEPEVAL = {"aggregate_metrics.deepeval.status": {"$in": ["pending", "running"]}}
+_RESUMABLE_DEEPEVAL = {
+    **_UNFINISHED_DEEPEVAL,
+    "aggregate_metrics.deepeval.resume_attempts": {"$lt": settings.max_resume_attempts},
 }
 
 
@@ -106,6 +113,39 @@ async def claim_golden_metrics_pass_for_queue(set_id: ObjectId) -> bool:
     return result.modified_count == 1
 
 
+async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
+    """Takes the GEval pass of a finished run for POST .../deepeval. False means it is not claimable.
+
+    Atomic for the same reason as the golden-metrics claim: two clicks must not start two passes
+    that both pay the judge for the same entries.
+    """
+    query: dict[str, Any] = {
+        "_id": run_id,
+        "status": {"$nin": ["pending", "running"]},
+        "$or": [
+            {"aggregate_metrics.deepeval": None},
+            {"aggregate_metrics.deepeval.status": {"$in": ["completed", "failed"]}},
+            {
+                **_UNFINISHED_DEEPEVAL,
+                "aggregate_metrics.deepeval.heartbeat_at": {"$lt": stale_work_cutoff()},
+            },
+        ],
+    }
+    result = await get_evaluation_runs_collection().update_one(
+        query,
+        {
+            "$set": {
+                "aggregate_metrics.deepeval": {
+                    "status": "pending",
+                    "heartbeat_at": datetime.now(UTC),
+                    "resume_attempts": 0,
+                }
+            }
+        },
+    )
+    return result.modified_count == 1
+
+
 async def resume_interrupted_work() -> None:
     """Restarts everything resumable.
 
@@ -141,9 +181,22 @@ async def resume_interrupted_work() -> None:
         spawn_tracked_task(run_golden_metrics_pass(set_id), kind="golden_metrics_pass")
         resumed_golden_metrics_passes += 1
 
+    resumed_deepeval_passes = 0
+    async for run in runs.find(_RESUMABLE_DEEPEVAL, {"_id": 1}):
+        await runs.update_one(
+            {"_id": run["_id"]},
+            {
+                "$set": {"aggregate_metrics.deepeval.heartbeat_at": datetime.now(UTC)},
+                "$inc": {"aggregate_metrics.deepeval.resume_attempts": 1},
+            },
+        )
+        spawn_tracked_task(compute_run_deepeval_metrics(str(run["_id"])), kind="deepeval_pass")
+        resumed_deepeval_passes += 1
+
     log.info(
         "interrupted work resumed",
         resumed_runs=resumed_runs,
         resumed_jobs=resumed_jobs,
         resumed_golden_metrics_passes=resumed_golden_metrics_passes,
+        resumed_deepeval_passes=resumed_deepeval_passes,
     )

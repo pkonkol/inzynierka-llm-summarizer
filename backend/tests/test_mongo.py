@@ -35,3 +35,11 @@ async def test_runs_expire_on_the_heartbeat_rather_than_creation_time(
 async def test_stale_jobs_are_counted(jobs_collection: AsyncMock) -> None:
     jobs_collection.update_many.return_value.modified_count = 2
     assert await mongo.cleanup_stale_pending_jobs() == 2
+
+
+async def test_deepeval_passes_expire_on_their_own_heartbeat(runs_collection: AsyncMock) -> None:
+    await mongo.cleanup_stale_deepeval_passes()
+
+    query, update = runs_collection.update_many.call_args.args
+    assert "aggregate_metrics.deepeval.heartbeat_at" in query
+    assert update["$set"]["aggregate_metrics.deepeval.status"] == "failed"

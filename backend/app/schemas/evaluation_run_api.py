@@ -16,7 +16,9 @@ EntryStatus = Literal["pending", "running", "completed", "failed"]
 class DeepevalPassMetrics(ApiModel):
     """Progress of the GEval pass, which runs separately from the run itself."""
 
-    status: Literal["running", "completed", "failed"]
+    status: Literal["pending", "running", "completed", "failed"]
+    heartbeat_at: datetime | None = None
+    resume_attempts: int = 0
     started_at: datetime | None = None
     finished_at: datetime | None = None
     updated_entries: int | None = None

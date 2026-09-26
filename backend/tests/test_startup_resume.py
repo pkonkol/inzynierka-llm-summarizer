@@ -78,7 +78,7 @@ async def test_startup_does_not_wait_out_a_staleness_window(
 ) -> None:
     await startup_resume.resume_interrupted_work()
 
-    run_query = runs_collection.find.call_args.args[0]
+    run_query = runs_collection.find.call_args_list[0].args[0]
     # A run killed a minute before the restart has a fresh heartbeat; requiring staleness here
     # would leave it unresumed until some later boot.
     assert "heartbeat_at" not in run_query
@@ -123,3 +123,37 @@ async def test_golden_metrics_queue_claim_allows_missing_failed_or_stale(
     assert update["$set"]["golden_metrics_pass.status"] == "pending"
     assert update["$set"]["golden_metrics_pass.resume_attempts"] == 0
     assert update["$set"]["golden_metrics_pass.error"] is None
+
+
+async def test_deepeval_claim_requires_a_finished_run_and_resets_the_pass(
+    runs_collection: AsyncMock,
+) -> None:
+    runs_collection.update_one.return_value.modified_count = 1
+    assert await startup_resume.claim_deepeval_pass_for_queue(ObjectId()) is True
+
+    query, update = runs_collection.update_one.call_args.args
+    assert query["status"] == {"$nin": ["pending", "running"]}
+    conditions = query["$or"]
+    assert {"aggregate_metrics.deepeval": None} in conditions
+    assert {"aggregate_metrics.deepeval.status": {"$in": ["completed", "failed"]}} in conditions
+    # A pass with a fresh heartbeat is still owned by a live loop; taking it is how two passes pay the judge twice.
+    assert any("aggregate_metrics.deepeval.heartbeat_at" in cond for cond in conditions)
+    new_pass = update["$set"]["aggregate_metrics.deepeval"]
+    assert new_pass["status"] == "pending"
+    assert new_pass["resume_attempts"] == 0
+
+    runs_collection.update_one.return_value.modified_count = 0
+    assert await startup_resume.claim_deepeval_pass_for_queue(ObjectId()) is False
+
+
+async def test_deepeval_passes_are_resumed_by_attempt_budget_not_heartbeat(
+    runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
+) -> None:
+    await startup_resume.resume_interrupted_work()
+
+    deepeval_query = runs_collection.find.call_args_list[-1].args[0]
+    assert deepeval_query["aggregate_metrics.deepeval.status"] == {"$in": ["pending", "running"]}
+    assert deepeval_query["aggregate_metrics.deepeval.resume_attempts"] == {
+        "$lt": settings.max_resume_attempts
+    }
+    assert "aggregate_metrics.deepeval.heartbeat_at" not in deepeval_query

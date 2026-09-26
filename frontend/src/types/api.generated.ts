@@ -499,7 +499,14 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "running" | "completed" | "failed";
+            status: "pending" | "running" | "completed" | "failed";
+            /** Heartbeat At */
+            heartbeat_at: string | null;
+            /**
+             * Resume Attempts
+             * @default 0
+             */
+            resume_attempts: number;
             /** Started At */
             started_at: string | null;
             /** Finished At */

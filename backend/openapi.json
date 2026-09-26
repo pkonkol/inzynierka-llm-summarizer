@@ -1408,11 +1408,29 @@
           "status": {
             "type": "string",
             "enum": [
+              "pending",
               "running",
               "completed",
               "failed"
             ],
             "title": "Status"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
+          "resume_attempts": {
+            "type": "integer",
+            "title": "Resume Attempts",
+            "default": 0
           },
           "started_at": {
             "anyOf": [
@@ -1486,6 +1504,8 @@
         "type": "object",
         "required": [
           "status",
+          "heartbeat_at",
+          "resume_attempts",
           "started_at",
           "finished_at",
           "updated_entries",

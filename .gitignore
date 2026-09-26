@@ -18,7 +18,7 @@ logs.md
 !.env.example
 CLAUDE.local.md
 .scratch/
-
+.codegraph
 
 # macOS
 .DS_Store

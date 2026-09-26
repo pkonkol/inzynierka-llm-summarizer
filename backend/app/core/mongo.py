@@ -176,3 +176,19 @@ async def cleanup_stale_golden_metrics_passes() -> int:
         },
     )
     return result.modified_count
+
+
+async def cleanup_stale_deepeval_passes() -> int:
+    runs_collection = get_evaluation_runs_collection()
+    unfinished = {"aggregate_metrics.deepeval.status": {"$in": ["pending", "running"]}}
+    result = await runs_collection.update_many(
+        {**unfinished, "aggregate_metrics.deepeval.heartbeat_at": {"$lt": stale_work_cutoff()}},
+        {
+            "$set": {
+                "aggregate_metrics.deepeval.status": "failed",
+                "aggregate_metrics.deepeval.finished_at": datetime.now(UTC),
+                "aggregate_metrics.deepeval.error": "GEval pass stopped responding",
+            }
+        },
+    )
+    return result.modified_count

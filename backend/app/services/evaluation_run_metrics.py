@@ -20,19 +20,26 @@ from .run_metrics import (
 log = structlog.get_logger(__name__)
 
 
-async def _store_deepeval_status(run_id: str, deepeval_status: dict[str, Any]) -> None:
-    await get_evaluation_runs_collection().update_one(
-        {"_id": ObjectId(run_id)},
-        {"$set": {"aggregate_metrics.deepeval": deepeval_status}},
-    )
-
-
-async def mark_deepeval_pass_started(run_id: str) -> None:
-    await _store_deepeval_status(run_id, {"status": "running", "started_at": datetime.now(UTC)})
+async def _store_deepeval_status(run_id: str, fields: dict[str, Any]) -> None:
+    prefixed = {f"aggregate_metrics.deepeval.{key}": value for key, value in fields.items()}
+    await get_evaluation_runs_collection().update_one({"_id": ObjectId(run_id)}, {"$set": prefixed})
 
 
 @track_background_work("deepeval_pass")
 async def compute_run_deepeval_metrics(run_id: str) -> None:
+    """Scores every completed entry that has no GEval result yet, one entry at a time.
+
+    Each entry is written back — and the pass heartbeat refreshed — the moment it is judged, so
+    a restart mid-pass resumes from whatever is left rather than paying the judge twice.
+    """
+    structlog.contextvars.bind_contextvars(run_id=run_id)
+    try:
+        await _score_run_entries(run_id)
+    finally:
+        structlog.contextvars.unbind_contextvars("run_id")
+
+
+async def _score_run_entries(run_id: str) -> None:
     runs = get_evaluation_runs_collection()
     sets = get_evaluation_sets_collection()
 
@@ -65,6 +72,10 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
         return
 
     output_format = SummarySpec.model_validate(run_doc["summary_spec"]).output_format
+    started_at = datetime.now(UTC)
+    await _store_deepeval_status(
+        run_id, {"status": "running", "started_at": started_at, "heartbeat_at": started_at}
+    )
 
     updated_entries = 0
     skipped_entries = 0
@@ -111,12 +122,13 @@ async def compute_run_deepeval_metrics(run_id: str) -> None:
                     "$set": {
                         "entries.$.ai_metrics": ai_metrics,
                         "entries.$.cross_metrics": cross_metrics,
+                        "aggregate_metrics.deepeval.heartbeat_at": datetime.now(UTC),
                     }
                 },
             )
             updated_entries += 1
     except Exception as exc:
-        log.exception("deepeval failed", run_id=run_id)
+        log.exception("deepeval failed")
         await _store_deepeval_status(
             run_id,
             {"status": "failed", "error": str(exc), "finished_at": datetime.now(UTC)},

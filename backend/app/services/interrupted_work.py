@@ -1,12 +1,13 @@
-"""Picks up evaluation runs and summarisation jobs left behind by a process that died.
+"""The lifecycle of background work — summarisation jobs, evaluation runs, golden-metrics passes
+and GEval passes — once the process that owned it may have died.
 
-Runs once in the lifespan, before the app serves anything. Because this process has just
-started, nothing it finds unfinished can belong to it, so the startup path takes work however
-recent its heartbeat is — waiting out a staleness window would mean a run killed a minute
-before the restart is never picked up at all.
+`recover_interrupted_work` runs once in the lifespan, before the app serves anything. Because
+this process has just started, nothing it finds unfinished can belong to it, so the startup path
+takes work however recent its heartbeat is — waiting out a staleness window would mean a run
+killed a minute before the restart is never picked up at all.
 
-The manual resume endpoint is the opposite case: the app is live and a loop may genuinely own
-the run, so `claim_evaluation_run_for_resume` checks the heartbeat before taking it.
+The `claim_*` functions are the opposite case: the app is live and a loop may genuinely own the
+work, so they check the heartbeat before taking it.
 """
 
 from __future__ import annotations
@@ -146,12 +147,25 @@ async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
     return result.modified_count == 1
 
 
-async def resume_interrupted_work() -> None:
-    """Restarts everything resumable.
+async def recover_interrupted_work() -> None:
+    """Resumes what still has attempts left, then fails what is left over.
 
-    Must run before the stale-work cleanup, which would otherwise mark the documents being
-    resumed here as failed.
+    The order is the point: the cleanup keys off a stale heartbeat, and resuming refreshes it,
+    so work resumed here is out of the cleanup's reach. The other way round, every resumable
+    document would be marked failed first.
     """
+    await resume_interrupted_work()
+    log.info(
+        "stale work cleaned",
+        stale_jobs=await cleanup_stale_pending_jobs(),
+        stale_runs=await cleanup_stale_evaluation_runs(),
+        stale_golden_metrics_passes=await cleanup_stale_golden_metrics_passes(),
+        stale_deepeval_passes=await cleanup_stale_deepeval_passes(),
+    )
+
+
+async def resume_interrupted_work() -> None:
+    """Restarts everything that still has resume attempts left."""
     runs = get_evaluation_runs_collection()
     jobs = get_jobs_collection()
 
@@ -200,3 +214,65 @@ async def resume_interrupted_work() -> None:
         resumed_golden_metrics_passes=resumed_golden_metrics_passes,
         resumed_deepeval_passes=resumed_deepeval_passes,
     )
+
+
+async def cleanup_stale_pending_jobs() -> int:
+    result = await get_jobs_collection().update_many(
+        {**_UNFINISHED, "heartbeat_at": {"$lt": stale_work_cutoff()}},
+        {
+            "$set": {
+                "status": "failed",
+                "error": "Job killed before completion (server restart)",
+                "updated_at": datetime.now(UTC),
+            }
+        },
+    )
+    return result.modified_count
+
+
+async def cleanup_stale_evaluation_runs() -> int:
+    result = await get_evaluation_runs_collection().update_many(
+        {**_UNFINISHED, "heartbeat_at": {"$lt": stale_work_cutoff()}},
+        {
+            "$set": {
+                "status": "failed",
+                "finished_at": datetime.now(UTC),
+                "aggregate_metrics.error": "Evaluation run stopped responding and could not be resumed",
+            }
+        },
+    )
+    return result.modified_count
+
+
+async def cleanup_stale_golden_metrics_passes() -> int:
+    result = await get_evaluation_sets_collection().update_many(
+        {
+            **_UNFINISHED_GOLDEN_METRICS,
+            "golden_metrics_pass.heartbeat_at": {"$lt": stale_work_cutoff()},
+        },
+        {
+            "$set": {
+                "golden_metrics_pass.status": "failed",
+                "golden_metrics_pass.finished_at": datetime.now(UTC),
+                "golden_metrics_pass.error": "Golden metrics pass stopped responding",
+            }
+        },
+    )
+    return result.modified_count
+
+
+async def cleanup_stale_deepeval_passes() -> int:
+    result = await get_evaluation_runs_collection().update_many(
+        {
+            **_UNFINISHED_DEEPEVAL,
+            "aggregate_metrics.deepeval.heartbeat_at": {"$lt": stale_work_cutoff()},
+        },
+        {
+            "$set": {
+                "aggregate_metrics.deepeval.status": "failed",
+                "aggregate_metrics.deepeval.finished_at": datetime.now(UTC),
+                "aggregate_metrics.deepeval.error": "GEval pass stopped responding",
+            }
+        },
+    )
+    return result.modified_count

@@ -23,11 +23,11 @@ from ..schemas.evaluation_run_api import (
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
 from ..services.evaluation_run_metrics import compute_run_deepeval_metrics
 from ..services.evaluation_runner import run_evaluation_batch
-from ..services.llm._base import validate_model, validate_processing_strategy
-from ..services.startup_resume import (
+from ..services.interrupted_work import (
     claim_deepeval_pass_for_queue,
     claim_evaluation_run_for_resume,
 )
+from ..services.llm._base import validate_model, validate_processing_strategy
 from .evaluation_sets import find_evaluation_set_or_404
 
 log = structlog.get_logger(__name__)

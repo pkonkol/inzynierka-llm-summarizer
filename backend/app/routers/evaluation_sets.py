@@ -34,7 +34,7 @@ from ..schemas.evaluation_set_db import (
     GoldenMetricsPassStatus,
 )
 from ..services.evaluation_set_metrics import run_golden_metrics_pass
-from ..services.startup_resume import claim_golden_metrics_pass_for_queue
+from ..services.interrupted_work import claim_golden_metrics_pass_for_queue
 
 log = structlog.get_logger(__name__)
 

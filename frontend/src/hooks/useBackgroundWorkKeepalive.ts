@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { getKeepalive } from "../api/client";
-import { logger } from "./logger";
+import { logger } from "../utils/logger";
 
 const IDLE_RECHECK_MS = 30_000;
 const FAILURE_RETRY_MS = 2_000;

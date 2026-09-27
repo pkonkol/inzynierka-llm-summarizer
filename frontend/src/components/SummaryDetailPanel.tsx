@@ -2,9 +2,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
-import { Button, type ButtonVariant } from "../components/ui/Button";
-import { DisclosureSections } from "../components/ui/DisclosureSections";
-import { SectionHeading } from "../components/ui/PageShell";
+import { useFetchOnMount } from "../hooks/useFetchOnMount";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatusValue, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
@@ -16,13 +14,15 @@ import {
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
-import { useFetchOnMount } from "../utils/useFetchOnMount";
 import { isJobInProgress, isManualSource } from "../utils/utils";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
 import { MetricsSection } from "./MetricsSection";
-import { PreBlock } from "./PreBlock";
+import { Button, type ButtonVariant } from "./ui/Button";
+import { DisclosureSections } from "./ui/DisclosureSections";
+import { SectionHeading } from "./ui/PageShell";
+import { PreBlock } from "./ui/PreBlock";
 
 interface JobDetailPanelProps {
   sourceUrl: string | null;

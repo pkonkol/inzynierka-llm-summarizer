@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 
 import { getAuthStatus } from "../api/client";
+import { useFetchOnMount } from "../hooks/useFetchOnMount";
+import { useIsLoggedIn } from "../hooks/useIsLoggedIn";
 import { LOGIN_PATH, redirectTo } from "../utils/routing";
-import { useFetchOnMount } from "../utils/useFetchOnMount";
-import { useIsLoggedIn } from "../utils/useIsLoggedIn";
 import { Alert } from "./ui/Alert";
 import { PageShell } from "./ui/PageShell";
 

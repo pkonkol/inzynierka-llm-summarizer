@@ -1,6 +1,6 @@
 import { getEvaluationSetEntryInputText } from "../api/research";
-import { useFetchOnMount } from "../utils/useFetchOnMount";
-import { PreBlock } from "./PreBlock";
+import { useFetchOnMount } from "../hooks/useFetchOnMount";
+import { PreBlock } from "./ui/PreBlock";
 
 type Props = {
   setId: string;

@@ -1,4 +1,4 @@
-import { cn } from "./ui/cn";
+import { cn } from "./cn";
 
 type PreBlockProps = React.ComponentProps<"pre"> & {
   withoutBackground?: boolean;

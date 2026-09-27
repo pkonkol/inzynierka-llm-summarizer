@@ -6,9 +6,9 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { FieldLabel, Input } from "../components/ui/Field";
 import { Panel } from "../components/ui/Panel";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useIsLoggedIn } from "../hooks/useIsLoggedIn";
 import { navigateTo, redirectTo, SUMMARIES_NEW_PATH } from "../utils/routing";
-import { useDocumentTitle } from "../utils/useDocumentTitle";
-import { useIsLoggedIn } from "../utils/useIsLoggedIn";
 
 export function LoginPage() {
   useDocumentTitle("Logowanie");

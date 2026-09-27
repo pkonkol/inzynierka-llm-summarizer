@@ -1,9 +1,9 @@
-import type { FlashMessage } from "../../utils/useFlashMessage";
-import { Collapsible } from "../Collapsible";
-import { PreBlock } from "../PreBlock";
+import type { FlashMessage } from "../../hooks/useFlashMessage";
 import { Alert } from "./Alert";
 import { Button } from "./Button";
+import { Collapsible } from "./Collapsible";
 import { LinkButton } from "./LinkButton";
+import { PreBlock } from "./PreBlock";
 
 const SUMMARY_LIMIT = 140;
 

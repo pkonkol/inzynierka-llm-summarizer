@@ -1,4 +1,10 @@
 import { useId } from "react";
+import {
+  DEFAULT_EXPLICIT_LENGTH,
+  DEFAULT_SCALED_LENGTH,
+  type LengthSpec,
+  type SummarySpecForm,
+} from "../hooks/useSummarySpecForm";
 import type { SummarySpec } from "../types/api.generated";
 import {
   FUNCTION_LABELS,
@@ -6,12 +12,6 @@ import {
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
-import {
-  DEFAULT_EXPLICIT_LENGTH,
-  DEFAULT_SCALED_LENGTH,
-  type LengthSpec,
-  type SummarySpecForm,
-} from "../utils/useSummarySpecForm";
 import { FieldLabel, Input, RangeInput, Select, Textarea } from "./ui/Field";
 
 // Keep in sync with backend/app/schemas/summary_spec.py — the backend owns the defaults.

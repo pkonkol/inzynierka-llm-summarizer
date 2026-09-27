@@ -1,10 +1,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
+import type { PublicSummaryState } from "../../hooks/usePublicSummary";
 import type { SummaryResponse } from "../../types/api.generated";
 import { downloadText } from "../../utils/download";
 import { formatDuration } from "../../utils/format";
-import type { PublicSummaryState } from "../../utils/usePublicSummary";
 import { useFlash } from "../FlashProvider";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";

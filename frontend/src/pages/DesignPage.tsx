@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Collapsible } from "../components/Collapsible";
 import { useFlash } from "../components/FlashProvider";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { Collapsible } from "../components/ui/Collapsible";
 import { DisclosureButton } from "../components/ui/DisclosureButton";
 import { FieldLabel, Input, Textarea } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";

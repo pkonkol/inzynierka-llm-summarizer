@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { getBackendVersion } from "./api/client";
 import { AdminGate } from "./components/AdminGate";
 import { NavDock } from "./components/NavDock";
+import { useBackgroundWorkKeepalive } from "./hooks/useBackgroundWorkKeepalive";
+import { useIsLoggedIn } from "./hooks/useIsLoggedIn";
 import { DesignPage } from "./pages/DesignPage";
 import { EvaluationImportPage } from "./pages/EvaluationImportPage";
 import { EvaluationRunPage } from "./pages/EvaluationRunPage";
@@ -14,8 +16,6 @@ import { PublicHomePage } from "./pages/PublicHomePage";
 import { ResearchPage } from "./pages/ResearchPage";
 import { logger } from "./utils/logger";
 import { isAdminRoute, matchRoute, type Route } from "./utils/routing";
-import { useBackgroundWorkKeepalive } from "./utils/useBackgroundWorkKeepalive";
-import { useIsLoggedIn } from "./utils/useIsLoggedIn";
 
 function CurrentPage({ route }: { route: Route }) {
   switch (route.tab) {

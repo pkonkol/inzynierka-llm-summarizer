@@ -6,10 +6,10 @@ import { useFlash } from "../components/FlashProvider";
 import { Button, buttonClasses } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Field";
 import { PageShell } from "../components/ui/PageShell";
+import { useAsyncAction } from "../hooks/useAsyncAction";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import type { EvaluationSetImportRequest } from "../types/api.generated";
 import { evaluationSetPath, navigateTo } from "../utils/routing";
-import { useAsyncAction } from "../utils/useAsyncAction";
-import { useDocumentTitle } from "../utils/useDocumentTitle";
 
 const PRETTY_EXAMPLE = `{
   "name": "dataset-sample1",

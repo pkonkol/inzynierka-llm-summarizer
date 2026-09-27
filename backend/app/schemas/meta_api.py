@@ -8,7 +8,7 @@ class VersionResponse(ApiModel):
     git_sha: str
 
 
-class SummaryPresetOut(ApiModel):
+class SummaryPresetResponse(ApiModel):
     label: str
     description: str
     example: str

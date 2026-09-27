@@ -26,7 +26,7 @@ from ..core.mongo import (
     get_jobs_collection,
     stale_work_cutoff,
 )
-from .evaluation_run_metrics import compute_run_deepeval_metrics
+from .evaluation_run_metrics import run_deepeval_pass
 from .evaluation_runner import run_evaluation_batch
 from .evaluation_set_metrics import run_golden_metrics_pass
 from .summarization_runner import run_summarization_job
@@ -154,7 +154,7 @@ async def recover_interrupted_work() -> None:
     so work resumed here is out of the cleanup's reach. The other way round, every resumable
     document would be marked failed first.
     """
-    await resume_interrupted_work()
+    await _resume_resumable_work()
     log.info(
         "stale work cleaned",
         stale_jobs=await cleanup_stale_pending_jobs(),
@@ -164,7 +164,7 @@ async def recover_interrupted_work() -> None:
     )
 
 
-async def resume_interrupted_work() -> None:
+async def _resume_resumable_work() -> None:
     """Restarts everything that still has resume attempts left."""
     runs = get_evaluation_runs_collection()
     jobs = get_jobs_collection()
@@ -204,7 +204,7 @@ async def resume_interrupted_work() -> None:
                 "$inc": {"aggregate_metrics.deepeval.resume_attempts": 1},
             },
         )
-        spawn_tracked_task(compute_run_deepeval_metrics(str(run["_id"])), kind="deepeval_pass")
+        spawn_tracked_task(run_deepeval_pass(str(run["_id"])), kind="deepeval_pass")
         resumed_deepeval_passes += 1
 
     log.info(

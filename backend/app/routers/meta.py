@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 from ..core.background_work import wait_until_no_work_remaining
 from ..core.config import settings
-from ..schemas.meta_api import KeepaliveResponse, SummaryPresetOut, VersionResponse
+from ..schemas.meta_api import KeepaliveResponse, SummaryPresetResponse, VersionResponse
 from ..services.llm.presets import SUMMARY_PRESETS
 
 router = APIRouter(prefix="/api/v1/meta", tags=["meta"])
@@ -31,9 +31,9 @@ async def get_supported_processing_strategies() -> dict[str, str]:
 
 
 @router.get("/summary-presets", summary="Get the summary kinds offered on the public page")
-async def get_summary_presets() -> dict[str, SummaryPresetOut]:
+async def get_summary_presets() -> dict[str, SummaryPresetResponse]:
     return {
-        key: SummaryPresetOut(
+        key: SummaryPresetResponse(
             label=preset.label,
             description=preset.description,
             example=preset.example,

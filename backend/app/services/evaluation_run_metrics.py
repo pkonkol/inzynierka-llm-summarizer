@@ -29,7 +29,7 @@ async def _store_deepeval_status(run_id: str, fields: dict[str, Any]) -> None:
 
 
 @track_background_work("deepeval_pass")
-async def compute_run_deepeval_metrics(run_id: str) -> None:
+async def run_deepeval_pass(run_id: str) -> None:
     """Scores every completed entry that has no GEval result yet, one entry at a time.
 
     Each entry is written back — and the pass heartbeat refreshed — the moment it is judged, so

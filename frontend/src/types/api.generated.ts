@@ -1148,8 +1148,8 @@ export interface components {
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
         };
-        /** SummaryPresetOut */
-        SummaryPresetOut: {
+        /** SummaryPresetResponse */
+        SummaryPresetResponse: {
             /** Label */
             label: string;
             /** Description */
@@ -1329,7 +1329,7 @@ export type PublicSummarizeRequest = components['schemas']['PublicSummarizeReque
 export type ResolvedLength = components['schemas']['ResolvedLength'];
 export type ScaledLength = components['schemas']['ScaledLength'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
-export type SummaryPresetOut = components['schemas']['SummaryPresetOut'];
+export type SummaryPresetResponse = components['schemas']['SummaryPresetResponse'];
 export type SummaryResponse = components['schemas']['SummaryResponse'];
 export type SummarySpec = components['schemas']['SummarySpec'];
 export type SummaryStatisticalMetrics = components['schemas']['SummaryStatisticalMetrics'];
@@ -1723,7 +1723,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        [key: string]: components["schemas"]["SummaryPresetOut"];
+                        [key: string]: components["schemas"]["SummaryPresetResponse"];
                     };
                 };
             };

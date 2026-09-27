@@ -76,7 +76,7 @@ async def test_a_manual_resume_lifts_the_cap_but_keeps_the_heartbeat_check(
 async def test_startup_does_not_wait_out_a_staleness_window(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
-    await interrupted_work.resume_interrupted_work()
+    await interrupted_work._resume_resumable_work()
 
     run_query = runs_collection.find.call_args_list[0].args[0]
     # A run killed a minute before the restart has a fresh heartbeat; requiring staleness here
@@ -88,7 +88,7 @@ async def test_startup_does_not_wait_out_a_staleness_window(
 async def test_golden_metrics_passes_are_resumed_by_attempt_budget_not_heartbeat(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
-    await interrupted_work.resume_interrupted_work()
+    await interrupted_work._resume_resumable_work()
 
     set_query = sets_collection.find.call_args.args[0]
     assert set_query["golden_metrics_pass.status"] == {"$in": ["pending", "running"]}
@@ -149,7 +149,7 @@ async def test_deepeval_claim_requires_a_finished_run_and_resets_the_pass(
 async def test_deepeval_passes_are_resumed_by_attempt_budget_not_heartbeat(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
-    await interrupted_work.resume_interrupted_work()
+    await interrupted_work._resume_resumable_work()
 
     deepeval_query = runs_collection.find.call_args_list[-1].args[0]
     assert deepeval_query["aggregate_metrics.deepeval.status"] == {"$in": ["pending", "running"]}
@@ -195,10 +195,10 @@ async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.M
         "cleanup_stale_golden_metrics_passes",
         "cleanup_stale_deepeval_passes",
     ]
-    for name in ["resume_interrupted_work", *cleanups]:
+    for name in ["_resume_resumable_work", *cleanups]:
         monkeypatch.setattr(interrupted_work, name, record(name))
 
     await interrupted_work.recover_interrupted_work()
 
     # Cleaning first would mark every resumable document failed before resume could see it.
-    assert calls == ["resume_interrupted_work", *cleanups]
+    assert calls == ["_resume_resumable_work", *cleanups]

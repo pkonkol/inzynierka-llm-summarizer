@@ -581,7 +581,7 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "$ref": "#/components/schemas/SummaryPresetOut"
+                    "$ref": "#/components/schemas/SummaryPresetResponse"
                   },
                   "type": "object",
                   "title": "Response Get Summary Presets Api V1 Meta Summary Presets Get"
@@ -3122,7 +3122,7 @@
         ],
         "title": "SourceMetrics"
       },
-      "SummaryPresetOut": {
+      "SummaryPresetResponse": {
         "properties": {
           "label": {
             "type": "string",
@@ -3147,7 +3147,7 @@
           "example",
           "spec"
         ],
-        "title": "SummaryPresetOut"
+        "title": "SummaryPresetResponse"
       },
       "SummaryResponse": {
         "properties": {

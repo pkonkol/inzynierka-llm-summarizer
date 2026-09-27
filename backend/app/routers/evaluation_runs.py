@@ -27,7 +27,7 @@ from ..services.interrupted_work import (
     claim_deepeval_pass_for_queue,
     claim_evaluation_run_for_resume,
 )
-from ..services.llm._base import validate_model, validate_processing_strategy
+from ..services.llm import validate_model, validate_processing_strategy
 from .evaluation_sets import find_evaluation_set_or_404
 
 log = structlog.get_logger(__name__)

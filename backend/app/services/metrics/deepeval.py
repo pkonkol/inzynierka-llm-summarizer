@@ -14,7 +14,7 @@ from langchain_core.runnables import Runnable
 
 from ...core.config import Settings
 from ...core.executors import run_geval
-from ..llm._base import build_llm, extract_text_from_content
+from ..llm import build_llm, extract_text_from_content
 
 log = structlog.get_logger(__name__)
 

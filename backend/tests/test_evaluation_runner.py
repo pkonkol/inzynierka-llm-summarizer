@@ -52,7 +52,7 @@ def _llm_result(summary: str) -> LlmSummaryResult:
 @pytest.fixture
 def mocked_entry_pipeline(monkeypatch: pytest.MonkeyPatch) -> dict[str, AsyncMock]:
     mocks = {
-        "fetch_source_entry": AsyncMock(return_value=_SOURCE_ENTRY),
+        "find_evaluation_set_entry_or_raise": AsyncMock(return_value=_SOURCE_ENTRY),
         "generate_summary": AsyncMock(return_value=_llm_result("AI summary.")),
         "compute_statistical_metrics": AsyncMock(return_value={}),
         "compute_cross_metrics": AsyncMock(return_value={}),

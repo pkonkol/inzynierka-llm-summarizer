@@ -119,6 +119,13 @@ async def find_evaluation_set_entry(set_id: str, entry_id: str) -> dict | None:
     return document["entries"][0]
 
 
+async def find_evaluation_set_entry_or_raise(set_id: str, entry_id: str) -> dict:
+    entry = await find_evaluation_set_entry(set_id, entry_id)
+    if entry is None:
+        raise ValueError(f"evaluation set {set_id} has no entry {entry_id}")
+    return entry
+
+
 def stale_work_cutoff() -> datetime:
     """Work whose heartbeat is older than this is treated as belonging to a dead process.
 

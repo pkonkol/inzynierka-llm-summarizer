@@ -8,9 +8,12 @@ import structlog
 from bson import ObjectId
 
 from ..core.background_work import track_background_work
-from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
+from ..core.mongo import (
+    find_evaluation_set_entry_or_raise,
+    get_evaluation_runs_collection,
+    get_evaluation_sets_collection,
+)
 from ..schemas.summary_spec import SummarySpec
-from .evaluation_runner import fetch_source_entry
 from .run_metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
@@ -93,7 +96,7 @@ async def _score_run_entries(run_id: str) -> None:
 
             entry_id = entry["entry_id"]
             summary_text = entry["ai_summary"].strip()
-            source_text = (await fetch_source_entry(set_id, entry_id))["input_text"]
+            source_text = (await find_evaluation_set_entry_or_raise(set_id, entry_id))["input_text"]
 
             deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
                 compute_deepeval_metrics(

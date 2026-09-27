@@ -9,7 +9,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 
 from ..core.background_work import track_background_work
 from ..core.mongo import (
-    find_evaluation_set_entry,
+    find_evaluation_set_entry_or_raise,
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
@@ -38,13 +38,6 @@ def summarize_entry_statuses(entry_statuses: list[str]) -> tuple[str, int, int, 
     return run_status, len(entry_statuses), completed, failed
 
 
-async def fetch_source_entry(set_id: str, entry_id: str) -> dict:
-    entry = await find_evaluation_set_entry(set_id, entry_id)
-    if entry is None:
-        raise ValueError(f"evaluation set {set_id} has no entry {entry_id}")
-    return entry
-
-
 async def _mark_run_failed(runs: AsyncIOMotorCollection, run_id: str, error: str) -> None:
     await runs.update_one(
         {"_id": ObjectId(run_id)},
@@ -62,7 +55,9 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
     """Everything written back about a single entry, including the failure case."""
     entry_id = run_entry["entry_id"]
     try:
-        source_entry = await fetch_source_entry(run_doc["evaluation_set_id"], entry_id)
+        source_entry = await find_evaluation_set_entry_or_raise(
+            run_doc["evaluation_set_id"], entry_id
+        )
         spec = SummarySpec.model_validate(run_doc["summary_spec"])
         length = resolve_target_length(
             spec.length,

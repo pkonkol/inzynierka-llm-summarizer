@@ -21,7 +21,7 @@ from ..schemas.job_api import (
 )
 from ..schemas.job_db import JobDocument
 from ..schemas.summary_spec import ProcessingStrategy
-from ..services.llm._base import validate_model, validate_processing_strategy
+from ..services.llm import validate_model, validate_processing_strategy
 from ..services.summarization_runner import run_summarization_job
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])

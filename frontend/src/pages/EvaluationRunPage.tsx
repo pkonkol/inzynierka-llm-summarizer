@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { type ReactNode, useMemo } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
@@ -31,6 +31,7 @@ import { useAsyncAction } from "../utils/useAsyncAction";
 import { useDocumentTitle } from "../utils/useDocumentTitle";
 import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
+import { useWorkFinished } from "../utils/useWorkFinished";
 
 const PAIRWISE_TIE_MARGIN = 0.05;
 
@@ -320,8 +321,6 @@ type Props = {
 
 export function EvaluationRunPage({ runId }: Props) {
   const showFlash = useFlash();
-  const previousRunStatus = useRef<string | null>(null);
-  const wasDeepevalRunning = useRef(false);
 
   const runResource = useReloadableResource(
     () => getEvaluationRun(runId),
@@ -353,25 +352,16 @@ export function EvaluationRunPage({ runId }: Props) {
   useListPolling(runResource.reload, isRunInProgress || isDeepevalRunning);
   useListPolling(entriesResource.reload, true, isRunInProgress || isDeepevalRunning);
 
-  useEffect(() => {
-    if (!run) return;
-    const previousStatus = previousRunStatus.current;
-    previousRunStatus.current = run.status;
-    if (previousStatus && previousStatus !== run.status && !isRunInProgress) {
-      showFlash(`Run zakończony ze statusem: ${run.status}.`);
-      void entriesResource.reload();
-    }
-  }, [run, isRunInProgress, entriesResource.reload, showFlash]);
+  useWorkFinished(run?.status ?? null, isRunInProgress, (status) => {
+    showFlash(`Run zakończony ze statusem: ${status}.`);
+    void entriesResource.reload();
+  });
 
   // GEval writes its scores into the entries, which the run document does not carry.
-  useEffect(() => {
-    const wasRunning = wasDeepevalRunning.current;
-    wasDeepevalRunning.current = isDeepevalRunning;
-    if (wasRunning && deepevalStatus && !isDeepevalRunning) {
-      showFlash(`G-Eval zakończony ze statusem: ${deepevalStatus}.`);
-      void entriesResource.reload();
-    }
-  }, [deepevalStatus, isDeepevalRunning, entriesResource.reload, showFlash]);
+  useWorkFinished(deepevalStatus, isDeepevalRunning, (status) => {
+    showFlash(`G-Eval zakończony ze statusem: ${status}.`);
+    void entriesResource.reload();
+  });
 
   const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
     errorPrefix: "Nie udało się uruchomić G-Eval",

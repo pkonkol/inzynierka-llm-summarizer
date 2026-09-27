@@ -48,6 +48,7 @@ import { useListPolling } from "../utils/useListPolling";
 import { useReloadableResource } from "../utils/useReloadableResource";
 import { useSummarizationOptions } from "../utils/useSummarizationOptions";
 import { useSummarySpecForm } from "../utils/useSummarySpecForm";
+import { useWorkFinished } from "../utils/useWorkFinished";
 import { splitProviderModel } from "../utils/utils";
 
 type GoldenMetricsPassStatus = NonNullable<EvaluationSetListItemResponse["golden_metrics_status"]>;
@@ -199,22 +200,10 @@ export function EvaluationSetPage({ setId }: Props) {
 
   useListPolling(goldenMetricsPass.reload, isGoldenMetricsPassInProgress);
 
-  // Announce the pass leaving pending/running, the same shape as the run-status effect below.
-  const previousGoldenMetricsStatus = useRef<GoldenMetricsPassStatus | null>(null);
-  useEffect(() => {
-    const previousStatus = previousGoldenMetricsStatus.current;
-    previousGoldenMetricsStatus.current = goldenMetricsStatus;
-    if (
-      previousStatus &&
-      previousStatus !== goldenMetricsStatus &&
-      !isGoldenMetricsPassInProgress
-    ) {
-      showFlash(
-        `Metryki wzorcowe: ${GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus ?? "failed"]}.`,
-      );
-      void setDetail.reload();
-    }
-  }, [goldenMetricsStatus, isGoldenMetricsPassInProgress, setDetail.reload, showFlash]);
+  useWorkFinished(goldenMetricsStatus, isGoldenMetricsPassInProgress, (status) => {
+    showFlash(`Metryki wzorcowe: ${GOLDEN_METRICS_STATUS_LABEL[status]}.`);
+    void setDetail.reload();
+  });
 
   // Once per mount: a set left "pending"/"running" by a process that died, or "failed", gets
   // queued again without the reader having to click anything. The backend's own staleness and

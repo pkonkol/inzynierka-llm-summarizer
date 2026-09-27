@@ -6,7 +6,7 @@ from deepeval.test_case import LLMTestCase
 from ...core.config import settings
 from ...core.executors import run_blocking
 from ...schemas.summary_spec import OutputFormat
-from . import cross
+from .cross import evaluate_pairwise_cross_deepeval, rouge_meteor_scores
 from .deepeval import (
     SUMMARY_INPUT_SPECS,
     SUMMARY_SPECS,
@@ -57,7 +57,7 @@ async def compute_cross_metrics(
     reference_text: str,
     summary_text: str,
 ) -> dict[str, float]:
-    return await run_blocking(cross.compute_cross_metrics, reference_text, summary_text)
+    return await run_blocking(rouge_meteor_scores, reference_text, summary_text)
 
 
 async def compute_pairwise_cross_deepeval_metrics(
@@ -69,7 +69,7 @@ async def compute_pairwise_cross_deepeval_metrics(
 
     "how much better is the AI summary than the golden one" — higher score favors AI.
     """
-    return await cross.evaluate_pairwise_cross_deepeval(
+    return await evaluate_pairwise_cross_deepeval(
         settings=settings,
         source_text=source_text,
         summary_actual=ai_summary,

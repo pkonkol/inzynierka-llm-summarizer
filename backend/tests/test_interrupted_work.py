@@ -181,3 +181,24 @@ async def test_deepeval_passes_expire_on_their_own_heartbeat(runs_collection: As
     query, update = runs_collection.update_many.call_args.args
     assert "aggregate_metrics.deepeval.heartbeat_at" in query
     assert update["$set"]["aggregate_metrics.deepeval.status"] == "failed"
+
+
+async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def record(name: str) -> AsyncMock:
+        return AsyncMock(side_effect=lambda: calls.append(name) or 0)
+
+    cleanups = [
+        "cleanup_stale_pending_jobs",
+        "cleanup_stale_evaluation_runs",
+        "cleanup_stale_golden_metrics_passes",
+        "cleanup_stale_deepeval_passes",
+    ]
+    for name in ["resume_interrupted_work", *cleanups]:
+        monkeypatch.setattr(interrupted_work, name, record(name))
+
+    await interrupted_work.recover_interrupted_work()
+
+    # Cleaning first would mark every resumable document failed before resume could see it.
+    assert calls == ["resume_interrupted_work", *cleanups]

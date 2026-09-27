@@ -95,7 +95,7 @@ async def claim_golden_metrics_pass_for_queue(set_id: ObjectId) -> bool:
             {"golden_metrics_pass": None},
             {"golden_metrics_pass.status": "failed"},
             {
-                "golden_metrics_pass.status": {"$in": ["pending", "running"]},
+                **_UNFINISHED_GOLDEN_METRICS,
                 "golden_metrics_pass.heartbeat_at": {"$lt": stale_work_cutoff()},
             },
         ],

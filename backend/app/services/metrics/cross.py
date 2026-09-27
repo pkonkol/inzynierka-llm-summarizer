@@ -12,7 +12,7 @@ from .deepeval import GEvalSpec, evaluate_geval
 _ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
 
 
-def compute_cross_metrics(reference_text: str, summary_text: str) -> dict[str, float]:
+def rouge_meteor_scores(reference_text: str, summary_text: str) -> dict[str, float]:
     reference = reference_text.strip()
     summary = summary_text.strip()
 

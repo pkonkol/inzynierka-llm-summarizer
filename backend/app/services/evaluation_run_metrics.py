@@ -14,7 +14,7 @@ from ..core.mongo import (
     get_evaluation_sets_collection,
 )
 from ..schemas.summary_spec import SummarySpec
-from .run_metrics import (
+from .metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
     compute_pairwise_cross_deepeval_metrics,

@@ -14,13 +14,13 @@ from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.job_db import JobErrorCode
 from ..schemas.summary import SummaryResponse
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
-from ..services.llm import LlmOutputError, generate_summary
-from ..services.llm.title import generate_title
-from ..services.run_metrics import (
+from ..services.job_metrics import (
     store_deepeval_metrics_for_job,
     store_source_metrics_for_job,
     store_statistical_metrics_for_job,
 )
+from ..services.llm import LlmOutputError, generate_summary
+from ..services.llm.title import generate_title
 from ..services.scraper import extract_text_from_url
 
 log = structlog.get_logger(__name__)

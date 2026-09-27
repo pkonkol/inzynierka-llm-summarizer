@@ -14,7 +14,7 @@ from ..core.mongo import (
     get_evaluation_sets_collection,
 )
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
-from ..services.run_metrics import (
+from ..services.metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
 )

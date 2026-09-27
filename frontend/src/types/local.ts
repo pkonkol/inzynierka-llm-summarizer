@@ -3,7 +3,7 @@
 
 import type { JobStatusResponse } from "./api.generated";
 
-export type JobStatusValue = JobStatusResponse["status"];
+export type JobStatus = JobStatusResponse["status"];
 
 /** Backend emits [role, template] pairs, not objects. */
 export type PromptMessage = JobStatusResponse["prompt_template"][number];

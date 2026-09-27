@@ -14,8 +14,8 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
 import { usePublicSummary } from "../hooks/usePublicSummary";
 import type { SummarySpec } from "../types/api.generated";
+import { MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
 import { LOGIN_PATH } from "../utils/routing";
-import { MAX_PUBLIC_PASTED_CHARS } from "../utils/utils";
 
 const DEFAULT_LANGUAGE = "auto";
 const DEFAULT_DENSITY = 0.5;

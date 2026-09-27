@@ -315,11 +315,11 @@ function RunEntryCard({
   );
 }
 
-type Props = {
+type EvaluationRunPageProps = {
   runId: string;
 };
 
-export function EvaluationRunPage({ runId }: Props) {
+export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
   const showFlash = useFlash();
 
   const runResource = useReloadableResource(

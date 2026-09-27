@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
 import type { JobListItemResponse } from "../types/api.generated";
+import { isJobInProgress } from "../utils/jobs";
 import { jobPath } from "../utils/routing";
-import { isJobInProgress } from "../utils/utils";
 import { StatusLabel } from "./StatusLabel";
 import { AppLink } from "./ui/AppLink";
 import { buttonClasses } from "./ui/Button";

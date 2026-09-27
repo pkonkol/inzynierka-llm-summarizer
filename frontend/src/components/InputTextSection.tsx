@@ -2,12 +2,12 @@ import { getEvaluationSetEntryInputText } from "../api/research";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
 import { PreBlock } from "./ui/PreBlock";
 
-type Props = {
+type InputTextSectionProps = {
   setId: string;
   entryId: string;
 };
 
-export function InputTextSection({ setId, entryId }: Props) {
+export function InputTextSection({ setId, entryId }: InputTextSectionProps) {
   const { data, isLoading, errorMessage } = useFetchOnMount(
     () => getEvaluationSetEntryInputText(setId, entryId),
     `${setId}/${entryId}`,

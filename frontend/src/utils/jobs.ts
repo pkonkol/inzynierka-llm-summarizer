@@ -1,4 +1,4 @@
-import type { JobStatusValue } from "../types/local";
+import type { JobStatus } from "../types/local";
 
 // Mirrors JobCreateRequest._MAX_PASTED_CHARS in backend/app/schemas/job_api.py.
 export const MAX_PASTED_CHARS = 500_000;
@@ -27,6 +27,6 @@ export function splitProviderModel(value: string): { provider: string; modelName
 
 // A job is in progress from the moment it is queued until it reaches a terminal state. Every
 // caller needs both halves, and treating `running` as finished is what silently stops polling.
-export function isJobInProgress(status: JobStatusValue): boolean {
+export function isJobInProgress(status: JobStatus): boolean {
   return status === "pending" || status === "running";
 }

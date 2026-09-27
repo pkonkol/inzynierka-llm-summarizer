@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useSummarizationOptions } from "../hooks/useSummarizationOptions";
 import { useSummarySpecForm } from "../hooks/useSummarySpecForm";
 import type { JobCreateRequest } from "../types/api.generated";
-import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/utils";
+import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/jobs";
 import { buildSourcePayload, SourceField } from "./SourceField";
 import { ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
 import { Button } from "./ui/Button";

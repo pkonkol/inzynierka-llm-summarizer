@@ -47,9 +47,9 @@ import type {
 } from "../types/api.generated";
 import { downloadJson } from "../utils/download";
 import { formatDateMinute } from "../utils/format";
+import { splitProviderModel } from "../utils/jobs";
 import { logger } from "../utils/logger";
 import { EVALUATION_SETS_PATH, evaluationRunPath, navigateTo } from "../utils/routing";
-import { splitProviderModel } from "../utils/utils";
 
 type GoldenMetricsPassStatus = NonNullable<EvaluationSetListItemResponse["golden_metrics_status"]>;
 
@@ -170,11 +170,11 @@ function RunsTable({
   );
 }
 
-type Props = {
+type EvaluationSetPageProps = {
   setId: string;
 };
 
-export function EvaluationSetPage({ setId }: Props) {
+export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   const showFlash = useFlash();
   const setDetail = useReloadableResource(
     () => getEvaluationSet(setId),

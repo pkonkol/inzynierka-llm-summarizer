@@ -1,6 +1,6 @@
 import type { UrlSummaryListItem } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
-import { isManualSource, manualSourceTitle } from "../utils/utils";
+import { isManualSource, manualSourceTitle } from "../utils/jobs";
 import { StatusLabel } from "./StatusLabel";
 import { listItemClasses } from "./ui/listItem";
 

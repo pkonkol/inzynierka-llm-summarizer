@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 
 import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
 import type { PublicSummarizeRequest, SummaryResponse } from "../types/api.generated";
+import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
 import { logger } from "../utils/logger";
-import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "../utils/utils";
 import { useListPolling } from "./useListPolling";
 
 export type PublicSummaryState =

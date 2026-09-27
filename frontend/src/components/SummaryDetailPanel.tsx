@@ -4,17 +4,17 @@ import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
 import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
-import type { JobStatusValue, PromptMessage } from "../types/local";
+import type { JobStatus, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
 import { formatDateMinute, formatDuration } from "../utils/format";
+import { isJobInProgress, isManualSource } from "../utils/jobs";
 import {
   FUNCTION_LABELS,
   formatLengthTarget,
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
-import { isJobInProgress, isManualSource } from "../utils/utils";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoRow } from "./InfoRow";
@@ -125,7 +125,7 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
   );
 }
 
-function statusBadge(status: JobStatusValue) {
+function statusBadge(status: JobStatus) {
   if (status === "failed")
     return <span className="mono-value ml-2 uppercase text-danger">failed</span>;
   if (isJobInProgress(status))

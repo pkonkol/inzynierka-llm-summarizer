@@ -12,7 +12,7 @@ import type {
   UrlSummaryListItem,
   VersionResponse,
 } from "../types/api.generated";
-import type { JobStatusValue } from "../types/local";
+import type { JobStatus } from "../types/local";
 import { logger } from "../utils/logger";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
@@ -129,7 +129,7 @@ export const listSummarizedUrls = (limit = 50): Promise<UrlSummaryListItem[]> =>
 
 export const listAllJobsFlat = (
   limit = 100,
-  status: JobStatusValue[] = [],
+  status: JobStatus[] = [],
 ): Promise<JobListItemResponse[]> => {
   const query = new URLSearchParams([
     ["limit", String(limit)],
@@ -138,10 +138,7 @@ export const listAllJobsFlat = (
   return request<JobListItemResponse[]>(`/api/v1/jobs/list?${query}`);
 };
 
-export const getJobsForUrl = (
-  sourceUrl: string,
-  status: JobStatusValue,
-): Promise<JobStatusResponse[]> =>
+export const getJobsForUrl = (sourceUrl: string, status: JobStatus): Promise<JobStatusResponse[]> =>
   request<JobStatusResponse[]>(
     `/api/v1/jobs/by-url?source_url=${encodeURIComponent(sourceUrl)}&status=${status}`,
   );

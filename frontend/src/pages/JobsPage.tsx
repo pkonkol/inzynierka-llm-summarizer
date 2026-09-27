@@ -13,8 +13,8 @@ import { useListPolling } from "../hooks/useListPolling";
 import { useReloadableResource } from "../hooks/useReloadableResource";
 import type { JobListItemResponse } from "../types/api.generated";
 import { formatDateMinute } from "../utils/format";
+import { isJobInProgress } from "../utils/jobs";
 import { jobPath, navigateTo, SUMMARIES_ALL_PATH } from "../utils/routing";
-import { isJobInProgress } from "../utils/utils";
 
 export function JobsPage({ jobId }: { jobId: string | null }) {
   useDocumentTitle("Zadania");

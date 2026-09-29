@@ -121,8 +121,7 @@ check-openapi:
 [group('frontend')]
 [working-directory('frontend')]
 check-generated-types:
-    # Flags must match package.json's generate-types, or this reports drift that isn't there.
-    npx openapi-typescript ../backend/openapi.json --root-types --root-types-no-schema-prefix 2>/dev/null | diff -u src/types/api.generated.ts - || (echo "api.generated.ts is stale — run: npm run generate-types" && exit 1)
+    npm run -s print-types 2>/dev/null | diff -u src/types/api.generated.ts - || (echo "api.generated.ts is stale — run: npm run generate-types" && exit 1)
 
 # Backend: recompile requirements.txt from requirements.in
 [group('backend')]

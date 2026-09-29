@@ -26,7 +26,7 @@ just dev        # backend :8000 and frontend :5173, Ctrl+C stops both
 just db-down
 ```
 
-API docs: http://127.0.0.1:8000/docs · app: http://127.0.0.1:5173
+API docs: http://127.0.0.1:8000/docs · app: http://localhost:5173
 
 ## Checks
 

@@ -13,7 +13,7 @@ The split is explained in [ADR 0004](../docs/adr/0004-public-homepage-and-admin-
 ```bash
 just install-frontend                          # npm ci from the lockfile
 cp frontend/.env.example frontend/.env         # VITE_API_URL, the backend base URL
-just dev-frontend                              # http://127.0.0.1:5173
+just dev-frontend                              # http://localhost:5173
 ```
 
 ## Checks

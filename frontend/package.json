@@ -10,7 +10,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc -b --noEmit",
-    "generate-types": "openapi-typescript ../backend/openapi.json --root-types --root-types-no-schema-prefix -o src/types/api.generated.ts"
+    "print-types": "openapi-typescript ../backend/openapi.json --root-types --root-types-no-schema-prefix",
+    "generate-types": "npm run -s print-types > src/types/api.generated.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

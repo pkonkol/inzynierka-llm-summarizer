@@ -7,14 +7,15 @@ including the tools deliberately not used — is in
 ## Running it
 
 `just` is the single entry point. GitHub Actions contains no tool commands of its own; every
-step is `run: just <recipe>`, so a flag has exactly one place to change.
+step is `run: just <recipe>`, so a flag has exactly one place to change. The frontend lint recipes call
+the `package.json` scripts, so `npm run lint` and `just lint-frontend-style` are the same check.
 
 ```
 just              # list recipes
-just lint         # ruff, biome, tsc, pytest — ~2s, no containers
+just lint         # ruff, pyrefly, pytest, biome, tsc, schema drift — ~10s, no containers
 just fix          # formatting and safe fixes
 just security     # gitleaks, trivy, hadolint, actionlint, zizmor — needs Docker
-just ci           # everything CI runs, ~20s
+just ci           # lint + security
 ```
 
 Scanners run as **pinned container images** rather than installed binaries. That is the only
@@ -27,8 +28,8 @@ way a CI runner and a laptop are guaranteed to execute the same version.
 | Editor (LSP) | ruff, biome, tsserver | no |
 | `pre-commit` hook | `gitleaks protect --staged` only, ~50 ms | yes |
 | Manual | `just lint`, `just fix` | no |
-| CI, any branch push | `just ci` | no, but visible |
-| CI, push to `master` | `just ci` + build + image scan + deploy + smoke test | yes — deploy is gated |
+| CI, any branch push | the `just ci` recipes, per area the push touched; `scan-secrets` always | no, but visible |
+| CI, push to `master` | the same checks + build + image scan + deploy + smoke test | yes — deploy is gated |
 
 Only one git hook exists, on purpose. A leaked secret is the single item on this list that
 cannot be undone after a push; everything else is caught a minute later by CI. One slow hook
@@ -42,7 +43,7 @@ is all it takes for `--no-verify` to become habit, and then no hook runs at all.
 | **Biome** | lint + format | TypeScript/JSX/JSON, React hook rules, import order. Replaces ESLint and Prettier |
 | **tsc** | types | TypeScript in `strict` mode, as a separate step from the build |
 | **pyrefly** | types | Python types. `basic` preset, enforced at 0 errors: CI fails the build if any remain |
-| **pytest** | tests | currently the scraper's SSRF guard |
+| **pytest** | tests | backend unit tests in `backend/tests/`, the scraper's SSRF guard among them |
 | **gitleaks** | secrets | secrets across the whole git history, including already-committed and removed files |
 | **Trivy** | SCA + IaC + image | dependency CVEs, Terraform misconfiguration, CVEs in a built image |
 | **hadolint** | lint | Dockerfile practices — missing `USER`, unpinned installs |

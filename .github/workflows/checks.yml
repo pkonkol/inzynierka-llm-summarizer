@@ -19,6 +19,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       security: ${{ steps.filter.outputs.security }}
+      workflows: ${{ steps.filter.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +41,9 @@ jobs:
               - 'backend/requirements.txt'
               - 'frontend/package-lock.json'
               - 'infra/**'
+              - 'justfile'
+            workflows:
+              - '.github/workflows/**'
               - 'justfile'
 
   backend:
@@ -74,6 +78,17 @@ jobs:
       - run: just lint-frontend
       - run: just check-generated-types
       - run: just audit-frontend
+
+  workflows:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: extractions/setup-just@v3
+      - run: just lint-workflows
 
   # Secrets are scanned on every push regardless of paths: a leak can arrive in any file.
   secrets:

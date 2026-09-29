@@ -1,44 +1,50 @@
 # Web Summarization Thesis Monorepo
 
-Monorepo for the B.Sc. Engineering Thesis project: system for summarization of web content using LLMs.
+How to set up, run and check the system for summarizing web content with LLMs (B.Sc. thesis,
+see [CONTEXT.md](CONTEXT.md)). Every routine task is a `just` recipe; `just` lists them all.
 
-## Structure
+- [backend/](backend/README.md) — FastAPI API: scraping, summarization jobs, evaluation runs.
+- [frontend/](frontend/README.md) — React SPA: public page `/` and research console `/admin`.
+- `infra/` — Docker Compose for local MongoDB, Terraform for GCP, model catalogues.
 
-```text
-backend/   FastAPI API, scraping, summarization pipeline, async job flow
-frontend/  React + TypeScript client app (UI)
-infra/     Docker Compose for local MongoDB, Terraform for GCP, model catalogues
-```
-
-## Quick Start
-Start local infrastructure (MongoDB):
+## First run
 
 ```bash
-just db-up
+brew install just uv            # Docker and Node 22 are assumed
+just setup-hooks                # pre-commit hook: gitleaks on staged changes
+just venv deps-sync             # backend/venv from the locks
+just install-frontend           # npm ci
+cp backend/.env.example backend/.env        # fill in API keys
+cp frontend/.env.example frontend/.env
 ```
 
-Run backend from repository root:
+## Daily work
 
 ```bash
-uvicorn backend.app.main:app --reload
-```
-
-Backend details and setup are documented in `backend/README.md`.
-
-Run parallel frontend implementation (custom SPA):
-
-```bash
-cd frontend/web
-npm install
-cp .env.example .env
-npm run dev
-```
-
-Reference-only design source remains in:
-- `frontend/MVP Frontend for Summaries/`
-
-Stop local infrastructure:
-
-```bash
+just db-up      # MongoDB in Docker
+just dev        # backend :8000 and frontend :5173, Ctrl+C stops both
 just db-down
 ```
+
+API docs: http://127.0.0.1:8000/docs · app: http://127.0.0.1:5173
+
+## Checks
+
+```bash
+just lint       # ruff, pyrefly, pytest, biome, tsc, OpenAPI and TS type drift — no containers
+just fix        # formatting and safe fixes
+just security   # gitleaks, trivy, hadolint, npm audit, actionlint, zizmor — needs Docker
+just ci         # lint + security
+```
+
+CI runs the same recipes on every push ([checks.yml](.github/workflows/checks.yml)); details in
+[docs/static-analysis.md](docs/static-analysis.md).
+
+## Deploy
+
+A push to `master` runs [deploy.yaml](.github/workflows/deploy.yaml): checks, backend image to
+Cloud Run (image scan, smoke test, rollback on failure), frontend to Firebase Hosting.
+
+## Decisions
+
+Architecture decisions: [docs/adr/](docs/adr/README.md). Security write-ups: [docs/security/](docs/security/).

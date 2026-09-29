@@ -1,158 +1,91 @@
 # Backend (FastAPI)
 
-## Purpose
-Backend API for web content summarization jobs.
+How to install, run and debug the API that scrapes pages, runs summarization jobs and evaluation
+runs. Recipes run from the repository root; Python 3.14, MongoDB via `just db-up`.
 
-## Requirements
-- Python 3.14
-
-## Install
-From the `backend` directory:
+## Setup
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+just venv deps-sync                      # backend/venv from requirements.txt + requirements-dev.txt
+cp backend/.env.example backend/.env     # all other settings: app/core/config.py
 ```
+
+`backend/.env` is loaded by Pydantic Settings wherever the process starts.
+
+- Auth is off unless `AUTH_ENABLED=true`; when on, both `AUTH_SECRET` and `JWT_SECRET` must be set
+  or the app refuses to start.
+- `DEBUG=true` logs every pipeline step (prompts and model output included). `LOG_FORMAT=json` is
+  what Cloud Run uses.
+- `SUPPORTED_MODELS` is one JSON line, minified from `infra/supported_models*.json`.
+
+## Run
+
+```bash
+just dev-backend      # uvicorn --reload on :8000, also reloads on .env edits
+just smoke-backend    # does the app import and wire up its routes
+```
+
+Swagger: http://127.0.0.1:8000/docs · health: http://127.0.0.1:8000/health
+
+| Prefix | What |
+|---|---|
+| `/api/v1/public` | rate-limited summarize for the public page |
+| `/api/v1/jobs` | summarize jobs for the console; writes need a token when auth is on |
+| `/api/v1/research` | evaluation sets and evaluation runs |
+| `/api/v1/meta` | models, languages, presets, version |
+| `/auth` | login status and token |
+
+After changing a route or schema: `just export-openapi`, then `npm run generate-types` in
+`frontend/`. `just lint` fails while either file is stale.
 
 ## Dependencies
 
-Two files, on purpose:
-
-- **`requirements.in`** — the ~14 direct dependencies, edited by hand, pinned with `~=` so patch
-  releases are allowed.
-- **`requirements.txt`** — the generated lock: every transitive dependency at an exact version.
-  This is what `pip install` and the Docker build use, so a given commit always builds the same
-  image.
-
-Never edit `requirements.txt` by hand. After changing `requirements.in`, or to pick up patch
-releases, recompile it with [uv](https://docs.astral.sh/uv/) (dev-machine tool only — it is not
-used in the image or in CI):
+- `requirements.in` / `requirements-dev.in` — direct dependencies, edited by hand, pinned with `~=`.
+- `requirements.txt` / `requirements-dev.txt` — generated locks, exact versions. The image installs
+  `requirements.txt`. Never edit a lock by hand.
 
 ```bash
-uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14
-
-uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 --upgrade
-uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 \
-    --upgrade-package fastapi
+just deps-compile                             # after editing a .in file; existing pins stay
+just deps-compile --upgrade-package fastapi   # move one package
+just deps-compile --upgrade                   # move everything
+just deps-sync                                # install the locks into venv
 ```
 
-`uv pip compile` keeps existing pins unless you pass `--upgrade`/`--upgrade-package`, so versions
-never move on their own. `--universal` makes the single lock file valid on both Linux (the image)
-and macOS (this venv).
+The locks are `--universal`, so one file is valid on Linux (the image) and macOS.
 
-## Environment Variables
-Preferred: keep API keys in `backend/.env`:
-
-```env
-GEMINI_API_KEY=your_key_here
-DEBUG=true
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB_NAME=web_summarization
-MONGODB_JOBS_COLLECTION=jobs
-```
-
-The app loads `backend/.env` automatically via Pydantic Settings, regardless of where you start Uvicorn.
-See `.env.example` for the full list, including `AUTH_ENABLED`, `LOG_FORMAT` and
-`CORS_ALLOWED_ORIGINS`.
-
-Auth is off unless `AUTH_ENABLED=true`; when it is on, both `AUTH_SECRET` and `JWT_SECRET` must be
-set or the app refuses to start.
-
-Optional summary tuning variables:
-
-```env
-SUMMARY_BASE_OUTPUT_TOKENS=300
-SUMMARY_TOKENS_PER_1000_CHARS=120
-SUMMARY_MAX_OUTPUT_TOKENS=1600
-```
-
-When `DEBUG=true`, backend logs detailed steps of: queueing job, scraping, LLM call, and final status.
-
-Jobs are persisted in MongoDB (naive create/read/update) and survive a restart.
-
-Alternative (terminal/session only):
+## Checks
 
 ```bash
-export GEMINI_API_KEY="your_key_here"
+just lint-backend        # ruff check + format check
+just typecheck-backend   # pyrefly
+just test-backend        # pytest
 ```
 
-## Run
-Before starting backend, start local MongoDB from repository root:
+## Image
 
 ```bash
-just db-up
+just build-backend    # tag inzynierka-backend:local
+just smoke-image      # GEval importable, pytest pruned, METEOR reads wordnet
+just scan-image       # trivy on the built image
 ```
 
-### Option A (from repository root)
-Recommended in monorepo mode:
+## Debugging without just
+
+From `backend/`:
 
 ```bash
-uvicorn backend.app.main:app --reload
+./venv/bin/python -m uvicorn app.main:app --reload --port 8000
+./venv/bin/python -m pytest tests/test_scraper.py -k non_public -x -vv
 ```
 
-### Option B (from `backend` directory)
+Queue a job through the public endpoint and poll it until `status` is `completed` or `failed`
+(`pending` → `running` → …):
 
 ```bash
-uvicorn main:app --reload
+curl -s -X POST http://localhost:8000/api/v1/public/summarize \
+  -H 'Content-Type: application/json' -d '{"url": "https://example.com"}'
+curl -s http://localhost:8000/api/v1/jobs/<job_id>
 ```
 
-Then open:
-- API docs: `http://127.0.0.1:8000/docs`
-- Health: `http://127.0.0.1:8000/health`
-
-## Debug Via Swagger (`/docs`)
-Use Swagger UI to verify the full job flow:
-
-1. Open `http://127.0.0.1:8000/docs`.
-2. Run `POST /api/v1/jobs/summarize` with body:
-
-```json
-{
-	"url": "https://example.com"
-}
-```
-
-Example real article request:
-
-```bash
-curl -X 'POST' \
-	'http://localhost:8000/api/v1/jobs/summarize' \
-	-H 'accept: application/json' \
-	-H 'Content-Type: application/json' \
-	-d '{
-	"url": "https://techcrunch.com/2026/04/10/france-to-ditch-windows-for-linux-to-reduce-reliance-on-us-tech/"
-}'
-```
-
-3. Copy the returned `job_id`.
-4. Run `GET /api/v1/jobs/{job_id}` repeatedly until status is `completed` or `failed`.
-5. On success, read structured output from `summary_data`.
-
-For frontend list view (ready results), use:
-
-```bash
-curl -X 'GET' 'http://localhost:8000/api/v1/jobs'
-```
-
-Optional `limit` query param:
-
-```bash
-curl -X 'GET' 'http://localhost:8000/api/v1/jobs?limit=100'
-```
-
-`summary_data` contains `source_url` (the original link).
-
-Expected statuses:
-- `pending`: background task still running
-- `completed`: summary generated successfully
-- `failed`: scraping or generation failed
-
-To stop local MongoDB:
-
-```bash
-just db-down
-```
-
-## Module path
-`No module named 'app'` means Python was started from a directory where `app` is not importable as a top-level module. Use one of the commands above to run with the correct module path.
+`POST /api/v1/jobs/summarize` takes the same body plus `model_provider` and `model_name`; the
+valid pairs come from `GET /api/v1/meta/models`.

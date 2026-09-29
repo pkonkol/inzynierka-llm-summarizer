@@ -1,42 +1,48 @@
-# Frontend Web (Parallel Implementation)
+# Frontend (React + Vite)
 
-This is the custom React SPA implementation built in parallel to the reference design folder.
+How to run, check and build the SPA. Recipes run from the repository root.
 
-Reference-only folder (not modified):
-- `frontend/MVP Frontend for Summaries/`
+- `/` — public page: no login, rate-limited, three summary kinds and a density slider.
+- `/admin/*` — research console: jobs, evaluation sets and runs; `/login` when auth is on.
+- `/design` — design-system gallery, dev server only.
 
-Implemented app folder:
-- `frontend/web/`
+The split is explained in [ADR 0004](../docs/adr/0004-public-homepage-and-admin-split.md).
 
-## Features
-
-- Central rounded URL submit card
-- Live polling for just-created jobs
-- Dynamic list of completed jobs
-- Right-side detail panel inspired by Deep Research layout
-- Mobile-responsive panel behavior
-
-## Backend API Used
-
-- `POST /api/v1/jobs/summarize`
-- `GET /api/v1/jobs`
-- `GET /api/v1/jobs/{job_id}`
-
-## Run
-
-From `frontend/web`:
+## Setup and run
 
 ```bash
-npm install
-cp .env.example .env
-npm run dev
+just install-frontend                          # npm ci from the lockfile
+cp frontend/.env.example frontend/.env         # VITE_API_URL, the backend base URL
+just dev-frontend                              # http://127.0.0.1:5173
 ```
 
-Default app URL:
-- `http://127.0.0.1:5173`
-
-Build:
+## Checks
 
 ```bash
-npm run build
+just lint-frontend     # npm run lint (biome) + npm run typecheck (tsc -b)
+just fix-frontend      # npm run lint:fix
+just audit-frontend    # npm audit, fails on high
 ```
+
+## API types
+
+`src/types/api.generated.ts` is generated from `backend/openapi.json`. After a backend schema
+change, from `frontend/`:
+
+```bash
+npm run generate-types
+```
+
+`just check-generated-types` (part of `just lint`) fails while the file is stale.
+
+## Build
+
+From `frontend/`:
+
+```bash
+npm run build      # tsc -b, then vite build into dist/
+npm run preview    # serve dist/ locally
+```
+
+Production reads `.env.production`. A push to `master` builds and deploys `dist/` to Firebase
+Hosting (`deploy.yaml`).

@@ -3,8 +3,9 @@
 #
 # Setup:  brew install just uv
 # Usage:  just            (list recipes)
-#         just lint       (everything)
+#         just lint       (fast checks, no containers)
 #         just fix        (auto-fix what can be auto-fixed)
+#         just ci         (everything, including the container scanners)
 
 # Pinned so a local run and a CI run use the same binary.
 ruff := "ruff@0.16.2"
@@ -170,21 +171,20 @@ install-frontend:
 [group('frontend')]
 [working-directory('frontend')]
 lint-frontend-style:
-    npx biome check .
+    npm run lint
 
 # Frontend: typecheck without emitting — faster feedback than a full build
 [group('frontend')]
 [working-directory('frontend')]
 typecheck-frontend:
-    # `-b` and not `--noEmit`: the root tsconfig is a solution file holding only `references`,
-    # so a bare invocation type-checks nothing and always passes.
-    npx tsc -b --noEmit
+    # The script is `tsc -b`: the root tsconfig is a solution file holding only `references`, so a bare `tsc` type-checks nothing and always passes.
+    npm run typecheck
 
 # Frontend: apply biome's formatting and safe fixes
 [group('frontend')]
 [working-directory('frontend')]
 fix-frontend:
-    npx biome check --write .
+    npm run lint:fix
 
 # Kept alongside trivy, not instead of it: trivy reported 0 on this same lockfile while
 # npm audit found 5 highs in vite/postcss. Different advisory sources, different blind spots.

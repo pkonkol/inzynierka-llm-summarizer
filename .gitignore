@@ -2,7 +2,6 @@
 *.pyc
 **/__pycache__/
 AGENTS.md
-CONTEXT.md
 .terraform/
 # .terraform.lock.hcl is committed on purpose - it pins provider versions.
 # Non-secret .tfvars are committed; anything holding a credential must use this suffix.

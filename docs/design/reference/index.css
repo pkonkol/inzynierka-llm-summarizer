@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ==================================================================
+   Podsumowania — tokeny (v3). Źródło prawdy: DESIGN.md obok tego pliku.
+   JetBrains Mono, kremowe płótno, tusz, linie 1px, 4px tylko na kontrolkach,
+   znaczniki ASCII zamiast ikon, brak cieni.
+   ================================================================== */
+
+@theme {
+  --color-*: initial;
+
+  --color-primary: #201d1d;
+  --color-on-primary: #fdfcfc;
+  --color-ink: #201d1d;                 /* 16.3:1 na canvas */
+  --color-ink-deep: #0f0000;            /* wciśnięty primary */
+  --color-charcoal: #302c2c;
+  --color-body: #424245;                /* 9.8:1 */
+  --color-mute: #646262;                /* 5.9:1 — etykiety, metadane, nieaktywne zakładki */
+  --color-stone: #6e6e73;               /* 5.0:1 — separatory okruszków */
+  --color-ash: #9a9898;                 /* 2.8:1 — TYLKO tekst wyłączony i na ciemnym (5.8:1) */
+  --color-canvas: #fdfcfc;
+  --color-surface-soft: #f8f7f7;        /* tło pól */
+  --color-surface-card: #f1eeee;        /* snippet, przycisk wyłączony */
+  --color-surface-dark: #201d1d;        /* chip „publiczne”, toast */
+  --color-surface-dark-elevated: #302c2c;
+  --color-hairline: rgb(15 0 0 / 0.12); /* linie sekcji */
+  --color-hairline-strong: #646262;     /* dolna linia zakładek, obramowania pól (patrz SPEC) */
+  --color-on-dark: #fdfcfc;
+  --color-on-dark-mute: #9a9898;
+
+  /* Rampa semantyczna Apple HIG. Na jasnym tle tekst używa tylko odcieni,
+     które mają ≥ 4.5:1; jasne odcienie tylko na ciemnym tle. */
+  --color-accent: #007aff;              /* 3.9:1 na canvas → tylko na ciemnym */
+  --color-accent-hover: #0056b3;        /* 6.9:1 — informacja na jasnym */
+  --color-accent-active: #004085;
+  --color-warning: #ff9f0a;             /* 8.1:1 na ciemnym */
+  --color-warning-hover: #cc7f08;
+  --color-warning-active: #995f06;      /* 5.1:1 — „w toku” na jasnym */
+  --color-danger: #ff3b30;
+  --color-danger-hover: #d70015;        /* 5.3:1 — błędy na jasnym */
+  --color-danger-active: #a50011;
+  --color-success: #30d158;             /* 8.3:1 na ciemnym; na jasnym 2.0:1 → „gotowe” zostaje w tuszu */
+
+  /* Berkeley Mono jest płatny: zamienniki z DESIGN.md, w tej kolejności */
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: var(--font-mono);        /* UI w całości mono */
+  --font-reading: var(--font-mono);     /* tekst do czytania: pole źródła, treść podsumowania; jedyne miejsce, gdzie wolno podmienić krój */
+
+  --text-display: 2.25rem;   --text-display--line-height: 1.3;   /* 36 / 700 */
+  --text-body: 0.9375rem;    --text-body--line-height: 1.6;      /* 15 / 400 — UI */
+  --text-title: 1.5rem;      --text-title--line-height: 1.35;    /* 24 / 700 — tytuł strony konsoli */
+  --text-subtitle: 1.25rem;  --text-subtitle--line-height: 1.4;  /* 20 / 700 — tytuł wyniku */
+  --text-reading: 1rem;      --text-reading--line-height: 1.65;  /* 16 / 400 — czytanie */
+  --text-button: 0.9375rem;  --text-button--line-height: 1.6;    /* 15 / 500 */
+  --text-caption: 0.8125rem; --text-caption--line-height: 1.7;   /* 13 / 400 — metadane */
+  --text-tight: 1rem;        --text-tight--line-height: 1;
+
+  --radius-*: initial;
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-full: 9999px;
+
+  --shadow-*: initial;
+
+  --spacing: 0.25rem;            /* Tailwind: p-1 = 4px; tokeny DESIGN.md: 1/4/8/12/16/24/32/96 */
+  --spacing-section: 6rem;       /* 96px; 64px tablet, 48px mobile */
+  --spacing-button: 2.25rem;     /* 36px */
+  --spacing-input: 2.5rem;       /* 40px */
+  --spacing-nav: 3.5rem;         /* 56px */
+
+  --container-column: 60rem;     /* 960px kolumna treści */
+  --container-frame: 80rem;      /* 1280px rama strony i pasa roboczego */
+}
+
+@layer base {
+  html { background: var(--color-canvas); }
+  body { @apply m-0 bg-canvas font-mono text-body text-ink; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, h4 { font-size: 1rem; line-height: 1.5; font-weight: 700; }   /* heading 16/700: nagłówek sekcji jest o krok większy od UI 15 */
+  a { color: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }   /* link-inline: tusz, nie niebieski */
+  /* Fokus: DESIGN.md opisuje fokus pola (tło canvas + ramka ink). Dla reszty: ta sama zasada, obrys ink. */
+  :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+  ::placeholder { color: var(--color-mute); opacity: 1; }
+  ::selection { background: var(--color-ink); color: var(--color-canvas); }
+  input[type="range"], input[type="checkbox"], input[type="radio"] { accent-color: var(--color-ink); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
+  @media (max-width: 850px) { :root { --spacing-section: 4rem; } }
+  @media (max-width: 640px) { :root { --spacing-section: 3rem; --text-display: 1.75rem; } }
+}
+
+/* --- prymitywy (w aplikacji: components/ui) --- */
+
+@utility btn {
+  @apply inline-flex h-button items-center justify-center gap-2 rounded-sm px-5 font-mono text-button font-medium whitespace-nowrap cursor-pointer;
+  &:disabled { @apply cursor-not-allowed border-transparent bg-surface-card text-ash; }
+}
+@utility btn-primary { @apply bg-primary text-on-primary; &:active:not(:disabled) { @apply bg-ink-deep; } }
+@utility btn-secondary { @apply border border-hairline-strong bg-canvas text-ink; }
+
+@utility field {
+  @apply block h-input w-full rounded-sm border border-hairline-strong bg-surface-soft px-3 font-mono text-body text-ink;
+  &:focus-visible { @apply bg-canvas; outline: 1px solid var(--color-ink); outline-offset: 0; border-color: var(--color-ink); }
+  &[aria-invalid="true"] { border-color: var(--color-danger-hover); }
+  &:disabled { @apply cursor-not-allowed bg-surface-card text-ash; }
+}
+@utility field-area {
+  @apply block w-full rounded-sm border border-hairline-strong bg-surface-soft p-3 font-mono text-body text-ink;
+  &:focus-visible { @apply bg-canvas; outline: 1px solid var(--color-ink); outline-offset: 0; border-color: var(--color-ink); }
+}
+@utility field-label { @apply mb-1 block font-mono text-body font-medium text-ink; }
+
+/* button-tab: nieaktywna = mute, aktywna = ink + 2px podkreślenie; pasek ma dolną linię hairline-strong */
+@utility tab { @apply inline-flex min-h-11 items-center gap-2 px-3 sm:px-4 font-mono text-button font-medium text-mute cursor-pointer; }
+
+@utility section-rule { @apply border-t border-hairline; }
+@utility badge { @apply inline-flex items-center rounded-sm bg-surface-dark px-2 font-mono text-caption text-on-dark; }
+@utility snippet { @apply rounded-sm bg-surface-card px-4 py-3 font-mono text-body text-ink; }
+@utility caption { @apply font-mono text-caption text-mute; }
+/* „gotowe” w tuszu: zielony #30d158 ma na kremie 2.0:1 (patrz SPEC) */
+@utility status-ok { color: var(--color-ink); }

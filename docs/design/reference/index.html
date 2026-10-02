@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Podsumuj artykuł — wersja OpenCode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- CSS: Tailwind v4 skompilowany z opencode-ver/v3/index.css + reguły demo; działa offline (font z Google Fonts, bez sieci zamienniki mono) -->
+<style>/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties{@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-font-weight:initial;--tw-border-style:solid;--tw-leading:initial;--tw-ordinal:initial;--tw-slashed-zero:initial;--tw-numeric-figure:initial;--tw-numeric-spacing:initial;--tw-numeric-fraction:initial;--tw-outline-style:solid}}}@layer theme{:root,:host{--font-sans:var(--font-mono);--font-mono:"JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;--spacing:.25rem;--container-sm:24rem;--container-md:28rem;--font-weight-normal:400;--font-weight-medium:500;--font-weight-bold:700;--leading-snug:1.375;--leading-normal:1.5;--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono);--color-primary:#201d1d;--color-on-primary:#fdfcfc;--color-ink:#201d1d;--color-ink-deep:#0f0000;--color-body:#424245;--color-mute:#646262;--color-stone:#6e6e73;--color-ash:#9a9898;--color-canvas:#fdfcfc;--color-surface-soft:#f8f7f7;--color-surface-card:#f1eeee;--color-surface-dark:#201d1d;--color-surface-dark-elevated:#302c2c;--color-hairline:#0f00001f;--color-hairline-strong:#646262;--color-on-dark:#fdfcfc;--color-on-dark-mute:#9a9898;--color-warning:#ff9f0a;--color-warning-active:#995f06;--color-danger-hover:#d70015;--color-success:#30d158;--font-reading:var(--font-mono);--text-display:2.25rem;--text-display--line-height:1.3;--text-body:.9375rem;--text-title:1.5rem;--text-title--line-height:1.35;--text-subtitle:1.25rem;--text-subtitle--line-height:1.4;--text-reading:1rem;--text-reading--line-height:1.65;--text-button:.9375rem;--text-button--line-height:1.6;--text-caption:.8125rem;--text-caption--line-height:1.7;--radius-sm:4px;--spacing-section:6rem;--spacing-button:2.25rem;--spacing-input:2.5rem;--spacing-nav:3.5rem;--container-column:60rem;--container-frame:80rem}}@layer base{*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring:where(:not(iframe)){outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:color-mix(in lab, red, red)){::placeholder{color:color-mix(in oklab, currentcolor 50%, transparent)}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}html{background:var(--color-canvas)}body{background-color:var(--color-canvas);font-family:var(--font-mono);color:var(--color-ink);-webkit-font-smoothing:antialiased;margin:0}h1,h2,h3,h4{font-size:1rem;font-weight:700;line-height:1.5}a{color:var(--color-ink);text-underline-offset:3px;text-decoration:underline}:focus-visible{outline:2px solid var(--color-ink);outline-offset:2px}::placeholder{color:var(--color-mute);opacity:1}::selection{background:var(--color-ink);color:var(--color-canvas)}input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--color-ink)}@media (prefers-reduced-motion:reduce){*,:before,:after{transition-duration:.01ms!important;animation-duration:.01ms!important}}@media (max-width:850px){:root{--spacing-section:4rem}}@media (max-width:640px){:root{--spacing-section:3rem;--text-display:1.75rem}}}@layer components;@layer utilities{.pointer-events-auto{pointer-events:auto}.pointer-events-none{pointer-events:none}.invisible{visibility:hidden}.sr-only{clip-path:inset(50%);white-space:nowrap;border-width:0;width:1px;height:1px;margin:-1px;padding:0;position:absolute;overflow:hidden}.absolute{position:absolute}.fixed{position:fixed}.relative{position:relative}.top-full{top:100%}.right-0{right:0}.right-4{right:calc(var(--spacing) * 4)}.bottom-4{bottom:calc(var(--spacing) * 4)}.left-0{left:0}.left-4{left:calc(var(--spacing) * 4)}.z-20{z-index:20}.z-30{z-index:30}.z-40{z-index:40}.z-50{z-index:50}.order-last{order:9999}.m-auto{margin:auto}.-mx-1{margin-inline:calc(var(--spacing) * -1)}.mx-auto{margin-inline:auto}.my-4{margin-block:calc(var(--spacing) * 4)}.-mt-1{margin-top:calc(var(--spacing) * -1)}.mt-1{margin-top:var(--spacing)}.mt-2{margin-top:calc(var(--spacing) * 2)}.mt-3{margin-top:calc(var(--spacing) * 3)}.mt-4{margin-top:calc(var(--spacing) * 4)}.mt-6{margin-top:calc(var(--spacing) * 6)}.mt-8{margin-top:calc(var(--spacing) * 8)}.mt-px{margin-top:1px}.mt-section{margin-top:var(--spacing-section)}.mr-auto{margin-right:auto}.field-label{margin-bottom:var(--spacing);font-family:var(--font-mono);--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium);color:var(--color-ink);display:block}.mb-0{margin-bottom:0}.mb-3{margin-bottom:calc(var(--spacing) * 3)}.ml-auto{margin-left:auto}.field{height:var(--spacing-input);border-radius:var(--radius-sm);border-style:var(--tw-border-style);border-width:1px;border-color:var(--color-hairline-strong);background-color:var(--color-surface-soft);width:100%;padding-inline:calc(var(--spacing) * 3);font-family:var(--font-mono);color:var(--color-ink);display:block}.field:focus-visible{background-color:var(--color-canvas);outline:1px solid var(--color-ink);outline-offset:0;border-color:var(--color-ink)}.field[aria-invalid=true]{border-color:var(--color-danger-hover)}.field:disabled{cursor:not-allowed;background-color:var(--color-surface-card);color:var(--color-ash)}.btn{height:var(--spacing-button);cursor:pointer;justify-content:center;align-items:center;gap:calc(var(--spacing) * 2);border-radius:var(--radius-sm);padding-inline:calc(var(--spacing) * 5);font-family:var(--font-mono);font-size:var(--text-button);line-height:var(--tw-leading,var(--text-button--line-height));--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium);white-space:nowrap;display:inline-flex}.btn:disabled{cursor:not-allowed;background-color:var(--color-surface-card);color:var(--color-ash);border-color:#0000}.tab{min-height:calc(var(--spacing) * 11);cursor:pointer;align-items:center;gap:calc(var(--spacing) * 2);padding-inline:calc(var(--spacing) * 3);font-family:var(--font-mono);font-size:var(--text-button);line-height:var(--tw-leading,var(--text-button--line-height));--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium);color:var(--color-mute);display:inline-flex}@media (min-width:40rem){.tab{padding-inline:calc(var(--spacing) * 4)}}.field-area{border-radius:var(--radius-sm);border-style:var(--tw-border-style);border-width:1px;border-color:var(--color-hairline-strong);background-color:var(--color-surface-soft);width:100%;padding:calc(var(--spacing) * 3);font-family:var(--font-mono);color:var(--color-ink);display:block}.field-area:focus-visible{background-color:var(--color-canvas);outline:1px solid var(--color-ink);outline-offset:0;border-color:var(--color-ink)}.badge{border-radius:var(--radius-sm);background-color:var(--color-surface-dark);padding-inline:calc(var(--spacing) * 2);font-family:var(--font-mono);font-size:var(--text-caption);line-height:var(--tw-leading,var(--text-caption--line-height));color:var(--color-on-dark);align-items:center;display:inline-flex}.block{display:block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.inline-flex{display:inline-flex}.table{display:table}.h-4{height:calc(var(--spacing) * 4)}.h-5{height:calc(var(--spacing) * 5)}.h-6{height:calc(var(--spacing) * 6)}.h-8{height:calc(var(--spacing) * 8)}.h-10{height:calc(var(--spacing) * 10)}.h-12{height:calc(var(--spacing) * 12)}.h-auto{height:auto}.h-full{height:100%}.h-nav{height:var(--spacing-nav)}.min-h-0{min-height:0}.min-h-8{min-height:calc(var(--spacing) * 8)}.min-h-11{min-height:calc(var(--spacing) * 11)}.min-h-56{min-height:calc(var(--spacing) * 56)}.min-h-64{min-height:calc(var(--spacing) * 64)}.min-h-80{min-height:calc(var(--spacing) * 80)}.min-h-\[80dvh\]{min-height:80dvh}.w-2{width:calc(var(--spacing) * 2)}.w-2\/3{width:66.6667%}.w-4{width:calc(var(--spacing) * 4)}.w-4\/5{width:80%}.w-11{width:calc(var(--spacing) * 11)}.w-11\/12{width:91.6667%}.w-14{width:calc(var(--spacing) * 14)}.w-64{width:calc(var(--spacing) * 64)}.w-72{width:calc(var(--spacing) * 72)}.w-80{width:calc(var(--spacing) * 80)}.w-\[calc\(100\%-2rem\)\]{width:calc(100% - 2rem)}.w-\[min\(18rem\,calc\(100vw-2rem\)\)\]{width:min(18rem,100vw - 2rem)}.w-\[min\(20rem\,calc\(100vw-2rem\)\)\]{width:min(20rem,100vw - 2rem)}.w-auto{width:auto}.w-full{width:100%}.w-px{width:1px}.max-w-column{max-width:var(--container-column)}.max-w-frame{max-width:var(--container-frame)}.max-w-full{max-width:100%}.max-w-md{max-width:var(--container-md)}.max-w-sm{max-width:var(--container-sm)}.min-w-0{min-width:0}.min-w-24{min-width:calc(var(--spacing) * 24)}.min-w-32{min-width:calc(var(--spacing) * 32)}.min-w-36{min-width:calc(var(--spacing) * 36)}.min-w-56{min-width:calc(var(--spacing) * 56)}.min-w-\[40rem\]{min-width:40rem}.min-w-\[44rem\]{min-width:44rem}.flex-1{flex:1}.shrink-0{flex-shrink:0}.cursor-help{cursor:help}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-\[auto_1fr\]{grid-template-columns:auto 1fr}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.place-items-center{place-items:center}.content-start{align-content:flex-start}.items-baseline{align-items:baseline}.items-center{align-items:center}.items-end{align-items:flex-end}.items-start{align-items:flex-start}.items-stretch{align-items:stretch}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.justify-end{justify-content:flex-end}.justify-start{justify-content:flex-start}.gap-0{gap:0}.gap-1{gap:var(--spacing)}.gap-2{gap:calc(var(--spacing) * 2)}.gap-3{gap:calc(var(--spacing) * 3)}.gap-4{gap:calc(var(--spacing) * 4)}.gap-6{gap:calc(var(--spacing) * 6)}.gap-8{gap:calc(var(--spacing) * 8)}.gap-section{gap:var(--spacing-section)}.gap-x-2{column-gap:calc(var(--spacing) * 2)}.gap-x-3{column-gap:calc(var(--spacing) * 3)}.gap-x-4{column-gap:calc(var(--spacing) * 4)}.gap-x-5{column-gap:calc(var(--spacing) * 5)}.gap-x-6{column-gap:calc(var(--spacing) * 6)}.gap-y-2{row-gap:calc(var(--spacing) * 2)}.gap-y-3{row-gap:calc(var(--spacing) * 3)}.justify-self-start{justify-self:flex-start}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.snippet{border-radius:var(--radius-sm);background-color:var(--color-surface-card);padding-inline:calc(var(--spacing) * 4);padding-block:calc(var(--spacing) * 3);font-family:var(--font-mono);color:var(--color-ink)}.rounded-\[3px\]{border-radius:3px}.rounded-sm{border-radius:var(--radius-sm)}.btn-secondary{border-style:var(--tw-border-style);border-width:1px;border-color:var(--color-hairline-strong);background-color:var(--color-canvas);color:var(--color-ink)}.border{border-style:var(--tw-border-style);border-width:1px}.border-y{border-block-style:var(--tw-border-style);border-block-width:1px}.border-t{border-top-style:var(--tw-border-style);border-top-width:1px}.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.border-l{border-left-style:var(--tw-border-style);border-left-width:1px}.border-danger-hover{border-color:var(--color-danger-hover)}.border-hairline{border-color:var(--color-hairline)}.border-hairline-strong{border-color:var(--color-hairline-strong)}.btn-primary{background-color:var(--color-primary);color:var(--color-on-primary)}.btn-primary:active:not(:disabled){background-color:var(--color-ink-deep)}.bg-canvas{background-color:var(--color-canvas)}.bg-ink{background-color:var(--color-ink)}.bg-primary{background-color:var(--color-primary)}.bg-surface-card{background-color:var(--color-surface-card)}.bg-surface-dark{background-color:var(--color-surface-dark)}.bg-surface-dark-elevated{background-color:var(--color-surface-dark-elevated)}.bg-surface-soft{background-color:var(--color-surface-soft)}.bg-transparent{background-color:#0000}.fill-body{fill:var(--color-body)}.p-3{padding:calc(var(--spacing) * 3)}.p-4{padding:calc(var(--spacing) * 4)}.p-6{padding:calc(var(--spacing) * 6)}.p-8{padding:calc(var(--spacing) * 8)}.px-1{padding-inline:var(--spacing)}.px-2{padding-inline:calc(var(--spacing) * 2)}.px-3{padding-inline:calc(var(--spacing) * 3)}.px-4{padding-inline:calc(var(--spacing) * 4)}.px-6{padding-inline:calc(var(--spacing) * 6)}.py-0{padding-block:0}.py-0\.5{padding-block:calc(var(--spacing) * .5)}.py-1{padding-block:var(--spacing)}.py-2{padding-block:calc(var(--spacing) * 2)}.py-2\.5{padding-block:calc(var(--spacing) * 2.5)}.py-3{padding-block:calc(var(--spacing) * 3)}.py-8{padding-block:calc(var(--spacing) * 8)}.py-10{padding-block:calc(var(--spacing) * 10)}.pt-3{padding-top:calc(var(--spacing) * 3)}.pt-4{padding-top:calc(var(--spacing) * 4)}.pt-6{padding-top:calc(var(--spacing) * 6)}.pt-8{padding-top:calc(var(--spacing) * 8)}.pt-12{padding-top:calc(var(--spacing) * 12)}.pr-3{padding-right:calc(var(--spacing) * 3)}.pr-4{padding-right:calc(var(--spacing) * 4)}.pb-2{padding-bottom:calc(var(--spacing) * 2)}.pb-4{padding-bottom:calc(var(--spacing) * 4)}.pb-6{padding-bottom:calc(var(--spacing) * 6)}.pb-8{padding-bottom:calc(var(--spacing) * 8)}.pl-4{padding-left:calc(var(--spacing) * 4)}.text-center{text-align:center}.text-left{text-align:left}.text-right{text-align:right}.caption{font-family:var(--font-mono);font-size:var(--text-caption);line-height:var(--tw-leading,var(--text-caption--line-height));color:var(--color-mute)}.font-reading{font-family:var(--font-reading)}.text-caption{font-size:var(--text-caption);line-height:var(--tw-leading,var(--text-caption--line-height))}.text-display{font-size:var(--text-display);line-height:var(--tw-leading,var(--text-display--line-height))}.text-reading{font-size:var(--text-reading);line-height:var(--tw-leading,var(--text-reading--line-height))}.text-subtitle{font-size:var(--text-subtitle);line-height:var(--tw-leading,var(--text-subtitle--line-height))}.text-title{font-size:var(--text-title);line-height:var(--tw-leading,var(--text-title--line-height))}.text-\[1\.25rem\]{font-size:1.25rem}.leading-none{--tw-leading:1;line-height:1}.leading-normal{--tw-leading:var(--leading-normal);line-height:var(--leading-normal)}.leading-snug{--tw-leading:var(--leading-snug);line-height:var(--leading-snug)}.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}.font-normal{--tw-font-weight:var(--font-weight-normal);font-weight:var(--font-weight-normal)}.break-all{word-break:break-all}.whitespace-normal{white-space:normal}.whitespace-nowrap{white-space:nowrap}.whitespace-pre{white-space:pre}.whitespace-pre-wrap{white-space:pre-wrap}.status-ok{color:var(--color-ink)}.text-body{color:var(--color-body)}.text-danger-hover{color:var(--color-danger-hover)}.text-ink{color:var(--color-ink)}.text-mute{color:var(--color-mute)}.text-on-dark{color:var(--color-on-dark)}.text-on-dark-mute{color:var(--color-on-dark-mute)}.text-on-primary{color:var(--color-on-primary)}.text-stone{color:var(--color-stone)}.text-success{color:var(--color-success)}.text-warning{color:var(--color-warning)}.text-warning-active{color:var(--color-warning-active)}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal,) var(--tw-slashed-zero,) var(--tw-numeric-figure,) var(--tw-numeric-spacing,) var(--tw-numeric-fraction,)}.no-underline{text-decoration-line:none}.underline{text-decoration-line:underline}.outline-none{--tw-outline-style:none;outline-style:none}.peer-focus-visible\:outline-2:is(:where(.peer):focus-visible~*){outline-style:var(--tw-outline-style);outline-width:2px}.peer-focus-visible\:outline-ink:is(:where(.peer):focus-visible~*){outline-color:var(--color-ink)}.file\:mr-4::file-selector-button{margin-right:calc(var(--spacing) * 4)}.file\:btn::file-selector-button{height:var(--spacing-button);cursor:pointer;justify-content:center;align-items:center;gap:calc(var(--spacing) * 2);border-radius:var(--radius-sm);padding-inline:calc(var(--spacing) * 5);font-family:var(--font-mono);font-size:var(--text-button);line-height:var(--tw-leading,var(--text-button--line-height));--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium);white-space:nowrap;display:inline-flex}.file\:btn-secondary::file-selector-button{border-style:var(--tw-border-style);border-width:1px;border-color:var(--color-hairline-strong);background-color:var(--color-canvas);color:var(--color-ink)}.placeholder\:text-mute::placeholder{color:var(--color-mute)}.focus-within\:border-ink:focus-within{border-color:var(--color-ink)}.focus-within\:bg-canvas:focus-within{background-color:var(--color-canvas)}@media (min-width:40rem){.sm\:col-span-2{grid-column:span 2/span 2}.sm\:ml-auto{margin-left:auto}.sm\:inline{display:inline}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.sm\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.sm\:grid-cols-\[auto_1fr_auto_1fr\]{grid-template-columns:auto 1fr auto 1fr}.sm\:grid-cols-\[minmax\(0\,1fr\)_auto\]{grid-template-columns:minmax(0,1fr) auto}.sm\:gap-x-4{column-gap:calc(var(--spacing) * 4)}.sm\:border-l{border-left-style:var(--tw-border-style);border-left-width:1px}.sm\:px-6{padding-inline:calc(var(--spacing) * 6)}.sm\:pt-16{padding-top:calc(var(--spacing) * 16)}}@media (min-width:48rem){.md\:col-span-2{grid-column:span 2/span 2}.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (min-width:64rem){.lg\:grid{display:grid}.lg\:h-\[calc\(100vh-15rem\)\]{height:calc(100vh - 15rem)}.lg\:min-h-0{min-height:0}.lg\:min-h-\[36rem\]{min-height:36rem}.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\:grid-cols-\[minmax\(0\,1fr\)_minmax\(0\,1fr\)\]{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.lg\:px-8{padding-inline:calc(var(--spacing) * 8)}}.\[\&_li\]\:border-b li{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.\[\&_li\]\:border-hairline li{border-color:var(--color-hairline)}.\[\&_li\]\:py-2 li{padding-block:calc(var(--spacing) * 2)}.\[\&_td\]\:border-b td{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}.\[\&_td\]\:border-hairline td{border-color:var(--color-hairline)}.\[\&_td\]\:py-3 td{padding-block:calc(var(--spacing) * 3)}.\[\&\>\*\]\:min-w-0>*{min-width:0}}.md p+p,.md ul+p,.md p+ul{margin-top:1rem}.md ul{padding:0;list-style:none}.md li{text-indent:-2ch;padding-left:2ch}.md li:before{content:"- ";color:var(--color-mute)}.md li+li{margin-top:.25rem}dialog::backdrop{background:#0f000066}html[data-size="16"]{--text-body:1rem;--text-button:1rem;--text-caption:.875rem}.tab[aria-current=page],.peer:checked+.tab{color:var(--color-ink);box-shadow:inset 0 -2px 0 var(--color-ash)}@property --tw-font-weight{syntax:"*";inherits:false}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid}@property --tw-leading{syntax:"*";inherits:false}@property --tw-ordinal{syntax:"*";inherits:false}@property --tw-slashed-zero{syntax:"*";inherits:false}@property --tw-numeric-figure{syntax:"*";inherits:false}@property --tw-numeric-spacing{syntax:"*";inherits:false}@property --tw-numeric-fraction{syntax:"*";inherits:false}@property --tw-outline-style{syntax:"*";inherits:false;initial-value:solid}</style>
+</head>
+<body>
+
+<!-- =================== / =================== -->
+<section data-view="public" hidden>
+  <header class="border-b border-hairline">
+    <div class="mx-auto flex h-nav max-w-frame items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <a href="#public" class="font-bold no-underline">podsumowania</a>
+      <a href="#login" class="btn btn-secondary no-underline">Zaloguj</a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-frame px-4 sm:px-6 lg:px-8">
+    <div class="pt-12 pb-8 sm:pt-16">
+      <h1 class="text-display">Podsumuj dowolny artykuł</h1>
+      <p class="text-mute">Wklej adres albo treść. Bez konta, bez instalacji.</p>
+    </div>
+
+    <form id="public-form" class="grid gap-6 lg:h-[calc(100vh-15rem)] lg:min-h-[36rem] lg:grid-cols-2" novalidate>
+      <!-- Kompozytor: SourceField + PresetTabs + długość + język + Podsumuj w jednej ramce -->
+      <div class="flex min-h-0 flex-col rounded-sm border border-hairline-strong bg-surface-soft focus-within:border-ink focus-within:bg-canvas">
+        <div class="flex items-baseline justify-between gap-2 px-4 pt-3">
+          <label for="source" class="font-medium">Adres artykułu albo jego treść</label>
+          <span id="source-count" class="caption hidden" aria-live="polite"></span>
+        </div>
+        <textarea id="source" class="min-h-56 flex-1 resize-none bg-transparent px-4 py-2 font-reading text-reading outline-none placeholder:text-mute" maxlength="30000" placeholder="https://example.com/artykul albo wklejony tekst artykułu..."></textarea>
+
+        <div class="grid gap-3 border-t border-hairline bg-canvas px-4 pt-3 pb-4">
+          <fieldset id="presets" class="min-w-0">
+            <legend class="sr-only">Rodzaj podsumowania</legend>
+            <div class="grid grid-cols-2 gap-x-2 border-b border-hairline-strong sm:gap-x-4" id="preset-options"></div>
+            <p id="preset-desc" class="mt-3"></p>
+            <div class="mt-1">
+              <button type="button" class="disclosure flex min-h-8 cursor-pointer items-center gap-2 caption" aria-expanded="false" aria-controls="preset-example"><span data-sign>[+]</span> przykład</button>
+              <p id="preset-example" class="snippet hidden text-caption"></p>
+            </div>
+          </fieldset>
+
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hairline pt-3">
+            <label for="density" class="flex min-w-56 flex-1 items-center gap-3">
+              <span class="whitespace-nowrap">Długość: <span id="density-label" class="font-medium">średnio</span></span>
+              <input id="density" type="range" min="0" max="1" step="0.05" value="0.5" class="min-w-24 flex-1" aria-valuetext="średnio">
+            </label>
+            <label for="language" class="flex items-center gap-2 caption">Język
+              <select id="language" class="h-8 rounded-sm border border-hairline-strong bg-surface-soft px-1 text-caption text-ink"><option>auto</option><option>PL</option><option>EN</option></select></label>
+            <span class="ml-auto flex items-center gap-3">
+              <kbd class="hidden caption sm:inline">ctrl+enter</kbd>
+              <button type="submit" id="submit" class="btn btn-primary min-w-36">Podsumuj</button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PublicSummaryResult -->
+      <section class="flex min-h-80 flex-col border border-hairline lg:min-h-0">
+        <div class="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-hairline px-4">
+          <h3>Podsumowanie</h3>
+          <span id="result-state" class="caption"></span>
+        </div>
+        <div aria-live="polite" id="result" class="flex flex-1 flex-col overflow-auto p-4">
+          <p id="result-idle" class="m-auto caption">Tu pojawi się podsumowanie.</p>
+          <div id="result-working" class="hidden" aria-busy="true">
+            <p class="caption">Przygotowuję podsumowanie...</p>
+            <div class="mt-3 grid gap-2" aria-hidden="true"><span class="h-5 w-2/3 rounded-sm bg-surface-card"></span><span class="h-4 w-full rounded-sm bg-surface-soft"></span><span class="h-4 w-11/12 rounded-sm bg-surface-soft"></span><span class="h-4 w-4/5 rounded-sm bg-surface-soft"></span></div>
+          </div>
+          <article id="result-done" class="hidden flex-1 flex-col">
+            <h2 id="result-title" class="text-subtitle"></h2>
+            <div id="result-body" class="md mt-3 flex-1 font-reading text-reading"></div>
+            <div class="mt-6 flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
+              <p class="caption mr-auto">Wygenerowano w 3,4 s</p>
+              <button type="button" class="btn btn-secondary" data-toast="Skopiowano podsumowanie do schowka">Kopiuj</button><button type="button" class="btn btn-secondary">Pobierz .txt</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </form>
+
+    <div id="public-alert" role="alert"></div>
+    <p class="mt-4 caption">demo, rozmiar UI: <button type="button" class="cursor-pointer underline" data-set-size="">15 px</button> · <button type="button" class="cursor-pointer underline" data-set-size="16">16 px</button> (tekst do czytania zawsze 16) · stany: <button type="button" class="cursor-pointer underline" data-demo-alert="Podaj adres artykułu albo wklej jego treść">brak treści</button> · <button type="button" class="cursor-pointer underline" data-demo-alert="Tekst przekracza limit 30 000 znaków. Skróć go albo wklej tylko najważniejszy fragment.">limit długości</button> · <button type="button" class="cursor-pointer underline" data-demo-alert="Zbyt wiele zapytań. Spróbuj ponownie za około minutę.">rate limit</button></p>
+  </main>
+
+  <footer class="mt-section border-t border-hairline">
+    <div class="mx-auto flex max-w-frame flex-wrap justify-between gap-x-6 gap-y-2 px-4 py-8 sm:px-6 lg:px-8 caption"><span>©2026 Piotr Konkol · Politechnika Gdańska · praca inżynierska</span><span class="flex gap-6"><a href="#login" class="text-mute">Zaloguj</a><a href="#admin" class="text-mute">/admin</a></span></div>
+  </footer>
+</section>
+
+<!-- =================== /login =================== -->
+<section data-view="login" hidden>
+  <main class="mx-auto grid min-h-[80dvh] max-w-column place-items-center px-4">
+    <form class="grid w-full max-w-sm gap-4 border border-hairline p-8" onsubmit="event.preventDefault(); location.hash='admin'">
+      <h1>Dostęp wymagany</h1>
+      <div><label for="login-password" class="field-label">Hasło</label><input id="login-password" type="password" class="field" autofocus></div>
+      <div id="login-error"></div>
+      <button type="submit" class="btn btn-primary">Wejdź</button>
+      <button type="button" class="justify-self-start caption cursor-pointer underline" onclick="document.getElementById('login-error').innerHTML=alertHTML('Nieprawidłowe hasło');document.getElementById('login-password').setAttribute('aria-invalid','true')">demo: błędne hasło</button>
+    </form>
+  </main>
+</section>
+
+<!-- =================== NavDock =================== -->
+<template id="navdock">
+  <header class="border-b border-hairline">
+    <div class="mx-auto flex h-nav max-w-frame items-center gap-6 px-4 sm:px-6 lg:px-8">
+      <nav class="-mx-1 flex min-w-0 flex-1 items-center gap-x-5 overflow-x-auto px-1 text-caption whitespace-nowrap" aria-label="Nawigacja główna" data-paths></nav>
+      <span class="hidden shrink-0 caption text-ink sm:inline">[✓] zalogowano</span>
+    </div>
+  </header>
+</template>
+
+<!-- =================== /admin (Nowe) =================== -->
+<section data-view="admin" hidden>
+  <div data-nav></div>
+  <main class="mx-auto grid max-w-frame grid-cols-1 gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] [&>*]:min-w-0" id="admin-shell">
+    <section class="grid min-w-0 grid-cols-1 content-start gap-8 [&>*]:min-w-0">
+      <!-- SummarySubmitCard -->
+      <form id="submit-card" class="grid gap-4" onsubmit="event.preventDefault(); toast('Zadanie zostało utworzone. Trwa analiza artykułu...')">
+        <h1 class="text-title">Praca Inżynierska - Podsumowanie Artykułów z LLM</h1>
+        <div><label for="a-src" class="field-label">Adres artykułu albo jego treść</label><textarea id="a-src" rows="6" class="field-area" placeholder="https://example.com/artykul albo wklejony tekst artykułu..."></textarea></div>
+        <div class="grid items-end gap-4 sm:grid-cols-3">
+          <div><label class="field-label" for="a-model">Model</label><select id="a-model" class="field"><option>gemini:gemini-2.5-flash</option><option>openrouter:llama-3.3-70b</option><option>ollama:qwen3:8b</option></select></div>
+          <div><label class="field-label" for="a-strat">Strategia przetwarzania</label><select id="a-strat" class="field"><option>single_pass</option><option>map_reduce</option></select></div>
+          <div><label class="field-label" for="a-lang">Język</label><select id="a-lang" class="field"><option>auto</option><option>PL</option><option>EN</option></select></div>
+        </div>
+        <label class="flex min-h-11 items-center gap-2"><input type="checkbox"> Policz G-Eval</label>
+        <!-- SummarySpecFields -->
+        <fieldset class="grid gap-4 border-t border-hairline pt-4 sm:grid-cols-2">
+          <legend class="sr-only">Specyfikacja podsumowania</legend>
+          <div><label class="field-label" for="a-stance">Narracja <span class="tip relative font-normal"><button type="button" class="cursor-help text-mute" aria-describedby="t-stance">[?]</button><span id="t-stance" role="tooltip" class="tooltip hidden absolute top-full left-0 z-20 mt-1 w-[min(18rem,calc(100vw-2rem))] border border-hairline-strong bg-canvas p-3 caption text-body">Głosem dokumentu: „Lehman Brothers upadł we wrześniu 2008.” O dokumencie: „Ten artykuł omawia upadek Lehman Brothers.”</span></span></label>
+            <select id="a-stance" class="field"><option>Głosem dokumentu</option><option>O dokumencie („artykuł omawia…”)</option></select></div>
+          <div><label class="field-label" for="a-fn">Funkcja</label><select id="a-fn" class="field"><option>Informacyjne — zastępuje tekst</option><option>Wskazujące — o czym jest tekst</option><option>Mieszane</option></select></div>
+          <div><label class="field-label" for="a-fmt">Format</label><select id="a-fmt" class="field"><option>Proza</option><option>Punkty</option></select></div>
+          <div><label class="field-label" for="a-lenp">Długość</label><select id="a-lenp" class="field"><option>Suwak</option><option>Ręcznie: słowa i zdania</option></select></div>
+          <div class="sm:col-span-2"><label class="field-label" for="a-dens">Gęstość — <span id="a-dens-l">standard</span></label><input id="a-dens" type="range" min="0" max="1" step="0.05" value="0.5" class="w-full" aria-valuetext="standard"></div>
+        </fieldset>
+        <button type="submit" class="btn btn-primary justify-self-start">Podsumuj</button>
+      </form>
+
+      <!-- JobActivityPanel -->
+      <section aria-live="polite">
+        <div class="flex items-baseline justify-between border-b border-hairline pb-2"><h2>W trakcie</h2><span class="caption">2</span></div>
+        <ul id="activity"></ul>
+      </section>
+
+      <!-- CompletedJobsList -->
+      <section>
+        <div class="flex items-baseline justify-between border-b border-hairline pb-2"><h2>Lista podsumowanych linków</h2><span class="caption">3</span></div>
+        <ul id="completed" aria-live="polite"></ul>
+      </section>
+    </section>
+
+    <!-- SummaryDetailPanel -->
+    <aside id="detail" class="hidden content-start border border-hairline p-4 lg:grid">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-2"><h2>Szczegóły</h2><div class="flex flex-wrap gap-2"><button class="btn btn-secondary" data-toast="Pobieranie...">Pobierz wszystkie</button><button class="btn btn-secondary" id="detail-close">Zamknij</button></div></div>
+      <p class="mt-3 break-all"><a href="#admin" id="detail-url"></a></p>
+      <h3 class="mt-4">Wyniki dla modeli</h3>
+      <h2 class="mt-2 text-subtitle" id="detail-title"></h2>
+      <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Model">
+        <button class="btn btn-primary">gemini-2.5-flash</button><button class="btn btn-secondary">llama-3.3-70b</button>
+      </div>
+      <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 caption" id="info-rows"></dl>
+      <h4 class="mt-4">Podsumowanie</h4>
+      <div class="md mt-2 font-reading text-reading" id="detail-body"></div>
+      <div class="mt-4 border-t border-hairline" id="detail-disclosures"></div>
+      <button class="btn btn-secondary mt-4 justify-self-start" data-toast="Pobieranie...">Pobierz JSON</button>
+    </aside>
+  </main>
+</section>
+
+<!-- =================== /admin/jobs (Wszystkie) =================== -->
+<section data-view="jobs" hidden>
+  <div data-nav></div>
+  <main class="mx-auto max-w-frame px-4 py-8 sm:px-6 lg:px-8">
+    <h2 class="border-b border-hairline pb-2">Gotowe podsumowania</h2>
+    <ul id="jobs-list" aria-live="polite"></ul>
+  </main>
+</section>
+
+<!-- =================== /admin/research/import =================== -->
+<section data-view="import" hidden>
+  <div data-nav></div>
+  <main class="mx-auto grid max-w-column gap-6 px-4 py-8">
+    <h1 class="text-display">Import zbioru ewaluacyjnego</h1>
+    <div><label class="field-label" for="imp-name">Nazwa</label><input id="imp-name" class="field" placeholder="cnn-dailymail-50"></div>
+    <div><label class="field-label" for="imp-file">Plik JSON</label><input id="imp-file" type="file" accept=".json" class="block w-full caption file:btn file:btn-secondary file:mr-4"></div>
+    <div class="border-y border-hairline">
+      <button type="button" class="disclosure flex min-h-11 w-full cursor-pointer items-center gap-3 py-3 text-left" aria-expanded="false"><span data-sign>[+]</span> Wklej JSON ręcznie</button>
+      <div class="hidden pb-4"><textarea rows="8" class="field-area text-caption">[
+  { "title": "Example", "input_text": "Example input text", "golden_summary": "Example golden summary" }
+]</textarea></div>
+    </div>
+    <button class="btn btn-primary justify-self-start" data-toast="Zaimportowano zbiór">Importuj zbiór</button>
+  </main>
+</section>
+
+<!-- =================== /admin/research (Zbiory) =================== -->
+<section data-view="sets" hidden>
+  <div data-nav></div>
+  <main class="mx-auto max-w-frame px-4 py-8 sm:px-6 lg:px-8">
+    <h2 class="border-b border-hairline pb-2">Zbiory ewaluacyjne</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[44rem] text-left">
+        <thead class="caption"><tr class="border-b border-hairline-strong"><th class="py-2 font-normal">Nazwa</th><th class="font-normal">Język</th><th class="text-right font-normal">Wpisów</th><th class="text-right font-normal">Przebiegów</th><th class="font-normal">Metryki</th><th class="font-normal">Utworzono</th><th class="text-right font-normal">Akcja</th></tr></thead>
+        <tbody class="[&_td]:border-b [&_td]:border-hairline [&_td]:py-3">
+          <tr><td><a href="#set">cnn-dailymail-50</a></td><td>EN</td><td class="text-right tabular-nums">50</td><td class="text-right tabular-nums">3</td><td><span class="status-ok">[✓] 50 gotowe</span></td><td class="caption">2026-09-21 14:02</td><td class="text-right"><button class="cursor-pointer underline text-danger-hover" data-confirm="Usunąć evaluation set?">Usuń</button></td></tr>
+          <tr><td><a href="#set">wiki-pl-20</a></td><td>PL</td><td class="text-right tabular-nums">20</td><td class="text-right tabular-nums">1</td><td><span class="text-warning-active">[▶] 12 w toku</span></td><td class="caption">2026-09-28 09:41</td><td class="text-right"><button class="cursor-pointer underline text-danger-hover" data-confirm="Usunąć evaluation set?">Usuń</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</section>
+
+<!-- =================== /admin/research/{id} =================== -->
+<section data-view="set" hidden>
+  <div data-nav></div>
+  <main class="mx-auto grid max-w-frame grid-cols-1 gap-section px-4 py-8 sm:px-6 lg:px-8 [&>*]:min-w-0">
+    <div>
+      <nav aria-label="Okruszki" class="caption"><a href="#import" class="text-mute">Ewaluacja</a> <span class="text-stone">/</span> <a href="#sets" class="text-mute">Zbiory</a> <span class="text-stone">/</span> <span aria-current="page" class="text-ink">cnn-dailymail-50</span></nav>
+      <div class="mt-2 flex flex-wrap items-baseline justify-between gap-4"><h1 class="text-display">cnn-dailymail-50</h1><button class="btn btn-secondary" data-toast="Eksportowanie...">Eksport JSON</button></div>
+      <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-6 caption"><dt>Zbiór</dt><dd class="text-ink">CNN/DailyMail, próbka 50</dd><dt>Wpisów</dt><dd class="text-ink tabular-nums">50</dd><dt>Utworzono</dt><dd class="text-ink">2026-09-21 14:02</dd></dl>
+    </div>
+
+    <section class="grid gap-4">
+      <h2 class="border-b border-hairline pb-2">Nowy przebieg</h2>
+      <div class="grid gap-4 sm:grid-cols-4">
+        <div><label class="field-label" for="r-prov">Dostawca</label><select id="r-prov" class="field"><option>gemini</option><option>openrouter</option><option>ollama</option></select></div>
+        <div><label class="field-label" for="r-model">Model</label><select id="r-model" class="field"><option>gemini-2.5-flash</option></select></div>
+        <div><label class="field-label" for="r-mode">Tryb</label><select id="r-mode" class="field"><option>single_pass</option><option>map_reduce</option></select></div>
+        <div><label class="field-label" for="r-gap">Odstęp (ms)</label><input id="r-gap" type="number" value="500" class="field tabular-nums"></div>
+      </div>
+      <label class="flex min-h-11 items-center gap-2"><input type="checkbox" checked> Deepeval</label>
+      <button class="btn btn-primary justify-self-start" data-toast="Tworzenie...">Utwórz przebieg</button>
+    </section>
+
+    <section>
+      <h2 class="border-b border-hairline pb-2">Przebiegi</h2>
+      <div class="overflow-x-auto"><table class="w-full min-w-[40rem] text-left">
+        <thead class="caption"><tr class="border-b border-hairline-strong"><th class="py-2 font-normal">Model</th><th class="font-normal">Tryb</th><th class="font-normal">Status</th><th class="font-normal">Utworzono</th><th class="text-right font-normal">Akcja</th></tr></thead>
+        <tbody class="[&_td]:border-b [&_td]:border-hairline [&_td]:py-3">
+          <tr><td><a href="#run">gemini-2.5-flash</a></td><td>single_pass</td><td><span class="status-ok">[✓] gotowe</span></td><td class="caption">2026-09-21 14:10</td><td class="text-right"><button class="cursor-pointer underline text-danger-hover" data-confirm="Usunąć evaluation run?">Usuń</button></td></tr>
+          <tr><td><a href="#run">llama-3.3-70b</a></td><td>single_pass</td><td><span class="text-danger-hover">[✗] błędne</span></td><td class="caption">2026-09-22 08:31</td><td class="text-right"><button class="cursor-pointer underline text-danger-hover" data-confirm="Usunąć evaluation run?">Usuń</button></td></tr>
+          <tr><td><a href="#run">qwen3:8b</a></td><td>map_reduce</td><td><span class="text-warning-active">[▶] w toku</span></td><td class="caption">2026-09-29 10:05</td><td class="text-right"><button class="cursor-pointer underline text-danger-hover" data-confirm="Usunąć evaluation run?">Usuń</button></td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section>
+      <h2 class="border-b border-hairline pb-2">Wpisy</h2>
+      <ul class="[&_li]:border-b [&_li]:border-hairline [&_li]:py-2">
+        <li class="flex justify-between gap-4"><span>[+] Lehman Brothers files for bankruptcy</span><span class="caption">4 812 zn.</span></li>
+        <li class="flex justify-between gap-4"><span>[+] Fed cuts rates to near zero</span><span class="caption">3 207 zn.</span></li>
+        <li class="flex justify-between gap-4"><span>[+] AIG receives $85bn rescue</span><span class="caption">5 140 zn.</span></li>
+      </ul>
+    </section>
+  </main>
+</section>
+
+<!-- =================== /admin/research/runs/{id} =================== -->
+<section data-view="run" hidden>
+  <div data-nav></div>
+  <main class="mx-auto grid max-w-frame grid-cols-1 gap-section px-4 py-8 sm:px-6 lg:px-8 [&>*]:min-w-0">
+    <div>
+      <nav aria-label="Okruszki" class="caption"><a href="#import" class="text-mute">Ewaluacja</a> <span class="text-stone">/</span> <a href="#sets" class="text-mute">Zbiory</a> <span class="text-stone">/</span> <a href="#set" class="text-mute">cnn-dailymail-50</a> <span class="text-stone">/</span> <span aria-current="page" class="text-ink">Przebieg</span></nav>
+      <h1 class="mt-2 text-display">Przebieg: gemini-2.5-flash</h1>
+      <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-6 caption sm:grid-cols-[auto_1fr_auto_1fr]">
+        <dt>status</dt><dd class="status-ok">[✓] gotowe</dd><dt>wpisów</dt><dd class="text-ink tabular-nums">50</dd>
+        <dt>utworzono</dt><dd class="text-ink">2026-09-21 14:10</dd><dt>ukończonych</dt><dd class="text-ink tabular-nums">48</dd>
+        <dt>rozpoczęto</dt><dd class="text-ink">2026-09-21 14:10</dd><dt>błędnych</dt><dd class="text-ink tabular-nums">1</dd>
+        <dt>zakończono</dt><dd class="text-ink">2026-09-21 14:26</dd><dt>pominiętych</dt><dd class="text-ink tabular-nums">1</dd>
+      </dl>
+    </div>
+
+    <section>
+      <h2 class="border-b border-hairline pb-2">Metryki statystyczne</h2>
+      <!-- chart-tile: cztery kafle, podpis „Fig N.” -->
+      <div class="grid grid-cols-2 border-b border-hairline sm:grid-cols-4" id="metric-tiles"></div>
+    </section>
+
+    <section class="grid gap-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-2"><h2>G-Eval</h2><button class="btn btn-secondary" data-toast="Liczenie...">Policz G-Eval</button></div>
+      <p class="caption">Jeszcze nie policzone.</p>
+    </section>
+
+    <section>
+      <h2 class="border-b border-hairline pb-2">Wpisy</h2>
+      <div class="border-b border-hairline">
+        <button type="button" class="disclosure flex min-h-11 w-full cursor-pointer items-center gap-3 py-3 text-left" aria-expanded="true"><span data-sign>[-]</span> Lehman Brothers files for bankruptcy <span class="ml-auto status-ok caption">[✓] gotowe</span></button>
+        <div class="grid gap-6 pb-6 md:grid-cols-2">
+          <div><h3 class="caption text-ink">Wzorzec</h3><p class="mt-1">Lehman Brothers filed for bankruptcy on 15 September 2008 after the US government declined to back a rescue.</p></div>
+          <div><h3 class="caption text-ink">AI</h3><p class="mt-1">Lehman Brothers went bankrupt on 15 September 2008 when Washington refused to guarantee a buyer.</p></div>
+          <dl class="grid grid-cols-[auto_1fr] gap-x-6 caption md:col-span-2"><dt>rouge1</dt><dd class="text-ink tabular-nums">0,447</dd><dt>rougeL</dt><dd class="text-ink tabular-nums">0,301</dd><dt>meteor</dt><dd class="text-ink tabular-nums">0,392</dd></dl>
+        </div>
+      </div>
+      <div class="border-b border-hairline"><button type="button" class="disclosure flex min-h-11 w-full cursor-pointer items-center gap-3 py-3 text-left" aria-expanded="false"><span data-sign>[+]</span> Fed cuts rates to near zero <span class="ml-auto text-danger-hover caption">[✗] błędne</span></button><div class="hidden pb-6 caption">Błąd: przekroczono limit czasu odpowiedzi modelu.</div></div>
+    </section>
+  </main>
+</section>
+
+<!-- =================== /admin/design =================== -->
+<section data-view="design" hidden>
+  <div data-nav></div>
+  <main class="mx-auto grid max-w-column gap-section px-4 py-8">
+    <h1 class="text-display">/admin/design</h1>
+    <section><h2 class="border-b border-hairline pb-2">Kolory</h2><div class="grid grid-cols-2 sm:grid-cols-4" id="swatches"></div></section>
+    <section><h2 class="border-b border-hairline pb-2">Typografia</h2>
+      <div class="grid gap-2 pt-4">
+        <p class="text-display font-bold">display-xl 38/700</p>
+        <p class="font-bold">heading-md 16/700</p><p>body-md 16/400 — cały tekst</p><p class="font-medium">body-strong 16/500</p>
+        <p class="caption">caption-md 14/400 — metadane, stopka</p><p><a href="#design">link-inline</a></p>
+      </div></section>
+    <section><h2 class="border-b border-hairline pb-2">Przyciski i pola</h2>
+      <div class="flex flex-wrap gap-2 pt-4"><button class="btn btn-primary">Primary</button><button class="btn btn-secondary">Secondary</button><button class="btn btn-primary" disabled>Przetwarzanie...</button><a href="#public" class="btn btn-secondary no-underline">LinkButton</a></div>
+      <div class="grid gap-4 pt-6 sm:grid-cols-2">
+        <div><label class="field-label" for="d1">Input</label><input id="d1" class="field" placeholder="placeholder"></div>
+        <div><label class="field-label" for="d2">Input z błędem</label><input id="d2" class="field" value="abc" aria-invalid="true" aria-describedby="d2e"><p id="d2e" class="mt-1 caption text-danger-hover">[✗] Wymagana liczba 20–600</p></div>
+        <div><label class="field-label" for="d3">Select</label><select id="d3" class="field"><option>Opcja</option></select></div>
+        <div><label class="field-label" for="d4">Wyłączone</label><input id="d4" class="field" value="nieedytowalne" disabled></div>
+        <label class="flex min-h-11 items-center gap-2"><input type="checkbox" checked> Checkbox</label>
+        <div><label class="field-label" for="d5">RangeInput</label><input id="d5" type="range" class="w-full"></div>
+      </div></section>
+    <section><h2 class="border-b border-hairline pb-2">Stany</h2>
+      <p class="flex flex-wrap gap-x-6 pt-4"><span class="status-ok">[✓] gotowe</span><span class="text-danger-hover">[✗] błędne</span><span class="text-mute">[⋯] w kolejce</span><span class="text-warning-active">[▶] w toku</span><span class="badge">◌ publiczne</span></p>
+      <div class="pt-4" id="design-alert"></div>
+      <div class="flex flex-wrap gap-2"><button class="btn btn-secondary" data-confirm="Usunąć job?">ConfirmDialog</button><button class="btn btn-secondary" data-toast="Zapisano">Toast</button>
+        <span class="tip relative inline-flex"><button class="btn btn-secondary" aria-describedby="t-demo">Tooltip</button><span id="t-demo" role="tooltip" class="tooltip hidden absolute top-full left-0 z-20 mt-1 w-64 border border-hairline-strong bg-canvas p-3 caption text-body">Opis pokazywany przy najechaniu i fokusie; Esc chowa.</span></span></div>
+    </section>
+  </main>
+</section>
+
+<dialog id="confirm" class="m-auto w-[calc(100%-2rem)] max-w-md border border-hairline-strong bg-canvas p-6 text-ink" aria-labelledby="confirm-h">
+  <form method="dialog" class="grid gap-4">
+    <h2 id="confirm-h">Usunąć job?</h2>
+    <p class="text-body" id="confirm-msg">Usunąć "Upadek Lehman Brothers" (https://www.nytimes.com/2008/09/15/business/15lehman.html)?</p>
+    <div class="flex justify-end gap-2"><button value="cancel" class="btn btn-secondary" autofocus>Anuluj</button><button value="ok" class="btn btn-primary">Usuń</button></div>
+  </form>
+</dialog>
+<div id="toasts" class="pointer-events-none fixed right-4 bottom-4 z-50 grid gap-2" role="status" aria-live="polite"></div>
+
+<script>
+const PRESETS = [
+  { key: "facts", label: "Fakty i wnioski", description: "Podaje konkretne fakty i wnioski z artykułu, więc można go nie czytać.", example: "Lehman Brothers upadł we wrześniu 2008. Rząd USA odmówił ratunku, co uruchomiło globalny kryzys.",
+    body: "<p>Lehman Brothers ogłosił upadłość 15 września 2008 roku, po tym jak rząd USA odmówił udzielenia gwarancji potencjalnym nabywcom.</p><p>Decyzja wywołała panikę na rynkach międzybankowych i w ciągu kilku tygodni przerodziła się w globalny kryzys finansowy.</p>" },
+  { key: "points", label: "Kluczowe punkty", description: "Najważniejsze fakty z artykułu w formie listy punktów.", example: "Lehman Brothers upadł we wrześniu 2008 • Rząd USA odmówił ratunku • Kryzys rozlał się na cały świat",
+    body: "<ul><li>Lehman Brothers upadł 15 września 2008 r.</li><li>Rząd USA odmówił gwarancji dla nabywców banku.</li><li>Zamroził się rynek pożyczek międzybankowych.</li><li>Kryzys w ciągu tygodni objął cały świat.</li></ul>" },
+  { key: "topics", label: "O czym jest tekst", description: "Wymienia tylko tematy, które artykuł porusza, bez faktów i wniosków. Pomaga zdecydować, czy warto czytać.", example: "Artykuł omawia upadek Lehman Brothers i jego skutki dla rynków.",
+    body: "<p>Artykuł omawia okoliczności upadku Lehman Brothers, decyzję rządu USA o braku pomocy oraz skutki tej decyzji dla rynków finansowych na świecie.</p>" },
+  { key: "one", label: "Jedno zdanie", description: "Sedno artykułu w jednym zdaniu, z najważniejszym faktem.", example: "Upadek Lehman Brothers w 2008 roku wywołał globalny kryzys finansowy.",
+    body: "<p>Upadek Lehman Brothers we wrześniu 2008 roku, po odmowie pomocy ze strony rządu USA, wywołał globalny kryzys finansowy.</p>" },
+];
+// Opisy z NavDock.tsx
+const NAV = [
+  { label: "Podsumowania", description: "Pojedyncze artykuły. Wklejasz adres URL, system pobiera treść strony i generuje podsumowanie wybranym modelem LLM.",
+    tabs: [["Nowe", "admin", "Formularz nowego podsumowania, zadania które właśnie się liczą i lista dotychczas podsumowanych adresów."],
+           ["Wszystkie", "jobs", "Pełna historia zadań: każde uruchomienie osobno, z modelem, trybem, statusem i pełnym wynikiem do pobrania."]] },
+  { label: "Ewaluacja", description: "Całe zbiory artykułów z gotowymi podsumowaniami wzorcowymi. Uruchamiasz model na całym zbiorze i porównujesz wynik z wzorcem metrykami ROUGE, METEOR i G-Eval.",
+    tabs: [["Import", "import", "Wgraj nowy zbiór jako JSON: artykuły wraz z podsumowaniami wzorcowymi, względem których liczone są metryki."],
+           ["Zbiory", "sets", "Lista zaimportowanych zbiorów ewaluacyjnych. Wejdź w zbiór, żeby obejrzeć jego wpisy i uruchomić na nim przebieg."]] },
+];
+const ACTIVE_TAB = { admin: "admin", jobs: "jobs", import: "import", sets: "sets", set: "sets", run: "sets", design: null };
+// StatusLabel.tsx: glif + słowo; tu glif w nawiasach ASCII
+const STATUS = { completed: ["[✓]", "gotowe", "status-ok"], failed: ["[✗]", "błędne", "text-danger-hover"], pending: ["[⋯]", "w kolejce", "text-mute"], running: ["[▶]", "w toku", "text-warning-active"] };
+const status = (s, n) => `<span class="${STATUS[s][2]}">${STATUS[s][0]} ${n === undefined ? STATUS[s][1] : n + " " + STATUS[s][1]}</span>`;
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+
+// NavDock: ścieżki zamiast etykiet; nazwa modułu i opis z NavDock.tsx w podpowiedzi
+const PATHS = [
+  ["/", "public", "Portal", "Strona publiczna"],
+  ["/admin", "admin", "Podsumowania · Nowe", NAV[0].tabs[0][2]],
+  ["/admin/jobs", "jobs", "Podsumowania · Wszystkie", NAV[0].tabs[1][2]],
+  ["/admin/research/import", "import", "Ewaluacja · Import", NAV[1].tabs[0][2]],
+  ["/admin/research", "sets", "Ewaluacja · Zbiory", NAV[1].tabs[1][2]],
+  ["/admin/design", "design", "Katalog komponentów", "Żywy katalog tokenów i wariantów komponentów. Narzędzie autora, nie część produktu."],
+];
+// Strony otwierane z listy dopisują swoją ścieżkę za aktywną zakładką
+const NESTED = { set: ["/admin/research/cnn-dailymail-50", "sets"], run: ["/admin/research/runs/6f2a", "sets"] };
+$$("[data-nav]").forEach((slot) => slot.replaceWith($("#navdock").content.cloneNode(true)));
+function renderPaths(v) {
+  const nested = NESTED[v], active = nested ? nested[1] : v;
+  $$("[data-paths]").forEach((nav) => {
+    nav.innerHTML = PATHS.map(([p, h, label, d], i) => `<span class="tip relative ${h === "design" ? "sm:ml-auto" : ""}">
+      <a href="#${h}" ${h === active && !nested ? 'aria-current="page"' : ""} aria-describedby="np-${i}" class="${h === active ? "font-bold" : ""} ${h === "design" ? "text-mute" : ""}">${p}</a>
+      <span id="np-${i}" role="tooltip" class="tooltip hidden absolute top-full ${h === "design" ? "right-0" : "left-0"} z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] border border-hairline-strong bg-canvas p-3 whitespace-normal caption text-body"><span class="font-medium text-ink">${label}.</span> ${d}</span></span>`
+      + (nested && h === active ? `<a href="#${v}" aria-current="page" class="font-bold no-underline">${nested[0]}</a>` : "")).join("");
+    $$(".tip", nav).forEach(bindTip);
+  });
+}
+
+function route() {
+  const v = location.hash.slice(1) || "public";
+  $$("[data-view]").forEach((s) => (s.hidden = s.dataset.view !== v));
+  renderPaths(v);
+  scrollTo(0, 0);
+}
+
+// ---------- strona publiczna ----------
+const box = $("#preset-options");
+PRESETS.forEach((p, i) => box.insertAdjacentHTML("beforeend",
+  `<label class="flex"><input type="radio" name="preset" value="${p.key}" class="peer sr-only" ${i ? "" : "checked"}><span class="tab w-full items-start justify-start gap-2 px-2 py-2.5 leading-normal peer-focus-visible:outline-2 peer-focus-visible:outline-ink"><span data-mark aria-hidden="true" class="shrink-0 whitespace-pre"></span><span>${p.label}</span></span></label>`));
+const current = () => PRESETS.find((p) => p.key === $("input[name=preset]:checked").value);
+const densityLabel = (d) => (d < 1 / 3 ? "krótko" : d < 2 / 3 ? "średnio" : "długo");
+function syncPreset() {
+  const p = current(), d = densityLabel(+$("#density").value);
+  $("#preset-desc").textContent = p.description;
+  $("#preset-example").textContent = `Przykład: „${p.example}”`;
+  $$("#preset-options label").forEach((l) => ($("[data-mark]", l).textContent = $("input", l).checked ? "[x]" : "[ ]"));
+  $("#density-label").textContent = d; $("#density").setAttribute("aria-valuetext", d);
+}
+box.addEventListener("change", syncPreset); $("#density").addEventListener("input", syncPreset); syncPreset();
+
+const LIMIT = 30000, src = $("#source"), count = $("#source-count");
+const isUrl = (c) => /^https?:\/\/\S*[^\s.,;:!?)]$/.test(c.trim());
+src.addEventListener("input", () => {
+  const pasted = !isUrl(src.value) && src.value.trim().length > 0;   // licznik tylko dla wklejonego tekstu, jak w SourceField
+  count.classList.toggle("hidden", !pasted);
+  count.textContent = `${src.value.length.toLocaleString("pl-PL")} / ${LIMIT.toLocaleString("pl-PL")}`;
+});
+
+function alertHTML(msg) {
+  return `<div class="my-4 flex gap-3 border border-danger-hover bg-canvas px-4 py-3 text-danger-hover"><span aria-hidden="true">[✗]</span><p>${msg}</p></div>`;
+}
+const showAlert = (m) => ($("#public-alert").innerHTML = m ? alertHTML(m) : "");
+$$("[data-demo-alert]").forEach((b) => (b.onclick = () => showAlert(b.dataset.demoAlert)));
+$("#design-alert").innerHTML = alertHTML("Nie udało się pobrać listy zadań");
+
+function setResult(phase) {
+  ["idle", "working", "done"].forEach((k) => $("#result-" + k).classList.toggle("hidden", k !== phase));
+  $("#result-state").innerHTML = { idle: "", working: status("running"), done: status("completed") + ' <span class="text-mute">· 3,4 s</span>' }[phase];
+}
+$("#public-form").addEventListener("submit", (e) => {
+  e.preventDefault(); showAlert("");
+  const c = src.value;
+  if (!c.trim()) return showAlert("Podaj adres artykułu albo wklej jego treść");
+  if (/^https?:/.test(c.trim()) && !isUrl(c)) return showAlert("Wprowadź poprawny adres URL artykułu");
+  const btn = $("#submit"); btn.disabled = true; btn.textContent = "Przetwarzanie..."; $("#presets").disabled = true; setResult("working");
+  setTimeout(() => {
+    $("#result-title").textContent = "Upadek Lehman Brothers i początek kryzysu 2008";
+    $("#result-body").innerHTML = current().body; setResult("done");
+    btn.disabled = false; btn.textContent = "Podsumuj"; $("#presets").disabled = false;
+  }, 1400);
+});
+src.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("#public-form").requestSubmit(); });
+
+// ---------- konsola ----------
+$("#a-dens").addEventListener("input", (e) => { const v = +e.target.value, l = v < 1 / 3 ? "zwięźle" : v < 2 / 3 ? "standard" : "obszernie"; $("#a-dens-l").textContent = l; e.target.setAttribute("aria-valuetext", l); });
+
+$("#activity").innerHTML = [
+  ["https://www.bbc.com/news/business-45487066", "running", "gemini:gemini-2.5-flash", "0:42"],
+  ["https://www.ft.com/content/aig-rescue", "pending", "ollama:qwen3:8b", "4s"],
+].map(([u, s, m, t]) => `<li class="border-b border-hairline"><a href="#admin" class="grid min-w-0 gap-1 py-2 no-underline sm:grid-cols-[minmax(0,1fr)_auto]"><span class="truncate text-body underline">${u}</span><span class="flex flex-wrap gap-x-4 caption">${status(s)}<span>${m}</span><span class="tabular-nums">${t}</span></span></a></li>`).join("");
+
+const COMPLETED = [
+  ["https://www.nytimes.com/2008/09/15/business/15lehman.html", "Upadek Lehman Brothers", { completed: 2 }, "2026-09-30 18:12"],
+  ["Wklejony tekst · 4 212 znaków", "Regulacje AI w UE: stan na 2026", { completed: 1, failed: 1 }, "2026-09-29 11:40"],
+  ["https://www.reuters.com/markets/fed-cuts-rates", null, { pending: 1, completed: 1 }, "2026-09-28 09:05"],
+];
+$("#completed").innerHTML = COMPLETED.map(([u, t, c, d], i) => `<li class="border-b border-hairline"><button type="button" data-open="${i}" class="grid w-full cursor-pointer gap-1 py-2 text-left">
+  <span class="break-all ${u.startsWith("http") ? "underline" : ""}">${u}</span>${t ? `<span class="text-body">${t}</span>` : ""}
+  <span class="flex flex-wrap gap-x-4 caption">${Object.entries(c).map(([s, n]) => status(s, n)).join("")}<span>${d}</span></span></button></li>`).join("");
+
+const INFO = [["Wywołano", "2026-09-30 18:12"], ["Pochodzenie", "Strona publiczna"], ["Czas generacji", "3,4 s"], ["Tokeny wejściowe", "2 118"], ["Tokeny wyjściowe", "164"], ["Tokeny łącznie", "2 282"], ["Strategia przetwarzania", "single_pass"], ["Format", "Proza"], ["Narracja", "Głosem dokumentu"], ["Funkcja", "Informacyjne — zastępuje tekst"], ["Cel długości", "Suwak · średnio"]];
+$("#info-rows").innerHTML = INFO.map(([k, v]) => `<dt class="py-0.5">${k}</dt><dd class="py-0.5 text-ink tabular-nums">${v}</dd>`).join("");
+$("#detail-body").innerHTML = PRESETS[0].body;
+$("#detail-disclosures").innerHTML = [["Metryki", "rouge1 0,447 · rougeL 0,301 · meteor 0,392"], ["Prompt", "You are a summarization assistant. Summarize the article below…"], ["Surowe metadane", '{ "provider": "gemini", "finish_reason": "STOP" }']].map(([l, b]) =>
+  `<div class="border-b border-hairline"><button type="button" class="disclosure flex min-h-11 w-full cursor-pointer items-center gap-3 py-2 text-left" aria-expanded="false"><span data-sign>[+]</span> ${l}</button><pre class="hidden snippet mb-3 overflow-auto text-caption whitespace-pre-wrap">${b}</pre></div>`).join("");
+
+document.addEventListener("click", (e) => {
+  const o = e.target.closest("[data-open]");
+  if (o) { const [u, t] = COMPLETED[+o.dataset.open];
+    $("#submit-card").hidden = true;                     // HomePage: formularz znika, gdy otwarte są szczegóły
+    $("#detail").classList.remove("hidden"); $("#detail").classList.add("grid");
+    $("#detail-url").textContent = u; $("#detail-title").textContent = t ?? u; $("#detail").scrollIntoView({ block: "start" }); }
+  if (e.target.closest("#detail-close")) { $("#detail").classList.add("hidden"); $("#detail").classList.remove("grid"); $("#submit-card").hidden = false; }
+  const d = e.target.closest(".disclosure");
+  if (d) { const open = d.getAttribute("aria-expanded") !== "true"; d.setAttribute("aria-expanded", open); d.nextElementSibling.classList.toggle("hidden", !open); $("[data-sign]", d).textContent = open ? "[-]" : "[+]"; }
+  const c = e.target.closest("[data-confirm]");
+  if (c) { e.preventDefault(); $("#confirm-h").textContent = c.dataset.confirm; $("#confirm").showModal(); }
+  const t = e.target.closest("[data-toast]"); if (t) { e.preventDefault(); toast(t.dataset.toast); }
+});
+$("#confirm").addEventListener("close", () => { if ($("#confirm").returnValue === "ok") toast("Usunięto"); });
+
+const JOBS = [
+  ["Upadek Lehman Brothers", "https://www.nytimes.com/2008/09/15/business/15lehman.html", "completed", true],
+  ["Regulacje AI w UE: stan na 2026", "Wklejony tekst · 4 212 znaków", "completed", false],
+  ["example.com/paywall", "https://example.com/paywall", "failed", true],
+  ["Fed cuts rates to near zero", "https://www.reuters.com/markets/fed-cuts-rates", "running", false],
+];
+$("#jobs-list").innerHTML = JOBS.map(([t, u, s, pub]) => `<li class="flex items-start justify-between gap-4 border-b border-hairline py-3">
+  <a href="#admin" class="grid min-w-0 gap-1 no-underline"><span class="font-medium underline">${t}</span><span class="truncate caption">${u}</span>
+    <span class="flex flex-wrap gap-x-4 caption">${status(s)}${pub ? `<span class="text-ink"><span aria-hidden="true">◌ </span>publiczne</span>` : ""}</span></a>
+  <button type="button" class="shrink-0 cursor-pointer underline text-danger-hover" data-confirm="Usunąć job?" aria-label="Usuń job">Usuń</button></li>`).join("");
+
+// chart-tile: wartość + podpis „Fig N.” (bez dekoracyjnego wykresu — patrz SPEC)
+const METRICS = [["rouge1", 0.412], ["rouge2", 0.188], ["rougeL", 0.287], ["meteor", 0.356]];
+$("#metric-tiles").innerHTML = METRICS.map(([n, v], i) => {
+  return `<figure class="border-hairline p-4 ${i ? "sm:border-l" : ""} ${i % 2 ? "border-l" : ""}">
+    <p class="text-display font-bold tabular-nums">${v.toFixed(3).replace(".", ",")}</p>
+    <figcaption class="caption">Fig ${i + 1}. ${n}</figcaption></figure>`;
+}).join("");
+
+function bindTip(g) { const t = $("[role=tooltip]", g), show = () => t.classList.remove("hidden"), hide = () => t.classList.add("hidden");
+  g.addEventListener("pointerenter", show); g.addEventListener("pointerleave", hide); g.addEventListener("focusin", show); g.addEventListener("focusout", hide); }
+$$(".tip").forEach(bindTip);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $$("[role=tooltip]").forEach((t) => t.classList.add("hidden")); });
+
+function toast(msg) {
+  const el = document.createElement("div");
+  el.className = "pointer-events-auto rounded-sm bg-primary px-4 py-2 text-caption text-on-primary";
+  el.textContent = msg; $("#toasts").append(el); setTimeout(() => el.remove(), 3000);
+}
+
+const SW = [["primary / ink", "#201d1d", "16.3:1"], ["canvas", "#fdfcfc", "tło"], ["surface-soft", "#f8f7f7", "pola"], ["surface-card", "#f1eeee", "snippet, wyłączone"], ["body", "#424245", "9.8:1"], ["mute", "#646262", "5.9:1"], ["stone", "#6e6e73", "5.0:1"], ["ash", "#9a9898", "2.8:1 · tylko wyłączone / ciemne"],
+  ["hairline-strong", "#646262", "obramowania pól"], ["surface-dark", "#201d1d", "tylko TUI"], ["accent-hover", "#0056b3", "6.9:1"], ["warning-active", "#995f06", "w toku · 5.1:1"], ["danger-hover", "#d70015", "błąd · 5.3:1"], ["success", "#30d158", "tylko na ciemnym · 8.3:1"]];
+$("#swatches").innerHTML = SW.map(([n, h, c]) => `<div class="border-b border-hairline py-3 pr-3"><div class="h-10 rounded-sm border border-hairline" style="background:${h}"></div><p class="mt-2 font-medium">${n}</p><p class="caption">${h} · ${c}</p></div>`).join("");
+function syncDemo() {
+  const z = document.documentElement.dataset.size || "";
+  $$("[data-set-size]").forEach((b) => b.classList.toggle("font-bold", b.dataset.setSize === z));
+}
+document.addEventListener("click", (e) => {
+  const z = e.target.closest("[data-set-size]");
+  if (z) { document.documentElement.dataset.size = z.dataset.setSize; syncDemo(); }
+});
+syncDemo();
+addEventListener("hashchange", route); route();
+</script>
+</body>
+</html>

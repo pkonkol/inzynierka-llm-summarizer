@@ -1,3 +1,4 @@
+praca_overleaf/
 .env
 *.pyc
 **/__pycache__/

@@ -12,7 +12,7 @@ see [CONTEXT.md](CONTEXT.md)). Every routine task is a `just` recipe; `just` lis
 ```bash
 brew install just uv            # Docker and Node 22 are assumed
 just setup-hooks                # pre-commit hook: gitleaks on staged changes
-just venv deps-sync             # backend/venv from the locks
+just deps-sync                  # backend/.venv from backend/uv.lock
 just install-frontend           # npm ci
 cp backend/.env.example backend/.env        # fill in API keys
 cp frontend/.env.example frontend/.env

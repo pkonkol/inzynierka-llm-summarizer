@@ -38,7 +38,7 @@ jobs:
               - 'backend/openapi.json' # generated TS types are derived from it
             security:
               - 'backend/Dockerfile'
-              - 'backend/requirements.txt'
+              - 'backend/uv.lock'
               - 'frontend/package-lock.json'
               - 'infra/**'
               - 'justfile'
@@ -56,8 +56,10 @@ jobs:
           persist-credentials: false
       - uses: extractions/setup-just@v3
       - uses: astral-sh/setup-uv@v6
+        with:
+          version-file: backend/pyproject.toml
       - run: just lint-backend
-      - run: just venv deps-sync test-backend
+      - run: just deps-sync test-backend
       - run: just typecheck-backend check-openapi
 
   frontend:

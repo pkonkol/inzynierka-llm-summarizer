@@ -106,7 +106,7 @@ different tools answering different questions.
 
 ## Standards this follows
 
-12-Factor App — II (explicit dependencies: `requirements.in` → locked `requirements.txt`),
+12-Factor App — II (explicit dependencies: `pyproject.toml` → locked `uv.lock`),
 III (config in the environment), XI (logs as an event stream to stdout). Conventional
 Commits 1.0.0. MADR for the decision records. OWASP Top 10 A10 and API Security API7 for
 the SSRF work. CIS Docker Benchmark for the non-root container.

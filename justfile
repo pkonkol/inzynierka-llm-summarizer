@@ -71,7 +71,7 @@ typecheck-backend:
 [working-directory('backend')]
 dev-backend:
     # --reload-include: the default excludes cover every dotfile, so .env edits would need a manual restart.
-    GIT_SHA=$(git rev-parse --short HEAD) ./venv/bin/python -m uvicorn app.main:app --reload --reload-include .env --port 8000
+    GIT_SHA=$(git rev-parse --short HEAD) uv run uvicorn app.main:app --reload --reload-include .env --port 8000
 
 # Frontend: vite dev server (vite.config.ts stamps the commit itself)
 [group('dev')]
@@ -102,20 +102,21 @@ dev:
 
 # Backend: does the app still import and wire up its routes?
 [group('backend')]
+[working-directory('backend')]
 smoke-backend:
-    cd backend && ./venv/bin/python -c "from app.main import app; print(f'OK — {len(app.routes)} routes')"
+    uv run python -c "from app.main import app; print(f'OK — {len(app.routes)} routes')"
 
 # Backend: regenerate the OpenAPI schema FastAPI derives from the route signatures
 [group('backend')]
 [working-directory('backend')]
 export-openapi:
-    ./venv/bin/python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
+    uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" > openapi.json
 
 # Backend: fail if the committed schema no longer matches the routes, so an API change shows up in review
 [group('backend')]
 [working-directory('backend')]
 check-openapi:
-    ./venv/bin/python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" | diff -u openapi.json - || (echo "openapi.json is stale — run: just export-openapi" && exit 1)
+    uv run python -c "import json; from app.main import app; print(json.dumps(app.openapi(), indent=2))" | diff -u openapi.json - || (echo "openapi.json is stale — run: just export-openapi" && exit 1)
 
 # Frontend: fail if the generated TS types no longer match openapi.json, so a schema change shows up in review
 [group('frontend')]
@@ -123,36 +124,25 @@ check-openapi:
 check-generated-types:
     npm run -s print-types 2>/dev/null | diff -u src/types/api.generated.ts - || (echo "api.generated.ts is stale — run: npm run generate-types" && exit 1)
 
-# Backend: recompile requirements.txt from requirements.in
+# Backend: re-resolve uv.lock after a pyproject.toml edit; --upgrade or --upgrade-package <name> moves pins
 [group('backend')]
 [working-directory('backend')]
-deps-compile *args:
-    uv pip compile requirements.in -o requirements.txt --universal --python-version 3.14 {{args}}
-    # -c requirements.txt: deepeval ships pytest as a runtime dependency, so the same packages
-    # appear in both locks. The constraint makes the dev lock resolve to the versions prod
-    # already pins, instead of quietly downgrading them at `deps-sync` install time.
-    uv pip compile requirements-dev.in -o requirements-dev.txt --universal --python-version 3.14 -c requirements.txt {{args}}
+deps-lock *args:
+    uv lock {{args}}
 
-# Create backend/venv from scratch. Local dev already has one; CI does not.
-[group('backend')]
-[working-directory('backend')]
-venv:
-    uv venv --python 3.14 venv
+# `--locked` fails on a uv.lock that no longer matches pyproject.toml instead of rewriting it.
 
-# Run after deps-compile, so local dev matches the image (12-factor X).
-
-# Backend: install both locks into ./venv
+# Backend: create or update backend/.venv from uv.lock
 [group('backend')]
 [working-directory('backend')]
 deps-sync:
-    uv pip install --python ./venv/bin/python -r requirements.txt
-    uv pip install --python ./venv/bin/python -r requirements-dev.txt
+    uv sync --locked
 
 # Backend: pytest
 [group('backend')]
 [working-directory('backend')]
 test-backend:
-    ./venv/bin/python -m pytest -q
+    uv run pytest -q
 
 # Frontend: lint + typecheck
 [group('frontend')]
@@ -228,8 +218,9 @@ scan-deps:
         --db-repository ghcr.io/aquasecurity/trivy-db:2 \
         --severity {{gate}} --exit-code 1 --quiet \
         --ignorefile /repo/.trivyignore.yaml \
-        --skip-dirs frontend/node_modules --skip-dirs backend/venv \
-        --skip-dirs frontend/.firebase
+        --skip-dirs frontend/node_modules --skip-dirs backend/.venv \
+        --skip-dirs frontend/.firebase \
+        --include-dev-deps # uv.lock marks dev groups, and trivy skips them by default
 
 # actionlint catches the workflow that dies eight minutes in; zizmor catches the one that
 # runs fine and gets you owned. Gated at medium — these files hold the OIDC token.
@@ -259,7 +250,7 @@ scan-image image="inzynierka-backend:local":
 build-backend:
     docker build -t inzynierka-backend:local ./backend
 
-# The Dockerfile deletes deepeval's pytest dependency and keeps the wordnet corpus zipped.
+# The Dockerfile leaves out deepeval's pytest dependency and unpacks the wordnet corpus.
 # Both are invisible to every other check: the image builds, imports pass, and the failure
 # only shows up when a run reaches a GEval or a METEOR score. This is that check.
 [group('backend')]

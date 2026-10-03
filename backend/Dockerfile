@@ -1,18 +1,22 @@
 FROM python:3.14-alpine AS builder
 
-WORKDIR /build
+COPY --from=ghcr.io/astral-sh/uv:0.12.22 /uv /bin/uv
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+# The venv's scripts carry absolute shebangs, so it is built at the path the runtime stage runs it from.
+WORKDIR /app
 
-RUN sp=/install/lib/python3.14/site-packages \
-    # A base-image bump moves this path; failing here beats silently pruning nothing.
-    && test -d "$sp" \
-    && rm -rf "$sp"/_pytest "$sp"/pytest "$sp"/pytest_asyncio "$sp"/pytest_repeat.py \
-    "$sp"/pytest_rerunfailures.py "$sp"/xdist "$sp"/execnet "$sp"/iniconfig "$sp"/pluggy \
-    "$sp"/pytest-*.dist-info "$sp"/pytest_*.dist-info "$sp"/execnet-*.dist-info \
-    "$sp"/iniconfig-*.dist-info "$sp"/pluggy-*.dist-info \
-    && rm -f /install/bin/pytest /install/bin/py.test
+# UV_COMPILE_BYTECODE: uv skips .pyc generation by default, which would move it onto every Cloud Run cold start.
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
+
+COPY pyproject.toml uv.lock ./
+
+# deepeval declares pytest and its plugins as runtime dependencies, but nothing the app imports loads them.
+RUN uv sync --locked --no-dev --no-cache \
+    --no-install-package pytest --no-install-package pytest-asyncio \
+    --no-install-package pytest-repeat --no-install-package pytest-rerunfailures \
+    --no-install-package pytest-xdist --no-install-package execnet \
+    --no-install-package iniconfig --no-install-package pluggy
 
 FROM python:3.14-alpine AS runtime
 
@@ -23,7 +27,8 @@ WORKDIR /app
 # apk itself is deleted further down, once this and the nltk corpora are in place.
 RUN apk add --no-cache "libuuid>=2.42.3-r0"
 
-COPY --from=builder /install /usr/local
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY app ./app
 
@@ -44,7 +49,7 @@ RUN python -c "from app.core.nltk_data import ensure_wordnet_resources; ensure_w
     # No package manager in the runtime image: the builder already installed everything,
     # so pip here only lets code execution turn into code installation. Also drops pip's
     # vendored bundle, which is where image scanners were finding CVEs.
-    && python -m pip uninstall -y pip \
+    && /usr/local/bin/python -m pip uninstall -y pip \
     && rm -rf /usr/local/lib/python3.14/ensurepip \
     # apk comes with the base image, so removing it is what actually leaves the runtime
     # without a package manager.

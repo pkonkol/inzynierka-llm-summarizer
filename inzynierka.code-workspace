@@ -67,7 +67,6 @@
 		},
 		"peacock.color": "000000",
 		// settings.json
-		"workbench.list.defaultFindMode": "filter", // pisanie w Explorerze ukrywa niepasujące pliki zamiast je tylko podświetlać
 		"workbench.tree.enableStickyScroll": true, // nagłówek folderu zostaje u góry przy przewijaniu stu plików
 		"workbench.tree.indent": 16, // wyraźniejsze wcięcia
 		"workbench.tree.renderIndentGuides": "always",
@@ -75,6 +74,8 @@
 		"explorer.fileNesting.enabled": true, // powiązane pliki zwinięte pod rodzicem
 		"explorer.fileNesting.patterns": {
 			"*.tsx": "${capture}.test.tsx, ${capture}.module.css"
-		}
+		},
+		"workbench.list.defaultFindMode": "filter", // niepasujące pliki znikają z drzewa
+		"workbench.list.defaultFindMatchType": "fuzzy" // "evrun" trafia w evaluation_runner.py
 	}
 }

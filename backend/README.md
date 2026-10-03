@@ -6,7 +6,7 @@ runs. Recipes run from the repository root; Python 3.14, MongoDB via `just db-up
 ## Setup
 
 ```bash
-just venv deps-sync                      # backend/venv from requirements.txt + requirements-dev.txt
+just deps-sync                           # backend/.venv from uv.lock, dev group included
 cp backend/.env.example backend/.env     # all other settings: app/core/config.py
 ```
 
@@ -40,18 +40,17 @@ After changing a route or schema: `just export-openapi`, then `npm run generate-
 
 ## Dependencies
 
-- `requirements.in` / `requirements-dev.in` — direct dependencies, edited by hand, pinned with `~=`.
-- `requirements.txt` / `requirements-dev.txt` — generated locks, exact versions. The image installs
-  `requirements.txt`. Never edit a lock by hand.
+- `pyproject.toml` — direct dependencies with `~=X.Y` ranges; the `dev` group holds test and reload tooling.
+- `uv.lock` — generated lock with exact versions and hashes, valid on Linux (the image) and macOS.
+  The image installs it without the `dev` group. Never edit it by hand.
 
 ```bash
-just deps-compile                             # after editing a .in file; existing pins stay
-just deps-compile --upgrade-package fastapi   # move one package
-just deps-compile --upgrade                   # move everything
-just deps-sync                                # install the locks into venv
+uv add 'pyjwt~=2.15'                        # add a dependency or change its range, relocks
+uv tree --outdated --depth 1                # direct dependencies with newer releases
+just deps-lock --upgrade-package fastapi    # move one package within its range
+just deps-lock --upgrade                    # move everything
+just deps-sync                              # install uv.lock into .venv
 ```
-
-The locks are `--universal`, so one file is valid on Linux (the image) and macOS.
 
 ## Checks
 
@@ -74,8 +73,8 @@ just scan-image       # trivy on the built image
 From `backend/`:
 
 ```bash
-./venv/bin/python -m uvicorn app.main:app --reload --port 8000
-./venv/bin/python -m pytest tests/test_scraper.py -k non_public -x -vv
+uv run uvicorn app.main:app --reload --port 8000
+uv run pytest tests/test_scraper.py -k non_public -x -vv
 ```
 
 Queue a job through the public endpoint and poll it until `status` is `completed` or `failed`

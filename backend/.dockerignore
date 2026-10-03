@@ -3,7 +3,6 @@
 .env.*
 
 # Virtualenvs and caches (also keeps the context from being ~100 MB)
-venv/
 .venv/
 __pycache__/
 **/__pycache__/

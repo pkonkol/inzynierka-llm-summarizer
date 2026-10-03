@@ -7,6 +7,7 @@ import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/jobs";
 import { buildSourcePayload, SourceField } from "./SourceField";
 import { ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
 import { Button } from "./ui/Button";
+import { Checkbox } from "./ui/Checkbox";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
 interface SummarySubmitCardProps {
@@ -67,15 +68,8 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
 
   return (
     <section className="grid gap-6">
-      <div className="grid gap-3">
-        <h1 className="hero-title text-balance">
-          Praca Inżynierska - Podsumowanie Artykułów z LLM
-        </h1>
-      </div>
-      <form
-        className="grid gap-4 border border-panel-border bg-panel-solid p-6"
-        onSubmit={handleSubmit}
-      >
+      <h1 className="text-title text-balance">Praca Inżynierska - Podsumowanie Artykułów z LLM</h1>
+      <form className="grid gap-4" onSubmit={handleSubmit}>
         <div className="grid gap-3">
           <SourceField
             content={content}
@@ -85,7 +79,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
           />
         </div>
 
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid shrink-0 gap-2">
             <FieldLabel htmlFor="model-select">Model</FieldLabel>
             <Select
@@ -93,7 +87,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={isSubmitting || isLoadingMeta}
-              className="max-w-56 truncate"
+              className="truncate"
             >
               <ModelOptions models={models} />
             </Select>
@@ -122,26 +116,24 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             </Select>
           </div>
 
-          <label className="flex h-control shrink-0 items-center gap-2 text-muted">
-            <input
-              type="checkbox"
-              checked={runDeepeval}
-              onChange={(e) => setRunDeepeval(e.target.checked)}
-              disabled={isSubmitting || isLoadingMeta}
-              className="h-4 w-4 border border-input-border"
-            />
+          <Checkbox
+            checked={runDeepeval}
+            onChange={(e) => setRunDeepeval(e.target.checked)}
+            disabled={isSubmitting || isLoadingMeta}
+          >
             Policz G-Eval
-          </label>
+          </Checkbox>
         </div>
 
         <SummarySpecFields form={specForm} disabled={isSubmitting || isLoadingMeta} />
 
-        {error || optionsError ? <p className="text-danger">{error ?? optionsError}</p> : null}
+        {error || optionsError ? (
+          <p className="text-danger-hover">{error ?? optionsError}</p>
+        ) : null}
 
         <Button
           type="submit"
           variant="primary"
-          size="lg"
           disabled={isSubmitting || isLoadingMeta}
           className="justify-self-start"
         >

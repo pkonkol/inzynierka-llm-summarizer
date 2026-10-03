@@ -40,8 +40,8 @@ interface SourceFieldProps {
   onContentChange: (content: string) => void;
   maxLength: number;
   disabled: boolean;
-  // Stretch the text field over the height the parent gives it, instead of a fixed row count.
-  fillHeight?: boolean;
+  // Borderless and stretched over the height the parent gives it: the composer frame around it is the field.
+  inComposer?: boolean;
 }
 
 // One field instead of a URL/pasted-text tab switch: paste a link and it's scraped, paste an
@@ -51,31 +51,46 @@ export function SourceField({
   onContentChange,
   maxLength,
   disabled,
-  fillHeight = false,
+  inComposer = false,
 }: SourceFieldProps) {
   const isPastedText = detectSourceMode(content) === "pastedText" && content.trim().length > 0;
 
+  const textareaProps = {
+    id: "source-content",
+    value: content,
+    onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+      onContentChange(event.target.value),
+    onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        event.currentTarget.form?.requestSubmit();
+      }
+    },
+    placeholder: "https://example.com/artykul albo wklejony tekst artykułu...",
+    disabled,
+    required: true,
+    maxLength,
+  };
+
   return (
-    <div className={cn("grid gap-2", fillHeight && "h-full grid-rows-[auto_1fr]")}>
-      <div className="flex items-baseline justify-between gap-2">
+    <div className={cn("grid gap-2", inComposer && "min-h-0 flex-1 grid-rows-[auto_1fr] gap-0")}>
+      <div className={cn("flex items-baseline justify-between gap-2", inComposer && "px-4 pt-3")}>
         <FieldLabel htmlFor="source-content">Adres artykułu albo jego treść</FieldLabel>
         {isPastedText ? (
-          <span className="text-xs text-muted">
+          <span className="text-caption text-mute">
             {content.length.toLocaleString("pl-PL")} / {maxLength.toLocaleString("pl-PL")}
           </span>
         ) : null}
       </div>
-      <Textarea
-        id="source-content"
-        value={content}
-        onChange={(e) => onContentChange(e.target.value)}
-        placeholder="https://example.com/artykul albo wklejony tekst artykułu..."
-        disabled={disabled}
-        required
-        rows={8}
-        className={cn(fillHeight && "h-full min-h-64 resize-none")}
-        maxLength={maxLength}
-      />
+      {inComposer ? (
+        // The composer's focus-within border and background are this field's focus indicator.
+        <textarea
+          {...textareaProps}
+          className="min-h-56 w-full resize-none bg-transparent px-4 py-2 font-reading text-reading text-ink outline-none disabled:cursor-not-allowed disabled:text-ash"
+        />
+      ) : (
+        <Textarea {...textareaProps} rows={8} />
+      )}
     </div>
   );
 }

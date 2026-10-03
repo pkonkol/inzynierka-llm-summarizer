@@ -15,11 +15,7 @@ export function Panel({ padding = "md", as: Tag = "div", className, ...props }: 
   return (
     <Tag
       {...props}
-      className={cn(
-        "min-w-0 overflow-clip border border-panel-border bg-panel-solid",
-        PADDING[padding],
-        className,
-      )}
+      className={cn("min-w-0 overflow-clip border border-hairline", PADDING[padding], className)}
     />
   );
 }

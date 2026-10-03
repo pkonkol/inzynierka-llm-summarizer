@@ -1,9 +1,9 @@
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
-import { InfoRow, InfoRowContent } from "../components/InfoRow";
+import { InfoList, InfoRow, InfoRowContent } from "../components/InfoRow";
 import { InputTextSection } from "../components/InputTextSection";
 import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
@@ -11,8 +11,7 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { cn } from "../components/ui/cn";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
-import { PageShell, SectionHeading } from "../components/ui/PageShell";
-import { Panel } from "../components/ui/Panel";
+import { PageSection, PageShell, SectionHeading } from "../components/ui/PageShell";
 import { useAsyncAction } from "../hooks/useAsyncAction";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useListPolling } from "../hooks/useListPolling";
@@ -56,9 +55,9 @@ function MetricRow({
 }) {
   return (
     <>
-      <span className="label-caps font-semibold text-muted">{label}:</span>
-      <span className="mono-value">{golden != null ? formatScore(golden) : "—"}</span>
-      <span className="mono-value">{ai != null ? formatScore(ai) : "—"}</span>
+      <span className="text-mute">{label}:</span>
+      <span className="tabular-nums">{golden != null ? formatScore(golden) : "—"}</span>
+      <span className="tabular-nums">{ai != null ? formatScore(ai) : "—"}</span>
     </>
   );
 }
@@ -86,7 +85,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryRespons
       <SectionHeading>Metryki statystyczne</SectionHeading>
       {allLabels.length > 0 ? (
         <>
-          <div className={cn(COMPARISON_COLUMNS, "gap-y-1 text-xs")}>
+          <div className={cn(COMPARISON_COLUMNS, "gap-y-1 text-caption")}>
             <ColumnsHeader />
             {allLabels.map((label) => (
               <MetricRow
@@ -98,7 +97,7 @@ function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryRespons
             ))}
           </div>
           {!entry.golden_metrics ? (
-            <p className="text-muted">Metryki wzorca nie zostały policzone dla tego wpisu.</p>
+            <p className="text-mute">Metryki wzorca nie zostały policzone dla tego wpisu.</p>
           ) : null}
         </>
       ) : null}
@@ -113,18 +112,18 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }
   if (goldenItems.length === 0 && aiItems.length === 0) return null;
 
   return (
-    <div className="grid gap-2 border-t border-panel-border pt-4">
+    <div className="grid gap-2 border-t border-hairline pt-4">
       <SectionHeading>Metryki deepeval</SectionHeading>
       <div className="grid grid-cols-2 gap-3">
         <div>
           {goldenItems.length > 0 ? (
             <DeepevalItems items={goldenItems} />
           ) : (
-            <p className="text-muted">—</p>
+            <p className="text-mute">—</p>
           )}
         </div>
         <div>
-          {aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="text-muted">—</p>}
+          {aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="text-mute">—</p>}
         </div>
       </div>
     </div>
@@ -133,7 +132,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }
 
 function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
   if (!entry.cross_metrics) {
-    return <p className="text-muted">Jeszcze nie policzone.</p>;
+    return <p className="text-mute">Jeszcze nie policzone.</p>;
   }
 
   const { rouge1, rouge2, rougeL, meteor, deepeval } = entry.cross_metrics;
@@ -145,14 +144,14 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
   return (
     <div className="grid gap-3">
       <SectionHeading>Metryki statystyczne porównawcze</SectionHeading>
-      <div className="metric-row">
+      <InfoList>
         <InfoRow label="rouge1" value={rouge1} />
         <InfoRow label="rouge2" value={rouge2} />
         <InfoRow label="rougeL" value={rougeL} />
         <InfoRow label="meteor" value={meteor} />
-      </div>
+      </InfoList>
       {pairwiseItems.length > 0 ? (
-        <div className="border-t border-panel-border pt-4">
+        <div className="grid gap-2 border-t border-hairline pt-4">
           <SectionHeading>Metryki deepeval porównawcze</SectionHeading>
           <DeepevalItems items={pairwiseItems} />
         </div>
@@ -163,11 +162,11 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
 
 function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
   return (
-    <div className="grid gap-4 p-3 bg-subtle">
+    <div className="grid gap-4">
       <div className="grid gap-2">
         <CrossMetricsSection entry={entry} />
       </div>
-      <div className="grid gap-4 border-t border-panel-border pt-4">
+      <div className="grid gap-4 border-t border-hairline pt-4">
         <StatisticalMetricsColumns entry={entry} />
         <DeepevalMetricsColumns entry={entry} />
       </div>
@@ -192,8 +191,8 @@ function RunSummary({
   const { error, deepeval } = run.aggregate_metrics;
 
   return (
-    <Panel padding="sm" className="grid gap-3">
-      <div className="metric-row">
+    <div className="grid gap-4">
+      <InfoList>
         <InfoRowContent label="status">
           <StatusLabel status={run.status} />
         </InfoRowContent>
@@ -205,51 +204,53 @@ function RunSummary({
         <InfoRow
           label="błędnych"
           value={progress.failedEntryCount}
-          valueClassName={progress.failedEntryCount ? "text-danger" : ""}
+          valueClassName={progress.failedEntryCount ? "text-danger-hover" : undefined}
         />
         <InfoRow label="utworzono" value={formatDateMinute(run.created_at)} />
         <InfoRow label="zakończono" value={formatDateMinute(run.finished_at)} />
-      </div>
+      </InfoList>
 
-      <div className="metric-row">
+      <InfoList>
         <InfoRow label="format" value={OUTPUT_FORMAT_LABELS[run.summary_spec.output_format]} />
         <InfoRow label="narracja" value={STANCE_LABELS[run.summary_spec.narrative_stance]} />
         <InfoRow label="funkcja" value={FUNCTION_LABELS[run.summary_spec.summary_function]} />
         {run.summary_spec.length ? (
           <InfoRow label="długość" value={LENGTH_POLICY_LABELS[run.summary_spec.length.policy]} />
         ) : null}
-      </div>
+      </InfoList>
 
-      <div className="grid gap-2 border-t border-panel-border pt-4">
+      <div className="grid gap-2 border-t border-hairline pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <div className="metric-row items-baseline">
-            <SectionHeading>G-Eval</SectionHeading>
-            {deepeval ? (
-              <>
-                <InfoRowContent label="status">
-                  <StatusLabel status={deepeval.status} />
-                </InfoRowContent>
-                <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
-                <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
-                <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
-                <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
-                <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
-              </>
-            ) : (
-              // StatusLabel carries the four job statuses shared with jobs, runs and entries;
-              // "not started" is a fifth state that only this pass has.
-              <InfoRowContent label="status">
-                <span className="text-muted">nierozpoczęte</span>
-              </InfoRowContent>
-            )}
-          </div>
+          <SectionHeading>G-Eval</SectionHeading>
           {deepevalButton}
         </div>
-        {deepeval?.error ? <p className="text-danger">{deepeval.error}</p> : null}
+        <InfoList>
+          {deepeval ? (
+            <>
+              <InfoRowContent label="status">
+                <StatusLabel status={deepeval.status} />
+              </InfoRowContent>
+              <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
+              <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
+              <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
+              <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
+              <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
+            </>
+          ) : (
+            // StatusLabel carries the four job statuses shared with jobs, runs and entries;
+            // "not started" is a fifth state that only this pass has.
+            <InfoRowContent label="status">
+              <span className="text-mute">nierozpoczęte</span>
+            </InfoRowContent>
+          )}
+        </InfoList>
+        {deepeval?.error ? (
+          <p className="wrap-anywhere text-danger-hover">{deepeval.error}</p>
+        ) : null}
       </div>
 
-      {error ? <p className="text-danger">{error}</p> : null}
-    </Panel>
+      {error ? <p className="wrap-anywhere text-danger-hover">{error}</p> : null}
+    </div>
   );
 }
 
@@ -262,55 +263,77 @@ function RunEntryCard({
   entry: EvaluationRunEntryResponse;
   evaluationSetId: string;
 }) {
+  const [isOpen, setIsOpen] = useState(index === 0);
+
   return (
-    <article className="grid gap-3 border-t border-panel-border p-4">
-      <h4>
-        {index + 1}
-        {" · "}
-        <span className="font-normal">
-          <StatusLabel status={entry.status} />
-        </span>
-        {" · "}
-        <span className="mono-value font-normal lowercase text-muted">
-          {entry.title} · {entry.url}
-        </span>
-      </h4>
+    <article className="min-w-0 border-b border-hairline">
+      <h3 className="font-normal">
+        <button
+          type="button"
+          onClick={() => setIsOpen((value) => !value)}
+          aria-expanded={isOpen}
+          className="flex min-h-11 w-full cursor-pointer items-baseline gap-3 py-3 text-left"
+        >
+          <span aria-hidden="true" className="shrink-0">
+            {isOpen ? "[-]" : "[+]"}
+          </span>
+          <span className="grid min-w-0 flex-1">
+            <span className="wrap-anywhere">
+              {index + 1}
+              {" · "}
+              {entry.title}
+            </span>
+            <span className="truncate text-caption text-mute">{entry.url}</span>
+          </span>
+          <span className="shrink-0 text-caption">
+            <StatusLabel status={entry.status} />
+          </span>
+        </button>
+      </h3>
 
-      {entry.error ? <p className="text-danger">{entry.error}</p> : null}
+      {isOpen ? (
+        <div className="grid min-w-0 gap-4 pb-4">
+          {entry.error ? <p className="wrap-anywhere text-danger-hover">{entry.error}</p> : null}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="grid content-start gap-1">
-          <h4>Podsumowanie wzorcowe</h4>
-          <p className="whitespace-pre-wrap text-ink">{entry.golden_summary}</p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid min-w-0 content-start gap-2">
+              <h4>Podsumowanie wzorcowe</h4>
+              <p className="whitespace-pre-wrap font-reading text-reading">
+                {entry.golden_summary}
+              </p>
+            </div>
+
+            <div className="grid min-w-0 content-start gap-2">
+              <h4>
+                Podsumowanie AI
+                {entry.resolved_length ? (
+                  <span className="font-normal text-mute">
+                    {" · cel: "}
+                    {formatLengthTarget(
+                      entry.resolved_length.target_words,
+                      entry.resolved_length.target_sentences,
+                    )}
+                  </span>
+                ) : null}
+              </h4>
+              <p className="whitespace-pre-wrap font-reading text-reading">
+                {entry.ai_summary ?? "—"}
+              </p>
+            </div>
+          </div>
+
+          <DisclosureSections
+            sections={[
+              {
+                key: "input",
+                label: "Tekst źródłowy",
+                content: <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />,
+              },
+              { key: "metrics", label: "Metryki", content: <EntryMetrics entry={entry} /> },
+            ]}
+          />
         </div>
-
-        <div className="grid content-start gap-2">
-          <h4>
-            Podsumowanie AI
-            {entry.resolved_length ? (
-              <span className="font-normal text-muted">
-                {" · cel: "}
-                {formatLengthTarget(
-                  entry.resolved_length.target_words,
-                  entry.resolved_length.target_sentences,
-                )}
-              </span>
-            ) : null}
-          </h4>
-          <p className="whitespace-pre-wrap text-ink">{entry.ai_summary ?? "—"}</p>
-        </div>
-      </div>
-
-      <DisclosureSections
-        sections={[
-          {
-            key: "input",
-            label: "Tekst źródłowy",
-            content: <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />,
-          },
-          { key: "metrics", label: "Metryki", content: <EntryMetrics entry={entry} /> },
-        ]}
-      />
+      ) : null}
     </article>
   );
 }
@@ -377,7 +400,6 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
         deepevalButton={
           <Button
             variant="primary"
-            size="sm"
             onClick={() => void startDeepeval.run()}
             disabled={isRunInProgress || isDeepevalRunning || startDeepeval.isPending}
           >
@@ -387,7 +409,7 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
       />
     );
   } else if (runResource.isInitialLoading) {
-    runSummary = <p className="text-muted">Ładowanie szczegółów runa...</p>;
+    runSummary = <p className="text-mute">Ładowanie szczegółów runa...</p>;
   }
 
   // Polling replaces `run` every few seconds; the entry list does not depend on it.
@@ -409,55 +431,61 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
   }, [entries, evaluationSetId]);
 
   const entriesSection = entriesResource.isInitialLoading ? (
-    <p className="text-muted">Ładowanie wpisów...</p>
+    <p className="text-mute">Ładowanie wpisów...</p>
   ) : (
     entryCards
   );
 
   return (
     <PageShell>
-      <section className="panel-shell grid min-w-0 gap-4">
-        <Breadcrumbs
-          trail={
-            run
-              ? [
-                  ...EVALUATION_TRAIL,
-                  {
-                    label: run.evaluation_set_name,
-                    href: evaluationSetPath(run.evaluation_set_id),
-                  },
-                ]
-              : EVALUATION_TRAIL
-          }
-        />
+      <div className="grid min-w-0 gap-section">
+        <div className="grid min-w-0 gap-6">
+          <div className="grid gap-2">
+            <Breadcrumbs
+              trail={
+                run
+                  ? [
+                      ...EVALUATION_TRAIL,
+                      {
+                        label: run.evaluation_set_name,
+                        href: evaluationSetPath(run.evaluation_set_id),
+                      },
+                    ]
+                  : EVALUATION_TRAIL
+              }
+            />
 
-        <h1 className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-muted">Przebieg</span>
-          {run ? (
-            <>
-              <span className="mono-value">{run.evaluation_set_name}</span>
-              <span className="text-muted">·</span>
-              <span className="mono-value">
-                {run.model_provider} – {run.model_name}
-              </span>
-              <span className="text-muted">·</span>
-              <span className="mono-value">{run.processing_strategy}</span>
-            </>
-          ) : (
-            <span className="text-muted">ładowanie...</span>
-          )}
-        </h1>
+            <h1 className="flex flex-wrap items-baseline gap-x-2 text-title">
+              <span className="text-mute">Przebieg</span>
+              {run ? (
+                <>
+                  <span className="wrap-anywhere">{run.evaluation_set_name}</span>
+                  <span className="text-mute">·</span>
+                  <span className="wrap-anywhere">
+                    {run.model_provider} – {run.model_name}
+                  </span>
+                  <span className="text-mute">·</span>
+                  <span>{run.processing_strategy}</span>
+                </>
+              ) : (
+                <span className="text-mute">ładowanie...</span>
+              )}
+            </h1>
+          </div>
 
-        {runResource.errorMessage ? <Alert tone="danger">{runResource.errorMessage}</Alert> : null}
-        {entriesResource.errorMessage ? (
-          <Alert tone="danger">{entriesResource.errorMessage}</Alert>
-        ) : null}
+          {runResource.errorMessage ? (
+            <Alert tone="danger">{runResource.errorMessage}</Alert>
+          ) : null}
+          {entriesResource.errorMessage ? (
+            <Alert tone="danger">{entriesResource.errorMessage}</Alert>
+          ) : null}
 
-        {/* Always mounted: a live region only announces content inserted after it exists. */}
-        <div aria-live="polite">{runSummary}</div>
+          {/* Always mounted: a live region only announces content inserted after it exists. */}
+          <div aria-live="polite">{runSummary}</div>
+        </div>
 
-        {entriesSection}
-      </section>
+        <PageSection title="Wpisy">{entriesSection}</PageSection>
+      </div>
     </PageShell>
   );
 }

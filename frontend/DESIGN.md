@@ -34,7 +34,7 @@ typography:
   subtitle: { size: 20px, weight: 700, lineHeight: 1.4 }   # tytuł wygenerowanego podsumowania
   heading:  { size: 16px, weight: 700, lineHeight: 1.5 }   # nagłówki sekcji
   reading:  { size: 16px, weight: 400, lineHeight: 1.65 }  # pole źródła, treść podsumowania
-  body:     { size: 15px, weight: 400, lineHeight: 1.6 }   # cały UI
+  body:     { size: 15px, weight: 400, lineHeight: 1.6 }   # cały UI; token `text-ui` (`text-body` to kolor)
   strong:   { size: 15px, weight: 500, lineHeight: 1.6 }   # etykiety pól, przyciski
   caption:  { size: 13px, weight: 400, lineHeight: 1.7 }   # metadane, czasy, stopka, ścieżki nawigacji
 
@@ -159,14 +159,14 @@ Nazwy odpowiadają plikom w `src/components`.
 ## 7. Nawigacja konsoli: ścieżki
 
 ```
-/   /admin   /admin/jobs   /admin/research/import   /admin/research   [/admin/research/{id}]        /admin/design   [✓] zalogowano
+/   /admin   /admin/jobs   /admin/research/import   /admin/research   [/admin/research/{id}]        /design   [✓] Zalogowano
 ```
 
 - Tekst linku to dokładnie adres trasy (routing przez History API).
 - Aktywna trasa: pogrubiona, bez podkreślenia, `aria-current="page"`.
 - Podstrona otwarta z listy (zbiór, przebieg) dopisuje swoją ścieżkę za nadrzędną zakładką.
 - Nazwa modułu i opis z NavDock (np. „Podsumowania · Nowe. Formularz nowego podsumowania…”) są w Tooltipie.
-- `/admin/design` jest wyszarzony i przesunięty w prawo: narzędzie autora, nie produkt.
+- `/design` (katalog systemu, tylko serwer deweloperski) jest wyszarzony i przesunięty w prawo: narzędzie autora.
 - Mobile: jeden wiersz z przewijaniem w poziomie.
 - Strona publiczna nie ma tego paska: tylko nazwa `podsumowania` i „Zaloguj”.
 
@@ -200,5 +200,9 @@ Nazwy odpowiadają plikom w `src/components`.
 
 - Tokeny w `src/index.css` w `@theme` (Tailwind v4). Domyślne kolory, promienie i cienie Tailwinda są wyłączone (`--color-*: initial` itd.), więc poza paletą nie da się wyjść przypadkiem.
 - Komponenty składają klasy z tokenów; strony składają komponenty i nie definiują własnego wyglądu.
-- Wzorcowa implementacja: `index.html` + `index.css` w tym katalogu (`opencode-ver/v3/`).
+- Rozmiar UI 15px to `text-ui`. Nazwa `text-body` należy do koloru `body`; Tailwind rozwiązuje ją jako kolor.
+- Domyślne rozmiary tekstu Tailwinda też są wyłączone (`--text-*: initial`); `text-sm` czy `text-xs` nie istnieją.
+- Kolory stanów na jasnym tle: błąd `danger-hover`, „w toku” `warning-active`, informacja `accent-hover`. Gołe `danger`, `warning`, `success`, `accent` mają < 4.5:1 na `canvas` i występują tylko na `surface-dark` (toast).
+- Utility w `index.css`: `btn` / `btn-primary` / `btn-secondary`, `field` / `field-area` / `field-compact` / `field-label`, `badge`, `markdown` (wynik LLM). Używają ich tylko prymitywy z `components/ui` i komponenty domenowe.
+- Wzorcowa implementacja: `docs/design/reference/index.html` + `index.css`; żywy katalog prymitywów: `/design` (`src/pages/DesignPage.tsx`).
 - Zmiana kroju to jedna linia: `--font-mono`. Gdyby tekst do czytania miał kiedyś przejść na sans, służy do tego osobny token `--font-reading`.

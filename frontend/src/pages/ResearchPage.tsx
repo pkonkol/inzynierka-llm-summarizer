@@ -17,10 +17,10 @@ const SET_COLUMNS = ["Nazwa", "Język", "Wpisów", "Metryki", "Przebiegów", "Ut
 // as a plain count ("N gotowe") which is wrong for a set — reuse the label, skip the count.
 function GoldenMetricsStatusCell({ set }: { set: EvaluationSetListItemResponse }) {
   if (set.golden_metrics_status === null || set.golden_metrics_status === undefined) {
-    return <span className="text-muted">—</span>;
+    return <span className="text-mute">—</span>;
   }
   if (set.golden_metrics_status === "skipped") {
-    return <span className="text-muted">pominięte</span>;
+    return <span className="text-mute">pominięte</span>;
   }
   return (
     <>
@@ -32,21 +32,19 @@ function GoldenMetricsStatusCell({ set }: { set: EvaluationSetListItemResponse }
 
 function SetsTable({ sets }: { sets: EvaluationSetListItemResponse[] }) {
   return (
-    <Table headers={SET_COLUMNS}>
+    <Table headers={SET_COLUMNS} alignRight={["Wpisów", "Przebiegów"]}>
       {sets.map((set) => (
         <Tr key={set.evaluation_set_id}>
           <Td>{set.name}</Td>
           <Td>{set.language}</Td>
-          <Td>{set.entry_count}</Td>
+          <Td className="text-right">{set.entry_count}</Td>
           <Td>
             <GoldenMetricsStatusCell set={set} />
           </Td>
-          <Td>{set.run_count}</Td>
-          <Td>{formatDateMinute(set.created_at)}</Td>
+          <Td className="text-right">{set.run_count}</Td>
+          <Td className="text-caption text-mute">{formatDateMinute(set.created_at)}</Td>
           <Td className="text-right">
-            <LinkButton size="sm" href={evaluationSetPath(set.evaluation_set_id)}>
-              Otwórz
-            </LinkButton>
+            <LinkButton href={evaluationSetPath(set.evaluation_set_id)}>Otwórz</LinkButton>
           </Td>
         </Tr>
       ))}
@@ -71,12 +69,12 @@ export function ResearchPage() {
     ),
   );
 
-  let setsSection = <p className="text-muted">Ładowanie listy zbiorów...</p>;
+  let setsSection = <p className="text-mute">Ładowanie listy zbiorów...</p>;
   if (!setsResource.isInitialLoading) {
     setsSection =
       sets.length === 0 ? (
         <div className="grid justify-items-start gap-3">
-          <p className="text-muted">Brak zbiorów. Zaimportuj pierwszy, żeby uruchomić przebieg.</p>
+          <p className="text-mute">Brak zbiorów. Zaimportuj pierwszy, żeby uruchomić przebieg.</p>
           <LinkButton href={EVALUATION_IMPORT_PATH}>Przejdź do importu</LinkButton>
         </div>
       ) : (
@@ -86,10 +84,8 @@ export function ResearchPage() {
 
   return (
     <PageShell>
-      <section className="panel-shell grid min-w-0 gap-4">
-        <div className="flex items-end justify-between gap-3">
-          <h1>Zbiory ewaluacyjne</h1>
-        </div>
+      <section className="grid min-w-0 gap-6">
+        <h1 className="text-title">Zbiory ewaluacyjne</h1>
 
         {setsResource.errorMessage ? (
           <Alert tone="danger">{setsResource.errorMessage}</Alert>

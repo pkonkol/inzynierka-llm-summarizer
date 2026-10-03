@@ -1,14 +1,11 @@
 import { cn } from "./cn";
 
-const FIELD =
-  "w-full border border-input-border bg-subtle px-3 text-ink focus:border-input-focus disabled:cursor-not-allowed disabled:opacity-60";
-
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
-  return <input {...props} className={cn(FIELD, "h-control", className)} />;
+  return <input {...props} className={cn("field", className)} />;
 }
 
 export function Select({ className, ...props }: React.ComponentProps<"select">) {
-  return <select {...props} className={cn(FIELD, "h-control", className)} />;
+  return <select {...props} className={cn("field", className)} />;
 }
 
 export function RangeInput({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
@@ -16,16 +13,23 @@ export function RangeInput({ className, ...props }: Omit<React.ComponentProps<"i
     <input
       {...props}
       type="range"
-      className={cn(
-        "h-control w-full accent-input-focus disabled:cursor-not-allowed disabled:opacity-60",
-        className,
-      )}
+      className={cn("h-input w-full cursor-pointer disabled:cursor-not-allowed", className)}
     />
   );
 }
 
 export function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
-  return <textarea {...props} className={cn(FIELD, "py-2 font-mono text-sm", className)} />;
+  return <textarea {...props} className={cn("field-area", className)} />;
+}
+
+// Linked from the field through `aria-describedby`; the field itself carries `aria-invalid`.
+export function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} className="text-caption text-danger-hover">
+      <span aria-hidden="true">[✗] </span>
+      {children}
+    </p>
+  );
 }
 
 interface FieldLabelProps extends React.ComponentProps<"label"> {
@@ -33,7 +37,7 @@ interface FieldLabelProps extends React.ComponentProps<"label"> {
 }
 
 export function FieldLabel({ className, ...props }: FieldLabelProps) {
-  const classes = cn("block font-semibold text-muted", className);
+  const classes = cn("field-label", className);
   // biome-ignore lint/a11y/noLabelWithoutControl: htmlFor is required by FieldLabelProps
   return <label {...props} className={classes} />;
 }

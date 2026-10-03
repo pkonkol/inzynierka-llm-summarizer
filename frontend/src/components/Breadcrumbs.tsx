@@ -10,12 +10,16 @@ export function Breadcrumbs({ trail }: { trail: Crumb[] }) {
   return (
     <nav
       aria-label="Ścieżka nawigacji"
-      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted"
+      className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption"
     >
       {trail.map((crumb, index) => (
         <span key={crumb.href} className="flex items-center gap-x-2">
-          {index > 0 ? <span aria-hidden="true">›</span> : null}
-          <AppLink href={crumb.href} className="text-link">
+          {index > 0 ? (
+            <span aria-hidden="true" className="text-stone">
+              /
+            </span>
+          ) : null}
+          <AppLink href={crumb.href} className="text-mute">
             {crumb.label}
           </AppLink>
         </span>

@@ -1,6 +1,4 @@
 import type { FlashMessage } from "../../hooks/useFlashMessage";
-import { Alert } from "./Alert";
-import { Button } from "./Button";
 import { Collapsible } from "./Collapsible";
 import { LinkButton } from "./LinkButton";
 import { PreBlock } from "./PreBlock";
@@ -19,7 +17,10 @@ function splitMessage(text: string): { summary: string; details: string | null }
 
 // Colour alone would leave the tone invisible in greyscale, and to a reader who is only
 // glancing at the corner.
-const TONE_GLYPH = { success: "✓", danger: "✗" } as const;
+const TONE_GLYPH = {
+  success: { glyph: "[✓]", className: "text-success" },
+  danger: { glyph: "[✗]", className: "text-danger" },
+} as const;
 
 interface ToastProps {
   flash: FlashMessage | null;
@@ -37,35 +38,37 @@ export function Toast({ flash, onDismiss }: ToastProps) {
 
   const notification =
     flash && message ? (
-      <Alert
-        tone={flash.tone}
-        className="pointer-events-auto grid w-full max-w-md gap-3 border-2 p-4 shadow-xl"
-      >
+      <div className="pointer-events-auto grid w-full max-w-md gap-3 rounded-sm bg-surface-dark px-4 py-3 text-caption text-on-dark">
         <div className="flex items-start justify-between gap-3">
-          <p className="flex items-baseline gap-2 font-semibold">
-            <span aria-hidden="true" className="text-lg leading-none">
-              {TONE_GLYPH[flash.tone]}
+          <p className="flex items-baseline gap-2">
+            <span aria-hidden="true" className={TONE_GLYPH[flash.tone].className}>
+              {TONE_GLYPH[flash.tone].glyph}
             </span>
             {message.summary}
           </p>
-          <Button size="xs" onClick={onDismiss} aria-label="Zamknij powiadomienie">
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Zamknij powiadomienie"
+            className="inline-flex min-h-6 min-w-6 shrink-0 cursor-pointer items-center justify-center text-on-dark-mute"
+          >
             ✕
-          </Button>
+          </button>
         </div>
         {details}
         {flash.action ? (
-          <LinkButton href={flash.action.href} size="lg" className="w-full" onClick={onDismiss}>
+          <LinkButton href={flash.action.href} className="w-full" onClick={onDismiss}>
             {flash.action.label}
           </LinkButton>
         ) : null}
-      </Alert>
+      </div>
     ) : null;
 
   // The region is always mounted: a live region only announces what is inserted after it exists.
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-4 top-below-nav-stacked z-50 flex justify-start sm:inset-x-auto sm:left-4 sm:top-below-nav"
+      className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex justify-end sm:inset-x-auto sm:right-4"
     >
       {notification}
     </div>

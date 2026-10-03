@@ -4,9 +4,9 @@ import { StatusLabel } from "../components/StatusLabel";
 import { SummaryDetailPanel } from "../components/SummaryDetailPanel";
 import { Alert } from "../components/ui/Alert";
 import { AppLink } from "../components/ui/AppLink";
-import { buttonClasses } from "../components/ui/Button";
+import { DangerAction } from "../components/ui/DangerAction";
 import { listItemClasses } from "../components/ui/listItem";
-import { PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
+import { PageSection, PageShell, SPLIT_COLUMNS, STICKY_COLUMN } from "../components/ui/PageShell";
 import { useConfirmDelete } from "../hooks/useConfirmDelete";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useListPolling } from "../hooks/useListPolling";
@@ -62,39 +62,38 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
   return (
     <PageShell className={jobId ? SPLIT_COLUMNS : undefined}>
       <section className={jobId ? STICKY_COLUMN : "min-w-0"}>
-        <div className="panel-shell grid gap-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2>Gotowe podsumowania</h2>
-            <span className="text-muted">{jobs.length}</span>
-          </div>
-
+        <PageSection
+          title="Gotowe podsumowania"
+          trailing={<span className="text-caption text-mute">{jobs.length}</span>}
+        >
           {jobsResource.errorMessage ? (
             <Alert tone="danger">{jobsResource.errorMessage}</Alert>
           ) : null}
           {selectedJobResource.errorMessage ? (
             <Alert tone="danger">{selectedJobResource.errorMessage}</Alert>
           ) : null}
-          {jobsResource.isInitialLoading ? <p className="text-muted">Ładowanie listy...</p> : null}
+          {jobsResource.isInitialLoading ? <p className="text-mute">Ładowanie listy...</p> : null}
           {!jobsResource.isInitialLoading && jobs.length === 0 ? (
-            <p className="text-muted">Brak wyników.</p>
+            <p className="text-mute">Brak wyników.</p>
           ) : null}
 
-          <ul aria-live="polite" className="grid min-w-0 gap-2">
+          <ul aria-live="polite" className="grid min-w-0">
             {jobs.map((job) => (
-              <li key={job.job_id} className="relative min-w-0">
+              <li
+                key={job.job_id}
+                className="flex min-w-0 items-start justify-between gap-4 border-b border-hairline"
+              >
                 <AppLink
                   href={jobPath(job.job_id)}
                   className={listItemClasses(jobId === job.job_id)}
                   aria-current={jobId === job.job_id ? "page" : undefined}
                 >
-                  <span className="mono-value block overflow-hidden text-ellipsis whitespace-nowrap pr-8 text-link">
-                    {job.source_url}
-                  </span>
-                  <span className="block text-ink line-clamp-1">{job.title}</span>
-                  <span className="flex gap-3 text-xs text-muted">
+                  <span className="line-clamp-1 font-medium underline">{job.title}</span>
+                  <span className="truncate text-caption text-mute">{job.source_url}</span>
+                  <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-mute">
                     <StatusLabel status={job.status} />
                     {job.origin === "public" ? (
-                      <span>
+                      <span className="badge">
                         <span aria-hidden="true">◌ </span>publiczne
                       </span>
                     ) : null}
@@ -104,25 +103,20 @@ export function JobsPage({ jobId }: { jobId: string | null }) {
                     {job.updated_at && <span>{formatDateMinute(job.updated_at)}</span>}
                   </span>
                 </AppLink>
-                <button
-                  type="button"
+                <DangerAction
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteJobConfirm.request(job);
                   }}
-                  className={buttonClasses(
-                    "dangerOutline",
-                    "xs",
-                    "absolute right-2 top-2 px-2 py-1",
-                  )}
                   aria-label="Usuń job"
+                  className="py-2"
                 >
-                  ✕
-                </button>
+                  Usuń
+                </DangerAction>
               </li>
             ))}
           </ul>
-        </div>
+        </PageSection>
       </section>
 
       <SummaryDetailPanel

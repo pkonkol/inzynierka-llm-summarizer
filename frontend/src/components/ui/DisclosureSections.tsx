@@ -67,7 +67,10 @@ export function DisclosureSections({
 
   return (
     <>
-      <div ref={toggleRowRef} className="flex flex-wrap gap-2">
+      <div
+        ref={toggleRowRef}
+        className="flex flex-wrap items-center gap-x-6 border-b border-hairline"
+      >
         {sections.map((section) => (
           <DisclosureButton
             key={section.key}
@@ -80,15 +83,15 @@ export function DisclosureSections({
       </div>
 
       {open ? (
-        <div className="min-w-0 border border-panel-border">
+        <div className="grid min-w-0 gap-3 border-b border-hairline pb-3">
           {open.content}
           <button
             type="button"
             onClick={closeSection}
             aria-label={`Zwiń: ${open.label}`}
-            className="flex w-full cursor-pointer items-center justify-center border-t border-panel-border bg-subtle-hover py-1 text-xs text-muted transition-colors hover:bg-subtle"
+            className="flex min-h-11 cursor-pointer items-center justify-self-start text-mute"
           >
-            <span aria-hidden="true">▲</span>
+            <span aria-hidden="true">[-]</span>
           </button>
         </div>
       ) : null}

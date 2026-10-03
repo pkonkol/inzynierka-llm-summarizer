@@ -14,12 +14,12 @@ export function InputTextSection({ setId, entryId }: InputTextSectionProps) {
     "Nie udało się pobrać input text",
   );
 
-  if (isLoading) return <p className="p-3 text-muted">Ładowanie...</p>;
-  if (errorMessage) return <p className="p-3 text-danger">{errorMessage}</p>;
+  if (isLoading) return <p className="p-3 text-mute">Ładowanie...</p>;
+  if (errorMessage) return <p className="p-3 text-danger-hover">{errorMessage}</p>;
   if (!data) return null;
 
   return (
-    <PreBlock withoutBackground className="mx-auto max-w-measure">
+    <PreBlock withoutBackground className="max-w-measure">
       {data.input_text}
     </PreBlock>
   );

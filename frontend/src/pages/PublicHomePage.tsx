@@ -2,14 +2,14 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 
 import { getSummaryPresets, getSupportedLanguages } from "../api/client";
+import { Composer } from "../components/public/Composer";
 import { PresetTabs } from "../components/public/PresetTabs";
 import { PublicSummaryResult } from "../components/public/PublicSummaryResult";
 import { buildSourcePayload, SourceField } from "../components/SourceField";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { FieldLabel, RangeInput } from "../components/ui/Field";
+import { RangeInput } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
-import { Panel } from "../components/ui/Panel";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
 import { usePublicSummary } from "../hooks/usePublicSummary";
@@ -25,9 +25,6 @@ function densityLabel(density: number): string {
   if (density < 2 / 3) return "średnio";
   return "długo";
 }
-
-// One stroke of the arrow; the same element is horizontal beside the panels and vertical below.
-const ARROW_STEM = "h-8 w-px bg-ink lg:h-px lg:w-auto lg:flex-1";
 
 export function PublicHomePage() {
   useDocumentTitle("Podsumuj artykuł");
@@ -74,54 +71,57 @@ export function PublicHomePage() {
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-app gap-4 px-3 py-4">
-      <header className="flex items-center justify-between gap-4">
-        <span className="font-semibold">Podsumowania</span>
-        <LinkButton href={LOGIN_PATH} size="sm">
-          Zaloguj
-        </LinkButton>
+    <div className="grid">
+      <header className="border-b border-hairline">
+        <div className="mx-auto flex h-nav max-w-frame items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <span className="font-bold">Podsumowania</span>
+          <LinkButton href={LOGIN_PATH}>Zaloguj</LinkButton>
+        </div>
       </header>
 
-      <main className="grid gap-4">
-        <div className="grid gap-1 text-center">
-          <h1 className="hero-title text-balance">Podsumuj dowolny artykuł</h1>
-          <p className="text-muted">Wklej adres albo treść. Bez konta, bez instalacji.</p>
+      <main className="mx-auto grid w-full max-w-frame gap-6 px-4 pt-12 pb-8 sm:px-6 sm:pt-16 lg:px-8">
+        <div className="grid gap-1">
+          <h1 className="text-display text-balance">Podsumuj dowolny artykuł</h1>
+          <p className="text-mute">Wklej adres albo treść. Bez konta, bez instalacji.</p>
         </div>
 
+        {/* The one viewport-relative height on the page: both columns fill the screen below the title. */}
         <form
           onSubmit={handleSubmit}
-          className="grid gap-4 lg:h-[calc(100vh-17rem)] lg:min-h-[34rem] lg:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)_minmax(0,1fr)]"
+          className="grid gap-6 lg:h-[calc(100vh-15rem)] lg:min-h-144 lg:grid-cols-2"
         >
-          <Panel className="grid gap-4 lg:h-full lg:grid-rows-[1fr_auto]">
-            <SourceField
-              content={content}
-              onContentChange={setContent}
-              maxLength={MAX_PUBLIC_PASTED_CHARS}
-              disabled={isWorking}
-              fillHeight
-            />
+          <Composer
+            source={
+              <SourceField
+                content={content}
+                onContentChange={setContent}
+                maxLength={MAX_PUBLIC_PASTED_CHARS}
+                disabled={isWorking}
+                inComposer
+              />
+            }
+          >
+            {presetKey === null ? (
+              <p className="text-mute">Ładowanie...</p>
+            ) : (
+              <PresetTabs
+                options={presetEntries.map(([key, preset]) => ({
+                  key,
+                  label: preset.label,
+                  description: preset.description,
+                  example: preset.example,
+                }))}
+                selectedKey={presetKey}
+                onSelect={setSelectedPresetKey}
+                disabled={isWorking}
+              />
+            )}
 
-            <div className="grid gap-3">
-              {presetKey === null ? (
-                <p className="text-muted">Ładowanie...</p>
-              ) : (
-                <PresetTabs
-                  options={presetEntries.map(([key, preset]) => ({
-                    key,
-                    label: preset.label,
-                    description: preset.description,
-                    example: preset.example,
-                  }))}
-                  selectedKey={presetKey}
-                  onSelect={setSelectedPresetKey}
-                  disabled={isWorking}
-                />
-              )}
-
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <FieldLabel htmlFor="density" className="whitespace-nowrap">
-                  Długość: {densityLabel(density)}
-                </FieldLabel>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hairline pt-3">
+              <div className="flex min-w-56 flex-1 items-center gap-3">
+                <label htmlFor="density" className="whitespace-nowrap">
+                  Długość: <span className="font-medium">{densityLabel(density)}</span>
+                </label>
                 <RangeInput
                   id="density"
                   min={0}
@@ -131,48 +131,38 @@ export function PublicHomePage() {
                   onChange={(event) => setDensity(Number(event.target.value))}
                   aria-valuetext={densityLabel(density)}
                   disabled={isWorking}
-                  className="min-w-32 flex-1"
+                  className="min-w-24 flex-1"
                 />
-                <label htmlFor="language" className="flex items-center gap-2 text-sm text-muted">
-                  Język
-                  <select
-                    id="language"
-                    value={language}
-                    onChange={(event) => setLanguage(event.target.value)}
-                    disabled={isWorking || languages.data === null}
-                    className="border border-input-border bg-subtle px-2 py-1 text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
-                      <option key={code} value={code}>
-                        {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </div>
+              <label htmlFor="language" className="flex items-center gap-2 text-caption text-mute">
+                Język
+                <select
+                  id="language"
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value)}
+                  disabled={isWorking || languages.data === null}
+                  className="field-compact"
+                >
+                  {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
+                    <option key={code} value={code}>
+                      {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="flex flex-1 items-center justify-end gap-3">
+                <kbd className="hidden text-caption text-mute sm:inline">ctrl+enter</kbd>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={isWorking || !isReady}
+                  className="min-w-36"
+                >
+                  {isWorking ? "Przetwarzanie..." : "Podsumuj"}
+                </Button>
+              </span>
             </div>
-          </Panel>
-
-          <div className="flex flex-col items-center lg:flex-row">
-            <span aria-hidden="true" className={ARROW_STEM} />
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={isWorking || !isReady}
-              className="min-w-36 shrink-0"
-            >
-              {isWorking ? "Przetwarzanie..." : "Podsumuj"}
-            </Button>
-            <span aria-hidden="true" className={ARROW_STEM} />
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 12 16"
-              className="h-4 w-3 shrink-0 rotate-90 text-ink lg:rotate-0"
-            >
-              <path d="M0 0L12 8L0 16Z" fill="currentColor" />
-            </svg>
-          </div>
+          </Composer>
 
           <PublicSummaryResult state={state} />
         </form>

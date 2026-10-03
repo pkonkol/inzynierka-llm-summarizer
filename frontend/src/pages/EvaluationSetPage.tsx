@@ -25,11 +25,11 @@ import {
 } from "../components/SummarySpecFields";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { DangerAction } from "../components/ui/DangerAction";
 import { DisclosureSections } from "../components/ui/DisclosureSections";
 import { FieldLabel, Input, ModelOptions, Select } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
-import { PageShell, SectionHeading } from "../components/ui/PageShell";
-import { Panel } from "../components/ui/Panel";
+import { PageSection, PageShell, SectionHeading } from "../components/ui/PageShell";
 import { Table, Td, Tr } from "../components/ui/Table";
 import { useAsyncAction } from "../hooks/useAsyncAction";
 import { useConfirmDelete } from "../hooks/useConfirmDelete";
@@ -85,16 +85,18 @@ function EntryCard({
   goldenMetricsStatus: GoldenMetricsPassStatus | null;
 }) {
   return (
-    <div className="grid gap-3 border-t border-panel-border p-4">
+    <div className="grid gap-3 border-b border-hairline py-4">
       <h4>
         {index + 1}
         {" · "}
-        <span className="mono-value font-normal lowercase text-muted">
+        <span className="wrap-anywhere text-caption font-normal text-mute">
           {entry.title} · {entry.url}
         </span>
       </h4>
 
-      <p className="whitespace-pre-wrap text-ink">{entry.golden_summary}</p>
+      <p className="max-w-measure whitespace-pre-wrap font-reading text-reading">
+        {entry.golden_summary}
+      </p>
 
       <DisclosureSections
         sections={[
@@ -107,18 +109,18 @@ function EntryCard({
             key: "metrics",
             label: "Metryki",
             content: entry.golden_metrics ? (
-              <div className="grid gap-3 bg-subtle p-3">
+              <div className="grid gap-4">
                 <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
                 <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
                 {entry.golden_metrics.deepeval.length > 0 ? (
-                  <div className="grid gap-2 border-t border-panel-border pt-4">
+                  <div className="grid gap-2 border-t border-hairline pt-4">
                     <SectionHeading>Deepeval</SectionHeading>
                     <DeepevalItems items={entry.golden_metrics.deepeval} />
                   </div>
                 ) : null}
               </div>
             ) : (
-              <p className="p-3 text-muted">
+              <p className="text-mute">
                 Metryki wzorcowe:{" "}
                 {goldenMetricsStatus
                   ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
@@ -143,7 +145,7 @@ function RunsTable({
   onDelete: (run: EvaluationRunListItemResponse) => void;
 }) {
   return (
-    <Table headers={RUN_COLUMNS}>
+    <Table headers={RUN_COLUMNS} alignRight={["Wpisów"]}>
       {runs.map((run) => (
         <Tr key={run.evaluation_run_id}>
           <Td>{run.model_provider}</Td>
@@ -152,16 +154,12 @@ function RunsTable({
           <Td>
             <StatusLabel status={run.status} />
           </Td>
-          <Td>{run.entry_count}</Td>
-          <Td>{formatDateMinute(run.created_at)}</Td>
+          <Td className="text-right">{run.entry_count}</Td>
+          <Td className="text-caption text-mute">{formatDateMinute(run.created_at)}</Td>
           <Td className="text-right">
-            <div className="flex justify-end gap-2">
-              <LinkButton size="sm" href={evaluationRunPath(run.evaluation_run_id)}>
-                Otwórz
-              </LinkButton>
-              <Button variant="dangerOutline" size="sm" onClick={() => onDelete(run)}>
-                Usuń
-              </Button>
+            <div className="flex items-center justify-end gap-4">
+              <LinkButton href={evaluationRunPath(run.evaluation_run_id)}>Otwórz</LinkButton>
+              <DangerAction onClick={() => onDelete(run)}>Usuń</DangerAction>
             </div>
           </Td>
         </Tr>
@@ -306,9 +304,7 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
     existingRuns.some((run) => run.status === "pending" || run.status === "running"),
   );
 
-  let entriesSection: React.ReactNode = (
-    <p className="text-muted">Ładowanie szczegółów zbioru...</p>
-  );
+  let entriesSection: React.ReactNode = <p className="text-mute">Ładowanie szczegółów zbioru...</p>;
   if (!setDetail.isInitialLoading && selectedSet) {
     entriesSection = (
       <div className="grid">
@@ -327,11 +323,11 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
     entriesSection = null;
   }
 
-  let runsSection: React.ReactNode = <p className="text-muted">Ładowanie przebiegów...</p>;
+  let runsSection: React.ReactNode = <p className="text-mute">Ładowanie przebiegów...</p>;
   if (!runs.isInitialLoading) {
     runsSection =
       existingRuns.length === 0 ? (
-        <p className="text-muted">Brak przebiegów dla tego zbioru.</p>
+        <p className="text-mute">Brak przebiegów dla tego zbioru.</p>
       ) : (
         <RunsTable runs={existingRuns} onDelete={deleteRun.request} />
       );
@@ -339,143 +335,139 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
 
   return (
     <PageShell>
-      <section className="panel-shell grid min-w-0 gap-4">
-        <Breadcrumbs trail={EVALUATION_TRAIL} />
+      <div className="grid min-w-0 gap-section">
+        <div className="grid min-w-0 gap-6">
+          <div className="grid gap-2">
+            <Breadcrumbs trail={EVALUATION_TRAIL} />
 
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-muted">Zbiór</span>
-            {selectedSet ? (
-              <>
-                <span className="mono-value">{selectedSet.name}</span>
-                <span className="text-muted">·</span>
-                <span className="mono-value">{selectedSet.entries.length} wpisów</span>
-              </>
-            ) : (
-              <span className="text-muted">
-                {setDetail.isInitialLoading ? "ładowanie..." : "zbiór niedostępny"}
-              </span>
-            )}
-          </h1>
+            <div className="flex flex-wrap items-baseline justify-between gap-4">
+              <h1 className="flex flex-wrap items-baseline gap-x-2 text-title">
+                <span className="text-mute">Zbiór</span>
+                {selectedSet ? (
+                  <>
+                    <span className="wrap-anywhere">{selectedSet.name}</span>
+                    <span className="text-mute">·</span>
+                    <span>{selectedSet.entries.length} wpisów</span>
+                  </>
+                ) : (
+                  <span className="text-mute">
+                    {setDetail.isInitialLoading ? "ładowanie..." : "zbiór niedostępny"}
+                  </span>
+                )}
+              </h1>
 
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => selectedSet && void exportSet.run(selectedSet.name)}
-              disabled={!selectedSet || exportSet.isPending}
-            >
-              {exportSet.isPending ? "Eksportowanie..." : "Eksport JSON"}
-            </Button>
-            <Button variant="dangerOutline" size="sm" onClick={() => deleteSet.request(setId)}>
-              Usuń zbiór
-            </Button>
-          </div>
-        </div>
-
-        {setDetail.errorMessage ? <Alert tone="danger">{setDetail.errorMessage}</Alert> : null}
-        {runs.errorMessage ? <Alert tone="danger">{runs.errorMessage}</Alert> : null}
-        {goldenMetricsPass.errorMessage ? (
-          <Alert tone="danger">{goldenMetricsPass.errorMessage}</Alert>
-        ) : null}
-        {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
-
-        {selectedSet ? (
-          <Alert
-            tone={
-              goldenMetricsStatus === "failed"
-                ? "danger"
-                : goldenMetricsStatus === "completed" || goldenMetricsStatus === "skipped"
-                  ? "success"
-                  : "warning"
-            }
-            aria-live="polite"
-          >
-            {goldenMetricsPass.data ? (
-              <>
-                Metryki wzorcowe:{" "}
-                {goldenMetricsStatus
-                  ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
-                  : "jeszcze nie policzone"}
-                {" · "}
-                {goldenMetricsPass.data.entries_with_metrics} / {goldenMetricsPass.data.entry_count}{" "}
-                wpisów
-                {goldenMetricsPass.data.error ? (
-                  <span className="block">{goldenMetricsPass.data.error}</span>
-                ) : null}
-              </>
-            ) : (
-              "Sprawdzanie statusu metryk wzorcowych…"
-            )}
-          </Alert>
-        ) : null}
-
-        {selectedSet ? (
-          <Panel as="section" padding="sm" className="grid gap-3">
-            <h2>Nowy przebieg</h2>
-
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-              <div className="grid shrink-0 gap-2">
-                <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
-                <Select
-                  id="new-run-model"
-                  value={newRunSelectedModel}
-                  onChange={(event) => setNewRunSelectedModel(event.target.value)}
-                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-                  className="max-w-56 truncate"
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={() => selectedSet && void exportSet.run(selectedSet.name)}
+                  disabled={!selectedSet || exportSet.isPending}
                 >
-                  <ModelOptions models={newRunAvailableModels} />
-                </Select>
+                  {exportSet.isPending ? "Eksportowanie..." : "Eksport JSON"}
+                </Button>
+                <DangerAction onClick={() => deleteSet.request(setId)}>Usuń zbiór</DangerAction>
               </div>
+            </div>
+          </div>
 
-              <ProcessingStrategySelect
-                processingStrategies={newRunAvailableStrategies}
-                selectedProcessingStrategy={newRunProcessingStrategy}
-                onProcessingStrategyChange={setNewRunProcessingStrategy}
-                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-              />
+          {setDetail.errorMessage ? <Alert tone="danger">{setDetail.errorMessage}</Alert> : null}
+          {runs.errorMessage ? <Alert tone="danger">{runs.errorMessage}</Alert> : null}
+          {goldenMetricsPass.errorMessage ? (
+            <Alert tone="danger">{goldenMetricsPass.errorMessage}</Alert>
+          ) : null}
+          {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 
-              <div className="grid shrink-0 gap-2">
-                <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
-                <Input
-                  id="new-run-delay"
-                  type="number"
-                  min={0}
-                  step={100}
-                  className="max-w-24"
-                  value={newRunDelayMs}
-                  onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
+          {selectedSet ? (
+            <Alert
+              tone={
+                goldenMetricsStatus === "failed"
+                  ? "danger"
+                  : goldenMetricsStatus === "completed" || goldenMetricsStatus === "skipped"
+                    ? "success"
+                    : "warning"
+              }
+              aria-live="polite"
+            >
+              {goldenMetricsPass.data ? (
+                <>
+                  Metryki wzorcowe:{" "}
+                  {goldenMetricsStatus
+                    ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
+                    : "jeszcze nie policzone"}
+                  {" · "}
+                  {goldenMetricsPass.data.entries_with_metrics} /{" "}
+                  {goldenMetricsPass.data.entry_count} wpisów
+                  {goldenMetricsPass.data.error ? (
+                    <span className="block">{goldenMetricsPass.data.error}</span>
+                  ) : null}
+                </>
+              ) : (
+                "Sprawdzanie statusu metryk wzorcowych…"
+              )}
+            </Alert>
+          ) : null}
+
+          {selectedSet ? (
+            <PageSection title="Nowy przebieg">
+              <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid shrink-0 gap-2">
+                  <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
+                  <Select
+                    id="new-run-model"
+                    value={newRunSelectedModel}
+                    onChange={(event) => setNewRunSelectedModel(event.target.value)}
+                    disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+                    className="truncate"
+                  >
+                    <ModelOptions models={newRunAvailableModels} />
+                  </Select>
+                </div>
+
+                <ProcessingStrategySelect
+                  processingStrategies={newRunAvailableStrategies}
+                  selectedProcessingStrategy={newRunProcessingStrategy}
+                  onProcessingStrategyChange={setNewRunProcessingStrategy}
+                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+                />
+
+                <div className="grid shrink-0 gap-2">
+                  <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
+                  <Input
+                    id="new-run-delay"
+                    type="number"
+                    min={0}
+                    step={100}
+                    className="max-w-24"
+                    value={newRunDelayMs}
+                    onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
+                  />
+                </div>
+
+                <MatchReferenceCheckbox
+                  form={newRunSpecForm}
+                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
                 />
               </div>
 
-              <MatchReferenceCheckbox
+              <SummarySpecFields
                 form={newRunSpecForm}
                 disabled={submitNewRun.isPending || isLoadingNewRunOptions}
               />
-            </div>
 
-            <SummarySpecFields
-              form={newRunSpecForm}
-              disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-            />
+              <Button
+                variant="primary"
+                onClick={() => void submitNewRun.run()}
+                disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
+                className="justify-self-start"
+              >
+                {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
+              </Button>
+            </PageSection>
+          ) : null}
+        </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => void submitNewRun.run()}
-              disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
-              className="justify-self-start"
-            >
-              {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
-            </Button>
-          </Panel>
-        ) : null}
+        <PageSection title="Przebiegi">{runsSection}</PageSection>
 
-        <h2>Przebiegi</h2>
-        {runsSection}
-
-        <h2>Wpisy</h2>
-        {entriesSection}
-      </section>
+        <PageSection title="Wpisy">{entriesSection}</PageSection>
+      </div>
 
       {deleteSet.dialogProps ? <ConfirmDialog {...deleteSet.dialogProps} /> : null}
       {deleteRun.dialogProps ? <ConfirmDialog {...deleteRun.dialogProps} /> : null}

@@ -1,21 +1,22 @@
-import { Button } from "./Button";
+import { cn } from "./cn";
 
 interface DisclosureButtonProps {
   label: string;
   isOpen: boolean;
   onToggle: () => void;
+  className?: string;
 }
 
-export function DisclosureButton({ label, isOpen, onToggle }: DisclosureButtonProps) {
+export function DisclosureButton({ label, isOpen, onToggle, className }: DisclosureButtonProps) {
   return (
-    <Button
-      variant={isOpen ? "disclosureOpen" : "disclosure"}
-      size="xs"
+    <button
+      type="button"
       onClick={onToggle}
       aria-expanded={isOpen}
+      className={cn("flex min-h-11 cursor-pointer items-center gap-2 text-left", className)}
     >
-      <span>{label}</span>
-      <span aria-hidden="true">{isOpen ? "▼" : "▶"}</span>
-    </Button>
+      <span aria-hidden="true">{isOpen ? "[-]" : "[+]"}</span>
+      {label}
+    </button>
   );
 }

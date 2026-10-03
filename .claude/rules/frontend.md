@@ -104,7 +104,7 @@ and is exempt.
 - Half steps (`2.5`, `3.5`) and off-scale values (`4.5`, `5.5`) **SHOULD NOT** be used.
 - Arbitrary values (`min-h-[320px]`, `max-w-355`) **MUST NOT** be used for a value that a
   scale step already expresses (`min-h-80` is the same 320px). A genuine design decision
-  **MUST** become a token in `@theme` (`--container-app`) or a named constant next to the
+  **MUST** become a token in `@theme` (`--container-frame`) or a named constant next to the
   component (`SPLIT_COLUMNS` in `ui/PageShell.tsx`).
 
 ### Sizing above the spacing ceiling — MUST
@@ -112,11 +112,11 @@ and is exempt.
 The spacing scale stops at 64px. Anything larger is a layout decision, not a step, and
 **MUST** be a named token in `@theme` rather than a number at the call site:
 
-- `--container-*` for widths — `--container-app`, `--container-measure`, `--container-list`,
-  `--container-detail`. These generate `max-w-app`, `w-detail`, and can be referenced inside
-  an arbitrary value as `minmax(var(--container-list),38%)`.
-- `--spacing-*` for a named component size — `--spacing-control` gives `h-control`,
-  which every input, select and full-height button uses so a row of them lines up.
+- `--container-*` for widths — `--container-frame`, `--container-column`, `--container-measure`.
+  These generate `max-w-frame`, `max-w-column`, `max-w-measure`, and can be referenced inside
+  an arbitrary value as `minmax(var(--container-column),1fr)`.
+- `--spacing-*` for a named component size — `--spacing-input` gives `h-input` (every field),
+  `--spacing-button` gives `h-button`, `--spacing-section` gives `gap-section` between page sections.
 
 Viewport-relative values (`h-[75vh]`, `calc(100vh-2rem)`) are not scale values and stay
 arbitrary. A repeated arbitrary value **SHOULD** become a token on its second use.

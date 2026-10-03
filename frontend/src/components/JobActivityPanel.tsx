@@ -5,8 +5,8 @@ import { isJobInProgress } from "../utils/jobs";
 import { jobPath } from "../utils/routing";
 import { StatusLabel } from "./StatusLabel";
 import { AppLink } from "./ui/AppLink";
-import { buttonClasses } from "./ui/Button";
 import { listItemClasses } from "./ui/listItem";
+import { PageSection } from "./ui/PageShell";
 
 function formatElapsed(milliseconds: number): string {
   const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -31,25 +31,18 @@ function useSecondsTick(isRunning: boolean): number {
 function JobActivityRow({ job, now }: { job: JobListItemResponse; now: number }) {
   return (
     <AppLink href={jobPath(job.job_id)} className={listItemClasses(false)}>
-      <span className="mono-value block break-all text-link">{job.source_url}</span>
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span className="flex items-center gap-2">
-          {isJobInProgress(job.status) ? (
-            <span
-              aria-hidden="true"
-              className="inline-block size-2 animate-pulse rounded-full bg-warning"
-            />
-          ) : null}
-          <StatusLabel status={job.status} />
-        </span>
+      <span className="break-all text-body underline">{job.source_url}</span>
+      <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption text-mute">
+        <StatusLabel status={job.status} />
         <span>
           {job.model_provider}:{job.model_name}
         </span>
         {isJobInProgress(job.status) ? (
-          <span>{formatElapsed(now - new Date(job.updated_at).getTime())}</span>
+          <span className="tabular-nums">
+            {formatElapsed(now - new Date(job.updated_at).getTime())}
+          </span>
         ) : (
-          // A span inside the row's own anchor: nesting a second <a> would be invalid HTML.
-          <span className={buttonClasses("secondary", "xs")}>Zobacz</span>
+          <span className="text-ink underline">Zobacz</span>
         )}
       </span>
     </AppLink>
@@ -64,22 +57,22 @@ export function JobActivityPanel({ jobs }: { jobs: JobListItemResponse[] }) {
   return (
     <div aria-live="polite">
       {jobs.length > 0 ? (
-        <section className="panel-shell grid gap-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2>{inProgressCount > 0 ? "W trakcie" : "Zakończone"}</h2>
-            <span className="text-muted">
+        <PageSection
+          title={inProgressCount > 0 ? "W trakcie" : "Zakończone"}
+          trailing={
+            <span className="text-caption text-mute">
               {inProgressCount > 0 ? inProgressCount : jobs.length}
             </span>
-          </div>
-
-          <ul className="grid min-w-0 gap-2">
+          }
+        >
+          <ul className="grid min-w-0">
             {jobs.map((job) => (
-              <li key={job.job_id} className="min-w-0">
+              <li key={job.job_id} className="min-w-0 border-b border-hairline">
                 <JobActivityRow job={job} now={now} />
               </li>
             ))}
           </ul>
-        </section>
+        </PageSection>
       ) : null}
     </div>
   );

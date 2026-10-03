@@ -12,7 +12,9 @@ import {
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
+import { Checkbox } from "./ui/Checkbox";
 import { FieldLabel, Input, RangeInput, Select, Textarea } from "./ui/Field";
+import { HelpTip } from "./ui/Tooltip";
 
 // Keep in sync with backend/app/schemas/summary_spec.py — the backend owns the defaults.
 const MAX_EXTRA_INSTRUCTIONS_CHARS = 2000;
@@ -45,7 +47,7 @@ export function ProcessingStrategySelect({
         value={selectedProcessingStrategy}
         onChange={(event) => onProcessingStrategyChange(event.target.value)}
         disabled={disabled}
-        className="max-w-56 truncate"
+        className="truncate"
       >
         {Object.entries(processingStrategies).map(([key, label]) => (
           <option key={key} value={key}>
@@ -68,22 +70,16 @@ interface MatchReferenceCheckboxProps {
 export function MatchReferenceCheckbox({ form, disabled }: MatchReferenceCheckboxProps) {
   if (!form.offerMatchReference) return null;
   return (
-    <label className="flex h-control shrink-0 items-center gap-2 text-muted">
-      <input
-        type="checkbox"
+    <div className="flex shrink-0 items-center gap-2">
+      <Checkbox
         checked={form.matchReference}
         onChange={(event) => form.setMatchReference(event.target.checked)}
         disabled={disabled}
-        className="h-4 w-4 border border-input-border"
-      />
-      Wyrównaj długość{" "}
-      <span
-        className="cursor-help"
-        title="Docelowa liczba słów i zdań brana z każdego złotego podsumowania z osobna."
       >
-        ⓘ
-      </span>
-    </label>
+        Wyrównaj długość
+      </Checkbox>
+      <HelpTip description="Docelowa liczba słów i zdań brana z każdego złotego podsumowania z osobna." />
+    </div>
   );
 }
 
@@ -107,20 +103,17 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+      <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="grid shrink-0 gap-2">
-          <FieldLabel htmlFor={fieldId("stance")}>
-            Narracja{" "}
-            <span
-              className="cursor-help text-muted"
-              title={
+          <div className="flex items-baseline gap-2">
+            <FieldLabel htmlFor={fieldId("stance")}>Narracja</FieldLabel>
+            <HelpTip
+              description={
                 "Głosem dokumentu: „Lehman Brothers upadł we wrześniu 2008.” " +
                 "O dokumencie: „Ten artykuł omawia upadek Lehman Brothers.”"
               }
-            >
-              ⓘ
-            </span>
-          </FieldLabel>
+            />
+          </div>
           <Select
             id={fieldId("stance")}
             value={spec.narrative_stance}
@@ -130,7 +123,7 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
               })
             }
             disabled={disabled}
-            className="max-w-56 truncate"
+            className="truncate"
           >
             {Object.entries(STANCE_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -141,18 +134,15 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
         </div>
 
         <div className="grid shrink-0 gap-2">
-          <FieldLabel htmlFor={fieldId("function")}>
-            Funkcja{" "}
-            <span
-              className="cursor-help text-muted"
-              title={
+          <div className="flex items-baseline gap-2">
+            <FieldLabel htmlFor={fieldId("function")}>Funkcja</FieldLabel>
+            <HelpTip
+              description={
                 "Informacyjne: podaje fakty i wnioski, zastępuje tekst. " +
                 "Wskazujące: sygnalizuje temat bez faktów, np. „Tekst dotyczy...”."
               }
-            >
-              ⓘ
-            </span>
-          </FieldLabel>
+            />
+          </div>
           <Select
             id={fieldId("function")}
             value={spec.summary_function}
@@ -162,7 +152,7 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
               })
             }
             disabled={disabled}
-            className="max-w-56 truncate"
+            className="truncate"
           >
             {Object.entries(FUNCTION_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -183,7 +173,7 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
               })
             }
             disabled={disabled}
-            className="max-w-56 truncate"
+            className="truncate"
           >
             {Object.entries(OUTPUT_FORMAT_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -208,7 +198,7 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
                   )
                 }
                 disabled={disabled}
-                className="max-w-56 truncate"
+                className="truncate"
               >
                 {(["scaled_to_input", "explicit"] as const).map((key) => (
                   <option key={key} value={key}>
@@ -257,15 +247,10 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
                   />
                 </div>
                 <div className="grid shrink-0 gap-2">
-                  <FieldLabel htmlFor={fieldId("target-sentences")}>
-                    Liczba zdań{" "}
-                    <span
-                      className="cursor-help text-muted"
-                      title="Puste pole — liczba zdań wyliczona automatycznie ze słów."
-                    >
-                      ⓘ
-                    </span>
-                  </FieldLabel>
+                  <div className="flex items-baseline gap-2">
+                    <FieldLabel htmlFor={fieldId("target-sentences")}>Liczba zdań</FieldLabel>
+                    <HelpTip description="Puste pole — liczba zdań wyliczona automatycznie ze słów." />
+                  </div>
                   <Input
                     id={fieldId("target-sentences")}
                     type="number"

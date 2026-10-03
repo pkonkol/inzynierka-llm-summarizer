@@ -17,8 +17,9 @@ import {
 } from "../utils/summarySpecLabels";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
-import { InfoRow } from "./InfoRow";
+import { InfoList, InfoRow } from "./InfoRow";
 import { MetricsSection } from "./MetricsSection";
+import { StatusLabel } from "./StatusLabel";
 import { Button, type ButtonVariant } from "./ui/Button";
 import { DisclosureSections } from "./ui/DisclosureSections";
 import { SectionHeading } from "./ui/PageShell";
@@ -58,14 +59,14 @@ function JobMetricsPanel({
 
   const deepevalBlock =
     deepevalMetrics.length > 0 ? (
-      <div className="grid gap-3 border-t border-panel-border pt-4">
+      <div className="grid gap-3 border-t border-hairline pt-4">
         <SectionHeading>Deepeval</SectionHeading>
         <DeepevalItems items={deepevalMetrics} />
       </div>
     ) : null;
 
   return (
-    <div className="grid gap-4 p-3">
+    <div className="grid gap-4">
       {defaultMetricsBlocks}
       {deepevalBlock}
     </div>
@@ -80,8 +81,8 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
   let templateBlock = null;
   if (template.length > 0) {
     const renderedMessages = template.map(([role, content]) => (
-      <div key={role} className="min-w-0 text-xs">
-        <span className="label-caps font-semibold text-muted">{role}:</span>
+      <div key={role} className="grid min-w-0 gap-1 text-caption">
+        <span className="text-mute">{role}:</span>
         <PreBlock>{content}</PreBlock>
       </div>
     ));
@@ -109,7 +110,7 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
     inputBlock = (
       <div className="grid min-w-0 gap-1">
         <h6>Tekst źródłowy</h6>
-        <PreBlock withoutBackground className="mx-auto max-h-96 max-w-measure overflow-y-auto">
+        <PreBlock withoutBackground className="max-h-96 max-w-measure overflow-y-auto">
           {inputText}
         </PreBlock>
       </div>
@@ -117,7 +118,7 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
   }
 
   return (
-    <div className="grid min-w-0 gap-3 p-3">
+    <div className="grid min-w-0 gap-3">
       {templateBlock}
       {paramsBlock}
       {inputBlock}
@@ -126,10 +127,13 @@ function PromptSection({ job }: { job: JobStatusResponse }) {
 }
 
 function statusBadge(status: JobStatus) {
-  if (status === "failed")
-    return <span className="mono-value ml-2 uppercase text-danger">failed</span>;
-  if (isJobInProgress(status))
-    return <span className="mono-value ml-2 uppercase text-warning">{status}</span>;
+  if (status === "failed" || isJobInProgress(status)) {
+    return (
+      <span className="text-caption">
+        <StatusLabel status={status} />
+      </span>
+    );
+  }
   return null;
 }
 
@@ -160,7 +164,7 @@ function ExportButton({
   }
 
   return (
-    <Button variant={variant} size="xs" onClick={() => void handleExport()} disabled={isExporting}>
+    <Button variant={variant} onClick={() => void handleExport()} disabled={isExporting}>
       {isExporting ? "Pobieranie..." : label}
     </Button>
   );
@@ -177,27 +181,25 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
       type="button"
       onClick={() => setOpen((v) => !v)}
       aria-expanded={open}
-      className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-subtle"
+      className="flex min-h-11 w-full cursor-pointer items-baseline gap-3 py-3 text-left"
     >
-      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="mono-value font-semibold">
-          {modelLabel}
-          {statusBadge(job.status)}
-        </span>
-        <span className="text-xs text-muted">{formatDateMinute(job.created_at)}</span>
+      <span aria-hidden="true" className="shrink-0">
+        {open ? "[-]" : "[+]"}
       </span>
-      <span aria-hidden="true" className="shrink-0 pt-1 text-xs text-muted">
-        {open ? "▼" : "▶"}
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="wrap-anywhere font-medium">{modelLabel}</span>
+        {statusBadge(job.status)}
+        <span className="text-caption text-mute">{formatDateMinute(job.created_at)}</span>
       </span>
     </button>
   );
 
   const details = open && (
-    <div className="grid gap-4 border-t border-panel-border bg-subtle px-4 py-3 min-w-0 overflow-clip">
+    <div className="grid min-w-0 gap-4 overflow-clip pb-4">
       {job.status === "failed" && job.error ? (
         <section>
           <h4>Błąd</h4>
-          <p className="text-danger">{job.error}</p>
+          <p className="wrap-anywhere text-danger-hover">{job.error}</p>
         </section>
       ) : isJobInProgress(job.status) ? null : (
         <JobDetails job={job} />
@@ -206,7 +208,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
   );
 
   return (
-    <div className="border border-panel-border min-w-0">
+    <div className="min-w-0 border-b border-hairline">
       {header}
       {details}
     </div>
@@ -221,16 +223,16 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
     "Nie udało się pobrać szczegółów",
   );
   const placeholder = errorMessage ? (
-    <p className="p-3 text-danger">{errorMessage}</p>
+    <p className="text-danger-hover">{errorMessage}</p>
   ) : (
-    <p className="p-3 text-muted">Ładowanie...</p>
+    <p className="text-mute">Ładowanie...</p>
   );
 
   const summaryText = job.summary_data?.summary ?? null;
 
   return (
     <>
-      <div className="metric-row">
+      <InfoList>
         <InfoRow label="Wywołano" value={formatDateMinute(job.created_at)} />
         <InfoRow label="Pochodzenie" value={ORIGIN_LABELS[job.origin]} />
         <InfoRow label="Czas generacji" value={formatDuration(job.duration_ms)} />
@@ -253,12 +255,12 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
             )}
           />
         ) : null}
-      </div>
+      </InfoList>
 
       {summaryText === null ? null : (
-        <section>
+        <section className="grid gap-2">
           <h4>Podsumowanie</h4>
-          <div className="grid gap-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5">
+          <div className="markdown max-w-measure font-reading text-reading">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryText}</ReactMarkdown>
           </div>
         </section>
@@ -293,7 +295,7 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
             jobIds={[job.job_id]}
             sourceUrl={job.source_url}
             label="Pobierz JSON"
-            variant="disclosure"
+            variant="secondary"
           />
         }
       />
@@ -323,30 +325,25 @@ export function SummaryDetailPanel({
   // with an unstyled right column and no way to close it.
   let body: React.ReactNode;
   if (isLoading) {
-    body = <p className="text-muted">Ładowanie wyników...</p>;
+    body = <p className="text-mute">Ładowanie wyników...</p>;
   } else if (!sourceUrl) {
-    body = <p className="text-muted">Brak wyników.</p>;
+    body = <p className="text-mute">Brak wyników.</p>;
   } else {
     body = (
       <article className="grid gap-4 min-w-0">
-        {title ? <h3>{title}</h3> : null}
+        {title ? <h3 className="text-subtitle">{title}</h3> : null}
 
         {isManualSource(sourceUrl) ? null : (
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mono-value wrap-anywhere font-semibold no-underline"
-          >
+          <a href={sourceUrl} target="_blank" rel="noreferrer" className="wrap-anywhere">
             {sourceUrl}
           </a>
         )}
 
-        <section className="grid content-start gap-3 border-t border-panel-border pt-4 min-w-0">
+        <section className="grid min-w-0 content-start border-t border-hairline pt-4">
           <h4>{sectionTitle}</h4>
 
           {jobsFilteredSorted.length === 0 ? (
-            <p className="text-muted">Brak wyników.</p>
+            <p className="text-mute">Brak wyników.</p>
           ) : (
             jobsFilteredSorted.map((job, index) => (
               <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
@@ -358,10 +355,10 @@ export function SummaryDetailPanel({
   }
 
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] content-start gap-4 overflow-y-auto border-t border-panel-border bg-panel-solid p-4 split:sticky split:top-4 split:z-auto split:h-[calc(100vh-2rem)] split:border split:p-6">
-      <div className="flex items-center justify-between border-b border-panel-border pb-3">
+    <aside className="fixed inset-x-0 bottom-0 z-30 grid h-[75vh] min-w-0 content-start gap-4 overflow-y-auto border-t border-hairline-strong bg-canvas p-4 lg:sticky lg:top-4 lg:z-auto lg:h-[calc(100vh-2rem)] lg:border lg:border-hairline">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-2">
         <h2>Szczegóły</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {sourceUrl && exportableJobIds.length > 0 ? (
             <ExportButton
               jobIds={exportableJobIds}
@@ -370,7 +367,7 @@ export function SummaryDetailPanel({
               variant="secondary"
             />
           ) : null}
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Zamknij
           </Button>
         </div>

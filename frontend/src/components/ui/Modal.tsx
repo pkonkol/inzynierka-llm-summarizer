@@ -1,7 +1,5 @@
 import { useEffect, useId, useRef } from "react";
 
-import { Panel } from "./Panel";
-
 interface ModalProps {
   isOpen: boolean;
   title: string;
@@ -49,19 +47,18 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
     // biome-ignore lint/a11y/noStaticElementInteractions: mouse-only shortcut; Escape closes the dialog from the keyboard
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-deep/40 p-4"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <Panel
+      <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        padding="xl"
-        className="grid w-full max-w-sm gap-6 focus:outline-none"
+        className="grid w-full min-w-0 max-w-md gap-4 border border-hairline-strong bg-canvas p-6 focus:outline-none"
       >
         <h2 id={titleId}>{title}</h2>
         {onSubmit ? (
@@ -71,7 +68,7 @@ export function Modal({ isOpen, title, children, onClose, onSubmit }: ModalProps
         ) : (
           <div className="grid gap-4">{children}</div>
         )}
-      </Panel>
+      </div>
     </div>
   );
 }

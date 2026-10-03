@@ -76,7 +76,7 @@ function App() {
         <AdminGate>
           <NavDock route={route} isLoggedIn={isLoggedIn} />
           <CurrentPage route={route} />
-          <span className="fixed bottom-1 right-2 select-none text-2xs text-muted/50">
+          <span className="fixed bottom-1 left-2 select-none text-caption text-mute">
             front #{__COMMIT_HASH__} · back #{backendSha || "?"}
           </span>
         </AdminGate>

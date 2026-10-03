@@ -1,5 +1,4 @@
 import { formatMetricLabel } from "../utils/format";
-import { InfoRow } from "./InfoRow";
 import { SectionHeading } from "./ui/PageShell";
 
 export function MetricsSection({
@@ -12,11 +11,20 @@ export function MetricsSection({
   return (
     <div className="grid gap-2">
       <SectionHeading>{title}</SectionHeading>
-      <div className="metric-row">
-        {Object.entries(data).map(([key, value]) => (
-          <InfoRow key={key} label={formatMetricLabel(key)} value={value} />
-        ))}
-      </div>
+      <dl className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] border-t border-hairline">
+        {Object.entries(data).map(([key, value]) =>
+          value === null ? null : (
+            // Value above its caption on screen, term before definition in the markup.
+            <div
+              key={key}
+              className="flex min-w-0 flex-col-reverse gap-1 border-b border-hairline py-3 pr-4"
+            >
+              <dt className="text-caption text-mute">{formatMetricLabel(key)}</dt>
+              <dd className="wrap-anywhere text-title font-bold tabular-nums">{String(value)}</dd>
+            </div>
+          ),
+        )}
+      </dl>
     </div>
   );
 }

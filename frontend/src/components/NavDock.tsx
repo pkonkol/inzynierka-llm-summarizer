@@ -2,6 +2,9 @@ import {
   type AdminRoute,
   EVALUATION_IMPORT_PATH,
   EVALUATION_SETS_PATH,
+  evaluationRunPath,
+  evaluationSetPath,
+  jobPath,
   LOGIN_PATH,
   PUBLIC_HOME_PATH,
   SUMMARIES_ALL_PATH,
@@ -9,7 +12,7 @@ import {
 } from "../utils/routing";
 import type { Crumb } from "./Breadcrumbs";
 import { AppLink } from "./ui/AppLink";
-import { segmentedCellClasses } from "./ui/segmentedCell";
+import { cn } from "./ui/cn";
 import { Tooltip } from "./ui/Tooltip";
 
 interface NavTab {
@@ -21,17 +24,13 @@ interface NavTab {
 
 interface NavModule {
   label: string;
-  description: string;
   tabs: NavTab[];
 }
 
-// The first tab of each module creates, the second browses, and the module cell links to its
-// own first tab. Both modules read the same way round.
+// The first tab of each module creates, the second browses. Both modules read the same way round.
 const NAV_MODULES: NavModule[] = [
   {
     label: "Podsumowania",
-    description:
-      "Pojedyncze artykuły. Wklejasz adres URL, system pobiera treść strony i generuje podsumowanie wybranym modelem LLM.",
     tabs: [
       {
         tab: "new",
@@ -51,8 +50,6 @@ const NAV_MODULES: NavModule[] = [
   },
   {
     label: "Ewaluacja",
-    description:
-      "Całe zbiory artykułów z gotowymi podsumowaniami wzorcowymi. Uruchamiasz model na całym zbiorze i porównujesz wynik z wzorcem metrykami ROUGE, METEOR i G-Eval.",
     tabs: [
       {
         tab: "import",
@@ -90,35 +87,41 @@ export const EVALUATION_TRAIL: Crumb[] = EVALUATION_MODULE.tabs.map((tab, index)
   href: tab.href,
 }));
 
-const CELL = "flex items-center whitespace-nowrap px-3 font-mono uppercase sm:px-5";
-const AUTH_CELL = `${CELL} border-l border-panel-border text-sm tracking-widest`;
-const HOME_CELL = `${CELL} border-r border-panel-border text-sm tracking-widest`;
+// Only an id-bearing page gets its own crumb after the list it was opened from (DESIGN.md §7).
+// Served outside the admin shell, by the dev server only (App.tsx).
+const DESIGN_PATH = "/design";
 
-function NavLink({
-  label,
+function currentSubpath(route: AdminRoute): string | null {
+  if (route.tab === "set") return evaluationSetPath(route.setId);
+  if (route.tab === "run") return evaluationRunPath(route.runId);
+  if (route.tab === "all" && route.jobId) return jobPath(route.jobId);
+  return null;
+}
+
+const PATH_LINK = "flex min-h-11 shrink-0 items-center";
+
+function PathLink({
   href,
   description,
-  isActive,
+  isCurrent,
   className,
 }: {
-  label: string;
   href: string;
   description: string;
-  isActive: boolean;
-  className: string;
+  isCurrent: boolean;
+  className?: string;
 }) {
   return (
     <Tooltip description={description}>
       {(describedBy) => (
-        // The active entry keeps its href so it can still be copied or opened in a new tab;
-        // aria-current and the inverted background are what mark it as current.
+        // The current entry keeps its href so it can still be copied or opened in a new tab.
         <AppLink
           href={href}
           aria-describedby={describedBy}
-          aria-current={isActive ? "page" : undefined}
-          className={`no-underline ${segmentedCellClasses(isActive, className)}`}
+          aria-current={isCurrent ? "page" : undefined}
+          className={cn(PATH_LINK, isCurrent && "font-bold no-underline", className)}
         >
-          {label}
+          {href}
         </AppLink>
       )}
     </Tooltip>
@@ -131,63 +134,55 @@ interface NavDockProps {
 }
 
 export function NavDock({ route, isLoggedIn }: NavDockProps) {
-  const activeTab = NAV_TAB[route.tab];
+  const subpath = currentSubpath(route);
+  const activeTab = subpath === null ? NAV_TAB[route.tab] : null;
 
   return (
-    <div className="flex justify-center px-4 pt-4">
-      <div className="inline-flex items-stretch border border-panel-border bg-panel-solid">
-        <AppLink
-          href={PUBLIC_HOME_PATH}
-          className={`${HOME_CELL} text-ink no-underline hover:bg-subtle`}
-        >
-          ← Portal
+    <header className="border-b border-hairline">
+      {/* Scrolls sideways only below sm, where tooltips are not hovered: any overflow value would clip them. */}
+      <nav
+        aria-label="Nawigacja główna"
+        className="mx-auto flex max-w-frame items-center gap-x-6 overflow-x-auto whitespace-nowrap px-4 sm:overflow-x-visible sm:px-6 lg:px-8"
+      >
+        <AppLink href={PUBLIC_HOME_PATH} className={PATH_LINK}>
+          {PUBLIC_HOME_PATH}
         </AppLink>
-
-        {/* Every divider is a 1px gap showing the container colour behind the opaque cells.
-            The modules stack below sm so the bar always fits: an ancestor carrying any overflow
-            value to scroll it would clip the tooltips. */}
-        <nav
-          className="grid grid-cols-1 gap-px bg-panel-border sm:grid-cols-2"
-          aria-label="Nawigacja główna"
-        >
-          {NAV_MODULES.map((module) => (
-            <div key={module.label} className="grid gap-px">
-              <NavLink
-                label={module.label}
-                href={module.tabs[0].href}
-                description={module.description}
-                isActive={module.tabs.some((tab) => tab.tab === activeTab)}
-                className="w-full text-sm tracking-widest"
-              />
-              <div className="grid grid-cols-2 gap-px">
-                {module.tabs.map((tab) => (
-                  <NavLink
-                    key={tab.tab}
-                    label={tab.label}
-                    href={tab.href}
-                    description={tab.description}
-                    isActive={tab.tab === activeTab}
-                    className="w-full text-xs tracking-wider"
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {isLoggedIn ? (
-          <span className={`${AUTH_CELL} border-l-success-border bg-success-bg text-success`}>
-            Zalogowano
-          </span>
-        ) : (
+        {NAV_MODULES.flatMap((module) =>
+          module.tabs.map((tab) => (
+            <PathLink
+              key={tab.tab}
+              href={tab.href}
+              description={`${module.label} · ${tab.label}. ${tab.description}`}
+              isCurrent={tab.tab === activeTab}
+            />
+          )),
+        )}
+        {subpath ? (
           <AppLink
-            href={LOGIN_PATH}
-            className={`${AUTH_CELL} text-ink no-underline hover:bg-subtle`}
+            href={subpath}
+            aria-current="page"
+            className={cn(PATH_LINK, "font-bold no-underline")}
           >
+            {subpath}
+          </AppLink>
+        ) : null}
+        <span aria-hidden="true" className="flex-1" />
+        {import.meta.env.DEV ? (
+          <PathLink
+            href={DESIGN_PATH}
+            description="Katalog systemu wizualnego: tokeny i prymitywy. Tylko w trybie deweloperskim."
+            isCurrent={false}
+            className="text-mute"
+          />
+        ) : null}
+        {isLoggedIn ? (
+          <span className="flex min-h-11 shrink-0 items-center">[✓] Zalogowano</span>
+        ) : (
+          <AppLink href={LOGIN_PATH} className={PATH_LINK}>
             Zaloguj
           </AppLink>
         )}
-      </div>
-    </div>
+      </nav>
+    </header>
   );
 }

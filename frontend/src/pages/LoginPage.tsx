@@ -41,7 +41,7 @@ export function LoginPage() {
   if (isLoggedIn) return null;
 
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-sm content-center px-3 py-8">
+    <main className="mx-auto grid min-h-screen w-full max-w-sm content-center px-4 py-8">
       <Panel padding="xl">
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <h1>Dostęp wymagany</h1>
@@ -57,7 +57,7 @@ export function LoginPage() {
             />
           </div>
           {error ? <Alert tone="danger">{error}</Alert> : null}
-          <Button type="submit" variant="primary" size="lg" disabled={isLoading || !password}>
+          <Button type="submit" variant="primary" disabled={isLoading || !password}>
             {isLoading ? "..." : "Wejdź"}
           </Button>
         </form>

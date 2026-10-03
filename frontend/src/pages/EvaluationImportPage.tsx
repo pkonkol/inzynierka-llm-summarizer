@@ -3,7 +3,10 @@ import { useMemo, useState } from "react";
 import { errorText } from "../api/client";
 import { createEvaluationSet } from "../api/research";
 import { useFlash } from "../components/FlashProvider";
+import { InfoList, InfoRowContent } from "../components/InfoRow";
 import { Button, buttonClasses } from "../components/ui/Button";
+import { Checkbox } from "../components/ui/Checkbox";
+import { Collapsible } from "../components/ui/Collapsible";
 import { Textarea } from "../components/ui/Field";
 import { PageShell } from "../components/ui/PageShell";
 import { useAsyncAction } from "../hooks/useAsyncAction";
@@ -27,9 +30,14 @@ const PRETTY_EXAMPLE = `{
 
 const NOTHING_PARSED = { name: "—", language: "—", entryCount: "—" };
 const JSON_PREVIEW = {
-  empty: { status: "brak danych", className: "text-muted", isValid: false, ...NOTHING_PARSED },
-  invalid: { status: "niepoprawny", className: "text-danger", isValid: false, ...NOTHING_PARSED },
-  valid: { status: "poprawny", className: "text-success", isValid: true },
+  empty: { status: "brak danych", className: "text-mute", isValid: false, ...NOTHING_PARSED },
+  invalid: {
+    status: "niepoprawny",
+    className: "text-danger-hover",
+    isValid: false,
+    ...NOTHING_PARSED,
+  },
+  valid: { status: "poprawny", className: "text-ink", isValid: true },
 };
 
 // Three GEval specs run per entry (see services/evaluation_set_metrics.py) — shown before the
@@ -91,10 +99,10 @@ export function EvaluationImportPage() {
 
   return (
     <PageShell>
-      <section className="panel-shell grid min-w-0 gap-4">
+      <section className="mx-auto grid w-full min-w-0 max-w-column gap-6">
         <div className="grid gap-2">
-          <h1>Import zbioru ewaluacyjnego</h1>
-          <p className="max-w-measure text-muted">
+          <h1 className="text-title">Import zbioru ewaluacyjnego</h1>
+          <p className="max-w-measure text-body">
             Zbiór ewaluacyjny to artykuły z gotowymi podsumowaniami wzorcowymi. Przebieg uruchamia
             wybrany model na każdym wpisie i zestawia jego wynik z wzorcem — stąd biorą się metryki
             ROUGE, METEOR i oceny G-Eval.
@@ -102,7 +110,7 @@ export function EvaluationImportPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className={buttonClasses("primary", "md", "cursor-pointer")}>
+          <label className={buttonClasses("secondary")}>
             <input
               type="file"
               accept=".json,application/json"
@@ -111,50 +119,49 @@ export function EvaluationImportPage() {
             />
             Wczytaj plik JSON
           </label>
-          <Button size="sm" onClick={() => setRawJson(PRETTY_EXAMPLE)}>
-            Wstaw przykład
-          </Button>
+          <Button onClick={() => setRawJson(PRETTY_EXAMPLE)}>Wstaw przykład</Button>
         </div>
 
-        <label className="flex items-center gap-2 text-muted">
-          <input
-            type="checkbox"
-            checked={computeGoldenMetrics}
-            onChange={(event) => setComputeGoldenMetrics(event.target.checked)}
-            className="h-4 w-4 border border-input-border"
-          />
+        <Checkbox
+          checked={computeGoldenMetrics}
+          onChange={(event) => setComputeGoldenMetrics(event.target.checked)}
+        >
           Policz metryki wzorcowe
-        </label>
+        </Checkbox>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 border border-panel-border bg-panel-solid px-3 py-2">
-          <span className={preview.className}>JSON: {preview.status}</span>
-          <span>Nazwa: {preview.name}</span>
-          <span>Język: {preview.language}</span>
-          <span>Wpisów: {preview.entryCount}</span>
+        <InfoList>
+          <InfoRowContent label="JSON">
+            <span className={preview.className}>{preview.status}</span>
+          </InfoRowContent>
+          <InfoRowContent label="Nazwa">{preview.name}</InfoRowContent>
+          <InfoRowContent label="Język">{preview.language}</InfoRowContent>
+          <InfoRowContent label="Wpisów">{preview.entryCount}</InfoRowContent>
           {computeGoldenMetrics && typeof preview.entryCount === "number" ? (
-            <span>Wywołania sędziego: {JUDGE_SPECS_PER_ENTRY * preview.entryCount}</span>
+            <InfoRowContent label="Wywołania sędziego">
+              {JUDGE_SPECS_PER_ENTRY * preview.entryCount}
+            </InfoRowContent>
           ) : null}
-        </div>
+        </InfoList>
 
-        {/* <Collapsible label="Wklej JSON ręcznie"> */}
-        <div className="grid gap-2">
+        <Collapsible label="Wklej JSON ręcznie">
           <Textarea
             id="import-json"
+            aria-label="JSON zbioru"
             value={rawJson}
             onChange={(event) => setRawJson(event.target.value)}
             spellCheck={false}
             className="min-h-80"
           />
-          <div>
-            <Button
-              onClick={() => void importSet.run(rawJson)}
-              disabled={!preview.isValid || importSet.isPending}
-            >
-              {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
-            </Button>
-          </div>
-        </div>
-        {/* </Collapsible> */}
+        </Collapsible>
+
+        <Button
+          variant="primary"
+          onClick={() => void importSet.run(rawJson)}
+          disabled={!preview.isValid || importSet.isPending}
+          className="justify-self-start"
+        >
+          {importSet.isPending ? "Importowanie..." : "Importuj zbiór"}
+        </Button>
       </section>
     </PageShell>
   );

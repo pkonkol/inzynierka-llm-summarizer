@@ -35,7 +35,7 @@ export function Tooltip({ description, children }: TooltipProps) {
       <span
         id={describedBy}
         role="tooltip"
-        className={`pointer-events-none absolute top-full left-0 z-50 w-64 max-w-[calc(100vw-2rem)] translate-y-1 border border-hairline-strong bg-canvas p-3 font-normal text-caption text-body normal-case ${isOpen ? "block" : "hidden"}`}
+        className={`pointer-events-none absolute top-full left-0 z-50 w-64 max-w-[calc(100vw-2rem)] translate-y-1 border border-hairline-strong bg-canvas p-3 text-left font-normal text-caption text-body normal-case whitespace-normal ${isOpen ? "block" : "hidden"}`}
       >
         {description}
       </span>

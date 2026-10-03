@@ -153,7 +153,7 @@ Nazwy odpowiadają plikom w `src/components`.
 - **StatusLabel**: tabela w punkcie 4.
 - **SummaryDetailPanel**: Panel; wiersze InfoRow jako lista definicji (etykieta `mute` | wartość `ink`, `caption`); treść w `reading`; sekcje Metryki / Prompt / Surowe metadane jako Disclosure.
 - **JobActivityPanel / CompletedJobsList / JobsPage**: listy wierszy z linią `hairline`; adres podkreślony, pod nim status, model i czas w `caption`.
-- **MetricsSection**: kafle z wartością w `title` i podpisem „Fig N. rouge1”, rozdzielone linią. Bez dekoracyjnych wykresów.
+- **MetricsSection**: siatka par wartość (`strong` 15/500, `tabular-nums`) nad podpisem w `caption`, rozdzielonych odstępem. Wartość nigdy nie jest większa od nagłówka sekcji. Bez dekoracyjnych wykresów.
 - **Chip „publiczne”**: `surface-dark`, tekst `on-dark`, `caption`, 4px.
 
 ## 7. Nawigacja konsoli: ścieżki

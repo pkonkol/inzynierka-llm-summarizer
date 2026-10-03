@@ -2,11 +2,6 @@
 
 You are an expert Python/React developer assisting a Senior Platform Engineer on a B.Sc. Engineering Thesis: "A System for Summarization of Web Content Using Large Language Models."
 
-Project context — thesis goal, deliverable status, remaining work, stack — lives in
-[CONTEXT.md](CONTEXT.md). This file holds only the rules for code, docs and workflow.
-
-@CONTEXT.md
-
 Folder-specific rules live in `.claude/rules/` and load only when the matching files are
 opened: [backend](.claude/rules/backend.md), [frontend](.claude/rules/frontend.md),
 [infra](.claude/rules/infra.md).
@@ -168,12 +163,18 @@ auth_secret: SecretStr = SecretStr("")
 cross_metrics: dict[str, Any] = dict(await compute_cross_metrics(...))
 
 # `include_raw=True` makes the output a dict, but LangChain's signature widens it — hence the cast.
-return cast(Runnable[Any, dict[str, Any]], llm.with_structured_output(structure, include_raw=True))
+return cast(
+    Runnable[Any, dict[str, Any]],
+    llm.with_structured_output(structure, include_raw=True),
+)
 
 # GOOD — the annotations and the cast already say all of it
 auth_secret: SecretStr = SecretStr("")
 cross_metrics: dict[str, Any] = dict(await compute_cross_metrics(...))
-return cast(Runnable[Any, dict[str, Any]], llm.with_structured_output(structure, include_raw=True))
+return cast(
+    Runnable[Any, dict[str, Any]],
+    llm.with_structured_output(structure, include_raw=True),
+)
 ```
 
 The test: if the sentence would only occur to someone comparing this version against the previous one, it is not a comment.
@@ -189,3 +190,37 @@ Markers like `TODO:`, `FIXME:`, `WIP:`, `REMOVE:`, `TMP:` are a deliberate mecha
 
 - Never delete, reword, or "clean up" a marked note written by the author. Answer it if you can, and say so — the author decides whether it goes.
 - When you add one yourself, use English and say what would resolve it.
+
+# Project context
+
+B.Sc. Engineering Thesis: "A System for Summarization of Web Content Using Large Language Models".
+Rules for working in this repo are in [CLAUDE.md](CLAUDE.md).
+
+- **Author:** Piotr Konkol (part-time IT student, Gdańsk University of Technology).
+- **Promoter:** dr hab. inż. Julian Szymański.
+- **Thesis deadline:** December 2026.
+
+**Goal (official topic):** Automatic, coherent summarization of web resources for a user-specified topic, drawing both from the selected resource and from automatically discovered, semantically related materials.
+
+## Deliverables (status 2026-09-29)
+
+1. Summarization — done. Output contract `SummarySpec` (function, format, narrative stance) + `LengthSpec`, independent of the processing strategy (`direct` / `extract_then_synthesize`) in `backend/app/services/llm/` ([ADR 0003](docs/adr/0003-summary-spec-and-processing-strategy.md)).
+2. Query Expansion — **not started; the last implementation stage.** Scope: web-search context (Brave Search MCP, optionally arXiv/Consensus) pasted into the prompt, public page only, outside the evaluation.
+3. User interface — done. Public page `/` (no login, rate-limited, three summary kinds, density slider) and research console under `/admin` ([ADR 0004](docs/adr/0004-public-homepage-and-admin-split.md)).
+4. Evaluation — pipeline done: evaluation sets (CNN/DailyMail, Curation Corpus, GUMSum, PSC 1.0), runs, G-Eval and pairwise G-Eval, ROUGE/METEOR, deterministic form metrics (`backend/app/routers/evaluation_*.py`, `backend/app/services/metrics/`). G-Eval is not calibrated yet.
+
+## Remaining work, in order
+
+1. Thesis write-up (Overleaf) — current. Knowledge base and rules: `.scratch/praca_overleaf/`.
+2. G-Eval calibration.
+3. Larger evaluation runs comparing system summaries with dataset references.
+4. Query Expansion (scope above).
+
+On hold: restyling the frontend from Figma. Dropped: the cognitive-value / semantic-novelty research trajectory.
+
+## Stack
+
+- **Backend:** Python 3.14, FastAPI, Pydantic v2, MongoDB via `motor`, `trafilatura`, LangChain (Gemini, OpenRouter via `langchain-openai`, Ollama).
+- **Frontend:** React + TypeScript, Vite, Tailwind, Firebase Hosting.
+- **Infra:** Terraform, GCP Cloud Run, Secret Manager, GitHub Actions with WIF; Docker Compose locally.
+- **Evaluation:** deepeval, rouge-score, nltk, textstat.

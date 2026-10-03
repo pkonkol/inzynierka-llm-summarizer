@@ -10,12 +10,32 @@
 	"settings": {
 		"python.analysis.autoFormatStrings": true,
 		"python-envs.defaultEnvManager": "ms-python.python:venv",
+		"python-envs.workspaceSearchPaths": [
+			".venv",
+			"*/.venv",
+			"backend/venv",
+			"backend/.venv"
+		],
+		"python.envFile": "${workspaceFolder}/backend/.env",
+		"python.analysis.typeCheckingMode": "off",
 		"chat.tools.terminal.autoApprove": {
 			"git check-ignore": true,
 			"git init": true,
 			"git add": true,
 			"mongosh": true
 		},
+		"editor.formatOnSave": true,
+		"[python]": {
+			"editor.defaultFormatter": "charliermarsh.ruff",
+			"editor.codeActionsOnSave": {
+				"source.fixAll.ruff": "explicit",
+				"source.organizeImports.ruff": "explicit"
+			}
+		},
+		"[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+		"[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+		"[json]": { "editor.defaultFormatter": "biomejs.biome" },
+		"[jsonc]": { "editor.defaultFormatter": "biomejs.biome" },
 		"workbench.colorCustomizations": {
 			"activityBar.activeBackground": "#1a1a1a",
 			"activityBar.activeBorder": "#e7e7e7",
@@ -45,6 +65,16 @@
 			"titleBar.inactiveForeground": "#e7e7e799",
 			"statusBar.inactiveBackground": "#000000"
 		},
-		"peacock.color": "000000"
+		"peacock.color": "000000",
+		// settings.json
+		"workbench.list.defaultFindMode": "filter", // pisanie w Explorerze ukrywa niepasujące pliki zamiast je tylko podświetlać
+		"workbench.tree.enableStickyScroll": true, // nagłówek folderu zostaje u góry przy przewijaniu stu plików
+		"workbench.tree.indent": 16, // wyraźniejsze wcięcia
+		"workbench.tree.renderIndentGuides": "always",
+		"explorer.compactFolders": false, // bez sklejania a/b/c w jeden wiersz
+		"explorer.fileNesting.enabled": true, // powiązane pliki zwinięte pod rodzicem
+		"explorer.fileNesting.patterns": {
+			"*.tsx": "${capture}.test.tsx, ${capture}.module.css"
+		}
 	}
 }

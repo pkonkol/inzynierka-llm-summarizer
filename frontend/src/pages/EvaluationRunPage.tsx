@@ -112,7 +112,7 @@ function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }
   if (goldenItems.length === 0 && aiItems.length === 0) return null;
 
   return (
-    <div className="grid gap-2 border-t border-hairline pt-4">
+    <div className="grid gap-2">
       <SectionHeading>Metryki deepeval</SectionHeading>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -151,7 +151,7 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
         <InfoRow label="meteor" value={meteor} />
       </InfoList>
       {pairwiseItems.length > 0 ? (
-        <div className="grid gap-2 border-t border-hairline pt-4">
+        <div className="grid gap-2">
           <SectionHeading>Metryki deepeval porównawcze</SectionHeading>
           <DeepevalItems items={pairwiseItems} />
         </div>
@@ -166,7 +166,7 @@ function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
       <div className="grid gap-2">
         <CrossMetricsSection entry={entry} />
       </div>
-      <div className="grid gap-4 border-t border-hairline pt-4">
+      <div className="grid gap-4">
         <StatisticalMetricsColumns entry={entry} />
         <DeepevalMetricsColumns entry={entry} />
       </div>
@@ -219,7 +219,7 @@ function RunSummary({
         ) : null}
       </InfoList>
 
-      <div className="grid gap-2 border-t border-hairline pt-4">
+      <div className="grid gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <SectionHeading>G-Eval</SectionHeading>
           {deepevalButton}

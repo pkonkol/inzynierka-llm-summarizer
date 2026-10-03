@@ -113,7 +113,7 @@ function EntryCard({
                 <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
                 <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
                 {entry.golden_metrics.deepeval.length > 0 ? (
-                  <div className="grid gap-2 border-t border-hairline pt-4">
+                  <div className="grid gap-2">
                     <SectionHeading>Deepeval</SectionHeading>
                     <DeepevalItems items={entry.golden_metrics.deepeval} />
                   </div>

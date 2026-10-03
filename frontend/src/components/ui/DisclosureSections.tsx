@@ -67,10 +67,7 @@ export function DisclosureSections({
 
   return (
     <>
-      <div
-        ref={toggleRowRef}
-        className="flex flex-wrap items-center gap-x-6 border-b border-hairline"
-      >
+      <div ref={toggleRowRef} className="flex flex-wrap items-center gap-x-6">
         {sections.map((section) => (
           <DisclosureButton
             key={section.key}
@@ -83,7 +80,7 @@ export function DisclosureSections({
       </div>
 
       {open ? (
-        <div className="grid min-w-0 gap-3 border-b border-hairline pb-3">
+        <div className="grid min-w-0 gap-3 pb-3">
           {open.content}
           <button
             type="button"

@@ -71,24 +71,24 @@ export function PublicHomePage() {
   };
 
   return (
-    <div className="grid">
-      <header className="border-b border-hairline">
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <header className="shrink-0 border-b border-hairline">
         <div className="mx-auto flex h-nav max-w-frame items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <span className="font-bold">Podsumowania</span>
           <LinkButton href={LOGIN_PATH}>Zaloguj</LinkButton>
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-frame gap-6 px-4 pt-12 pb-8 sm:px-6 sm:pt-16 lg:px-8">
-        <div className="grid gap-1">
+      <main className="mx-auto flex min-h-0 w-full max-w-frame flex-1 flex-col gap-4 px-4 pt-6 pb-4 sm:gap-6 sm:px-6 sm:pt-10 sm:pb-6 lg:px-8">
+        <div className="grid shrink-0 gap-1">
           <h1 className="text-display text-balance">Podsumuj dowolny artykuł</h1>
           <p className="text-mute">Wklej adres albo treść. Bez konta, bez instalacji.</p>
         </div>
 
-        {/* The one viewport-relative height on the page: both columns fill the screen below the title. */}
+        {/* The page is exactly one screen tall. Stacked, the composer takes its content height and the result the rest. */}
         <form
           onSubmit={handleSubmit}
-          className="grid gap-6 lg:h-[calc(100vh-15rem)] lg:min-h-144 lg:grid-cols-2"
+          className="grid min-h-0 flex-1 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] gap-4 sm:gap-6 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]"
         >
           <Composer
             source={
@@ -117,7 +117,7 @@ export function PublicHomePage() {
               />
             )}
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hairline pt-3">
+            <div className="sticky bottom-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hairline bg-canvas pt-3 pb-4">
               <div className="flex min-w-56 flex-1 items-center gap-3">
                 <label htmlFor="density" className="whitespace-nowrap">
                   Długość: <span className="font-medium">{densityLabel(density)}</span>
@@ -168,7 +168,9 @@ export function PublicHomePage() {
         </form>
 
         {validationError || loadError ? (
-          <Alert tone="danger">{validationError ?? loadError}</Alert>
+          <Alert tone="danger" className="shrink-0">
+            {validationError ?? loadError}
+          </Alert>
         ) : null}
       </main>
     </div>

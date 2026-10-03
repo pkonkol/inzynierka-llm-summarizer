@@ -10,7 +10,7 @@ export type DeepevalDisplayItem = {
 
 export function DeepevalItems({ items }: { items: DeepevalDisplayItem[] }) {
   return (
-    <div className="grid">
+    <div className="grid gap-4">
       {items.map((item) => {
         const passedText = item.passed != null ? (item.passed ? "passed" : "failed") : null;
         const statusText = item.statusLabel ?? passedText;
@@ -18,7 +18,7 @@ export function DeepevalItems({ items }: { items: DeepevalDisplayItem[] }) {
         const bits = [statusText, scoreText].filter(Boolean);
 
         return (
-          <div key={item.name} className="grid gap-1 border-b border-hairline py-2">
+          <div key={item.name} className="grid gap-1">
             <div className="flex flex-wrap items-baseline gap-x-2 text-caption">
               <span className="text-mute">{item.name}:</span>
               {bits.length > 0 ? <span className="tabular-nums">{bits.join(" · ")}</span> : null}

@@ -91,7 +91,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
 // it exists, so rendering it together with its first message would announce nothing.
 export function PublicSummaryResult({ state }: { state: PublicSummaryState }) {
   return (
-    <section className="flex min-h-80 flex-col border border-hairline lg:min-h-0">
+    <section className="flex min-h-0 flex-col border border-hairline">
       <div className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-hairline px-4">
         <h3>Podsumowanie</h3>
         <ResultState state={state} />

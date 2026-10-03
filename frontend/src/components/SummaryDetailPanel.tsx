@@ -59,7 +59,7 @@ function JobMetricsPanel({
 
   const deepevalBlock =
     deepevalMetrics.length > 0 ? (
-      <div className="grid gap-3 border-t border-hairline pt-4">
+      <div className="grid gap-3">
         <SectionHeading>Deepeval</SectionHeading>
         <DeepevalItems items={deepevalMetrics} />
       </div>
@@ -208,7 +208,7 @@ function JobEntry({ job, defaultOpen = false }: { job: JobStatusResponse; defaul
   );
 
   return (
-    <div className="min-w-0 border-b border-hairline">
+    <div className="min-w-0">
       {header}
       {details}
     </div>
@@ -339,15 +339,17 @@ export function SummaryDetailPanel({
           </a>
         )}
 
-        <section className="grid min-w-0 content-start border-t border-hairline pt-4">
+        <section className="grid min-w-0 content-start gap-2">
           <h4>{sectionTitle}</h4>
 
           {jobsFilteredSorted.length === 0 ? (
             <p className="text-mute">Brak wyników.</p>
           ) : (
-            jobsFilteredSorted.map((job, index) => (
-              <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
-            ))
+            <div className="grid divide-y divide-hairline">
+              {jobsFilteredSorted.map((job, index) => (
+                <JobEntry key={job.job_id} job={job} defaultOpen={index === 0} />
+              ))}
+            </div>
           )}
         </section>
       </article>

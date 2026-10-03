@@ -73,7 +73,7 @@ export function SourceField({
   };
 
   return (
-    <div className={cn("grid gap-2", inComposer && "min-h-0 flex-1 grid-rows-[auto_1fr] gap-0")}>
+    <div className={cn("grid gap-2", inComposer && "flex-1 grid-rows-[auto_1fr] gap-0")}>
       <div className={cn("flex items-baseline justify-between gap-2", inComposer && "px-4 pt-3")}>
         <FieldLabel htmlFor="source-content">Adres artykułu albo jego treść</FieldLabel>
         {isPastedText ? (
@@ -86,7 +86,7 @@ export function SourceField({
         // The composer's focus-within border and background are this field's focus indicator.
         <textarea
           {...textareaProps}
-          className="min-h-56 w-full resize-none bg-transparent px-4 py-2 font-reading text-reading text-ink outline-none disabled:cursor-not-allowed disabled:text-ash"
+          className="min-h-24 w-full resize-none bg-transparent px-4 py-2 font-reading text-reading text-ink outline-none disabled:cursor-not-allowed disabled:text-ash"
         />
       ) : (
         <Textarea {...textareaProps} rows={8} />

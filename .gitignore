@@ -10,6 +10,7 @@ AGENTS.md
 terraform.tfstate
 terraform.tfstate.backup
 .firebase/
+extension/dist/
 .firebaserc
 .agents/
 NOTES.md

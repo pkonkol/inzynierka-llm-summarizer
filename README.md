@@ -5,6 +5,7 @@ see [CONTEXT.md](CONTEXT.md)). Every routine task is a `just` recipe; `just` lis
 
 - [backend/](backend/README.md) — FastAPI API: scraping, summarization jobs, evaluation runs.
 - [frontend/](frontend/README.md) — React SPA: public page `/` and research console `/admin`.
+- [extension/](extension/README.md) — Chrome extension that sends the current tab to the public page.
 - `infra/` — Docker Compose for local MongoDB, Terraform for GCP, model catalogues.
 
 ## First run

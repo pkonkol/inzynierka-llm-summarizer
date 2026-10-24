@@ -181,6 +181,14 @@ fix-frontend:
 lint-extension:
     npx biome check ../extension/*.js ../extension/*.json
 
+# Extension: the zip installed with "Load unpacked"; the README stays out of it
+[group('extension')]
+[working-directory('extension')]
+extension-zip:
+    rm -rf dist
+    mkdir dist
+    zip -qr dist/podsumowania-extension.zip . -x 'dist/*' 'README.md'
+
 # Kept alongside trivy, not instead of it: trivy reported 0 on this same lockfile while
 # npm audit found 5 highs in vite/postcss. Different advisory sources, different blind spots.
 

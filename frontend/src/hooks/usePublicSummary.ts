@@ -58,7 +58,13 @@ export function usePublicSummary() {
     }
   }, [jobId]);
 
+  // Shows the result of a job created elsewhere (the browser extension).
+  const followJob = useCallback((handedOverJobId: string) => {
+    setState({ phase: "working" });
+    setJobId(handedOverJobId);
+  }, []);
+
   useListPolling(reloadJob, true, jobId !== null);
 
-  return { state, submit };
+  return { state, submit, followJob };
 }

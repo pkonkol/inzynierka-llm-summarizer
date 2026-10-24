@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getSummaryPresets, getSupportedLanguages } from "../api/client";
 import { Composer } from "../components/public/Composer";
@@ -12,6 +12,7 @@ import { RangeInput } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
+import { useHandoffJob } from "../hooks/useHandoffJob";
 import { usePublicSummary } from "../hooks/usePublicSummary";
 import type { SummarySpec } from "../types/api.generated";
 import { MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
@@ -34,7 +35,8 @@ export function PublicHomePage() {
     "languages",
     "Nie udało się pobrać języków",
   );
-  const { state, submit } = usePublicSummary();
+  const { state, submit, followJob } = usePublicSummary();
+  const handoff = useHandoffJob();
 
   const [content, setContent] = useState("");
   const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(null);
@@ -42,11 +44,31 @@ export function PublicHomePage() {
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  const isHandoffForUnknownPreset =
+    handoff.phase === "ready" &&
+    presets.data !== null &&
+    !(handoff.handoff.presetKey in presets.data);
+
+  useEffect(() => {
+    if (handoff.phase !== "ready") return;
+    const handedOver = handoff.handoff;
+    setContent(handedOver.content);
+    setSelectedPresetKey(handedOver.presetKey);
+    setDensity(handedOver.density);
+    setLanguage(handedOver.language);
+    followJob(handedOver.jobId);
+  }, [handoff, followJob]);
+
   const isWorking = state.phase === "working";
   const presetEntries = Object.entries(presets.data ?? {});
   const presetKey = selectedPresetKey ?? presetEntries[0]?.[0] ?? null;
-  const loadError = presets.errorMessage ?? languages.errorMessage;
-  const isReady = presetKey !== null && languages.data !== null;
+  const handoffError = isHandoffForUnknownPreset
+    ? "Rozszerzenie wskazało rodzaj podsumowania, którego strona nie zna. Zaktualizuj rozszerzenie."
+    : handoff.phase === "error"
+      ? handoff.message
+      : null;
+  const loadError = presets.errorMessage ?? languages.errorMessage ?? handoffError;
+  const isReady = presetKey !== null && languages.data !== null && !isHandoffForUnknownPreset;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

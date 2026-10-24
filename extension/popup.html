@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Podsumowania</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <form id="summary-form">
+      <fieldset>
+        <legend>Źródło</legend>
+        <label><input type="radio" name="source" value="url" checked /> Adres strony</label>
+        <label><input type="radio" name="source" value="pageText" disabled /> Treść strony</label>
+      </fieldset>
+
+      <label for="preset">Rodzaj</label>
+      <select id="preset" name="preset"></select>
+
+      <label for="density">Długość: <span id="density-label"></span></label>
+      <input id="density" name="density" type="range" min="0" max="1" step="0.05" />
+
+      <label for="language">Język</label>
+      <select id="language" name="language"></select>
+
+      <button id="submit" type="submit" disabled>Podsumuj</button>
+      <p id="error" role="alert" hidden></p>
+    </form>
+  </body>
+</html>

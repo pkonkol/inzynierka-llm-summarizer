@@ -42,7 +42,7 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend typecheck-backend lint-frontend test-backend check-openapi check-generated-types
+lint: lint-backend typecheck-backend lint-frontend lint-extension test-backend check-openapi check-generated-types
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
@@ -174,6 +174,12 @@ typecheck-frontend:
 [working-directory('frontend')]
 fix-frontend:
     npm run lint:fix
+
+# Extension: biome with the frontend's config; vendor/ is third-party code and stays unlinted
+[group('extension')]
+[working-directory('frontend')]
+lint-extension:
+    npx biome check ../extension/*.js ../extension/*.json
 
 # Kept alongside trivy, not instead of it: trivy reported 0 on this same lockfile while
 # npm audit found 5 highs in vite/postcss. Different advisory sources, different blind spots.

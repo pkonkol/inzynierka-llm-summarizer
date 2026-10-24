@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Podsumowania",
+  "version": "0.1.0",
+  "description": "Podsumuj bieżącą stronę jednym kliknięciem.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Podsumuj tę stronę"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://llm-summarizer-backend-644995789676.europe-central2.run.app/",
+    "http://127.0.0.1:8000/"
+  ]
+}

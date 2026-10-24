@@ -1,6 +1,9 @@
 import { createPublicSummaryJob, fetchSummaryPresets, fetchSupportedLanguages } from "./api.js";
 import { ACTIVE_ENVIRONMENT } from "./config.js";
+import { readArticleText } from "./page-text.js";
 
+// Mirrors public_max_input_chars in backend/app/core/config.py.
+const MAX_PUBLIC_INPUT_CHARS = 30_000;
 const SETTINGS_KEY = "lastSettings";
 const DEFAULT_SETTINGS = { source: "url", presetKey: null, density: 0.5, language: "auto" };
 
@@ -91,6 +94,18 @@ async function openResultTab(jobId, presetKey) {
   await chrome.tabs.create({ url: resultUrl.href });
 }
 
+async function readSource(tab, source) {
+  if (source === "url") return { url: tab.url };
+
+  const articleText = await readArticleText(tab.id);
+  if (articleText.length > MAX_PUBLIC_INPUT_CHARS) {
+    throw new Error(
+      `artykuł ma ${articleText.length.toLocaleString("pl-PL")} znaków, limit to ${MAX_PUBLIC_INPUT_CHARS.toLocaleString("pl-PL")}`,
+    );
+  }
+  return { input_text: articleText };
+}
+
 function showError(message) {
   errorText.textContent = message;
   errorText.hidden = false;
@@ -107,7 +122,7 @@ async function submit(event) {
     await saveSettings(settings);
     const tab = await activeTab();
     const jobId = await createPublicSummaryJob({
-      url: tab.url,
+      ...(await readSource(tab, settings.source)),
       language: settings.language,
       summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
     });

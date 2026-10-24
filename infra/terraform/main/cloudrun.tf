@@ -5,11 +5,12 @@ resource "google_service_account" "cloudrun_sa" {
 
 locals {
   env_vars = {
-    MONGODB_DB_NAME         = "test-inzynierka-db"
-    MONGODB_JOBS_COLLECTION = "jobs"
-    AUTH_ENABLED            = "true"
-    LOG_FORMAT              = "json"
-    DEEPEVAL_JUDGE_MODEL    = jsonencode({ model_provider = "gemini", model_name = "gemini-flash-latest" })
+    MONGODB_DB_NAME            = "test-inzynierka-db"
+    MONGODB_JOBS_COLLECTION    = "jobs"
+    AUTH_ENABLED               = "true"
+    LOG_FORMAT                 = "json"
+    PUBLIC_RATE_LIMIT_REQUESTS = "5" # Raised by hand for a supervisor's test period (extension/README.md); the next deploy restores it.
+    DEEPEVAL_JUDGE_MODEL       = jsonencode({ model_provider = "gemini", model_name = "gemini-flash-latest" })
     CORS_ALLOWED_ORIGINS = jsonencode([
       "https://${var.project_id}.web.app",
       "https://${var.project_id}.firebaseapp.com",

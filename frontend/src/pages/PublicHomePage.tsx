@@ -43,11 +43,7 @@ export function PublicHomePage() {
   const [density, setDensity] = useState(DEFAULT_DENSITY);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [validationError, setValidationError] = useState<string | null>(null);
-
-  const isHandoffForUnknownPreset =
-    handoff.phase === "ready" &&
-    presets.data !== null &&
-    !(handoff.handoff.presetKey in presets.data);
+  const [isHandoffErrorDismissed, setIsHandoffErrorDismissed] = useState(false);
 
   useEffect(() => {
     if (handoff.phase !== "ready") return;
@@ -62,17 +58,25 @@ export function PublicHomePage() {
   const isWorking = state.phase === "working";
   const presetEntries = Object.entries(presets.data ?? {});
   const presetKey = selectedPresetKey ?? presetEntries[0]?.[0] ?? null;
-  const handoffError = isHandoffForUnknownPreset
-    ? "Rozszerzenie wskazało rodzaj podsumowania, którego strona nie zna. Zaktualizuj rozszerzenie."
-    : handoff.phase === "error"
+  // Only a key handed over by an outdated extension can be unknown; picking a tab replaces it.
+  const isPresetUnknown =
+    presetKey !== null && presets.data !== null && !Object.hasOwn(presets.data, presetKey);
+  const handoffError = isPresetUnknown
+    ? "Rozszerzenie wskazało rodzaj podsumowania, którego strona nie zna. Wybierz rodzaj albo zaktualizuj rozszerzenie."
+    : handoff.phase === "error" && !isHandoffErrorDismissed
       ? handoff.message
       : null;
   const loadError = presets.errorMessage ?? languages.errorMessage ?? handoffError;
-  const isReady = presetKey !== null && languages.data !== null && !isHandoffForUnknownPreset;
+  const isReady =
+    presetKey !== null &&
+    languages.data !== null &&
+    !isPresetUnknown &&
+    handoff.phase !== "loading";
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (presetKey === null || presets.data === null) return;
+    setIsHandoffErrorDismissed(true);
 
     const { payload: source, error } = buildSourcePayload(content);
     setValidationError(error);

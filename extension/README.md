@@ -12,11 +12,13 @@ public page `/`. Recipes run from the repository root.
 
 ## Develop
 
-1. `just db-up && just dev`, and in `config.js` set `ACTIVE_ENVIRONMENT = ENVIRONMENTS.local`.
-2. `chrome://extensions` → **Developer mode** → **Load unpacked** → this `extension/` directory.
+1. `just dev`, and in `config.js` set `ACTIVE_ENVIRONMENT = ENVIRONMENTS.local`.
+2. `chrome://extensions` → **Developer mode** → **Load unpacked** → this `extension/` directory
+   (Chrome loads a directory; a zip has to be unpacked first).
 3. After an edit, press the reload icon on the extension's card. Popup DevTools: right-click
    the popup → **Inspect**.
-4. Set `config.js` back to `ENVIRONMENTS.prod` before committing.
+4. Set `config.js` back to `ENVIRONMENTS.prod` before committing; `just extension-zip` refuses
+   anything else.
 
 `just lint-extension` runs Biome on everything except `vendor/`.
 

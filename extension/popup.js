@@ -47,7 +47,7 @@ async function restoreSettings() {
   const settings = { ...DEFAULT_SETTINGS, ...savedSettings };
   form.elements.source.value = settings.source;
   // A preset or language removed from the API since the last visit keeps the first option selected.
-  if (settings.presetKey in presets) presetSelect.value = settings.presetKey;
+  if (Object.hasOwn(presets, settings.presetKey)) presetSelect.value = settings.presetKey;
   if ([...languageSelect.options].some((option) => option.value === settings.language)) {
     languageSelect.value = settings.language;
   }
@@ -98,9 +98,10 @@ async function readSource(tab, source) {
   if (source === "url") return { url: tab.url };
 
   const articleText = await readArticleText(tab.id);
-  if (articleText.length > MAX_PUBLIC_INPUT_CHARS) {
+  const characterCount = [...articleText].length; // Code points, as the backend counts them; emoji are two UTF-16 units.
+  if (characterCount > MAX_PUBLIC_INPUT_CHARS) {
     throw new Error(
-      `artykuł ma ${articleText.length.toLocaleString("pl-PL")} znaków, limit to ${MAX_PUBLIC_INPUT_CHARS.toLocaleString("pl-PL")}`,
+      `artykuł ma ${characterCount.toLocaleString("pl-PL")} znaków, limit to ${MAX_PUBLIC_INPUT_CHARS.toLocaleString("pl-PL")}`,
     );
   }
   return { input_text: articleText };

@@ -185,6 +185,7 @@ lint-extension:
 [group('extension')]
 [working-directory('extension')]
 extension-zip:
+    grep -q 'ACTIVE_ENVIRONMENT = ENVIRONMENTS.prod;' config.js || (echo "config.js does not point at prod — a released extension would call the local API" && exit 1)
     rm -rf dist
     mkdir dist
     zip -qr dist/podsumowania-extension.zip . -x 'dist/*' 'README.md'

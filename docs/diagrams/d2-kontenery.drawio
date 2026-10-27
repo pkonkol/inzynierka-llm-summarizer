@@ -1,0 +1,66 @@
+<mxGraphModel adaptiveColors="auto" grid="1" gridSize="10" page="1" pageWidth="827" pageHeight="1169">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="title" value="&lt;b&gt;D2. Kontenery (C4, poziom 2)&lt;/b&gt;&lt;br&gt;System sumaryzacji treści internetowych" style="text;html=1;align=left;verticalAlign=top;fontSize=14;" vertex="1" parent="1">
+      <mxGeometry x="40" y="10" width="420" height="50" as="geometry"/>
+    </mxCell>
+    <mxCell id="guest" value="&lt;b&gt;Gość&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;anonimowy użytkownik&lt;/font&gt;" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;" vertex="1" parent="1">
+      <mxGeometry x="90" y="70" width="140" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="researcher" value="&lt;b&gt;Badacz&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;zalogowany&lt;/font&gt;" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;" vertex="1" parent="1">
+      <mxGeometry x="290" y="70" width="140" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="boundary" value="System sumaryzacji [granica systemu]" style="swimlane;startSize=26;html=1;fontSize=12;fontStyle=1;dashed=1;fillColor=none;strokeColor=#666666;fontColor=#333333;swimlaneLine=0;align=left;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="230" width="440" height="460" as="geometry"/>
+    </mxCell>
+    <mxCell id="spa" value="&lt;b&gt;SPA&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[kontener: React, TypeScript, Vite]&lt;br&gt;strona publiczna / i konsola /admin; Firebase Hosting&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#3C7FC0;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="boundary">
+      <mxGeometry x="90" y="50" width="260" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="api" value="&lt;b&gt;API&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[kontener: Python, FastAPI]&lt;br&gt;zadania w tle ze wznowieniem po restarcie; Cloud Run&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#3C7FC0;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="boundary">
+      <mxGeometry x="90" y="200" width="260" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="db" value="&lt;b&gt;Baza danych&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[Firestore, zgodność z MongoDB]&lt;br&gt;jobs, evaluation_sets,&lt;br&gt;evaluation_runs, rate_limits&lt;/font&gt;" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=12;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#256428;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="boundary">
+      <mxGeometry x="110" y="340" width="220" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="web" value="&lt;b&gt;Strony WWW&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="560" y="360" width="180" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="llm" value="&lt;b&gt;Dostawcy LLM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;Gemini API, OpenRouter, Ollama&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="560" y="490" width="180" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-guest" value="korzysta ze strony&lt;br&gt;publicznej [HTTPS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;" edge="1" parent="1" source="guest" target="spa">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-researcher" value="korzysta z konsoli&lt;br&gt;/admin [HTTPS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;" edge="1" parent="1" source="researcher" target="spa">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-spa-api" value="wywołuje [JSON/HTTPS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;" edge="1" parent="boundary" source="spa" target="api">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-api-db" value="czyta i zapisuje [motor, TLS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;" edge="1" parent="boundary" source="api" target="db">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-web" value="pobiera treść&lt;br&gt;[HTTPS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;exitX=1;exitY=0.3;exitDx=0;exitDy=0;" edge="1" parent="1" source="api" target="web">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e-llm" value="generuje i ocenia&lt;br&gt;[HTTPS]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;fontSize=11;labelBackgroundColor=default;exitX=1;exitY=0.7;exitDx=0;exitDy=0;" edge="1" parent="1" source="api" target="llm">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend" value="Legenda" style="swimlane;startSize=22;html=1;fontSize=11;fillColor=none;strokeColor=#B3B3B3;" vertex="1" parent="1">
+      <mxGeometry x="560" y="620" width="180" height="160" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend-person" value="osoba" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=none;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="legend">
+      <mxGeometry x="15" y="32" width="150" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend-container" value="kontener własny" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=none;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="legend">
+      <mxGeometry x="15" y="62" width="150" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend-db" value="baza danych" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=none;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="legend">
+      <mxGeometry x="15" y="92" width="150" height="24" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend-external" value="system zewnętrzny" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=none;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="legend">
+      <mxGeometry x="15" y="122" width="150" height="24" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

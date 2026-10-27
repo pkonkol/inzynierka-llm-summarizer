@@ -3,7 +3,6 @@ export function navigateTo(path: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-// Replaces the current history entry, so Back does not return to a page that only redirects.
 export function redirectTo(path: string) {
   window.history.replaceState({}, "", path);
   window.dispatchEvent(new PopStateEvent("popstate"));

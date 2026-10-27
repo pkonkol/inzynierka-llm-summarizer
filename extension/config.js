@@ -9,4 +9,4 @@ const ENVIRONMENTS = {
   },
 };
 
-export const ACTIVE_ENVIRONMENT = ENVIRONMENTS.prod;
+export const ACTIVE_ENVIRONMENT = ENVIRONMENTS.local;

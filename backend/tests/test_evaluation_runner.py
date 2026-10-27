@@ -96,7 +96,7 @@ async def test_each_length_policy_reaches_the_model_as_a_resolved_length(
         _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}
     )
 
-    passed_length = mocked_entry_pipeline["generate_summary"].call_args.kwargs["length"]
+    passed_length = mocked_entry_pipeline["generate_summary"].call_args.args[0].length
     assert (passed_length.target_words, passed_length.target_sentences) == expected
     assert result["resolved_length"] == {
         "target_words": expected[0],

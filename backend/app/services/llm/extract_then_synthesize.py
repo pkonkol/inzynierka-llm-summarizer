@@ -7,8 +7,7 @@ takeaways as input, so the second call synthesizes from already-distilled points
 
 import structlog
 
-from ...schemas.summary import LlmSummaryResult
-from ...schemas.summary_spec import ResolvedLength, SummarySpec
+from ...schemas.summary import LlmSummaryRequest, LlmSummaryResult
 from ._base import (
     GENERIC_DETAIL_GUIDANCE,
     TAKEAWAY_DETAIL_GUIDANCE,
@@ -26,13 +25,11 @@ from ._prompts import EXTRACT_FROM_CONTENT, SYNTHESIZE_FROM_TAKEAWAYS
 log = structlog.get_logger(__name__)
 
 
-async def _extract_takeaways(
-    text: str, language: str, model_name: str, model_provider: str
-) -> StructuredOutput:
-    llm = build_structured_llm(BulletsResponse, model_provider, model_name)
+async def _extract_takeaways(request: LlmSummaryRequest, text: str) -> StructuredOutput:
+    llm = build_structured_llm(BulletsResponse, request.model_provider, request.model_name)
     raw = await (EXTRACT_FROM_CONTENT | llm).ainvoke(
         {
-            "language_instruction": build_language_instruction(language),
+            "language_instruction": build_language_instruction(request.language),
             "text": text,
             "what_to_generate": "key_takeaways",
             "detail_guidance": "\n".join([GENERIC_DETAIL_GUIDANCE, TAKEAWAY_DETAIL_GUIDANCE]),
@@ -42,18 +39,13 @@ async def _extract_takeaways(
 
 
 async def _synthesize(
-    key_takeaways: list[str],
-    spec: SummarySpec,
-    length: ResolvedLength,
-    language: str,
-    model_name: str,
-    model_provider: str,
+    request: LlmSummaryRequest, key_takeaways: list[str]
 ) -> tuple[*StructuredOutput, dict[str, str]]:
-    llm = build_structured_llm(SummaryOutput, model_provider, model_name)
+    llm = build_structured_llm(SummaryOutput, request.model_provider, request.model_name)
     invoke_params = {
-        "language_instruction": build_language_instruction(language),
+        "language_instruction": build_language_instruction(request.language),
         "takeaways": "\n".join(f"- {item}" for item in key_takeaways),
-        "detail_guidance": build_detail_guidance(spec, length),
+        "detail_guidance": build_detail_guidance(request.spec, request.length),
     }
     raw = await (SYNTHESIZE_FROM_TAKEAWAYS | llm).ainvoke(invoke_params)
     parsed, raw_str, usage, raw_metadata = parse_structured_output(
@@ -63,26 +55,18 @@ async def _synthesize(
     return parsed, raw_str, usage, raw_metadata, prompt_params
 
 
-async def run(
-    input: dict,
-    source_url: str,
-    model_name: str,
-    model_provider: str,
-    language: str,
-    spec: SummarySpec,
-    length: ResolvedLength,
-) -> LlmSummaryResult:
-    text = input["text"].strip()
+async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
+    text = request.text.strip()
     takeaways, takeaways_raw, takeaways_usage, takeaways_metadata = await _extract_takeaways(
-        text, language, model_name, model_provider
+        request, text
     )
     parsed, raw_str, usage, raw_metadata, prompt_params = await _synthesize(
-        takeaways.key_takeaways, spec, length, language, model_name, model_provider
+        request, takeaways.key_takeaways
     )
 
     return LlmSummaryResult(
         summary=parsed.summary,
-        source_url=source_url,
+        source_url=request.source_url,
         usage=takeaways_usage + usage,
         raw_metadata={"takeaways": takeaways_metadata, "synthesis": raw_metadata},
         raw_output=f"--- takeaways ---\n{takeaways_raw}\n--- synthesis ---\n{raw_str}",

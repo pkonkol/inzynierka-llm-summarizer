@@ -2,8 +2,7 @@
 
 import structlog
 
-from ...schemas.summary import LlmSummaryResult
-from ...schemas.summary_spec import ResolvedLength, SummarySpec
+from ...schemas.summary import LlmSummaryRequest, LlmSummaryResult
 from ._base import (
     SummaryOutput,
     build_detail_guidance,
@@ -17,23 +16,15 @@ from ._prompts import EXTRACT_FROM_CONTENT
 log = structlog.get_logger(__name__)
 
 
-async def run(
-    input: dict,
-    source_url: str,
-    model_name: str,
-    model_provider: str,
-    language: str,
-    spec: SummarySpec,
-    length: ResolvedLength,
-) -> LlmSummaryResult:
-    llm = build_structured_llm(SummaryOutput, model_provider, model_name)
+async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
+    llm = build_structured_llm(SummaryOutput, request.model_provider, request.model_name)
     chain = EXTRACT_FROM_CONTENT | llm
 
-    text = input["text"].strip()
+    text = request.text.strip()
     invoke_params = {
-        "language_instruction": build_language_instruction(language),
+        "language_instruction": build_language_instruction(request.language),
         "what_to_generate": "summary",
-        "detail_guidance": build_detail_guidance(spec, length),
+        "detail_guidance": build_detail_guidance(request.spec, request.length),
         "text": text,
     }
 
@@ -42,7 +33,7 @@ async def run(
 
     return LlmSummaryResult(
         summary=parsed.summary,
-        source_url=source_url,
+        source_url=request.source_url,
         usage=usage,
         raw_metadata=raw_metadata,
         raw_output=raw_str,

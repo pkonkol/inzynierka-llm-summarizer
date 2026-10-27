@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from .base import ApiModel
+from .summary_spec import ResolvedLength, SummarySpec
 
 
 class SummaryResponse(ApiModel):
@@ -33,6 +34,18 @@ class UsageMetadata(ApiModel):
             thinking_tokens=self.thinking_tokens + other.thinking_tokens,
             total_tokens=self.total_tokens + other.total_tokens,
         )
+
+
+class LlmSummaryRequest(BaseModel):
+    """Everything a processing strategy needs to produce one summary."""
+
+    text: str
+    source_url: str
+    model_provider: str
+    model_name: str
+    language: str
+    spec: SummarySpec
+    length: ResolvedLength
 
 
 class LlmSummaryResult(BaseModel):

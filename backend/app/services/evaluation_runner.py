@@ -13,6 +13,7 @@ from ..core.mongo import (
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
+from ..schemas.summary import LlmSummaryRequest
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.metrics import (
     compute_cross_metrics,
@@ -65,13 +66,15 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
             golden_summary=run_entry["golden_summary"],
         )
         summary = await generate_summary(
-            input={"text": source_entry["input_text"]},
-            source_url=source_entry["url"],
-            model_name=run_doc["model_name"],
-            model_provider=run_doc["model_provider"],
-            language=run_doc["language"],
-            spec=spec,
-            length=length,
+            LlmSummaryRequest(
+                text=source_entry["input_text"],
+                source_url=source_entry["url"],
+                model_name=run_doc["model_name"],
+                model_provider=run_doc["model_provider"],
+                language=run_doc["language"],
+                spec=spec,
+                length=length,
+            ),
             strategy=run_doc["processing_strategy"],
         )
         ai_metrics, cross_metrics = await asyncio.gather(

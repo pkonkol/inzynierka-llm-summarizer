@@ -12,7 +12,7 @@ from ..core.config import settings
 from ..core.mongo import get_jobs_collection
 from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.job_db import JobErrorCode
-from ..schemas.summary import SummaryResponse
+from ..schemas.summary import LlmSummaryRequest, SummaryResponse
 from ..schemas.summary_spec import SummarySpec, resolve_target_length
 from ..services.job_metrics import (
     store_deepeval_metrics_for_job,
@@ -94,13 +94,15 @@ async def run_summarization_job(job_id: str) -> None:
         )
         summary, title = await asyncio.gather(
             generate_summary(
-                data,
-                source_url,
-                model_name,
-                model_provider,
-                job["language"],
-                spec,
-                length,
+                LlmSummaryRequest(
+                    text=data["text"],
+                    source_url=source_url,
+                    model_name=model_name,
+                    model_provider=model_provider,
+                    language=job["language"],
+                    spec=spec,
+                    length=length,
+                ),
                 strategy=processing_strategy,
             ),
             generate_title(data["text"], job["language"]),

@@ -2,23 +2,21 @@ from datetime import UTC, datetime, timedelta
 
 import structlog
 from bson import ObjectId
-from motor.motor_asyncio import (
-    AsyncIOMotorClient,
-    AsyncIOMotorCollection,
-    AsyncIOMotorDatabase,
-)
+from pymongo import AsyncMongoClient
+from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.asynchronous.database import AsyncDatabase
 
 from .config import RATE_LIMIT_RETENTION_SECONDS, settings
 
 log = structlog.get_logger(__name__)
 
-_mongo_client: AsyncIOMotorClient | None = None
+_mongo_client: AsyncMongoClient | None = None
 
 
 async def init_mongo() -> None:
     global _mongo_client
 
-    _mongo_client = AsyncIOMotorClient(
+    _mongo_client = AsyncMongoClient(
         settings.mongodb_uri,
         tz_aware=True,
         retryWrites=False,
@@ -47,38 +45,38 @@ async def init_mongo() -> None:
 async def close_mongo() -> None:
     global _mongo_client
     if _mongo_client is not None:
-        _mongo_client.close()
+        await _mongo_client.close()
     _mongo_client = None
 
 
-def get_mongo_client() -> AsyncIOMotorClient:
+def get_mongo_client() -> AsyncMongoClient:
     if _mongo_client is None:
         raise RuntimeError("MongoDB client not initialized")
     return _mongo_client
 
 
-def get_database() -> AsyncIOMotorDatabase:
+def get_database() -> AsyncDatabase:
     client = get_mongo_client()
     return client[settings.mongodb_db_name]
 
 
-def get_jobs_collection() -> AsyncIOMotorCollection:
+def get_jobs_collection() -> AsyncCollection:
     return get_database()[settings.mongodb_jobs_collection]
 
 
-def get_rate_limits_collection() -> AsyncIOMotorCollection:
+def get_rate_limits_collection() -> AsyncCollection:
     return get_database()["rate_limits"]
 
 
-def get_evaluation_sets_collection() -> AsyncIOMotorCollection:
+def get_evaluation_sets_collection() -> AsyncCollection:
     return get_database()["evaluation_sets"]
 
 
-def get_evaluation_runs_collection() -> AsyncIOMotorCollection:
+def get_evaluation_runs_collection() -> AsyncCollection:
     return get_database()["evaluation_runs"]
 
 
-async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
+async def ensure_jobs_indexes(collection: AsyncCollection) -> None:
     await collection.create_index("job_id", unique=True)
     await collection.create_index([("status", 1), ("heartbeat_at", 1)])
     await collection.create_index("source_url")
@@ -87,14 +85,14 @@ async def ensure_jobs_indexes(collection: AsyncIOMotorCollection) -> None:
     await collection.create_index([("origin", 1), ("created_at", -1)])
 
 
-async def ensure_rate_limit_indexes(collection: AsyncIOMotorCollection) -> None:
+async def ensure_rate_limit_indexes(collection: AsyncCollection) -> None:
     await collection.create_index([("key", 1), ("at", -1)])
     # Fixed retention: changing an existing TTL index's expiry means dropping it, so the window
     # setting is bounded by this constant instead (see Settings).
     await collection.create_index("at", expireAfterSeconds=RATE_LIMIT_RETENTION_SECONDS)
 
 
-async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> None:
+async def ensure_evaluation_sets_indexes(collection: AsyncCollection) -> None:
     await collection.create_index("name")
     await collection.create_index([("created_at", -1)])
     await collection.create_index(
@@ -102,7 +100,7 @@ async def ensure_evaluation_sets_indexes(collection: AsyncIOMotorCollection) -> 
     )
 
 
-async def ensure_evaluation_runs_indexes(collection: AsyncIOMotorCollection) -> None:
+async def ensure_evaluation_runs_indexes(collection: AsyncCollection) -> None:
     await collection.create_index("evaluation_set_id")
     await collection.create_index([("status", 1), ("heartbeat_at", 1)])
     await collection.create_index([("created_at", -1)])

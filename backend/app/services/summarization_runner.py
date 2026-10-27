@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo.asynchronous.collection import AsyncCollection
 
 from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.config import settings
@@ -131,7 +131,7 @@ async def _load_source_text(job: dict[str, Any]) -> str:
 
 
 async def _store_completed_job(
-    jobs_collection: AsyncIOMotorCollection,
+    jobs_collection: AsyncCollection,
     job_id: str,
     summary: LlmSummaryResult,
     title: str,
@@ -168,7 +168,7 @@ async def _store_completed_job(
 
 
 async def _store_failed_job(
-    jobs_collection: AsyncIOMotorCollection, job_id: str, exc: Exception, started_at: datetime
+    jobs_collection: AsyncCollection, job_id: str, exc: Exception, started_at: datetime
 ) -> None:
     finished_at = datetime.now(UTC)
     duration_ms = int((finished_at - started_at).total_seconds() * 1000)

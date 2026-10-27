@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 import structlog
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorCollection
+from pymongo.asynchronous.collection import AsyncCollection
 
 from ..core.background_work import track_background_work
 from ..core.mongo import (
@@ -39,7 +39,7 @@ def summarize_entry_statuses(entry_statuses: list[str]) -> tuple[str, int, int, 
     return run_status, len(entry_statuses), completed, failed
 
 
-async def _mark_run_failed(runs: AsyncIOMotorCollection, run_id: str, error: str) -> None:
+async def _mark_run_failed(runs: AsyncCollection, run_id: str, error: str) -> None:
     await runs.update_one(
         {"_id": ObjectId(run_id)},
         {
@@ -101,7 +101,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
     }
 
 
-async def _finalize_run(runs: AsyncIOMotorCollection, run_id: str) -> None:
+async def _finalize_run(runs: AsyncCollection, run_id: str) -> None:
     """Counts from the stored document, because a resumed loop only touched what was left."""
     final_doc = await runs.find_one({"_id": ObjectId(run_id)}, {"entries.status": 1})
     if final_doc is None:

@@ -124,7 +124,7 @@ async def create_evaluation_set(
 async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
     collection = get_evaluation_sets_collection()
 
-    documents = await collection.aggregate(
+    cursor = await collection.aggregate(
         [
             {"$sort": {"created_at": DESCENDING}},
             {
@@ -138,11 +138,12 @@ async def list_evaluation_sets() -> list[EvaluationSetListItemResponse]:
                 }
             },
         ]
-    ).to_list(length=1000)
+    )
+    documents = await cursor.to_list(length=1000)
 
     run_counts = {
         doc["_id"]: doc["run_count"]
-        async for doc in get_evaluation_runs_collection().aggregate(
+        async for doc in await get_evaluation_runs_collection().aggregate(
             [{"$group": {"_id": "$evaluation_set_id", "run_count": {"$sum": 1}}}]
         )
     }
@@ -210,22 +211,19 @@ async def get_evaluation_set_entry_input_text(
 )
 async def get_golden_metrics_pass(set_id: str) -> GoldenMetricsPassResponse:
     """Progress only — no metric values, so this is cheap to poll."""
-    documents = (
-        await get_evaluation_sets_collection()
-        .aggregate(
-            [
-                {"$match": {"_id": ObjectId(set_id)}},
-                {
-                    "$project": {
-                        "golden_metrics_pass": 1,
-                        "entry_count": {"$size": "$entries"},
-                        "entries_with_metrics": _ENTRIES_WITH_METRICS_EXPR,
-                    }
-                },
-            ]
-        )
-        .to_list(length=1)
+    cursor = await get_evaluation_sets_collection().aggregate(
+        [
+            {"$match": {"_id": ObjectId(set_id)}},
+            {
+                "$project": {
+                    "golden_metrics_pass": 1,
+                    "entry_count": {"$size": "$entries"},
+                    "entries_with_metrics": _ENTRIES_WITH_METRICS_EXPR,
+                }
+            },
+        ]
     )
+    documents = await cursor.to_list(length=1)
     if not documents:
         raise HTTPException(status_code=404, detail="Evaluation set not found")
 

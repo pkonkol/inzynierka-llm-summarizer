@@ -156,7 +156,7 @@ async def list_summarized_urls(
             latest_title=doc["latest_title"],
             latest_updated_at=doc["latest_updated_at"],
         )
-        async for doc in jobs_collection.aggregate(pipeline)
+        async for doc in await jobs_collection.aggregate(pipeline)
     ]
 
 

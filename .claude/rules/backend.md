@@ -3,7 +3,7 @@ paths:
   - "backend/**/*.py"
 ---
 
-# Backend rules (FastAPI / Pydantic v2 / Motor / LangChain)
+# Backend rules (FastAPI / Pydantic v2 / PyMongo Async / LangChain)
 
 ## Parse, don't validate
 
@@ -74,7 +74,7 @@ openrouter_api_key: SecretStr | None = None
 
 ## Stack notes
 
-- Async everywhere for I/O (Mongo via `motor`, LLM calls, scraping) — use `asyncio`/FastAPI `BackgroundTasks`, no blocking calls in request handlers.
+- Async everywhere for I/O (Mongo via the PyMongo Async API, LLM calls, scraping) — use `asyncio`/FastAPI `BackgroundTasks`, no blocking calls in request handlers.
 - LangChain provider calls go through the existing provider abstraction in `app/services/llm/` — don't add a new ad-hoc client.
 
 ## Imports

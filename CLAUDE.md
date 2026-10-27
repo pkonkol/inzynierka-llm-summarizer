@@ -220,7 +220,7 @@ On hold: restyling the frontend from Figma. Dropped: the cognitive-value / seman
 
 ## Stack
 
-- **Backend:** Python 3.14, FastAPI, Pydantic v2, MongoDB via `motor`, `trafilatura`, LangChain (Gemini, OpenRouter via `langchain-openai`, Ollama).
+- **Backend:** Python 3.14, FastAPI, Pydantic v2, MongoDB via the PyMongo Async API, `trafilatura`, LangChain (Gemini, OpenRouter via `langchain-openai`, Ollama).
 - **Frontend:** React + TypeScript, Vite, Tailwind, Firebase Hosting.
 - **Infra:** Terraform, GCP Cloud Run, Secret Manager, GitHub Actions with WIF; Docker Compose locally.
 - **Evaluation:** deepeval, rouge-score, nltk, textstat.

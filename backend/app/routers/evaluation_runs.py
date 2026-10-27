@@ -112,7 +112,7 @@ async def create_evaluation_run(
 async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemResponse]:
     runs = get_evaluation_runs_collection()
 
-    documents = await runs.aggregate(
+    cursor = await runs.aggregate(
         [
             {"$match": {"evaluation_set_id": set_id}},
             {"$sort": {"created_at": DESCENDING}},
@@ -131,7 +131,8 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
                 }
             },
         ]
-    ).to_list(length=1000)
+    )
+    documents = await cursor.to_list(length=1000)
 
     return [
         EvaluationRunListItemResponse.model_validate({**doc, "evaluation_run_id": str(doc["_id"])})
@@ -141,31 +142,28 @@ async def list_evaluation_runs(set_id: str) -> list[EvaluationRunListItemRespons
 
 @router.get("/runs/{run_id}", response_model=EvaluationRunResponse)
 async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
-    documents = (
-        await get_evaluation_runs_collection()
-        .aggregate(
-            [
-                {"$match": {"_id": ObjectId(run_id)}},
-                {
-                    "$project": {
-                        "evaluation_set_id": 1,
-                        "evaluation_set_name": 1,
-                        "model_provider": 1,
-                        "model_name": 1,
-                        "processing_strategy": 1,
-                        "summary_spec": 1,
-                        "language": 1,
-                        "status": 1,
-                        "created_at": 1,
-                        "finished_at": 1,
-                        "aggregate_metrics": 1,
-                        "entry_count": {"$size": "$entries"},
-                    }
-                },
-            ]
-        )
-        .to_list(length=1)
+    cursor = await get_evaluation_runs_collection().aggregate(
+        [
+            {"$match": {"_id": ObjectId(run_id)}},
+            {
+                "$project": {
+                    "evaluation_set_id": 1,
+                    "evaluation_set_name": 1,
+                    "model_provider": 1,
+                    "model_name": 1,
+                    "processing_strategy": 1,
+                    "summary_spec": 1,
+                    "language": 1,
+                    "status": 1,
+                    "created_at": 1,
+                    "finished_at": 1,
+                    "aggregate_metrics": 1,
+                    "entry_count": {"$size": "$entries"},
+                }
+            },
+        ]
     )
+    documents = await cursor.to_list(length=1)
 
     if not documents:
         raise HTTPException(status_code=404, detail="Evaluation run not found")

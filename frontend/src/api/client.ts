@@ -81,12 +81,12 @@ export function subscribeToToken(listener: () => void): () => void {
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
-    ...options,
   });
 
   if (!response.ok) {

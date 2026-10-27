@@ -110,12 +110,18 @@ async def run_summarization_job(job_id: str) -> None:
             )
 
     except Exception as exc:
+        log.exception(
+            "summarization job failed",
+            error_type=type(exc).__name__,
+            duration_ms=int((datetime.now(UTC) - started_at).total_seconds() * 1000),
+        )
         await _store_failed_job(jobs_collection, job_id, exc, started_at)
     finally:
         structlog.contextvars.unbind_contextvars("job_id", "strategy", "provider", "model", "url")
 
 
 async def _load_source_text(job: dict[str, Any]) -> str:
+    log.debug("loading source text")
     source_url = job["source_url"]
     if source_url.startswith(MANUAL_SOURCE_PREFIX):
         source_text = job["input_text"]
@@ -138,6 +144,7 @@ async def _store_completed_job(
     length: ResolvedLength,
     started_at: datetime,
 ) -> None:
+    log.debug("storing completed job")
     finished_at = datetime.now(UTC)
     await jobs_collection.update_one(
         {"job_id": job_id},
@@ -170,14 +177,9 @@ async def _store_completed_job(
 async def _store_failed_job(
     jobs_collection: AsyncCollection, job_id: str, exc: Exception, started_at: datetime
 ) -> None:
+    log.debug("storing failed job")
     finished_at = datetime.now(UTC)
     duration_ms = int((finished_at - started_at).total_seconds() * 1000)
-    log.exception(
-        "summarization job failed",
-        error_type=type(exc).__name__,
-        duration_ms=duration_ms,
-    )
-
     await jobs_collection.update_one(
         {"job_id": job_id},
         {

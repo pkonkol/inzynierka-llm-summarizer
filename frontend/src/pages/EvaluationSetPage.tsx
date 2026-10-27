@@ -245,10 +245,11 @@ function GoldenMetricsStatusAlert({ pass, status }: GoldenMetricsStatusAlertProp
 
 type NewRunSectionProps = {
   setId: string;
+  summarizationOptions: ReturnType<typeof useSummarizationOptions>;
   onCreated: () => void;
 };
 
-function NewRunSection({ setId, onCreated }: NewRunSectionProps) {
+function NewRunSection({ setId, summarizationOptions, onCreated }: NewRunSectionProps) {
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const {
     models: newRunAvailableModels,
@@ -258,8 +259,7 @@ function NewRunSection({ setId, onCreated }: NewRunSectionProps) {
     selectedProcessingStrategy: newRunProcessingStrategy,
     setSelectedProcessingStrategy: setNewRunProcessingStrategy,
     isLoading: isLoadingNewRunOptions,
-    errorMessage,
-  } = useSummarizationOptions();
+  } = summarizationOptions;
   const newRunSpecForm = useSummarySpecForm({ offerMatchReference: true });
 
   const submitNewRun = useAsyncAction(
@@ -286,8 +286,6 @@ function NewRunSection({ setId, onCreated }: NewRunSectionProps) {
 
   return (
     <PageSection title="Nowy przebieg">
-      {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
-
       <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="grid shrink-0 gap-2">
           <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
@@ -419,6 +417,7 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
     },
   );
   const selectedSet = setDetail.data;
+  const summarizationOptions = useSummarizationOptions();
   const existingRuns = runs.data;
 
   useDocumentTitle(selectedSet?.name ?? null);
@@ -504,12 +503,21 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
           {goldenMetricsPass.errorMessage ? (
             <Alert tone="danger">{goldenMetricsPass.errorMessage}</Alert>
           ) : null}
+          {summarizationOptions.errorMessage ? (
+            <Alert tone="danger">{summarizationOptions.errorMessage}</Alert>
+          ) : null}
 
           {selectedSet ? (
             <GoldenMetricsStatusAlert pass={goldenMetricsPass.data} status={goldenMetricsStatus} />
           ) : null}
 
-          {selectedSet ? <NewRunSection setId={setId} onCreated={runs.reload} /> : null}
+          {selectedSet ? (
+            <NewRunSection
+              setId={setId}
+              summarizationOptions={summarizationOptions}
+              onCreated={runs.reload}
+            />
+          ) : null}
         </div>
 
         <PageSection title="Przebiegi">

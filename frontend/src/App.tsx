@@ -32,7 +32,7 @@ function CurrentPage({ route }: { route: Route }) {
     case "sets":
       return <ResearchPage />;
     case "set":
-      return <EvaluationSetPage setId={route.setId} />;
+      return <EvaluationSetPage key={route.setId} setId={route.setId} />;
     case "run":
       return <EvaluationRunPage runId={route.runId} />;
   }

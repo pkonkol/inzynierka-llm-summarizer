@@ -6,6 +6,7 @@ from typing import Any
 
 import structlog
 from bson import ObjectId
+from pymongo.asynchronous.collection import AsyncCollection
 
 from ..core.background_work import track_background_work
 from ..core.mongo import (
@@ -94,7 +95,7 @@ async def _score_run_entries(run_id: str) -> None:
                 already_scored_entries += 1
                 continue
 
-            await _score_entry(run_id, set_id, entry, output_format)
+            await _score_entry(runs, run_id, set_id, entry, output_format)
             updated_entries += 1
     except Exception as exc:
         log.exception("deepeval failed")
@@ -117,9 +118,14 @@ async def _score_run_entries(run_id: str) -> None:
 
 
 async def _score_entry(
-    run_id: str, set_id: str, entry: dict[str, Any], output_format: OutputFormat
+    runs: AsyncCollection,
+    run_id: str,
+    set_id: str,
+    entry: dict[str, Any],
+    output_format: OutputFormat,
 ) -> None:
     entry_id = entry["entry_id"]
+    log.debug("scoring run entry", entry_id=entry_id)
     summary_text = entry["ai_summary"].strip()
     source_text = (await find_evaluation_set_entry_or_raise(set_id, entry_id))["input_text"]
 
@@ -144,7 +150,7 @@ async def _score_entry(
     ai_metrics["deepeval"] = deepeval_metrics
     cross_metrics: dict[str, Any] = {**rouge_meteor, "deepeval": pairwise}
 
-    await get_evaluation_runs_collection().update_one(
+    await runs.update_one(
         {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
         {
             "$set": {

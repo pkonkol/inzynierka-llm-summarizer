@@ -13,7 +13,7 @@ from ..core.mongo import (
     get_evaluation_runs_collection,
     get_evaluation_sets_collection,
 )
-from ..schemas.summary_spec import SummarySpec
+from ..schemas.summary_spec import OutputFormat, SummarySpec
 from .metrics import (
     compute_cross_metrics,
     compute_deepeval_metrics,
@@ -94,41 +94,7 @@ async def _score_run_entries(run_id: str) -> None:
                 already_scored_entries += 1
                 continue
 
-            entry_id = entry["entry_id"]
-            summary_text = entry["ai_summary"].strip()
-            source_text = (await find_evaluation_set_entry_or_raise(set_id, entry_id))["input_text"]
-
-            deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
-                compute_deepeval_metrics(
-                    summary_text=summary_text,
-                    source_text=source_text,
-                    output_format=output_format,
-                ),
-                compute_cross_metrics(
-                    reference_text=entry["golden_summary"],
-                    summary_text=summary_text,
-                ),
-                compute_pairwise_cross_deepeval_metrics(
-                    source_text=source_text,
-                    golden_summary=entry["golden_summary"],
-                    ai_summary=summary_text,
-                ),
-            )
-
-            ai_metrics = entry["ai_metrics"]
-            ai_metrics["deepeval"] = deepeval_metrics
-            cross_metrics: dict[str, Any] = {**rouge_meteor, "deepeval": pairwise}
-
-            await runs.update_one(
-                {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
-                {
-                    "$set": {
-                        "entries.$.ai_metrics": ai_metrics,
-                        "entries.$.cross_metrics": cross_metrics,
-                        "aggregate_metrics.deepeval.heartbeat_at": datetime.now(UTC),
-                    }
-                },
-            )
+            await _score_entry(run_id, set_id, entry, output_format)
             updated_entries += 1
     except Exception as exc:
         log.exception("deepeval failed")
@@ -146,5 +112,45 @@ async def _score_run_entries(run_id: str) -> None:
             "skipped_entries": skipped_entries,
             "already_scored_entries": already_scored_entries,
             "finished_at": datetime.now(UTC),
+        },
+    )
+
+
+async def _score_entry(
+    run_id: str, set_id: str, entry: dict[str, Any], output_format: OutputFormat
+) -> None:
+    entry_id = entry["entry_id"]
+    summary_text = entry["ai_summary"].strip()
+    source_text = (await find_evaluation_set_entry_or_raise(set_id, entry_id))["input_text"]
+
+    deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
+        compute_deepeval_metrics(
+            summary_text=summary_text,
+            source_text=source_text,
+            output_format=output_format,
+        ),
+        compute_cross_metrics(
+            reference_text=entry["golden_summary"],
+            summary_text=summary_text,
+        ),
+        compute_pairwise_cross_deepeval_metrics(
+            source_text=source_text,
+            golden_summary=entry["golden_summary"],
+            ai_summary=summary_text,
+        ),
+    )
+
+    ai_metrics = entry["ai_metrics"]
+    ai_metrics["deepeval"] = deepeval_metrics
+    cross_metrics: dict[str, Any] = {**rouge_meteor, "deepeval": pairwise}
+
+    await get_evaluation_runs_collection().update_one(
+        {"_id": ObjectId(run_id), "entries.entry_id": entry_id},
+        {
+            "$set": {
+                "entries.$.ai_metrics": ai_metrics,
+                "entries.$.cross_metrics": cross_metrics,
+                "aggregate_metrics.deepeval.heartbeat_at": datetime.now(UTC),
+            }
         },
     )

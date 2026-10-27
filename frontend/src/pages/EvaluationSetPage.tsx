@@ -35,15 +35,17 @@ import { useAsyncAction } from "../hooks/useAsyncAction";
 import { useConfirmDelete } from "../hooks/useConfirmDelete";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useListPolling } from "../hooks/useListPolling";
-import { useReloadableResource } from "../hooks/useReloadableResource";
+import { type ReloadableResource, useReloadableResource } from "../hooks/useReloadableResource";
 import { useSummarizationOptions } from "../hooks/useSummarizationOptions";
 import { useSummarySpecForm } from "../hooks/useSummarySpecForm";
 import { useWorkFinished } from "../hooks/useWorkFinished";
 import type {
   EvaluationRunCreateRequest,
   EvaluationRunListItemResponse,
+  EvaluationSetDetailResponse,
   EvaluationSetEntryResponse,
   EvaluationSetListItemResponse,
+  GoldenMetricsPassResponse,
 } from "../types/api.generated";
 import { downloadJson } from "../utils/download";
 import { formatDateMinute } from "../utils/format";
@@ -168,47 +170,22 @@ function RunsTable({
   );
 }
 
-type EvaluationSetPageProps = {
-  setId: string;
-};
-
-// null = the list failed to load, so the count is unknown and the warning stays generic.
-function describeRunsDeletedWithSet(runs: EvaluationRunListItemResponse[] | null): string {
-  if (runs === null) return " Usunie to też wszystkie jego evaluation runy.";
-  if (runs.length === 0) return "";
-  return ` Usunie to też ${runs.length} evaluation run(y/ów).`;
-}
-
-export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
-  const showFlash = useFlash();
-  const setDetail = useReloadableResource(
-    () => getEvaluationSet(setId),
-    setId,
-    "Nie udało się wczytać zbioru",
-  );
-  const runs = useReloadableResource(
-    () => listEvaluationRuns(setId),
-    setId,
-    "Nie udało się wczytać przebiegów",
-  );
+// null status = the pass has never been queued for this set.
+function useGoldenMetricsPass(
+  setId: string,
+  onFinished: (status: GoldenMetricsPassStatus) => void,
+): { pass: ReloadableResource<GoldenMetricsPassResponse>; status: GoldenMetricsPassStatus | null } {
   const goldenMetricsPass = useReloadableResource(
     () => getGoldenMetricsPass(setId),
     setId,
     "Nie udało się pobrać statusu metryk wzorcowych",
   );
-  const selectedSet = setDetail.data;
-  // null means "no answer yet" — a real third state, not a missing value.
-  const existingRuns = runs.data;
   const goldenMetricsStatus = goldenMetricsPass.data?.status ?? null;
   const isGoldenMetricsPassInProgress =
     goldenMetricsStatus === "pending" || goldenMetricsStatus === "running";
 
   useListPolling(goldenMetricsPass.reload, isGoldenMetricsPassInProgress);
-
-  useWorkFinished(goldenMetricsStatus, isGoldenMetricsPassInProgress, (status) => {
-    showFlash(`Metryki wzorcowe: ${GOLDEN_METRICS_STATUS_LABEL[status]}.`);
-    void setDetail.reload();
-  });
+  useWorkFinished(goldenMetricsStatus, isGoldenMetricsPassInProgress, onFinished);
 
   // Once per mount: a set left "pending"/"running" by a process that died, or "failed", gets
   // queued again without the reader having to click anything. The backend's own staleness and
@@ -232,6 +209,46 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
       });
   }, [goldenMetricsPass.data, goldenMetricsPass.reload, goldenMetricsStatus, setId]);
 
+  return { pass: goldenMetricsPass, status: goldenMetricsStatus };
+}
+
+type GoldenMetricsStatusAlertProps = {
+  pass: GoldenMetricsPassResponse | null;
+  status: GoldenMetricsPassStatus | null;
+};
+
+function GoldenMetricsStatusAlert({ pass, status }: GoldenMetricsStatusAlertProps) {
+  return (
+    <Alert
+      tone={
+        status === "failed"
+          ? "danger"
+          : status === "completed" || status === "skipped"
+            ? "success"
+            : "warning"
+      }
+      aria-live="polite"
+    >
+      {pass ? (
+        <>
+          Metryki wzorcowe: {status ? GOLDEN_METRICS_STATUS_LABEL[status] : "jeszcze nie policzone"}
+          {" · "}
+          {pass.entries_with_metrics} / {pass.entry_count} wpisów
+          {pass.error ? <span className="block">{pass.error}</span> : null}
+        </>
+      ) : (
+        "Sprawdzanie statusu metryk wzorcowych…"
+      )}
+    </Alert>
+  );
+}
+
+type NewRunSectionProps = {
+  setId: string;
+  onCreated: () => void;
+};
+
+function NewRunSection({ setId, onCreated }: NewRunSectionProps) {
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
   const {
     models: newRunAvailableModels,
@@ -244,20 +261,6 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
     errorMessage,
   } = useSummarizationOptions();
   const newRunSpecForm = useSummarySpecForm({ offerMatchReference: true });
-
-  useDocumentTitle(selectedSet?.name ?? null);
-
-  const exportSet = useAsyncAction(
-    async (setName: string) => {
-      const data = await exportEvaluationSet(setId);
-      downloadJson(`${setName}.json`, data);
-      return setName;
-    },
-    {
-      errorPrefix: "Nie udało się wyeksportować EvaluationSetu",
-      successMessage: (setName) => `Wyeksportowano EvaluationSet: ${setName}.`,
-    },
-  );
 
   const submitNewRun = useAsyncAction(
     () => {
@@ -277,7 +280,158 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
     {
       errorPrefix: "Nie udało się utworzyć runa",
       successMessage: (created) => `Utworzono przebieg: ${created.evaluation_run_id}`,
-      onSuccess: () => runs.reload(),
+      onSuccess: onCreated,
+    },
+  );
+
+  return (
+    <PageSection title="Nowy przebieg">
+      {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
+
+      <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid shrink-0 gap-2">
+          <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
+          <Select
+            id="new-run-model"
+            value={newRunSelectedModel}
+            onChange={(event) => setNewRunSelectedModel(event.target.value)}
+            disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+            className="truncate"
+          >
+            <ModelOptions models={newRunAvailableModels} />
+          </Select>
+        </div>
+
+        <ProcessingStrategySelect
+          processingStrategies={newRunAvailableStrategies}
+          selectedProcessingStrategy={newRunProcessingStrategy}
+          onProcessingStrategyChange={setNewRunProcessingStrategy}
+          disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+        />
+
+        <div className="grid shrink-0 gap-2">
+          <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
+          <Input
+            id="new-run-delay"
+            type="number"
+            min={0}
+            step={100}
+            className="max-w-24"
+            value={newRunDelayMs}
+            onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
+          />
+        </div>
+
+        <MatchReferenceCheckbox
+          form={newRunSpecForm}
+          disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+        />
+      </div>
+
+      <SummarySpecFields
+        form={newRunSpecForm}
+        disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+      />
+
+      <Button
+        variant="primary"
+        onClick={() => void submitNewRun.run()}
+        disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
+        className="justify-self-start"
+      >
+        {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
+      </Button>
+    </PageSection>
+  );
+}
+
+type RunsSectionBodyProps = {
+  runs: ReloadableResource<EvaluationRunListItemResponse[]>;
+  onDelete: (run: EvaluationRunListItemResponse) => void;
+};
+
+// data null after the first answer = the load failed; the page-level Alert explains it.
+function RunsSectionBody({ runs, onDelete }: RunsSectionBodyProps) {
+  if (runs.data === null) {
+    return runs.isInitialLoading ? <p className="text-mute">Ładowanie przebiegów...</p> : null;
+  }
+  if (runs.data.length === 0) {
+    return <p className="text-mute">Brak przebiegów dla tego zbioru.</p>;
+  }
+  return <RunsTable runs={runs.data} onDelete={onDelete} />;
+}
+
+type EntriesSectionBodyProps = {
+  setDetail: ReloadableResource<EvaluationSetDetailResponse>;
+  setId: string;
+  goldenMetricsStatus: GoldenMetricsPassStatus | null;
+};
+
+function EntriesSectionBody({ setDetail, setId, goldenMetricsStatus }: EntriesSectionBodyProps) {
+  if (setDetail.data === null) {
+    return setDetail.isInitialLoading ? (
+      <p className="text-mute">Ładowanie szczegółów zbioru...</p>
+    ) : null;
+  }
+  return (
+    <div className="grid">
+      {setDetail.data.entries.map((entry, index) => (
+        <EntryCard
+          key={entry.entry_id}
+          index={index}
+          entry={entry}
+          setId={setId}
+          goldenMetricsStatus={goldenMetricsStatus}
+        />
+      ))}
+    </div>
+  );
+}
+
+type EvaluationSetPageProps = {
+  setId: string;
+};
+
+// null = the list failed to load, so the count is unknown and the warning stays generic.
+function describeRunsDeletedWithSet(runs: EvaluationRunListItemResponse[] | null): string {
+  if (runs === null) return " Usunie to też wszystkie jego evaluation runy.";
+  if (runs.length === 0) return "";
+  return ` Usunie to też ${runs.length} evaluation run(y/ów).`;
+}
+
+export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
+  const showFlash = useFlash();
+  const setDetail = useReloadableResource(
+    () => getEvaluationSet(setId),
+    setId,
+    "Nie udało się wczytać zbioru",
+  );
+  const runs = useReloadableResource(
+    () => listEvaluationRuns(setId),
+    setId,
+    "Nie udało się wczytać przebiegów",
+  );
+  const { pass: goldenMetricsPass, status: goldenMetricsStatus } = useGoldenMetricsPass(
+    setId,
+    (status) => {
+      showFlash(`Metryki wzorcowe: ${GOLDEN_METRICS_STATUS_LABEL[status]}.`);
+      void setDetail.reload();
+    },
+  );
+  const selectedSet = setDetail.data;
+  const existingRuns = runs.data;
+
+  useDocumentTitle(selectedSet?.name ?? null);
+
+  const exportSet = useAsyncAction(
+    async (setName: string) => {
+      const data = await exportEvaluationSet(setId);
+      downloadJson(`${setName}.json`, data);
+      return setName;
+    },
+    {
+      errorPrefix: "Nie udało się wyeksportować EvaluationSetu",
+      successMessage: (setName) => `Wyeksportowano EvaluationSet: ${setName}.`,
     },
   );
 
@@ -306,42 +460,9 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   });
 
   // pending = queued, running = a worker is on it; both mean the row will change.
-  useListPolling(
-    runs.reload,
-    existingRuns !== null &&
-      existingRuns.some((run) => run.status === "pending" || run.status === "running"),
-  );
-
-  let entriesSection: React.ReactNode = <p className="text-mute">Ładowanie szczegółów zbioru...</p>;
-  if (!setDetail.isInitialLoading && selectedSet) {
-    entriesSection = (
-      <div className="grid">
-        {selectedSet.entries.map((entry, index) => (
-          <EntryCard
-            key={entry.entry_id}
-            index={index}
-            entry={entry}
-            setId={setId}
-            goldenMetricsStatus={goldenMetricsStatus}
-          />
-        ))}
-      </div>
-    );
-  } else if (!setDetail.isInitialLoading) {
-    entriesSection = null;
-  }
-
-  let runsSection: React.ReactNode = <p className="text-mute">Ładowanie przebiegów...</p>;
-  if (existingRuns !== null) {
-    runsSection =
-      existingRuns.length === 0 ? (
-        <p className="text-mute">Brak przebiegów dla tego zbioru.</p>
-      ) : (
-        <RunsTable runs={existingRuns} onDelete={deleteRun.request} />
-      );
-  } else if (!runs.isInitialLoading) {
-    runsSection = null;
-  }
+  const hasRunsInProgress =
+    existingRuns?.some((run) => run.status === "pending" || run.status === "running") === true;
+  useListPolling(runs.reload, hasRunsInProgress);
 
   return (
     <PageShell>
@@ -383,100 +504,25 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
           {goldenMetricsPass.errorMessage ? (
             <Alert tone="danger">{goldenMetricsPass.errorMessage}</Alert>
           ) : null}
-          {errorMessage ? <Alert tone="danger">{errorMessage}</Alert> : null}
 
           {selectedSet ? (
-            <Alert
-              tone={
-                goldenMetricsStatus === "failed"
-                  ? "danger"
-                  : goldenMetricsStatus === "completed" || goldenMetricsStatus === "skipped"
-                    ? "success"
-                    : "warning"
-              }
-              aria-live="polite"
-            >
-              {goldenMetricsPass.data ? (
-                <>
-                  Metryki wzorcowe:{" "}
-                  {goldenMetricsStatus
-                    ? GOLDEN_METRICS_STATUS_LABEL[goldenMetricsStatus]
-                    : "jeszcze nie policzone"}
-                  {" · "}
-                  {goldenMetricsPass.data.entries_with_metrics} /{" "}
-                  {goldenMetricsPass.data.entry_count} wpisów
-                  {goldenMetricsPass.data.error ? (
-                    <span className="block">{goldenMetricsPass.data.error}</span>
-                  ) : null}
-                </>
-              ) : (
-                "Sprawdzanie statusu metryk wzorcowych…"
-              )}
-            </Alert>
+            <GoldenMetricsStatusAlert pass={goldenMetricsPass.data} status={goldenMetricsStatus} />
           ) : null}
 
-          {selectedSet ? (
-            <PageSection title="Nowy przebieg">
-              <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="grid shrink-0 gap-2">
-                  <FieldLabel htmlFor="new-run-model">Model</FieldLabel>
-                  <Select
-                    id="new-run-model"
-                    value={newRunSelectedModel}
-                    onChange={(event) => setNewRunSelectedModel(event.target.value)}
-                    disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-                    className="truncate"
-                  >
-                    <ModelOptions models={newRunAvailableModels} />
-                  </Select>
-                </div>
-
-                <ProcessingStrategySelect
-                  processingStrategies={newRunAvailableStrategies}
-                  selectedProcessingStrategy={newRunProcessingStrategy}
-                  onProcessingStrategyChange={setNewRunProcessingStrategy}
-                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-                />
-
-                <div className="grid shrink-0 gap-2">
-                  <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>
-                  <Input
-                    id="new-run-delay"
-                    type="number"
-                    min={0}
-                    step={100}
-                    className="max-w-24"
-                    value={newRunDelayMs}
-                    onChange={(event) => setNewRunDelayMs(Number(event.target.value))}
-                  />
-                </div>
-
-                <MatchReferenceCheckbox
-                  form={newRunSpecForm}
-                  disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-                />
-              </div>
-
-              <SummarySpecFields
-                form={newRunSpecForm}
-                disabled={submitNewRun.isPending || isLoadingNewRunOptions}
-              />
-
-              <Button
-                variant="primary"
-                onClick={() => void submitNewRun.run()}
-                disabled={submitNewRun.isPending || isLoadingNewRunOptions || !newRunSelectedModel}
-                className="justify-self-start"
-              >
-                {submitNewRun.isPending ? "Tworzenie..." : "Utwórz przebieg"}
-              </Button>
-            </PageSection>
-          ) : null}
+          {selectedSet ? <NewRunSection setId={setId} onCreated={runs.reload} /> : null}
         </div>
 
-        <PageSection title="Przebiegi">{runsSection}</PageSection>
+        <PageSection title="Przebiegi">
+          <RunsSectionBody runs={runs} onDelete={deleteRun.request} />
+        </PageSection>
 
-        <PageSection title="Wpisy">{entriesSection}</PageSection>
+        <PageSection title="Wpisy">
+          <EntriesSectionBody
+            setDetail={setDetail}
+            setId={setId}
+            goldenMetricsStatus={goldenMetricsStatus}
+          />
+        </PageSection>
       </div>
 
       {deleteSet.dialogProps ? <ConfirmDialog {...deleteSet.dialogProps} /> : null}

@@ -83,6 +83,104 @@ export function MatchReferenceCheckbox({ form, disabled }: MatchReferenceCheckbo
   );
 }
 
+interface LengthFieldsProps {
+  form: SummarySpecForm;
+  disabled: boolean;
+  fieldId: (name: string) => string;
+}
+
+function LengthFields({ form, disabled, fieldId }: LengthFieldsProps) {
+  const { spec } = form;
+  const setLength = (length: LengthSpec) => form.updateSpec({ length });
+  const explicitLength = spec.length?.policy === "explicit" ? spec.length : null;
+  const scaledLength = spec.length?.policy === "scaled_to_input" ? spec.length : null;
+
+  return (
+    <>
+      <div className="grid shrink-0 gap-2">
+        <FieldLabel htmlFor={fieldId("length-policy")}>Długość</FieldLabel>
+        <Select
+          id={fieldId("length-policy")}
+          value={spec.length?.policy === "explicit" ? "explicit" : "scaled_to_input"}
+          onChange={(event) =>
+            setLength(
+              event.target.value === "explicit" ? DEFAULT_EXPLICIT_LENGTH : DEFAULT_SCALED_LENGTH,
+            )
+          }
+          disabled={disabled}
+          className="truncate"
+        >
+          {(["scaled_to_input", "explicit"] as const).map((key) => (
+            <option key={key} value={key}>
+              {LENGTH_POLICY_LABELS[key]}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      {scaledLength ? (
+        <div className="grid shrink-0 gap-2">
+          <FieldLabel htmlFor={fieldId("density")}>
+            Gęstość — {densityLabel(scaledLength.slider)}
+          </FieldLabel>
+          <RangeInput
+            id={fieldId("density")}
+            min={0}
+            max={1}
+            step={0.05}
+            value={scaledLength.slider}
+            aria-valuetext={densityLabel(scaledLength.slider)}
+            onChange={(event) => setLength({ ...scaledLength, slider: Number(event.target.value) })}
+            disabled={disabled}
+          />
+        </div>
+      ) : explicitLength ? (
+        <>
+          <div className="grid shrink-0 gap-2">
+            <FieldLabel htmlFor={fieldId("target-words")}>Liczba słów</FieldLabel>
+            <Input
+              id={fieldId("target-words")}
+              type="number"
+              min={1}
+              max={3000}
+              className="max-w-24"
+              value={explicitLength.target_words}
+              onChange={(event) =>
+                setLength({
+                  ...explicitLength,
+                  target_words: Number(event.target.value),
+                })
+              }
+              disabled={disabled}
+            />
+          </div>
+          <div className="grid shrink-0 gap-2">
+            <div className="flex items-baseline gap-2">
+              <FieldLabel htmlFor={fieldId("target-sentences")}>Liczba zdań</FieldLabel>
+              <HelpTip description="Puste pole — liczba zdań wyliczona automatycznie ze słów." />
+            </div>
+            <Input
+              id={fieldId("target-sentences")}
+              type="number"
+              min={1}
+              max={50}
+              className="max-w-24"
+              value={explicitLength.target_sentences ?? ""}
+              onChange={(event) =>
+                setLength({
+                  ...explicitLength,
+                  target_sentences: event.target.value === "" ? null : Number(event.target.value),
+                })
+              }
+              disabled={disabled}
+            />
+          </div>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 interface SummarySpecFieldsProps {
   form: SummarySpecForm;
   disabled: boolean;
@@ -96,10 +194,6 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
   const fieldId = (name: string) => `${idPrefix}-${name}`;
   const { spec } = form;
   const lengthMatchesReference = form.offerMatchReference && form.matchReference;
-
-  const setLength = (length: LengthSpec) => form.updateSpec({ length });
-  const explicitLength = spec.length?.policy === "explicit" ? spec.length : null;
-  const scaledLength = spec.length?.policy === "scaled_to_input" ? spec.length : null;
 
   return (
     <div className="grid gap-3">
@@ -184,93 +278,7 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
         </div>
 
         {lengthMatchesReference ? null : (
-          <>
-            <div className="grid shrink-0 gap-2">
-              <FieldLabel htmlFor={fieldId("length-policy")}>Długość</FieldLabel>
-              <Select
-                id={fieldId("length-policy")}
-                value={spec.length?.policy === "explicit" ? "explicit" : "scaled_to_input"}
-                onChange={(event) =>
-                  setLength(
-                    event.target.value === "explicit"
-                      ? DEFAULT_EXPLICIT_LENGTH
-                      : DEFAULT_SCALED_LENGTH,
-                  )
-                }
-                disabled={disabled}
-                className="truncate"
-              >
-                {(["scaled_to_input", "explicit"] as const).map((key) => (
-                  <option key={key} value={key}>
-                    {LENGTH_POLICY_LABELS[key]}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {scaledLength ? (
-              <div className="grid shrink-0 gap-2">
-                <FieldLabel htmlFor={fieldId("density")}>
-                  Gęstość — {densityLabel(scaledLength.slider)}
-                </FieldLabel>
-                <RangeInput
-                  id={fieldId("density")}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={scaledLength.slider}
-                  aria-valuetext={densityLabel(scaledLength.slider)}
-                  onChange={(event) =>
-                    setLength({ ...scaledLength, slider: Number(event.target.value) })
-                  }
-                  disabled={disabled}
-                />
-              </div>
-            ) : explicitLength ? (
-              <>
-                <div className="grid shrink-0 gap-2">
-                  <FieldLabel htmlFor={fieldId("target-words")}>Liczba słów</FieldLabel>
-                  <Input
-                    id={fieldId("target-words")}
-                    type="number"
-                    min={1}
-                    max={3000}
-                    className="max-w-24"
-                    value={explicitLength.target_words}
-                    onChange={(event) =>
-                      setLength({
-                        ...explicitLength,
-                        target_words: Number(event.target.value),
-                      })
-                    }
-                    disabled={disabled}
-                  />
-                </div>
-                <div className="grid shrink-0 gap-2">
-                  <div className="flex items-baseline gap-2">
-                    <FieldLabel htmlFor={fieldId("target-sentences")}>Liczba zdań</FieldLabel>
-                    <HelpTip description="Puste pole — liczba zdań wyliczona automatycznie ze słów." />
-                  </div>
-                  <Input
-                    id={fieldId("target-sentences")}
-                    type="number"
-                    min={1}
-                    max={50}
-                    className="max-w-24"
-                    value={explicitLength.target_sentences ?? ""}
-                    onChange={(event) =>
-                      setLength({
-                        ...explicitLength,
-                        target_sentences:
-                          event.target.value === "" ? null : Number(event.target.value),
-                      })
-                    }
-                    disabled={disabled}
-                  />
-                </div>
-              </>
-            ) : null}
-          </>
+          <LengthFields form={form} disabled={disabled} fieldId={fieldId} />
         )}
       </div>
 

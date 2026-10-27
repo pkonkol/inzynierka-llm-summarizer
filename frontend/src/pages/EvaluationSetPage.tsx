@@ -172,6 +172,13 @@ type EvaluationSetPageProps = {
   setId: string;
 };
 
+// null = the list failed to load, so the count is unknown and the warning stays generic.
+function describeRunsDeletedWithSet(runs: EvaluationRunListItemResponse[] | null): string {
+  if (runs === null) return " Usunie to też wszystkie jego evaluation runy.";
+  if (runs.length === 0) return "";
+  return ` Usunie to też ${runs.length} evaluation run(y/ów).`;
+}
+
 export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   const showFlash = useFlash();
   const setDetail = useReloadableResource(
@@ -191,7 +198,7 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   );
   const selectedSet = setDetail.data;
   // null means "no answer yet" — a real third state, not a missing value.
-  const existingRuns = runs.data ?? [];
+  const existingRuns = runs.data;
   const goldenMetricsStatus = goldenMetricsPass.data?.status ?? null;
   const isGoldenMetricsPassInProgress =
     goldenMetricsStatus === "pending" || goldenMetricsStatus === "running";
@@ -277,7 +284,7 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   const deleteSet = useConfirmDelete<string>({
     title: "Usunąć evaluation set?",
     message: () =>
-      `Usunąć "${selectedSet?.name ?? setId}"?${existingRuns.length > 0 ? ` Usunie to też ${existingRuns.length} evaluation run(y/ów).` : ""}`,
+      `Usunąć "${selectedSet?.name ?? setId}"?${describeRunsDeletedWithSet(existingRuns)}`,
     onConfirm: async (id) => {
       await deleteEvaluationSet(id);
     },
@@ -301,7 +308,8 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   // pending = queued, running = a worker is on it; both mean the row will change.
   useListPolling(
     runs.reload,
-    existingRuns.some((run) => run.status === "pending" || run.status === "running"),
+    existingRuns !== null &&
+      existingRuns.some((run) => run.status === "pending" || run.status === "running"),
   );
 
   let entriesSection: React.ReactNode = <p className="text-mute">Ładowanie szczegółów zbioru...</p>;
@@ -324,13 +332,15 @@ export function EvaluationSetPage({ setId }: EvaluationSetPageProps) {
   }
 
   let runsSection: React.ReactNode = <p className="text-mute">Ładowanie przebiegów...</p>;
-  if (!runs.isInitialLoading) {
+  if (existingRuns !== null) {
     runsSection =
       existingRuns.length === 0 ? (
         <p className="text-mute">Brak przebiegów dla tego zbioru.</p>
       ) : (
         <RunsTable runs={existingRuns} onDelete={deleteRun.request} />
       );
+  } else if (!runs.isInitialLoading) {
+    runsSection = null;
   }
 
   return (

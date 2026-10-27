@@ -10,6 +10,7 @@
 # Pinned so a local run and a CI run use the same binary.
 ruff := "ruff@0.16.2"
 pyrefly := "pyrefly@1.2.0"
+complexipy := "complexipy@8.3.0"
 
 # Container images, not installed binaries — the only way CI and this laptop are
 # guaranteed to run the same version.
@@ -42,7 +43,7 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend typecheck-backend lint-frontend lint-extension test-backend check-openapi check-generated-types
+lint: lint-backend typecheck-backend complexity-backend lint-frontend lint-extension test-backend check-openapi check-generated-types
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
@@ -59,6 +60,12 @@ fix: fix-frontend
 lint-backend:
     uvx {{ruff}} check backend/
     uvx {{ruff}} format --check backend/
+
+# Backend: cognitive complexity per function. Above 15 is listed for review without failing; above 25 fails.
+[group('backend')]
+complexity-backend:
+    -uvx {{complexipy}} backend/app --max-complexity-allowed 15 --failed --plain
+    uvx {{complexipy}} backend/app --max-complexity-allowed 25 --failed --quiet
 
 # Backend: type check
 [group('backend')]

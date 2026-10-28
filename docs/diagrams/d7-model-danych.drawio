@@ -1,0 +1,101 @@
+<mxfile host="65bd71144e">
+    <diagram id="f5A14lbOp2n9ZubFpeV8" name="Page-1">
+        <mxGraphModel dx="1795" dy="828" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0" adaptiveColors="none">
+            <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="title-layer" value="tytuł (pomijany w eksporcie do pracy)" parent="0" />
+                <mxCell id="title" parent="title-layer" style="text;html=1;align=left;verticalAlign=top;fontSize=14;" value="&lt;b&gt;D7. Model danych: kolekcje bazy&lt;/b&gt;&lt;br&gt;pola kluczowe, stan 2026-10-27" vertex="1">
+                    <mxGeometry height="50" width="420" x="40" as="geometry" />
+                </mxCell>
+                <mxCell id="sets" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#00838F;strokeColor=#006064;fontSize=12;fontColor=#FFFFFF;swimlaneFillColor=#FFFFFF;" value="evaluation_sets" vertex="1">
+                    <mxGeometry height="120" width="320" x="40" y="80" as="geometry" />
+                </mxCell>
+                <mxCell id="sets-fields" parent="sets" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="name: str&lt;br&gt;language: str&lt;br&gt;created_at: datetime&lt;br&gt;golden_metrics_pass: GoldenMetricsPass?" vertex="1">
+                    <mxGeometry height="94" width="320" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="set_entry" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#FFFFFF;strokeColor=#00838F;fontSize=12;fontColor=#000000;swimlaneFillColor=#FFFFFF;" value="wpis zbioru" vertex="1">
+                    <mxGeometry height="124" width="320" x="40" y="280" as="geometry" />
+                </mxCell>
+                <mxCell id="set_entry-fields" parent="set_entry" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="entry_id: str&lt;br&gt;input_text: str&lt;br&gt;golden_summary: str&lt;br&gt;title: str&lt;br&gt;url: str&lt;br&gt;golden_metrics: GoldenMetrics?" vertex="1">
+                    <mxGeometry height="98" width="320" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="runs" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#00838F;strokeColor=#006064;fontSize=12;fontColor=#FFFFFF;swimlaneFillColor=#FFFFFF;" value="evaluation_runs" vertex="1">
+                    <mxGeometry height="169" width="400" x="560" y="80" as="geometry" />
+                </mxCell>
+                <mxCell id="runs-fields" parent="runs" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="evaluation_set_id: str&lt;br&gt;model_provider: str&lt;br&gt;model_name: str&lt;br&gt;processing_strategy: direct | extract_then_synthesize&lt;br&gt;summary_spec: SummarySpec&lt;br&gt;language: str&lt;br&gt;status: RunStatus&lt;br&gt;heartbeat_at: datetime&lt;br&gt;aggregate_metrics: AggregateMetrics" vertex="1">
+                    <mxGeometry height="143" width="400" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="run_entry" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#FFFFFF;strokeColor=#00838F;fontSize=12;fontColor=#000000;swimlaneFillColor=#FFFFFF;" value="wpis przebiegu" vertex="1">
+                    <mxGeometry height="139" width="400" x="560" y="320" as="geometry" />
+                </mxCell>
+                <mxCell id="run_entry-fields" parent="run_entry" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="entry_id: str&lt;br&gt;golden_summary: str (kopia)&lt;br&gt;ai_summary: str?&lt;br&gt;resolved_length: ResolvedLength?&lt;br&gt;ai_metrics: AiMetrics?&lt;br&gt;cross_metrics: CrossMetrics?&lt;br&gt;status: EntryStatus" vertex="1">
+                    <mxGeometry height="113" width="400" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="jobs" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#00838F;strokeColor=#006064;fontSize=12;fontColor=#FFFFFF;swimlaneFillColor=#FFFFFF;" value="jobs" vertex="1">
+                    <mxGeometry height="184" width="320" x="40" y="480" as="geometry" />
+                </mxCell>
+                <mxCell id="jobs-fields" parent="jobs" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="job_id: str&lt;br&gt;source_url: str&lt;br&gt;model_name: str&lt;br&gt;processing_strategy: str&lt;br&gt;summary_spec: SummarySpec&lt;br&gt;origin: admin | public&lt;br&gt;status: pending | running | completed | failed&lt;br&gt;summary_data: SummaryResponse?&lt;br&gt;metrics: JobMetrics&lt;br&gt;heartbeat_at: datetime" vertex="1">
+                    <mxGeometry height="158" width="320" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="rate_limits" parent="1" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;html=1;fillColor=#00838F;strokeColor=#006064;fontSize=12;fontColor=#FFFFFF;swimlaneFillColor=#FFFFFF;" value="rate_limits" vertex="1">
+                    <mxGeometry height="76" width="240" x="440" y="520" as="geometry" />
+                </mxCell>
+                <mxCell id="rate_limits-fields" parent="rate_limits" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=4;overflow=hidden;rotatable=0;fontSize=11;fontFamily=Courier New;whiteSpace=wrap;" value="key: str (IP)&lt;br&gt;at: datetime" vertex="1">
+                    <mxGeometry height="50" width="240" y="26" as="geometry" />
+                </mxCell>
+                <mxCell id="e-set-entries" edge="1" parent="1" source="sets" style="endArrow=none;startArrow=diamondThin;startFill=1;startSize=14;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;labelBackgroundColor=default;" target="set_entry" value="entries 1..*">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-run-entries" edge="1" parent="1" source="runs" style="endArrow=none;startArrow=diamondThin;startFill=1;startSize=14;html=1;edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=11;labelBackgroundColor=default;" target="run_entry" value="entries 1..*">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-run-set" edge="1" parent="1" source="runs-fields" style="endArrow=open;endSize=10;dashed=1;html=1;rounded=0;fontSize=11;labelBackgroundColor=default;exitX=0.005;exitY=0.371;exitDx=0;exitDy=0;exitPerimeter=0;" value="evaluation_set_id">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="550" y="140" as="sourcePoint" />
+                        <mxPoint x="360" y="160" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-entry-ref" edge="1" parent="1" source="run_entry" style="endArrow=open;endSize=10;dashed=1;html=1;rounded=0;fontSize=11;labelBackgroundColor=default;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=0.991;entryY=0.571;entryDx=0;entryDy=0;entryPerimeter=0;" target="set_entry-fields" value="entry_id">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="note" parent="1" style="text;html=1;align=left;verticalAlign=top;fontSize=11;whiteSpace=wrap;fontColor=#333333;" value="jobs i rate_limits bez relacji. rate_limits: okno przesuwne liczone zapytaniem at ≥ now − okno." vertex="1">
+                    <mxGeometry height="50" width="260" x="440" y="602" as="geometry" />
+                </mxCell>
+                <mxCell id="legend" parent="1" style="swimlane;startSize=24;html=1;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#B3B3B3;" value="Legenda" vertex="1">
+                    <mxGeometry height="144" width="280" x="720" y="520" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-0" value="" style="rounded=1;html=1;fillColor=#00838F;strokeColor=#006064;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="32" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-0" value="kolekcja MongoDB (osobny dokument)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="30" width="210" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-1" value="" style="rounded=1;html=1;fillColor=#FFFFFF;strokeColor=#00838F;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="60" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-1" value="dokument osadzony w dokumencie kolekcji" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="58" width="210" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-2" value="" style="endArrow=none;startArrow=diamondThin;startFill=1;startSize=14;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" parent="legend">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="12" y="98" as="sourcePoint" />
+                        <mxPoint x="52" y="98" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legend-text-2" value="kompozycja: osadzenie w dokumencie" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="86" width="210" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-3" value="" style="endArrow=open;endSize=10;dashed=1;html=1;strokeWidth=1.5;strokeColor=#333333;" edge="1" parent="legend">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="12" y="126" as="sourcePoint" />
+                        <mxPoint x="52" y="126" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legend-text-3" value="referencja po identyfikatorze" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="114" width="210" height="24" as="geometry" />
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

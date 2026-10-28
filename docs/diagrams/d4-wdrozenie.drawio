@@ -1,0 +1,228 @@
+<mxfile host="65bd71144e">
+    <diagram id="95zTH0b3-uFXoh3QK4Qi" name="Page-1">
+        <mxGraphModel dx="1588" dy="733" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="900" math="0" shadow="0" adaptiveColors="none">
+            <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="title-layer" value="tytuł (pomijany w eksporcie do pracy)" parent="0" />
+                <mxCell id="title" parent="title-layer" style="text;html=1;align=left;verticalAlign=top;fontSize=14;" value="&lt;b&gt;D4. Wdrożenie i CI/CD (C4, deployment)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;System sumaryzacji treści internetowych — produkcja, Google Cloud&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="50" width="460" x="40" y="10" as="geometry" />
+                </mxCell>
+                <mxCell id="browser" parent="1" style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#438DD5;strokeColor=#3C7FC0;strokeColor2=#2F6CA8;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;Frontend (SPA)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[kontener: React]&lt;br&gt;w przeglądarce użytkownika&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="110" width="240" x="620" y="60" as="geometry" />
+                </mxCell>
+                <mxCell id="github" parent="1" style="swimlane;startSize=26;html=1;fontSize=12;fontStyle=1;dashed=1;fillColor=none;strokeColor=#666666;fontColor=#333333;swimlaneLine=0;align=left;spacingLeft=8;" value="GitHub" vertex="1">
+                    <mxGeometry height="480" width="280" x="80" y="200" as="geometry" />
+                </mxCell>
+                <mxCell id="repo" parent="github" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Repozytorium&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;gałąź master&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="60" width="240" x="30" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="repo-icon" parent="repo" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/assets/developer/1/GitHub.svg;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="13" as="geometry" />
+                </mxCell>
+                <mxCell id="actions" parent="github" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;GitHub Actions&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;checks.yml, deploy.yaml&lt;br&gt;logowanie do GCP przez WIF&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="100" width="240" x="30" y="160" as="geometry" />
+                </mxCell>
+                <mxCell id="actions-icon" parent="actions" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/assets/digitalocean/1/Developer_Tools_-_GitHub_Actions.png;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="33" as="geometry" />
+                </mxCell>
+                <mxCell id="e-push" edge="1" parent="github" source="repo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#D9730D;dashed=1;" target="actions" value="uruchamia workflow&lt;br&gt;(&lt;i&gt;push&lt;/i&gt;)">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="gcp" parent="1" style="swimlane;startSize=26;html=1;fontSize=12;fontStyle=1;dashed=1;fillColor=none;strokeColor=#666666;fontColor=#333333;swimlaneLine=0;align=left;spacingLeft=8;" value="Google Cloud [projekt GCP]" vertex="1">
+                    <mxGeometry height="480" width="560" x="400" y="200" as="geometry" />
+                </mxCell>
+                <mxCell id="hosting" parent="gcp" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Firebase Hosting&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;pliki Frontendu (build Vite)&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="60" width="200" x="30" y="80" as="geometry" />
+                </mxCell>
+                <mxCell id="hosting-icon" parent="hosting" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/icon-cache1/Boxicons_Logos-2642/bxl-firebase-1290.svg;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="13" as="geometry" />
+                </mxCell>
+                <mxCell id="registry" parent="gcp" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Artifact Registry&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;obrazy Backendu&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="60" width="200" x="30" y="240" as="geometry" />
+                </mxCell>
+                <mxCell id="registry-icon" parent="registry" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIxLjk5OTAwMDU0OTMxNjQwNiIgaGVpZ2h0PSIyMC4zOTM5OTkwOTk3MzE0NDUiIHZpZXdCb3g9IjAgMCAyMS45OTkwMDA1NDkzMTY0MDYgMjAuMzkzOTk5MDk5NzMxNDQ1Ij4mI3hhOwk8c3R5bGUgdHlwZT0idGV4dC9jc3MiPiYjeGE7CS5zdDB7ZmlsbDojNDI4NWY0O2ZpbGwtcnVsZTpldmVub2RkfSYjeGE7CTwvc3R5bGU+JiN4YTsJPHBhdGggY2xhc3M9InN0MCIgZD0iTTUgMHYyLjQ1OEwxLjk5OSA0LjE5N3YxMi4wMUw1IDE3LjkzOHYyLjQ1NmwtNS0yLjg4N1YyLjg4NnptMTIgMGw0Ljk5OSAyLjg4NnYxNC42MjFMMTcgMjAuMzk0di0yLjQ1NmwzLTEuNzMxVjQuMTk3bC0zLTEuNzM5em0tNi4wMTYgNi42NzNsMi45NDctMS42NDYtMi45NDctMS42NDYtMi45NDcgMS42NDZ6bTMuMjY4LTEuMDk2bC0yLjg3MSAxLjY3OHYzLjI4N2wyLjg3MS0xLjY3NnpNNy43NzMgOC44NjZsMi44NzEgMS42NzRWNy4yNTZMNy43NzMgNS41Nzd6bS0uMjEyIDMuODc4bDIuODItMS42NDYtMi44Mi0xLjY0Ni0yLjgyIDEuNjQ2em0zLjEzMi0xLjA5OGwtMi44NzEgMS42Nzh2My4yODdsMi44NzEtMS42NzZ6bS02LjI2NCAzLjI4OUw3LjMgMTYuNjA5di0zLjI4NWwtMi44NzEtMS42Nzl6bTEwLjAyOS0yLjE5MWwyLjgyLTEuNjQ2LTIuODItMS42NDYtMi44MiAxLjY0NnptMy4xMzItMS4wOThsLTIuODcxIDEuNjc4djMuMjg3bDIuODcxLTEuNjc2em0tNi4yNjQgMy4yODlsMi44NzEgMS42NzR2LTMuMjg1bC0yLjg3MS0xLjY3OXoiLz4mI3hhOzwvc3ZnPg==;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="13" as="geometry" />
+                </mxCell>
+                <mxCell id="tf_state" parent="gcp" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Cloud Storage&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;stan Terraform (bootstrap, main)&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="70" width="200" x="30" y="370" as="geometry" />
+                </mxCell>
+                <mxCell id="tf_state-icon" parent="tf_state" style="shape=mxgraph.gcp3.cloud_storage;html=1;aspect=fixed;fillColor=#4285F4;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="18" as="geometry" />
+                </mxCell>
+                <mxCell id="cloud_run" parent="gcp" style="swimlane;startSize=26;html=1;fontSize=12;fontStyle=1;dashed=1;fillColor=none;strokeColor=#666666;fontColor=#333333;swimlaneLine=0;align=left;spacingLeft=8;spacingLeft=36;" value="Cloud Run [0–1 instancji]" vertex="1">
+                    <mxGeometry height="180" width="220" x="320" y="120" as="geometry" />
+                </mxCell>
+                <mxCell id="cloud_run-icon" parent="cloud_run" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjM2NS40NjQ5OTY3NzA0MjQ5MyIgaGVpZ2h0PSIzNzkuMjIyOTk0NDYzNTc3OTUiIHZpZXdCb3g9IjAgMCA5Ni42OTU5OTkxNDU1MDc4MSAxMDAuMzM1OTk4NTM1MTU2MjUiPiYjeGE7PHN0eWxlIHR5cGU9InRleHQvY3NzIj4mI3hhOwkuc3Qwe2ZpbGw6IzQyODVmNDt9JiN4YTsJLnN0MXtmaWxsOiNhZWNiZmE7fSYjeGE7PC9zdHlsZT4mI3hhOwk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjkuNzk0IDEwMC4zMzZMNDYuOTIgNTAuMTY4aDQ5Ljc3NnpNMCA5OS42NzFsMTIuOTc2LTQ5LjUwMkgyOS4yMkwxNi44OTcgOTIuMDU0eiIvPiYjeGE7CTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yOS43OTQgMEw0Ni45MiA1MC4xNjhoNDkuNzc2ek0wIC42NjZsMTIuOTc2IDQ5LjUwMkgyOS4yMkwxNi44OTcgOC4yODN6Ii8+JiN4YTs8L3N2Zz4=;" value="" vertex="1">
+                    <mxGeometry height="22" width="22" x="8" y="2" as="geometry" />
+                </mxCell>
+                <mxCell id="api" parent="cloud_run" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#3C7FC0;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;Backend&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[kontener: Python, FastAPI]&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="90" width="180" x="20" y="70" as="geometry" />
+                </mxCell>
+                <mxCell id="secrets" parent="gcp" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Secret Manager&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;URI bazy, klucze LLM, JWT&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="50" width="220" x="310" y="340" as="geometry" />
+                </mxCell>
+                <mxCell id="secrets-icon" parent="secrets" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGlkPSJzdmc1MzkzNyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTc1LjE2MDY0NDUzMTI1IDEwNC4yNzczNTEzNzkzOTQ1MyIgaGVpZ2h0PSIxMDQuMjc3MzUxMzc5Mzk0NTMiIHdpZHRoPSIxNzUuMTYwNjQ0NTMxMjUiPiYjeGE7CTxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+CS5zdDB7ZmlsbDojNDI4NWY0O308L3N0eWxlPgkmI3hhOyAgPHBhdGggY2xhc3M9InN0MCIgZD0ibSAxMjguNTY5MSwzNC4xMTUyMzYgdiAxMi45Nzg1MTYgbCAtMTIuMzM3ODksLTQuMzgwODYgLTIuNTA5NzcsNy4wNjgzNiAxMi41NDEwMiw0LjQ1MzEyNSAtOC41NjA1NSwxMS40MzE2NCA2LjAwMTk2LDQuNDk2MDk0IDguNTk5NjEsLTExLjQ4MDQ2OSA4LjQ5NDE0LDExLjQ2NDg0NCA2LjAyNzM0LC00LjQ2NDg0NCAtOC40NzI2NiwtMTEuNDMzNTkzIDEyLjY0MDYzLC00LjQ2Njc5NyAtMi41LC03LjA3MDMxMyAtMTIuNDIzODMsNC4zOTA2MjUgViAzNC4xMTUyMzYgWiBtIC00NC43NzY4NzIsMCB2IDEyLjk3ODUxNiBsIC0xMi4zMzc4OTEsLTQuMzgwODYgLTIuNTA5NzY1LDcuMDY4MzYgMTIuNTQxMDE1LDQuNDUzMTI1IC04LjU2MDU0NywxMS40MzE2NCA2LjAwMTk1Myw0LjQ5NjA5NCA4LjU5OTYxLC0xMS40ODA0NjkgOC40OTQxNCwxMS40NjQ4NDQgNi4wMjczNDcsLTQuNDY0ODQ0IC04LjQ3MjY1OSwtMTEuNDMzNTkzIDEyLjY0MDYyOSwtNC40NjY3OTcgLTIuNSwtNy4wNzAzMTMgLTEyLjQyMzgzMiw0LjM5MDYyNSBWIDM0LjExNTIzNiBaIG0gLTQ0Ljc3Njg1LDAgdiAxMi45Nzg1MTYgbCAtMTIuMzM3ODkxLC00LjM4MDg2IC0yLjUwOTc2NSw3LjA2ODM2IDEyLjU0MTAxNSw0LjQ1MzEyNSAtOC41NjA1NDcsMTEuNDMxNjQgNi4wMDE5NTMsNC40OTYwOTQgOC41OTk2MSwtMTEuNDgwNDY5IDguNDk0MTQsMTEuNDY0ODQ0IDYuMDI3MzQ0LC00LjQ2NDg0NCAtOC40NzI2NTYsLTExLjQzMzU5MyAxMi42NDA2MjUsLTQuNDY2Nzk3IC0yLjUsLTcuMDcwMzEzIC0xMi40MjM4MjgsNC4zOTA2MjUgViAzNC4xMTUyMzYgWiBNIDE3NS4xNjA2NCwxMGUtNyBWIDEwNC4yNzczNCBoIC0zNy4yNzY4MiBjIC0xLjIwODU3LDAgLTIuMDAyNDgsLTAuNjIzNTQgLTIuMDAyNDgsLTEuODY2MzQgdiAtOS45MjcyMzggYyAwLC0xLjE0ODI1IDAuNzE1OTYsLTEuNzA2NDIgMi4wMDI0OCwtMS43MDY0MiBoIDIzLjc3NjgyIFYgMTMuNSBoIC0yMy45NDQ5OCBjIC0xLjQwODU1LDAgLTEuOTUxNTEsLTAuNzUyMzE3IC0xLjk1MTUxLC0yLjA3NDQ4MiBWIDEuODQyNzI2IGMgMCwtMS4yNjU5NzEgMC42OTgwOCwtMS44NDI3MjUgMS45NTE1MSwtMS44NDI3MjUgeiBNIDAsMCB2IDEwNC4yNzczNSBoIDM3LjI3NjgxNCBjIDEuMjA4NTcxLDAgMi4wMDI0ODMsLTAuNjIzNTQgMi4wMDI0ODMsLTEuODY2MzQgdiAtOS45MjcyMzggYyAwLC0xLjE0ODI1IC0wLjcxNTk1NywtMS43MDY0MiAtMi4wMDI0ODMsLTEuNzA2NDIgSCAxMy41IFYgMTMuNDk5OTk5IGggMjMuOTQ0OTczIGMgMS40MDg1NTIsMCAxLjk1MTUxMSwtMC43NTIzMTcgMS45NTE1MTEsLTIuMDc0NDgyIFYgMS44NDI3MjUgQyAzOS4zOTY0ODQsMC41NzY3NTQgMzguNjk4NDEsMCAzNy40NDQ5NzMsMCBaIi8+JiN4YTs8L3N2Zz4=;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="8" as="geometry" />
+                </mxCell>
+                <mxCell id="firestore" parent="gcp" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#888888;fontColor=#000000;fontSize=12;align=left;spacingLeft=54;" value="&lt;b&gt;Firestore&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;zgodność z MongoDB&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="50" width="220" x="310" y="420" as="geometry" />
+                </mxCell>
+                <mxCell id="firestore-icon" parent="firestore" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjMyMy45MDU2MTAzOTg2NzUxNSIgaGVpZ2h0PSIzNzYuNDIyMjk0OTYzNjg0MDciIHZpZXdCb3g9Ii0wLjA5NzAwMDAwMjg2MTAyMjk1IDAuMjg3OTk5OTg3NjAyMjMzOSA4NS42OTk5OTY5NDgyNDIxOSA5OS41OTUwMDEyMjA3MDMxMiI+JiN4YTs8c3R5bGUgdHlwZT0idGV4dC9jc3MiPiYjeGE7CS5zdDB7ZmlsbDojYWVjYmZhO30mI3hhOwkuc3Qxe2ZpbGw6IzY2OWRmNjt9JiN4YTsJLnN0MntmaWxsOiM0Mjg1ZjQ7fSYjeGE7PC9zdHlsZT4mI3hhOwk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNLS4wOTcgNzUuODE1VjU1Ljg3NGw0Mi44NS0yMC4xODN2MTkuMDd6bTAtMzUuNDAzVjIwLjQ3MUw0Mi43NTMuMjg4djE5LjA3eiIvPiYjeGE7CTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04NS42MDMgNzUuODE1VjU1Ljg3NGwtNDIuODUtMjAuMTgzdjE5LjA3em0wLTM1LjQwM1YyMC40NzFMNDIuNzUzLjI4OHYxOS4wN3oiLz4mI3hhOwk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDIuNzUzIDgwLjMxNGwxNi4yMTctNy41MjUgMjEuMDg0IDkuNzE3LTM3LjMwMSAxNy4zNzd6Ii8+JiN4YTs8L3N2Zz4=;" value="" vertex="1">
+                    <mxGeometry height="34" width="34" x="12" y="8" as="geometry" />
+                </mxCell>
+                <mxCell id="e-secrets" edge="1" parent="gcp" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=0.444;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;strokeColor=#1168BD;" target="secrets" value="czyta sekrety z">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-firestore" edge="1" parent="gcp" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=1;exitY=0.8;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#1168BD;" target="firestore" value="czyta i zapisuje&lt;br&gt;dane w [TLS]">
+                    <mxGeometry relative="1" x="0.2" y="50" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="550" y="262" />
+                            <mxPoint x="550" y="445" />
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="llm" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;Dostawcy LLM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;Gemini API, OpenRouter, Ollama&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="80" width="190" x="1080" y="330" as="geometry" />
+                </mxCell>
+                <mxCell id="e-deploy-frontend" edge="1" parent="1" source="actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=1;exitY=0.1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#D9730D;dashed=1;" target="hosting" value="wdraża Frontend do">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="530" y="370" />
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-terraform" edge="1" parent="1" source="actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#D9730D;dashed=1;" target="cloud_run" value="wdraża nową rewizję do&lt;br&gt;(&lt;i&gt;terraform apply&lt;/i&gt;)">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-image" edge="1" parent="1" source="actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=1;exitY=0.9;exitDx=0;exitDy=0;entryX=0;entryY=0.167;entryDx=0;entryDy=0;strokeColor=#D9730D;dashed=1;" target="registry" value="wypycha&lt;br&gt;obraz do">
+                    <mxGeometry relative="1" x="0.1846" as="geometry">
+                        </mxGeometry>
+                </mxCell>
+                <mxCell id="e-state" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=0.5;exitY=1;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;strokeColor=#D9730D;dashed=1;" target="tf_state" value="zapisuje stan Terraform w" source="actions">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="230" y="605" />
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-pull" edge="1" parent="1" source="cloud_run" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.83;exitDx=0;exitDy=0;strokeColor=#D9730D;dashed=1;" target="registry" value="pobiera obraz z">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-load" edge="1" parent="1" source="browser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=0.1;exitY=1;exitDx=0;exitDy=0;strokeColor=#1168BD;" target="hosting" value="pobiera aplikację z&lt;br&gt;[HTTPS]">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="644" y="255" />
+                            <mxPoint x="530" y="255" />
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-call" edge="1" parent="1" source="browser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=0.98;exitY=1;exitDx=0;exitDy=0;entryX=0.96;entryY=0;entryDx=0;entryDy=0;strokeColor=#1168BD;" target="api" value="wysyła żądania do&lt;br&gt;[JSON/HTTPS]">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e-llm" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;strokeColor=#1168BD;" target="llm" value="generuje i ocenia&lt;br&gt;podsumowania przez [HTTPS]">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="legend" parent="1" style="swimlane;startSize=24;html=1;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#B3B3B3;" value="Legenda" vertex="1">
+                    <mxGeometry height="452" width="290" x="1040" y="520" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-0" value="" style="shape=mxgraph.c4.webBrowserContainer2;html=1;fillColor=#438DD5;strokeColor=#3C7FC0;strokeColor2=#2F6CA8;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="32" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-0" value="kontener własny w przeglądarce" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="30" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-1" value="" style="rounded=1;html=1;fillColor=#438DD5;strokeColor=none;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="60" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-1" value="kontener własny" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="58" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-2" value="" style="rounded=1;html=1;fillColor=#999999;strokeColor=none;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="88" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-2" value="system zewnętrzny (poza Systemem sumaryzacji)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="86" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-3" value="" style="rounded=1;html=1;fillColor=#FFFFFF;strokeColor=#888888;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="116" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-3" value="usługa zarządzana Google Cloud lub GitHub" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="114" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-4" value="" style="rounded=0;dashed=1;html=1;fillColor=none;strokeColor=#666666;" vertex="1" parent="legend">
+                    <mxGeometry x="12" y="144" width="40" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-4" value="granica: organizacja, chmura, węzeł wdrożenia" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="142" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-5" value="" style="endArrow=block;endFill=1;html=1;strokeWidth=1.5;strokeColor=#D9730D;dashed=1;" edge="1" parent="legend">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="12" y="182" as="sourcePoint" />
+                        <mxPoint x="52" y="182" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legend-text-5" value="CI/CD: wdrożenie" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="170" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-6" value="" style="endArrow=block;endFill=1;html=1;strokeWidth=1.5;strokeColor=#1168BD;dashed=0;" edge="1" parent="legend">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="12" y="210" as="sourcePoint" />
+                        <mxPoint x="52" y="210" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legend-text-6" value="runtime: żądanie (od strony inicjującej)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="198" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-7" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/assets/developer/1/GitHub.svg;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="228" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-7" value="GitHub (repozytorium)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="226" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-8" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/assets/digitalocean/1/Developer_Tools_-_GitHub_Actions.png;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="256" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-8" value="GitHub Actions (potok CI/CD)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="254" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-9" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=https://icons.diagrams.net/icon-cache1/Boxicons_Logos-2642/bxl-firebase-1290.svg;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="284" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-9" value="Firebase Hosting (pliki statyczne)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="282" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-10" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjIxLjk5OTAwMDU0OTMxNjQwNiIgaGVpZ2h0PSIyMC4zOTM5OTkwOTk3MzE0NDUiIHZpZXdCb3g9IjAgMCAyMS45OTkwMDA1NDkzMTY0MDYgMjAuMzkzOTk5MDk5NzMxNDQ1Ij4mI3hhOwk8c3R5bGUgdHlwZT0idGV4dC9jc3MiPiYjeGE7CS5zdDB7ZmlsbDojNDI4NWY0O2ZpbGwtcnVsZTpldmVub2RkfSYjeGE7CTwvc3R5bGU+JiN4YTsJPHBhdGggY2xhc3M9InN0MCIgZD0iTTUgMHYyLjQ1OEwxLjk5OSA0LjE5N3YxMi4wMUw1IDE3LjkzOHYyLjQ1NmwtNS0yLjg4N1YyLjg4NnptMTIgMGw0Ljk5OSAyLjg4NnYxNC42MjFMMTcgMjAuMzk0di0yLjQ1NmwzLTEuNzMxVjQuMTk3bC0zLTEuNzM5em0tNi4wMTYgNi42NzNsMi45NDctMS42NDYtMi45NDctMS42NDYtMi45NDcgMS42NDZ6bTMuMjY4LTEuMDk2bC0yLjg3MSAxLjY3OHYzLjI4N2wyLjg3MS0xLjY3NnpNNy43NzMgOC44NjZsMi44NzEgMS42NzRWNy4yNTZMNy43NzMgNS41Nzd6bS0uMjEyIDMuODc4bDIuODItMS42NDYtMi44Mi0xLjY0Ni0yLjgyIDEuNjQ2em0zLjEzMi0xLjA5OGwtMi44NzEgMS42Nzh2My4yODdsMi44NzEtMS42NzZ6bS02LjI2NCAzLjI4OUw3LjMgMTYuNjA5di0zLjI4NWwtMi44NzEtMS42Nzl6bTEwLjAyOS0yLjE5MWwyLjgyLTEuNjQ2LTIuODItMS42NDYtMi44MiAxLjY0NnptMy4xMzItMS4wOThsLTIuODcxIDEuNjc4djMuMjg3bDIuODcxLTEuNjc2em0tNi4yNjQgMy4yODlsMi44NzEgMS42NzR2LTMuMjg1bC0yLjg3MS0xLjY3OXoiLz4mI3hhOzwvc3ZnPg==;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="312" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-10" value="Artifact Registry (obrazy kontenerów)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="310" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-11" value="" style="shape=mxgraph.gcp3.cloud_storage;html=1;aspect=fixed;fillColor=#4285F4;strokeColor=none;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="340" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-11" value="Cloud Storage (bucket)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="338" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-12" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjM2NS40NjQ5OTY3NzA0MjQ5MyIgaGVpZ2h0PSIzNzkuMjIyOTk0NDYzNTc3OTUiIHZpZXdCb3g9IjAgMCA5Ni42OTU5OTkxNDU1MDc4MSAxMDAuMzM1OTk4NTM1MTU2MjUiPiYjeGE7PHN0eWxlIHR5cGU9InRleHQvY3NzIj4mI3hhOwkuc3Qwe2ZpbGw6IzQyODVmNDt9JiN4YTsJLnN0MXtmaWxsOiNhZWNiZmE7fSYjeGE7PC9zdHlsZT4mI3hhOwk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjkuNzk0IDEwMC4zMzZMNDYuOTIgNTAuMTY4aDQ5Ljc3NnpNMCA5OS42NzFsMTIuOTc2LTQ5LjUwMkgyOS4yMkwxNi44OTcgOTIuMDU0eiIvPiYjeGE7CTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yOS43OTQgMEw0Ni45MiA1MC4xNjhoNDkuNzc2ek0wIC42NjZsMTIuOTc2IDQ5LjUwMkgyOS4yMkwxNi44OTcgOC4yODN6Ii8+JiN4YTs8L3N2Zz4=;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="368" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-12" value="Cloud Run (kontenery bezserwerowe)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="366" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-13" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGlkPSJzdmc1MzkzNyIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTc1LjE2MDY0NDUzMTI1IDEwNC4yNzczNTEzNzkzOTQ1MyIgaGVpZ2h0PSIxMDQuMjc3MzUxMzc5Mzk0NTMiIHdpZHRoPSIxNzUuMTYwNjQ0NTMxMjUiPiYjeGE7CTxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+CS5zdDB7ZmlsbDojNDI4NWY0O308L3N0eWxlPgkmI3hhOyAgPHBhdGggY2xhc3M9InN0MCIgZD0ibSAxMjguNTY5MSwzNC4xMTUyMzYgdiAxMi45Nzg1MTYgbCAtMTIuMzM3ODksLTQuMzgwODYgLTIuNTA5NzcsNy4wNjgzNiAxMi41NDEwMiw0LjQ1MzEyNSAtOC41NjA1NSwxMS40MzE2NCA2LjAwMTk2LDQuNDk2MDk0IDguNTk5NjEsLTExLjQ4MDQ2OSA4LjQ5NDE0LDExLjQ2NDg0NCA2LjAyNzM0LC00LjQ2NDg0NCAtOC40NzI2NiwtMTEuNDMzNTkzIDEyLjY0MDYzLC00LjQ2Njc5NyAtMi41LC03LjA3MDMxMyAtMTIuNDIzODMsNC4zOTA2MjUgViAzNC4xMTUyMzYgWiBtIC00NC43NzY4NzIsMCB2IDEyLjk3ODUxNiBsIC0xMi4zMzc4OTEsLTQuMzgwODYgLTIuNTA5NzY1LDcuMDY4MzYgMTIuNTQxMDE1LDQuNDUzMTI1IC04LjU2MDU0NywxMS40MzE2NCA2LjAwMTk1Myw0LjQ5NjA5NCA4LjU5OTYxLC0xMS40ODA0NjkgOC40OTQxNCwxMS40NjQ4NDQgNi4wMjczNDcsLTQuNDY0ODQ0IC04LjQ3MjY1OSwtMTEuNDMzNTkzIDEyLjY0MDYyOSwtNC40NjY3OTcgLTIuNSwtNy4wNzAzMTMgLTEyLjQyMzgzMiw0LjM5MDYyNSBWIDM0LjExNTIzNiBaIG0gLTQ0Ljc3Njg1LDAgdiAxMi45Nzg1MTYgbCAtMTIuMzM3ODkxLC00LjM4MDg2IC0yLjUwOTc2NSw3LjA2ODM2IDEyLjU0MTAxNSw0LjQ1MzEyNSAtOC41NjA1NDcsMTEuNDMxNjQgNi4wMDE5NTMsNC40OTYwOTQgOC41OTk2MSwtMTEuNDgwNDY5IDguNDk0MTQsMTEuNDY0ODQ0IDYuMDI3MzQ0LC00LjQ2NDg0NCAtOC40NzI2NTYsLTExLjQzMzU5MyAxMi42NDA2MjUsLTQuNDY2Nzk3IC0yLjUsLTcuMDcwMzEzIC0xMi40MjM4MjgsNC4zOTA2MjUgViAzNC4xMTUyMzYgWiBNIDE3NS4xNjA2NCwxMGUtNyBWIDEwNC4yNzczNCBoIC0zNy4yNzY4MiBjIC0xLjIwODU3LDAgLTIuMDAyNDgsLTAuNjIzNTQgLTIuMDAyNDgsLTEuODY2MzQgdiAtOS45MjcyMzggYyAwLC0xLjE0ODI1IDAuNzE1OTYsLTEuNzA2NDIgMi4wMDI0OCwtMS43MDY0MiBoIDIzLjc3NjgyIFYgMTMuNSBoIC0yMy45NDQ5OCBjIC0xLjQwODU1LDAgLTEuOTUxNTEsLTAuNzUyMzE3IC0xLjk1MTUxLC0yLjA3NDQ4MiBWIDEuODQyNzI2IGMgMCwtMS4yNjU5NzEgMC42OTgwOCwtMS44NDI3MjUgMS45NTE1MSwtMS44NDI3MjUgeiBNIDAsMCB2IDEwNC4yNzczNSBoIDM3LjI3NjgxNCBjIDEuMjA4NTcxLDAgMi4wMDI0ODMsLTAuNjIzNTQgMi4wMDI0ODMsLTEuODY2MzQgdiAtOS45MjcyMzggYyAwLC0xLjE0ODI1IC0wLjcxNTk1NywtMS43MDY0MiAtMi4wMDI0ODMsLTEuNzA2NDIgSCAxMy41IFYgMTMuNDk5OTk5IGggMjMuOTQ0OTczIGMgMS40MDg1NTIsMCAxLjk1MTUxMSwtMC43NTIzMTcgMS45NTE1MTEsLTIuMDc0NDgyIFYgMS44NDI3MjUgQyAzOS4zOTY0ODQsMC41NzY3NTQgMzguNjk4NDEsMCAzNy40NDQ5NzMsMCBaIi8+JiN4YTs8L3N2Zz4=;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="396" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-13" value="Secret Manager (sekrety)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="394" width="220" height="24" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-sign-14" value="" style="shape=image;html=1;aspect=fixed;imageAspect=0;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnY9Imh0dHBzOi8vdmVjdGEuaW8vbmFubyIgd2lkdGg9IjMyMy45MDU2MTAzOTg2NzUxNSIgaGVpZ2h0PSIzNzYuNDIyMjk0OTYzNjg0MDciIHZpZXdCb3g9Ii0wLjA5NzAwMDAwMjg2MTAyMjk1IDAuMjg3OTk5OTg3NjAyMjMzOSA4NS42OTk5OTY5NDgyNDIxOSA5OS41OTUwMDEyMjA3MDMxMiI+JiN4YTs8c3R5bGUgdHlwZT0idGV4dC9jc3MiPiYjeGE7CS5zdDB7ZmlsbDojYWVjYmZhO30mI3hhOwkuc3Qxe2ZpbGw6IzY2OWRmNjt9JiN4YTsJLnN0MntmaWxsOiM0Mjg1ZjQ7fSYjeGE7PC9zdHlsZT4mI3hhOwk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNLS4wOTcgNzUuODE1VjU1Ljg3NGw0Mi44NS0yMC4xODN2MTkuMDd6bTAtMzUuNDAzVjIwLjQ3MUw0Mi43NTMuMjg4djE5LjA3eiIvPiYjeGE7CTxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik04NS42MDMgNzUuODE1VjU1Ljg3NGwtNDIuODUtMjAuMTgzdjE5LjA3em0wLTM1LjQwM1YyMC40NzFMNDIuNzUzLjI4OHYxOS4wN3oiLz4mI3hhOwk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDIuNzUzIDgwLjMxNGwxNi4yMTctNy41MjUgMjEuMDg0IDkuNzE3LTM3LjMwMSAxNy4zNzd6Ii8+JiN4YTs8L3N2Zz4=;" vertex="1" parent="legend">
+                    <mxGeometry x="22" y="424" width="20" height="20" as="geometry" />
+                </mxCell>
+                <mxCell id="legend-text-14" value="Firestore (baza dokumentowa)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
+                    <mxGeometry x="62" y="422" width="220" height="24" as="geometry" />
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

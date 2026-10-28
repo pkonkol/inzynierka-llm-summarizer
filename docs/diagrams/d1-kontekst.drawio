@@ -1,98 +1,98 @@
 <mxfile host="65bd71144e">
     <diagram id="OFbcIRUG_ijyuRX7vvpc" name="Page-1">
-        <mxGraphModel dx="1556" dy="828" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
+        <mxGraphModel dx="1227" dy="959" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0" adaptiveColors="none">
             <root>
-                <mxCell id="0" />
-                <mxCell id="1" parent="0" />
-                <mxCell id="title-layer" value="tytuł (pomijany w eksporcie do pracy)" parent="0" />
-                <mxCell id="title" parent="title-layer" style="text;html=1;align=left;verticalAlign=top;fontSize=14;" value="&lt;b&gt;D1. Kontekst systemu (C4, poziom 1)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;System sumaryzacji treści internetowych&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="50" width="420" x="40" y="10" as="geometry" />
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="guest" parent="1" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;rounded=1;roundedPerimeter=1;" value="&lt;b&gt;Gość&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[osoba]&lt;br&gt;anonimowy użytkownik strony publicznej&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="110" width="160" x="40" y="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="guest" parent="1" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;" value="&lt;b&gt;Gość&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[osoba]&lt;br&gt;anonimowy użytkownik strony publicznej&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="110" width="160" x="40" y="80" as="geometry" />
+                <mxCell id="researcher" parent="1" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;rounded=1;roundedPerimeter=1;" value="&lt;b&gt;Badacz&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[osoba]&lt;br&gt;zalogowany w konsoli /admin&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="110" width="160" x="320" y="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="researcher" parent="1" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#073B6F;fontColor=#FFFFFF;fontSize=12;verticalAlign=bottom;spacingBottom=6;" value="&lt;b&gt;Badacz&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[osoba]&lt;br&gt;zalogowany w konsoli /admin&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="110" width="160" x="320" y="80" as="geometry" />
+                <mxCell id="system" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#3C7FC0;fontColor=#FFFFFF;fontSize=12;roundedPerimeter=1;" value="&lt;b&gt;System sumaryzacji&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system]&lt;br&gt;podsumowuje strony WWW przez LLM i ocenia jakość podsumowań&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="100" width="280" x="120" y="280" as="geometry"/>
                 </mxCell>
-                <mxCell id="system" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#3C7FC0;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;System sumaryzacji&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system]&lt;br&gt;podsumowuje strony WWW przez LLM i ocenia jakość podsumowań&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="100" width="280" x="120" y="280" as="geometry" />
+                <mxCell id="web" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;roundedPerimeter=1;" value="&lt;b&gt;Strony WWW&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;źródło treści&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="80" width="200" x="40" y="470" as="geometry"/>
                 </mxCell>
-                <mxCell id="web" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;Strony WWW&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;źródło treści&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="80" width="200" x="40" y="470" as="geometry" />
-                </mxCell>
-                <mxCell id="llm" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;" value="&lt;b&gt;Dostawcy LLM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;Gemini API, OpenRouter, Ollama&lt;/font&gt;" vertex="1">
-                    <mxGeometry height="80" width="200" x="270" y="470" as="geometry" />
+                <mxCell id="llm" parent="1" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#8A8A8A;fontColor=#FFFFFF;fontSize=12;roundedPerimeter=1;" value="&lt;b&gt;Dostawcy LLM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[system zewnętrzny]&lt;br&gt;Gemini API, OpenRouter, Ollama&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="80" width="200" x="270" y="470" as="geometry"/>
                 </mxCell>
                 <mxCell id="e-guest" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#444444;" target="system" value="zleca podsumowania w&lt;br&gt;[HTTPS]">
                     <mxGeometry relative="1" x="0.1447" y="20" as="geometry">
-                        <mxPoint as="offset" />
+                        <mxPoint as="offset"/>
                         <Array as="points">
-                            <mxPoint x="80" y="186" />
-                            <mxPoint x="80" y="240" />
-                            <mxPoint x="260" y="240" />
+                            <mxPoint x="80" y="186"/>
+                            <mxPoint x="80" y="240"/>
+                            <mxPoint x="260" y="240"/>
                         </Array>
-                        <mxPoint x="110" y="186" as="sourcePoint" />
+                        <mxPoint x="110" y="186" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e-researcher" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#444444;" target="system" value="konfiguruje i ocenia podsumowania w&lt;br&gt;[HTTPS, JWT]">
-                    <mxGeometry relative="1" x="0.1358" y="-20" as="geometry">
-                        <mxPoint as="offset" />
+                    <mxGeometry relative="1" x="0.2593" y="-20" as="geometry">
+                        <mxPoint as="offset"/>
                         <Array as="points">
-                            <mxPoint x="467" y="190" />
-                            <mxPoint x="440" y="190" />
-                            <mxPoint x="440" y="240" />
-                            <mxPoint x="260" y="240" />
+                            <mxPoint x="467" y="190"/>
+                            <mxPoint x="440" y="190"/>
+                            <mxPoint x="440" y="240"/>
+                            <mxPoint x="260" y="240"/>
                         </Array>
-                        <mxPoint x="440" y="190" as="sourcePoint" />
+                        <mxPoint x="440" y="190" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="e-web" edge="1" parent="1" source="system" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#444444;" target="web" value="pobiera treść artykułów z&lt;br&gt;[HTTPS]">
-                    <mxGeometry relative="1" x="0.1481" y="-15" as="geometry">
-                        <mxPoint as="offset" />
+                    <mxGeometry relative="1" x="0.0741" y="-15" as="geometry">
+                        <mxPoint as="offset"/>
                         <Array as="points">
-                            <mxPoint x="260" y="425" />
-                            <mxPoint x="80" y="425" />
+                            <mxPoint x="260" y="425"/>
+                            <mxPoint x="80" y="425"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e-llm" edge="1" parent="1" source="system" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#444444;" target="llm" value="generuje podsumowania i oceny G-Eval przez&lt;br&gt;[HTTPS]">
-                    <mxGeometry relative="1" x="0.0741" y="15" as="geometry">
-                        <mxPoint as="offset" />
+                <mxCell id="e-llm" edge="1" parent="1" source="system" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;strokeColor=#444444;" target="llm" value="generuje podsumowania &lt;br&gt;i oceny G-Eval przez&amp;nbsp;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: light-dark(rgb(255, 255, 255), rgb(18, 18, 18));&quot;&gt;[HTTPS]&lt;/span&gt;">
+                    <mxGeometry relative="1" x="0.1481" y="15" as="geometry">
+                        <mxPoint as="offset"/>
                         <Array as="points">
-                            <mxPoint x="260" y="425" />
-                            <mxPoint x="440" y="425" />
+                            <mxPoint x="260" y="425"/>
+                            <mxPoint x="440" y="425"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="legend" parent="1" style="swimlane;startSize=24;html=1;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#B3B3B3;" value="Legenda" vertex="1">
-                    <mxGeometry height="144" width="250" x="520" y="420" as="geometry" />
+                <mxCell id="legend" parent="1" style="swimlane;startSize=24;html=1;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#B3B3B3;rounded=1;roundedPerimeter=1;" value="Legenda" vertex="1">
+                    <mxGeometry height="144" width="250" x="135" y="570" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-sign-0" value="" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;html=1;fillColor=#08427B;strokeColor=none;" vertex="1" parent="legend">
-                    <mxGeometry x="12" y="32" width="40" height="20" as="geometry" />
+                <mxCell id="legend-sign-0" parent="legend" style="shape=mermaidPerson;perimeter=mermaidPersonPerimeter;html=1;fillColor=#08427B;strokeColor=none;rounded=1;roundedPerimeter=1;" value="" vertex="1">
+                    <mxGeometry height="20" width="40" x="12" y="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-text-0" value="osoba" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
-                    <mxGeometry x="62" y="30" width="180" height="24" as="geometry" />
+                <mxCell id="legend-text-0" parent="legend" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;rounded=1;roundedPerimeter=1;" value="osoba" vertex="1">
+                    <mxGeometry height="24" width="180" x="62" y="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-sign-1" value="" style="rounded=1;html=1;fillColor=#1168BD;strokeColor=none;" vertex="1" parent="legend">
-                    <mxGeometry x="12" y="60" width="40" height="20" as="geometry" />
+                <mxCell id="legend-sign-1" parent="legend" style="rounded=1;html=1;fillColor=#1168BD;strokeColor=none;roundedPerimeter=1;" value="" vertex="1">
+                    <mxGeometry height="20" width="40" x="12" y="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-text-1" value="system własny" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
-                    <mxGeometry x="62" y="58" width="180" height="24" as="geometry" />
+                <mxCell id="legend-text-1" parent="legend" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;rounded=1;roundedPerimeter=1;" value="system własny" vertex="1">
+                    <mxGeometry height="24" width="180" x="62" y="58" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-sign-2" value="" style="rounded=1;html=1;fillColor=#999999;strokeColor=none;" vertex="1" parent="legend">
-                    <mxGeometry x="12" y="88" width="40" height="20" as="geometry" />
+                <mxCell id="legend-sign-2" parent="legend" style="rounded=1;html=1;fillColor=#999999;strokeColor=none;roundedPerimeter=1;" value="" vertex="1">
+                    <mxGeometry height="20" width="40" x="12" y="88" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-text-2" value="system zewnętrzny (poza Systemem sumaryzacji)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
-                    <mxGeometry x="62" y="86" width="180" height="24" as="geometry" />
+                <mxCell id="legend-text-2" parent="legend" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;rounded=1;roundedPerimeter=1;" value="system zewnętrzny (poza Systemem sumaryzacji)" vertex="1">
+                    <mxGeometry height="24" width="180" x="62" y="86" as="geometry"/>
                 </mxCell>
-                <mxCell id="legend-sign-3" value="" style="endArrow=block;endFill=1;html=1;strokeWidth=1.5;strokeColor=#444444;dashed=0;" edge="1" parent="legend">
+                <mxCell id="legend-sign-3" edge="1" parent="legend" style="endArrow=block;endFill=1;html=1;strokeWidth=1.5;strokeColor=#444444;dashed=0;rounded=1;" value="">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="12" y="126" as="sourcePoint" />
-                        <mxPoint x="52" y="126" as="targetPoint" />
+                        <mxPoint x="12" y="126" as="sourcePoint"/>
+                        <mxPoint x="52" y="126" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="legend-text-3" value="żądanie (od strony inicjującej)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;" vertex="1" parent="legend">
-                    <mxGeometry x="62" y="114" width="180" height="24" as="geometry" />
+                <mxCell id="legend-text-3" parent="legend" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;whiteSpace=wrap;rounded=1;roundedPerimeter=1;" value="żądanie (od strony inicjującej)" vertex="1">
+                    <mxGeometry height="24" width="180" x="62" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="title-layer" parent="0" value="tytuł (pomijany w eksporcie do pracy)"/>
+                <mxCell id="title" parent="title-layer" style="text;html=1;align=left;verticalAlign=top;fontSize=14;rounded=1;roundedPerimeter=1;" value="&lt;b&gt;D1. Kontekst systemu (C4, poziom 1)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;System sumaryzacji treści internetowych&lt;/font&gt;" vertex="1">
+                    <mxGeometry height="50" width="420" x="40" y="10" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

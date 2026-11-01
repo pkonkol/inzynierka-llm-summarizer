@@ -205,7 +205,7 @@ Rules for working in this repo are in [CLAUDE.md](CLAUDE.md).
 ## Deliverables (status 2026-09-29)
 
 1. Summarization — done. Output contract `SummarySpec` (function, format, narrative stance) + `LengthSpec`, independent of the processing strategy (`direct` / `extract_then_synthesize`) in `backend/app/services/llm/` ([ADR 0003](docs/adr/0003-summary-spec-and-processing-strategy.md)).
-2. Query Expansion — **not started; the last implementation stage.** Scope: web-search context (Brave Search MCP, optionally arXiv/Consensus) pasted into the prompt, public page only, outside the evaluation.
+2. Query Expansion — **not started.** Scope: web-search context (Brave Search MCP, optionally arXiv/Consensus) pasted into the prompt, public page only, outside the evaluation.
 3. User interface — done. Public page `/` (no login, rate-limited, three summary kinds, density slider) and research console under `/admin` ([ADR 0004](docs/adr/0004-public-homepage-and-admin-split.md)).
 4. Evaluation — pipeline done: evaluation sets (CNN/DailyMail, Curation Corpus, GUMSum, PSC 1.0), runs, G-Eval and pairwise G-Eval, ROUGE/METEOR, deterministic form metrics (`backend/app/routers/evaluation_*.py`, `backend/app/services/metrics/`). G-Eval is not calibrated yet.
 

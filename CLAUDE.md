@@ -209,12 +209,9 @@ Rules for working in this repo are in [CLAUDE.md](CLAUDE.md).
 3. User interface — done. Public page `/` (no login, rate-limited, three summary kinds, density slider) and research console under `/admin` ([ADR 0004](docs/adr/0004-public-homepage-and-admin-split.md)).
 4. Evaluation — pipeline done: evaluation sets (CNN/DailyMail, Curation Corpus, GUMSum, PSC 1.0), runs, G-Eval and pairwise G-Eval, ROUGE/METEOR, deterministic form metrics (`backend/app/routers/evaluation_*.py`, `backend/app/services/metrics/`). G-Eval is not calibrated yet.
 
-## Remaining work, in order
+## Remaining work
 
-1. Thesis write-up (Overleaf) — current. Knowledge base and rules: `.scratch/praca_overleaf/`.
-2. G-Eval calibration.
-3. Larger evaluation runs comparing system summaries with dataset references.
-4. Query Expansion (scope above).
+Order, owners and cuts live only in `.scratch/KANBAN.md` (local, gitignored). Thesis knowledge base and rules: `.scratch/praca_overleaf/`.
 
 On hold: restyling the frontend from Figma. Dropped: the cognitive-value / semantic-novelty research trajectory.
 

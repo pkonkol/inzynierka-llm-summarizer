@@ -298,3 +298,32 @@ report-infra:
 report-workflows:
     docker run --rm -v "{{root}}:/repo" -w /repo {{zizmor}} --no-progress \
         --min-severity=informational .github/workflows/ || true
+
+gcp_project := "gen-lang-client-0098900745"
+gcp_region := "europe-central2"
+gcp_service := "llm-summarizer-backend"
+
+# Steady state from infra/terraform/main/cloudrun.tf; demo-off writes these back
+steady_cpu := "2"
+steady_memory := "1024Mi"
+steady_rate_limit := "5"
+
+# GCP: one warm instance and a raised public rate limit for a live demo; billed per hour until demo-off
+[group('gcp')]
+demo-on cpu=steady_cpu memory=steady_memory rate_limit="100":
+    @echo "not implemented" && exit 1
+
+# GCP: back to scale-to-zero and the Terraform values
+[group('gcp')]
+demo-off:
+    @echo "not implemented" && exit 1
+
+# GCP: min instances, cpu, memory and public rate limit of the serving revision
+[group('gcp')]
+demo-status:
+    @echo "not implemented" && exit 1
+
+# GCP: fresh revision of the current image, no build (e.g. to pick up a new secret version)
+[group('gcp')]
+restart-backend:
+    @echo "not implemented" && exit 1

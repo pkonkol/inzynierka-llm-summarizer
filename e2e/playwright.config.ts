@@ -62,6 +62,12 @@ function localAdminPassword(): string {
   return password;
 }
 
+function prodApiUrl(): string {
+  const apiUrl = readEnvFile("../frontend/.env.production").VITE_API_URL;
+  if (!apiUrl) throw new Error("frontend/.env.production has no VITE_API_URL");
+  return apiUrl;
+}
+
 function prodAdminPassword(): string {
   const password = process.env.E2E_ADMIN_PASSWORD;
   if (!password) throw new Error("E2E_ADMIN_PASSWORD is not set — run through `just test-prod`");
@@ -86,7 +92,7 @@ const prodProject = () => ({
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "https://gen-lang-client-0098900745.web.app",
-    apiUrl: readEnvFile("../frontend/.env.production").VITE_API_URL,
+    apiUrl: prodApiUrl(),
     adminPassword: prodAdminPassword(),
     trace: "off" as const, // Traces record request bodies and localStorage, so the admin token would land in the report.
     video: "off" as const,

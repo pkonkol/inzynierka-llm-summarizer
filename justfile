@@ -54,6 +54,7 @@ security: scan-secrets scan-dockerfile scan-infra scan-deps audit-frontend audit
 fix: fix-frontend
     uvx {{ruff}} check --fix backend/
     uvx {{ruff}} format backend/
+    cd frontend && npx biome check --write ../e2e/tests ../e2e/playwright.config.ts
 
 # Backend: ruff lint + format check
 [group('backend')]

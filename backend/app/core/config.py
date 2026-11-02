@@ -146,6 +146,15 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _require_supported_thinking_models(self) -> Settings:
+        unknown = set(self.ollama_thinking_models) - set(self.supported_models.get("ollama", []))
+        if unknown:
+            raise ValueError(
+                f"OLLAMA_THINKING_MODELS {sorted(unknown)} are not in supported_models"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _require_rate_limit_window_within_retention(self) -> Settings:
         if self.public_rate_limit_window_minutes * 60 > RATE_LIMIT_RETENTION_SECONDS:
             raise ValueError("PUBLIC_RATE_LIMIT_WINDOW_MINUTES must not exceed 24 hours")

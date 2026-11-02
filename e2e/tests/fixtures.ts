@@ -33,16 +33,22 @@ async function createCompletedJob(apiUrl: string, token: string): Promise<string
   expect(created.status, "seed job refused").toBe(200);
   const { job_id: jobId } = (await created.json()) as { job_id: string };
 
-  await expect
-    .poll(
-      async () => {
-        const job = await fetch(`${apiUrl}/api/v1/jobs/${jobId}`, { headers });
-        return ((await job.json()) as { status: string }).status;
-      },
-      { timeout: 90_000 },
-    )
-    .toBe("completed");
-  return jobId;
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    const response = await fetch(`${apiUrl}/api/v1/jobs/${jobId}`, { headers });
+    expect(response.status, `seed job ${jobId} unreadable`).toBe(200);
+    const job = (await response.json()) as { status: string; error: string | null };
+    if (job.status === "completed") return jobId;
+    if (job.status === "failed") throw new Error(`seed job ${jobId} failed: ${job.error}`);
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw new Error(`seed job ${jobId} did not complete within 90 s`);
+}
+
+export function requireOption(option: keyof E2EOptions, value: string): string {
+  if (!value)
+    throw new Error(`${option} is not set by the Playwright project in playwright.config.ts`);
+  return value;
 }
 
 /**
@@ -53,7 +59,10 @@ export const test = base.extend<E2EOptions & { adminPage: Page; seededJobId: str
   apiUrl: ["", { option: true }],
   adminPassword: ["", { option: true }],
   adminPage: async ({ page, apiUrl, adminPassword }, use) => {
-    const token = await fetchAdminToken(apiUrl, adminPassword);
+    const token = await fetchAdminToken(
+      requireOption("apiUrl", apiUrl),
+      requireOption("adminPassword", adminPassword),
+    );
     await page.addInitScript((value) => localStorage.setItem("auth_token", value), token);
     await use(page);
   },
@@ -62,7 +71,12 @@ export const test = base.extend<E2EOptions & { adminPage: Page; seededJobId: str
       await use(null);
       return;
     }
-    await use(await createCompletedJob(apiUrl, await fetchAdminToken(apiUrl, adminPassword)));
+    const configuredApiUrl = requireOption("apiUrl", apiUrl);
+    const token = await fetchAdminToken(
+      configuredApiUrl,
+      requireOption("adminPassword", adminPassword),
+    );
+    await use(await createCompletedJob(configuredApiUrl, token));
   },
 });
 

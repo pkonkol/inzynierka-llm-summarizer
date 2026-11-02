@@ -8,10 +8,14 @@ test("login with password opens the console", async ({ page, adminPassword }) =>
   await expect(page.getByText("[✓] Zalogowano")).toBeVisible();
 });
 
-test("jobs list opens a job @smoke", async ({ adminPage: page, seededJobId: _seededJobId }) => {
+test("jobs list opens a job @smoke", async ({ adminPage: page, seededJobId }) => {
   await page.goto("/admin/jobs");
-  const firstJob = page.getByRole("main").getByRole("listitem").first().getByRole("link");
-  await firstJob.click();
+  const jobLinks = page.getByRole("main").getByRole("listitem").getByRole("link");
+  // Production is read-only, so there the newest completed job stands in for the seeded one.
+  const jobToOpen = seededJobId
+    ? page.locator(`a[href="/admin/jobs/${seededJobId}"]`)
+    : jobLinks.filter({ hasText: "gotowe" }).first();
+  await jobToOpen.click();
 
   await expect(page).toHaveURL(/\/admin\/jobs\/[0-9a-f-]{36}$/);
   const details = page.getByRole("complementary");

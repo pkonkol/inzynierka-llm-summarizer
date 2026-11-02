@@ -4,7 +4,13 @@ import { ARTICLE_TEXT, STABLE_ARTICLE_URL } from "./fixtures";
 async function summarizeOnPublicPage(page: Page, source: string): Promise<void> {
   await page.goto("/");
   await page.getByRole("textbox", { name: "Adres artykułu albo jego treść" }).fill(source);
+  const created = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/public/summarize") && response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Podsumuj" }).click();
+  const createdStatus = (await created).status();
+  expect(createdStatus, "public summarize refused (429 = the 5/h public limit is spent)").toBe(200);
 
   const summary = page.getByRole("article");
   await expect(summary.getByRole("heading", { level: 2 })).not.toBeEmpty({ timeout: 120_000 });

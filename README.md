@@ -41,7 +41,7 @@ just ci         # lint + security
 
 ```bash
 just test-quick # e2e on a local stack (own ports, database web_summarization_e2e), Ollama qwen3.5:0.8b — needs db-up and Ollama
-just test-long  # same stack with the models and keys from backend/.env, plus a real URL
+just test-long  # same stack on the default Gemini models (GEMINI_API_KEY from backend/.env), plus a real URL
 just test-prod  # @smoke against production: one real public summary, admin read-only — needs gcloud auth
 ```
 

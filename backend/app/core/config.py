@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import SecretStr, model_validator
@@ -15,7 +16,8 @@ RATE_LIMIT_RETENTION_SECONDS = 24 * 60 * 60
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_BACKEND_ROOT / ".env",
+        # e2e points this at e2e/backend.env so tests never touch the dev database.
+        env_file=os.environ.get("BACKEND_ENV_FILE", _BACKEND_ROOT / ".env"),
         env_file_encoding="utf-8",
         # A validation error would otherwise echo the whole raw settings dict — including the
         # leading characters of API keys — into the traceback and on into Cloud Logging.

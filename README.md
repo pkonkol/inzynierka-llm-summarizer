@@ -15,6 +15,7 @@ brew install just uv            # Docker and Node 22 are assumed
 just setup-hooks                # pre-commit hook: gitleaks on staged changes
 just deps-sync                  # backend/.venv from backend/uv.lock
 just install-frontend           # npm ci
+just install-e2e install-e2e-browser   # Playwright and its Chromium
 cp backend/.env.example backend/.env        # fill in API keys
 cp frontend/.env.example frontend/.env
 ```
@@ -36,6 +37,12 @@ just lint       # ruff, pyrefly, pytest, biome, tsc, OpenAPI and TS type drift �
 just fix        # formatting and safe fixes
 just security   # gitleaks, trivy, hadolint, npm audit, actionlint, zizmor — needs Docker
 just ci         # lint + security
+```
+
+```bash
+just test-quick # e2e on a local stack (own ports, database web_summarization_e2e), Ollama qwen3.5:0.8b — needs db-up and Ollama
+just test-long  # same stack with the models and keys from backend/.env, plus a real URL
+just test-prod  # @smoke against production: one real public summary, admin read-only — needs gcloud auth
 ```
 
 CI runs the same recipes on every push ([checks.yml](.github/workflows/checks.yml)); details in

@@ -43,11 +43,11 @@ ci: lint security
 
 # Fast inner loop: no containers, no network. Run this constantly.
 [group('meta')]
-lint: lint-backend typecheck-backend complexity-backend lint-frontend lint-extension test-backend check-openapi check-generated-types
+lint: lint-backend typecheck-backend complexity-backend lint-frontend lint-extension lint-e2e test-backend check-openapi check-generated-types
 
 # Container-based scanners. Slower, needs Docker running.
 [group('meta')]
-security: scan-secrets scan-dockerfile scan-infra scan-deps audit-frontend lint-workflows
+security: scan-secrets scan-dockerfile scan-infra scan-deps audit-frontend audit-e2e lint-workflows
 
 # Auto-fix formatting and the mechanical lint findings
 [group('meta')]
@@ -151,6 +151,72 @@ deps-sync:
 test-backend:
     uv run pytest -q
 
+# E2E: install from the lockfile (enough for lint-e2e)
+[group('e2e')]
+[working-directory('e2e')]
+install-e2e:
+    npm ci
+
+# E2E: the Chromium build this Playwright version pins; needed once per Playwright upgrade before test-*
+[group('e2e')]
+[working-directory('e2e')]
+install-e2e-browser:
+    npx playwright install chromium
+
+# E2E: npm advisories for the Playwright toolchain
+[group('e2e')]
+[working-directory('e2e')]
+audit-e2e:
+    npm audit --audit-level=high
+
+# E2E: biome (frontend config) + tsc over the e2e package
+[group('e2e')]
+lint-e2e:
+    cd frontend && npx biome check ../e2e/tests ../e2e/playwright.config.ts ../e2e/package.json ../e2e/tsconfig.json
+    cd e2e && npm run -s typecheck
+
+# Playwright starts the backend and frontend itself; Mongo and Ollama have to be up already.
+[private]
+e2e-preflight:
+    @nc -z 127.0.0.1 27017 || (echo "MongoDB is not reachable on 27017 — run: just db-up" && exit 1)
+    @curl -sf http://127.0.0.1:11434/api/tags > /dev/null || (echo "Ollama is not reachable on 11434 — run: ollama serve" && exit 1)
+
+# Every local run starts from an empty database; the guard keeps a misconfigured env file away from real data.
+[private]
+[working-directory('backend')]
+e2e-reset-db:
+    BACKEND_ENV_FILE=../e2e/backend.env uv run python -c "\
+    from pymongo import MongoClient; \
+    from app.core.config import settings; \
+    assert settings.mongodb_db_name.endswith('_e2e') and settings.mongodb_uri.startswith('mongodb://127.0.0.1'), 'refusing to drop a non-e2e database'; \
+    MongoClient(settings.mongodb_uri).drop_database(settings.mongodb_db_name); \
+    print(f'dropped {settings.mongodb_db_name}')"
+
+# E2E: local stack with Ollama, everything except @long
+[group('e2e')]
+[working-directory('e2e')]
+[positional-arguments]
+test-quick *args: e2e-preflight e2e-reset-db
+    E2E_TARGET=local E2E_LLM=ollama npx playwright test --grep-invert @long "$@"
+
+# E2E: local stack with the models from backend/.env, every scenario
+[group('e2e')]
+[working-directory('e2e')]
+[positional-arguments]
+test-long *args: e2e-preflight e2e-reset-db
+    E2E_TARGET=local E2E_LLM=env npx playwright test "$@"
+
+# E2E: @smoke against production; one real public summary (1 of the 5/h public limit), admin read-only
+[group('e2e')]
+[working-directory('e2e')]
+[positional-arguments]
+test-prod *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    admin_password=$(gcloud secrets versions access latest --secret=auth_secret --project {{gcp_project}}) \
+        || { echo "cannot read auth_secret from Secret Manager — run: gcloud auth login"; exit 1; }
+    E2E_TARGET=prod E2E_ADMIN_PASSWORD="$admin_password" npx playwright test --workers 1 "$@"
+
 # Frontend: lint + typecheck
 [group('frontend')]
 lint-frontend: lint-frontend-style typecheck-frontend
@@ -240,7 +306,7 @@ scan-deps:
         --db-repository ghcr.io/aquasecurity/trivy-db:2 \
         --severity {{gate}} --exit-code 1 --quiet \
         --ignorefile /repo/.trivyignore.yaml \
-        --skip-dirs frontend/node_modules --skip-dirs backend/.venv \
+        --skip-dirs frontend/node_modules --skip-dirs e2e/node_modules --skip-dirs backend/.venv \
         --skip-dirs frontend/.firebase \
         --skip-dirs .aislop --skip-dirs .scratch \
         --include-dev-deps # uv.lock marks dev groups, and trivy skips them by default

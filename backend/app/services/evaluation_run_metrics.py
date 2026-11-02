@@ -31,7 +31,19 @@ async def _store_deepeval_status(run_id: str, fields: dict[str, Any]) -> None:
 
 async def reset_run_judgements(run_id: str) -> None:
     """Clears every completed entry's GEval and pairwise results so the next pass judges them again."""
-    raise NotImplementedError
+    log.debug("resetting run judgements", run_id=run_id)
+    result = await get_evaluation_runs_collection().update_one(
+        {"_id": ObjectId(run_id)},
+        {
+            "$set": {
+                "entries.$[completed].ai_metrics.deepeval": None,
+                "entries.$[completed].cross_metrics.deepeval": [],
+            }
+        },
+        # Failed entries carry ai_metrics: null, and setting a field inside null is a write error.
+        array_filters=[{"completed.status": "completed"}],
+    )
+    log.info("run judgements reset", run_id=run_id, modified=result.modified_count)
 
 
 @track_background_work("deepeval_pass")

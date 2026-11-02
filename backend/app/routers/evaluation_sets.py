@@ -105,7 +105,7 @@ async def create_evaluation_set(
         golden_metrics_pass=GoldenMetricsPassDocument(
             status="pending" if needs_golden_metrics_pass else "skipped",
             heartbeat_at=created_at,
-            **judge_pass_provenance(),
+            **(judge_pass_provenance() if needs_golden_metrics_pass else {}),
         ),
     )
 

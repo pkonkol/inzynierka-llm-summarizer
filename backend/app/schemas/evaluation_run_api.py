@@ -14,7 +14,11 @@ EntryStatus = Literal["pending", "running", "completed", "failed"]
 
 
 class DeepevalPassMetrics(ApiModel):
-    """Progress of the GEval pass, which runs separately from the run itself."""
+    """Progress of the GEval pass, which runs separately from the run itself.
+
+    git_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a
+    given score is the judge_model stored with that score.
+    """
 
     status: Literal["pending", "running", "completed", "failed"]
     heartbeat_at: datetime | None = None

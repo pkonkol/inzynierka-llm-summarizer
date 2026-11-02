@@ -73,3 +73,11 @@ def test_pairwise_inconsistent_when_orders_disagree() -> None:
 
     assert combined["consistent"] is False
     assert combined["score"] == 0.5
+
+
+def test_pairwise_consistent_when_both_orders_tie() -> None:
+    assert combine_pairwise_orders(_judged(0.5, ""), _judged(0.5, ""))["consistent"] is True
+
+
+def test_pairwise_inconsistent_when_one_order_ties() -> None:
+    assert combine_pairwise_orders(_judged(0.5, ""), _judged(0.2, ""))["consistent"] is False

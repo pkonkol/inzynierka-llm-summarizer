@@ -26,13 +26,24 @@ _ENGLISH_ROUGE_SCORER = rouge_scorer.RougeScorer(_ROUGE_TYPES, use_stemmer=True)
 _UNICODE_ROUGE_SCORER = rouge_scorer.RougeScorer(_ROUGE_TYPES, tokenizer=_UnicodeWordTokenizer())
 
 
+def _preferred_summary(ai_score: float) -> str:
+    """GEval without logprobs scores in steps of 0.1, so an exact 0.5 tie is a common verdict."""
+    if ai_score > 0.5:
+        return "ai"
+    if ai_score < 0.5:
+        return "golden"
+    return "tie"
+
+
 def combine_pairwise_orders(
     ai_first: DeepEvalMetricResult, golden_first: DeepEvalMetricResult
 ) -> dict[str, Any]:
     """Averages both presentation orders into one AI-vs-golden score and flags whether they agree."""
     ai_score_when_ai_first = ai_first.score
     ai_score_when_golden_first = 1 - golden_first.score
-    same_winner = (ai_score_when_ai_first - 0.5) * (ai_score_when_golden_first - 0.5) > 0
+    same_winner = _preferred_summary(ai_score_when_ai_first) == _preferred_summary(
+        ai_score_when_golden_first
+    )
 
     return {
         "name": ai_first.name,

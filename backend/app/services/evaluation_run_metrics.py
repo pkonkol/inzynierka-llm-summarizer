@@ -47,17 +47,33 @@ async def reset_run_judgements(run_id: str) -> None:
 
 
 @track_background_work("deepeval_pass")
-async def run_deepeval_pass(run_id: str) -> None:
+async def run_deepeval_pass(run_id: str, force: bool = False) -> None:
     """Scores every completed entry that has no GEval result yet, one entry at a time.
 
     Each entry is written back — and the pass heartbeat refreshed — the moment it is judged, so
     a restart mid-pass resumes from whatever is left rather than paying the judge twice.
+    With force, every completed entry's results are cleared first, so the whole run is judged again.
     """
     structlog.contextvars.bind_contextvars(run_id=run_id)
     try:
+        if force:
+            await _reset_or_fail_pass(run_id)
         await _score_run_entries(run_id)
     finally:
         structlog.contextvars.unbind_contextvars("run_id")
+
+
+async def _reset_or_fail_pass(run_id: str) -> None:
+    """A failed reset ends the pass as failed, so the run can be claimed again."""
+    try:
+        await reset_run_judgements(run_id)
+    except Exception as exc:
+        log.exception("resetting run judgements failed")
+        await _store_deepeval_status(
+            run_id,
+            {"status": "failed", "error": str(exc), "finished_at": datetime.now(UTC)},
+        )
+        raise
 
 
 async def _score_run_entries(run_id: str) -> None:

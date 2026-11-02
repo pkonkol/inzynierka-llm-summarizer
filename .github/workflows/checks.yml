@@ -34,12 +34,14 @@ jobs:
               - 'justfile'
             frontend:
               - 'frontend/**'
+              - 'e2e/**'
               - 'justfile'
               - 'backend/openapi.json' # generated TS types are derived from it
             security:
               - 'backend/Dockerfile'
               - 'backend/uv.lock'
               - 'frontend/package-lock.json'
+              - 'e2e/package-lock.json'
               - 'infra/**'
               - 'justfile'
             workflows:
@@ -75,12 +77,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
       - run: just install-frontend
+      - run: just install-e2e
       - run: just lint-frontend
       - run: just lint-extension
+      - run: just lint-e2e
       - run: just check-generated-types
       - run: just audit-frontend
+      - run: just audit-e2e
 
   workflows:
     needs: changes

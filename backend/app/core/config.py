@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
     ollama_url: str = ""
+    # Ollama models allowed to think; every other Ollama model runs with reasoning off, since small Qwens loop when thinking.
+    ollama_thinking_models: list[str] = []
     debug: bool = False
     # "pretty" — colored human-readable output for local dev.
     # "json" — one JSON object per line with a `severity` field, parsed by GCP Cloud Logging.

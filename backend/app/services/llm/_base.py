@@ -86,6 +86,7 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
             model=model_name,
             base_url=settings.ollama_url,
             temperature=settings.llm_temperature,
+            reasoning=model_name in settings.ollama_thinking_models,
         )
 
     raise NotImplementedError(f"Provider {model_provider} is not implemented yet")

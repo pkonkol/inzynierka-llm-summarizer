@@ -111,3 +111,17 @@ def test_build_llm_passes_configured_temperature(
     monkeypatch.setattr(_base.settings, "llm_temperature", 0.7)
 
     assert build_llm(provider, "m").temperature == 0.7
+
+
+@pytest.mark.parametrize(
+    ("thinking_models", "expected_reasoning"),
+    [([], False), (["m"], True)],
+    ids=["model_off_the_list_does_not_think", "model_on_the_list_thinks"],
+)
+def test_ollama_reasoning_follows_thinking_list(
+    monkeypatch: pytest.MonkeyPatch, thinking_models: list[str], expected_reasoning: bool
+) -> None:
+    monkeypatch.setattr(_base.settings, "supported_models", {"ollama": ["m"]})
+    monkeypatch.setattr(_base.settings, "ollama_thinking_models", thinking_models)
+
+    assert build_llm("ollama", "m").reasoning is expected_reasoning

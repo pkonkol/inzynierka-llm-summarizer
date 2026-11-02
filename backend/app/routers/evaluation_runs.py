@@ -221,6 +221,7 @@ async def get_evaluation_run_entries(run_id: str) -> EvaluationRunEntriesRespons
 async def evaluate_run_deepeval(
     run_id: str,
     background_tasks: BackgroundTasks,
+    force: bool = False,
 ) -> DeepevalQueuedResponse:
     document = await find_evaluation_run_or_404(run_id, {"status": 1})
 
@@ -232,6 +233,9 @@ async def evaluate_run_deepeval(
 
     if not await claim_deepeval_pass_for_queue(ObjectId(run_id)):
         raise HTTPException(status_code=409, detail="GEval is already running for this run")
+
+    if force:
+        raise NotImplementedError
 
     background_tasks.add_task(run_deepeval_pass, run_id)
     log.info("geval pass requested", run_id=run_id)

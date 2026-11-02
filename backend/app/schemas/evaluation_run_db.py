@@ -35,6 +35,8 @@ class EvaluationRunDocument(BaseModel):
     summary_spec: SummarySpec
     language: str
     rate_limit_delay_ms: int
+    git_sha: str | None = None  # None on runs created before provenance was stored
+    temperature: float | None = None
     status: RunStatus
     created_at: datetime
     heartbeat_at: datetime

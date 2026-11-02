@@ -1223,6 +1223,16 @@
               "type": "string",
               "title": "Run Id"
             }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force"
+            }
           }
         ],
         "responses": {
@@ -1308,7 +1318,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/DeepevalItem"
+                  "$ref": "#/components/schemas/DeepevalItem-Output"
                 },
                 "type": "array"
               },
@@ -1354,7 +1364,14 @@
             "title": "Rougel"
           },
           "meteor": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Meteor"
           },
           "deepeval": {
@@ -1375,7 +1392,7 @@
         ],
         "title": "CrossMetrics"
       },
-      "DeepevalItem": {
+      "DeepevalItem-Input": {
         "properties": {
           "name": {
             "type": "string",
@@ -1392,6 +1409,28 @@
           "reason": {
             "type": "string",
             "title": "Reason"
+          },
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
+          },
+          "rubric_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Version"
           }
         },
         "type": "object",
@@ -1400,6 +1439,58 @@
           "score",
           "passed",
           "reason"
+        ],
+        "title": "DeepevalItem"
+      },
+      "DeepevalItem-Output": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
+          },
+          "rubric_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "score",
+          "passed",
+          "reason",
+          "judge_model",
+          "rubric_version"
         ],
         "title": "DeepevalItem"
       },
@@ -1499,6 +1590,39 @@
               }
             ],
             "title": "Error"
+          },
+          "git_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Sha"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
           }
         },
         "type": "object",
@@ -1511,7 +1635,10 @@
           "updated_entries",
           "skipped_entries",
           "already_scored_entries",
-          "error"
+          "error",
+          "git_sha",
+          "temperature",
+          "judge_model"
         ],
         "title": "DeepevalPassMetrics",
         "description": "Progress of the GEval pass, which runs separately from the run itself."
@@ -1728,7 +1855,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics"
+                "$ref": "#/components/schemas/GoldenMetrics-Output"
               },
               {
                 "type": "null"
@@ -1966,6 +2093,28 @@
             "type": "integer",
             "title": "Entry Count"
           },
+          "git_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Sha"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
           "aggregate_metrics": {
             "$ref": "#/components/schemas/EvaluationRunAggregateMetrics"
           }
@@ -1984,6 +2133,8 @@
           "created_at",
           "finished_at",
           "entry_count",
+          "git_sha",
+          "temperature",
           "aggregate_metrics"
         ],
         "title": "EvaluationRunResponse"
@@ -2128,7 +2279,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics"
+                "$ref": "#/components/schemas/GoldenMetrics-Input"
               },
               {
                 "type": "null"
@@ -2166,7 +2317,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics"
+                "$ref": "#/components/schemas/GoldenMetrics-Output"
               },
               {
                 "type": "null"
@@ -2223,7 +2374,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics"
+                "$ref": "#/components/schemas/GoldenMetrics-Output"
               },
               {
                 "type": "null"
@@ -2397,7 +2548,7 @@
         ],
         "title": "ExplicitLength"
       },
-      "GoldenMetrics": {
+      "GoldenMetrics-Input": {
         "properties": {
           "source": {
             "$ref": "#/components/schemas/SourceMetrics"
@@ -2407,7 +2558,31 @@
           },
           "deepeval": {
             "items": {
-              "$ref": "#/components/schemas/DeepevalItem"
+              "$ref": "#/components/schemas/DeepevalItem-Input"
+            },
+            "type": "array",
+            "title": "Deepeval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "summary",
+          "deepeval"
+        ],
+        "title": "GoldenMetrics"
+      },
+      "GoldenMetrics-Output": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceMetrics"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SummaryStatisticalMetrics"
+          },
+          "deepeval": {
+            "items": {
+              "$ref": "#/components/schemas/DeepevalItem-Output"
             },
             "type": "array",
             "title": "Deepeval"
@@ -2809,7 +2984,7 @@
           },
           "deepeval_metrics": {
             "items": {
-              "$ref": "#/components/schemas/DeepevalItem"
+              "$ref": "#/components/schemas/DeepevalItem-Output"
             },
             "type": "array",
             "title": "Deepeval Metrics"
@@ -2992,16 +3167,88 @@
           "reason": {
             "type": "string",
             "title": "Reason"
+          },
+          "score_ai_first": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Ai First"
+          },
+          "score_golden_first": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Golden First"
+          },
+          "consistent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consistent"
+          },
+          "reason_golden_first": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Golden First"
+          },
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
+          },
+          "rubric_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Version"
           }
         },
         "type": "object",
         "required": [
           "name",
           "score",
-          "reason"
+          "reason",
+          "score_ai_first",
+          "score_golden_first",
+          "consistent",
+          "reason_golden_first",
+          "judge_model",
+          "rubric_version"
         ],
         "title": "PairwiseDeepevalItem",
-        "description": "score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output)."
+        "description": "score: mean of both presentation orders, higher favors the AI summary over the golden one."
       },
       "PublicSummarizeRequest": {
         "properties": {

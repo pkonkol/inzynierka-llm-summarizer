@@ -97,6 +97,8 @@ class Settings(BaseSettings):
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",
     }
+    # Sent explicitly to every model, judge included, and stored on each run and judge pass.
+    llm_temperature: float = 1.0
     deepeval_timeout_seconds: int | None = None
     eval_max_concurrent_geval: int = 3
     blocking_work_max_threads: int = 5

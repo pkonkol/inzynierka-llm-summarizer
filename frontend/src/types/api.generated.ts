@@ -459,7 +459,7 @@ export interface components {
         AiMetrics: {
             summary: components["schemas"]["SummaryStatisticalMetrics"];
             /** Deepeval */
-            deepeval: components["schemas"]["DeepevalItem"][] | null;
+            deepeval: components["schemas"]["DeepevalItem-Output"][] | null;
         };
         /** AuthStatusResponse */
         AuthStatusResponse: {
@@ -475,12 +475,12 @@ export interface components {
             /** Rougel */
             rougeL: number;
             /** Meteor */
-            meteor: number;
+            meteor: number | null;
             /** Deepeval */
             deepeval: components["schemas"]["PairwiseDeepevalItem"][];
         };
         /** DeepevalItem */
-        DeepevalItem: {
+        "DeepevalItem-Input": {
             /** Name */
             name: string;
             /** Score */
@@ -489,6 +489,25 @@ export interface components {
             passed: boolean;
             /** Reason */
             reason: string;
+            /** Judge Model */
+            judge_model?: string | null;
+            /** Rubric Version */
+            rubric_version?: string | null;
+        };
+        /** DeepevalItem */
+        "DeepevalItem-Output": {
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /** Passed */
+            passed: boolean;
+            /** Reason */
+            reason: string;
+            /** Judge Model */
+            judge_model: string | null;
+            /** Rubric Version */
+            rubric_version: string | null;
         };
         /**
          * DeepevalPassMetrics
@@ -519,6 +538,12 @@ export interface components {
             already_scored_entries: number | null;
             /** Error */
             error: string | null;
+            /** Git Sha */
+            git_sha: string | null;
+            /** Temperature */
+            temperature: number | null;
+            /** Judge Model */
+            judge_model: string | null;
         };
         /** DeepevalQueuedResponse */
         DeepevalQueuedResponse: {
@@ -609,7 +634,7 @@ export interface components {
             url: string;
             /** Golden Summary */
             golden_summary: string;
-            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
             /** Ai Summary */
             ai_summary: string | null;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
@@ -692,6 +717,10 @@ export interface components {
             finished_at: string | null;
             /** Entry Count */
             entry_count: number;
+            /** Git Sha */
+            git_sha: string | null;
+            /** Temperature */
+            temperature: number | null;
             aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
         };
         /** EvaluationRunResumeResponse */
@@ -760,7 +789,7 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics?: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics?: components["schemas"]["GoldenMetrics-Input"] | null;
         };
         /** EvaluationSetEntryImport */
         "EvaluationSetEntryImport-Output": {
@@ -772,7 +801,7 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
         };
         /** EvaluationSetEntryInputTextResponse */
         EvaluationSetEntryInputTextResponse: {
@@ -794,7 +823,7 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
         };
         /**
          * EvaluationSetExportResponse
@@ -860,11 +889,18 @@ export interface components {
             target_sentences?: number | null;
         };
         /** GoldenMetrics */
-        GoldenMetrics: {
+        "GoldenMetrics-Input": {
             source: components["schemas"]["SourceMetrics"];
             summary: components["schemas"]["SummaryStatisticalMetrics"];
             /** Deepeval */
-            deepeval: components["schemas"]["DeepevalItem"][];
+            deepeval: components["schemas"]["DeepevalItem-Input"][];
+        };
+        /** GoldenMetrics */
+        "GoldenMetrics-Output": {
+            source: components["schemas"]["SourceMetrics"];
+            summary: components["schemas"]["SummaryStatisticalMetrics"];
+            /** Deepeval */
+            deepeval: components["schemas"]["DeepevalItem-Output"][];
         };
         /** GoldenMetricsPassQueuedResponse */
         GoldenMetricsPassQueuedResponse: {
@@ -1020,7 +1056,7 @@ export interface components {
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
             /** Deepeval Metrics */
-            deepeval_metrics: components["schemas"]["DeepevalItem"][];
+            deepeval_metrics: components["schemas"]["DeepevalItem-Output"][];
             usage: components["schemas"]["UsageMetadata"];
             /** Raw Metadata */
             raw_metadata: {
@@ -1089,7 +1125,7 @@ export interface components {
         };
         /**
          * PairwiseDeepevalItem
-         * @description score: raw GEval score, higher favors the AI summary (actual_output) over golden (expected_output).
+         * @description score: mean of both presentation orders, higher favors the AI summary over the golden one.
          */
         PairwiseDeepevalItem: {
             /** Name */
@@ -1098,6 +1134,18 @@ export interface components {
             score: number;
             /** Reason */
             reason: string;
+            /** Score Ai First */
+            score_ai_first: number | null;
+            /** Score Golden First */
+            score_golden_first: number | null;
+            /** Consistent */
+            consistent: boolean | null;
+            /** Reason Golden First */
+            reason_golden_first: string | null;
+            /** Judge Model */
+            judge_model: string | null;
+            /** Rubric Version */
+            rubric_version: string | null;
         };
         /** PublicSummarizeRequest */
         PublicSummarizeRequest: {
@@ -1289,7 +1337,8 @@ export interface components {
 export type AiMetrics = components['schemas']['AiMetrics'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
-export type DeepevalItem = components['schemas']['DeepevalItem'];
+export type DeepevalItemInput = components['schemas']['DeepevalItem-Input'];
+export type DeepevalItemOutput = components['schemas']['DeepevalItem-Output'];
 export type DeepevalPassMetrics = components['schemas']['DeepevalPassMetrics'];
 export type DeepevalQueuedResponse = components['schemas']['DeepevalQueuedResponse'];
 export type EvaluationRunAggregateMetrics = components['schemas']['EvaluationRunAggregateMetrics'];
@@ -1312,7 +1361,8 @@ export type EvaluationSetExportResponse = components['schemas']['EvaluationSetEx
 export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImportRequest'];
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
-export type GoldenMetrics = components['schemas']['GoldenMetrics'];
+export type GoldenMetricsInput = components['schemas']['GoldenMetrics-Input'];
+export type GoldenMetricsOutput = components['schemas']['GoldenMetrics-Output'];
 export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];
 export type GoldenMetricsPassResponse = components['schemas']['GoldenMetricsPassResponse'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
@@ -2170,7 +2220,9 @@ export interface operations {
     };
     evaluate_run_deepeval_api_v1_research_runs__run_id__deepeval_post: {
         parameters: {
-            query?: never;
+            query?: {
+                force?: boolean;
+            };
             header?: never;
             path: {
                 run_id: string;

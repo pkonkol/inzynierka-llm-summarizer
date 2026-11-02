@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
-import type { DeepevalItem, JobMetrics, JobStatusResponse } from "../types/api.generated";
+import type { DeepevalItemOutput, JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatus, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
@@ -49,7 +49,7 @@ function JobMetricsPanel({
   deepevalMetrics,
 }: {
   metrics: JobMetrics;
-  deepevalMetrics: DeepevalItem[];
+  deepevalMetrics: DeepevalItemOutput[];
 }) {
   const defaultMetricsBlocks = METRIC_SECTIONS.map((section) => {
     const data = metrics[section.field];

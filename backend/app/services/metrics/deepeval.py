@@ -130,6 +130,16 @@ class GEvalSpec:
     evaluation_steps: list[str] | None = None
 
 
+def rubric_version(spec: GEvalSpec) -> str:
+    """First 8 hex chars of sha256 over the spec's name, criteria and evaluation steps."""
+    raise NotImplementedError
+
+
+def judge_model_id(settings: Settings) -> str:
+    """'provider:model' of the configured judge."""
+    raise NotImplementedError
+
+
 SUMMARY_SPECS = [
     GEvalSpec(
         name="summary_coherence",

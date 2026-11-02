@@ -25,6 +25,9 @@ class DeepevalPassMetrics(ApiModel):
     skipped_entries: int | None = None
     already_scored_entries: int | None = None
     error: str | None = None
+    git_sha: str | None = None
+    temperature: float | None = None
+    judge_model: str | None = None
 
 
 class EvaluationRunAggregateMetrics(ApiModel):
@@ -77,6 +80,8 @@ class EvaluationRunResponse(ApiModel):
     created_at: datetime
     finished_at: datetime | None = None
     entry_count: int
+    git_sha: str | None = None
+    temperature: float | None = None
     aggregate_metrics: EvaluationRunAggregateMetrics = Field(
         default_factory=EvaluationRunAggregateMetrics
     )

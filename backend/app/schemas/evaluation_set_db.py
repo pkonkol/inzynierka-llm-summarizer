@@ -26,6 +26,9 @@ class GoldenMetricsPassDocument(BaseModel):
     started_at: datetime | None = None
     finished_at: datetime | None = None
     error: str | None = None
+    git_sha: str | None = None
+    temperature: float | None = None
+    judge_model: str | None = None
 
 
 class EvaluationSetDocument(BaseModel):

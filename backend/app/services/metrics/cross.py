@@ -7,9 +7,23 @@ from nltk.translate.meteor_score import meteor_score
 from rouge_score import rouge_scorer
 
 from ...core.config import Settings
-from .deepeval import GEvalSpec, evaluate_geval
+from .deepeval import DeepEvalMetricResult, GEvalSpec, evaluate_geval
 
 _ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
+
+
+class _UnicodeWordTokenizer:
+    """Lowercased Unicode word tokens for languages the default rouge-score tokenizer mangles."""
+
+    def tokenize(self, text: str) -> list[str]:
+        raise NotImplementedError
+
+
+def combine_pairwise_orders(
+    ai_first: DeepEvalMetricResult, golden_first: DeepEvalMetricResult
+) -> dict[str, Any]:
+    """Averages both presentation orders into one AI-vs-golden score and flags whether they agree."""
+    raise NotImplementedError
 
 
 def rouge_meteor_scores(reference_text: str, summary_text: str) -> dict[str, float]:

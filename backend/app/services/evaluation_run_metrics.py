@@ -29,6 +29,11 @@ async def _store_deepeval_status(run_id: str, fields: dict[str, Any]) -> None:
     await get_evaluation_runs_collection().update_one({"_id": ObjectId(run_id)}, {"$set": prefixed})
 
 
+async def reset_run_judgements(run_id: str) -> None:
+    """Clears every completed entry's GEval and pairwise results so the next pass judges them again."""
+    raise NotImplementedError
+
+
 @track_background_work("deepeval_pass")
 async def run_deepeval_pass(run_id: str) -> None:
     """Scores every completed entry that has no GEval result yet, one entry at a time.

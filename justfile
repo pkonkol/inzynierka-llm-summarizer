@@ -242,6 +242,7 @@ scan-deps:
         --ignorefile /repo/.trivyignore.yaml \
         --skip-dirs frontend/node_modules --skip-dirs backend/.venv \
         --skip-dirs frontend/.firebase \
+        --skip-dirs .aislop --skip-dirs .scratch \
         --include-dev-deps # uv.lock marks dev groups, and trivy skips them by default
 
 # actionlint catches the workflow that dies eight minutes in; zizmor catches the one that

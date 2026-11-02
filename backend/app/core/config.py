@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     git_sha: str = ""
     gemini_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
+    exa_api_key: SecretStr | None = None
+    openalex_api_key: SecretStr | None = None
     ollama_url: str = ""
     debug: bool = False
     # "pretty" — colored human-readable output for local dev.
@@ -93,6 +95,10 @@ class Settings(BaseSettings):
     public_max_input_chars: int = 30_000
     public_rate_limit_requests: int = 5
     public_rate_limit_window_minutes: int = 60
+    context_queries_per_channel: int = 2
+    context_results_per_query: int = 5
+    context_selected_sources: int = 4
+    context_excerpt_chars: int = 3000
     title_model: dict[str, str] = {
         "model_provider": "gemini",
         "model_name": "gemini-flash-latest",

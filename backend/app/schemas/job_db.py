@@ -23,7 +23,7 @@ class JobMetrics(ApiModel):
     summary: SummaryStatisticalMetrics | None = None
 
 
-JobErrorCode = Literal["source_too_long"]
+JobErrorCode = Literal["source_too_long", "context_expansion_failed"]
 
 
 class JobDocument(BaseModel):

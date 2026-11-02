@@ -93,7 +93,7 @@ async def test_each_length_policy_reaches_the_model_as_a_resolved_length(
     spec = SummarySpec.model_validate({"length": length})
 
     result = await evaluation_runner._summarize_one_entry(
-        _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}
+        _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}, "en"
     )
 
     passed_length = mocked_entry_pipeline["generate_summary"].call_args.args[0].length
@@ -116,10 +116,11 @@ async def test_a_markdown_bullet_list_is_stored_and_judged_as_the_summary_itself
     )
 
     result = await evaluation_runner._summarize_one_entry(
-        _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}
+        _run_doc(spec), {"entry_id": "e", "golden_summary": _GOLDEN}, "en"
     )
 
     assert result["status"] == "completed"
     assert result["ai_summary"] == "- a\n- b"
     cross_kwargs = mocked_entry_pipeline["compute_cross_metrics"].call_args.kwargs
     assert cross_kwargs["summary_text"] == "- a\n- b"
+    assert cross_kwargs["language"] == "en"

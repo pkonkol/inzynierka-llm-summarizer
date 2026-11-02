@@ -52,7 +52,7 @@ async def _mark_run_failed(runs: AsyncCollection, run_id: str, error: str) -> No
     )
 
 
-async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
+async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str) -> dict:
     """Everything written back about a single entry, including the failure case."""
     entry_id = run_entry["entry_id"]
     try:
@@ -85,6 +85,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict) -> dict:
             compute_cross_metrics(
                 reference_text=run_entry["golden_summary"],
                 summary_text=summary.summary,
+                language=set_language,
             ),
         )
     except Exception as exc:
@@ -161,7 +162,8 @@ async def run_evaluation_batch(run_id: str) -> None:
     if run_doc is None:
         return
 
-    if await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])}, {"_id": 1}) is None:
+    set_doc = await sets.find_one({"_id": ObjectId(run_doc["evaluation_set_id"])}, {"language": 1})
+    if set_doc is None:
         await _mark_run_failed(runs, run_id, "Evaluation set not found")
         return
 
@@ -187,7 +189,7 @@ async def run_evaluation_batch(run_id: str) -> None:
             {"$set": {"entries.$.status": "running", "heartbeat_at": datetime.now(UTC)}},
         )
 
-        result = await _summarize_one_entry(run_doc, run_entry)
+        result = await _summarize_one_entry(run_doc, run_entry, set_doc["language"])
 
         write = {f"entries.$.{key}": value for key, value in result.items()}
         write["heartbeat_at"] = datetime.now(UTC)

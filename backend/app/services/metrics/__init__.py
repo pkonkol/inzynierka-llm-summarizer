@@ -56,8 +56,9 @@ async def compute_deepeval_metrics(
 async def compute_cross_metrics(
     reference_text: str,
     summary_text: str,
-) -> dict[str, float]:
-    return await run_blocking(rouge_meteor_scores, reference_text, summary_text)
+    language: str,
+) -> dict[str, float | None]:
+    return await run_blocking(rouge_meteor_scores, reference_text, summary_text, language)
 
 
 async def compute_pairwise_cross_deepeval_metrics(

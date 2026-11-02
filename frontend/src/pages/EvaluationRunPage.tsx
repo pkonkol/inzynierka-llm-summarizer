@@ -148,7 +148,7 @@ function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
         <InfoRow label="rouge1" value={rouge1} />
         <InfoRow label="rouge2" value={rouge2} />
         <InfoRow label="rougeL" value={rougeL} />
-        <InfoRow label="meteor" value={meteor} />
+        <InfoRow label="meteor" value={meteor === null ? "— (tylko EN)" : meteor} />
       </InfoList>
       {pairwiseItems.length > 0 ? (
         <div className="grid gap-2">

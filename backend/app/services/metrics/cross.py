@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
@@ -9,14 +10,20 @@ from rouge_score import rouge_scorer
 from ...core.config import Settings
 from .deepeval import DeepEvalMetricResult, GEvalSpec, evaluate_geval
 
-_ROUGE_SCORER = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=True)
+_ROUGE_TYPES = ["rouge1", "rouge2", "rougeL"]
+_UNICODE_WORD = re.compile(r"\w+")
 
 
 class _UnicodeWordTokenizer:
     """Lowercased Unicode word tokens for languages the default rouge-score tokenizer mangles."""
 
     def tokenize(self, text: str) -> list[str]:
-        raise NotImplementedError
+        return _UNICODE_WORD.findall(text.lower())
+
+
+_ENGLISH_ROUGE_SCORER = rouge_scorer.RougeScorer(_ROUGE_TYPES, use_stemmer=True)
+# The default tokenizer keeps only [a-z0-9], so "Łódź" becomes ["d"]; Porter stemming is English-only.
+_UNICODE_ROUGE_SCORER = rouge_scorer.RougeScorer(_ROUGE_TYPES, tokenizer=_UnicodeWordTokenizer())
 
 
 def combine_pairwise_orders(
@@ -26,18 +33,28 @@ def combine_pairwise_orders(
     raise NotImplementedError
 
 
-def rouge_meteor_scores(reference_text: str, summary_text: str) -> dict[str, float]:
+def rouge_meteor_scores(
+    reference_text: str, summary_text: str, language: str
+) -> dict[str, float | None]:
+    """English keeps the stemmed scorer and METEOR; any other language gets Unicode tokens and meteor=None."""
     reference = reference_text.strip()
     summary = summary_text.strip()
+    is_english = language == "en"
 
-    rouge = _ROUGE_SCORER.score(reference, summary)
-    meteor = meteor_score([reference.lower().split()], summary.lower().split())
+    scorer = _ENGLISH_ROUGE_SCORER if is_english else _UNICODE_ROUGE_SCORER
+    rouge = scorer.score(reference, summary)
+    # nltk's METEOR matches through an English stemmer and WordNet.
+    meteor = (
+        round(meteor_score([reference.lower().split()], summary.lower().split()), 4)
+        if is_english
+        else None
+    )
 
     return {
         "rouge1": round(rouge["rouge1"].fmeasure, 4),
         "rouge2": round(rouge["rouge2"].fmeasure, 4),
         "rougeL": round(rouge["rougeL"].fmeasure, 4),
-        "meteor": round(meteor, 4),
+        "meteor": meteor,
     }
 
 

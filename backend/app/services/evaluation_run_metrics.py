@@ -68,7 +68,7 @@ async def _score_run_entries(run_id: str) -> None:
         return
 
     set_id = run_doc["evaluation_set_id"]
-    set_doc = await sets.find_one({"_id": ObjectId(set_id)}, {"_id": 1})
+    set_doc = await sets.find_one({"_id": ObjectId(set_id)}, {"language": 1})
     if set_doc is None:
         await _store_deepeval_status(
             run_id,
@@ -100,7 +100,7 @@ async def _score_run_entries(run_id: str) -> None:
                 already_scored_entries += 1
                 continue
 
-            await _score_entry(runs, run_id, set_id, entry, output_format)
+            await _score_entry(runs, run_id, set_id, set_doc["language"], entry, output_format)
             updated_entries += 1
     except Exception as exc:
         log.exception("deepeval failed")
@@ -126,6 +126,7 @@ async def _score_entry(
     runs: AsyncCollection,
     run_id: str,
     set_id: str,
+    set_language: str,
     entry: dict[str, Any],
     output_format: OutputFormat,
 ) -> None:
@@ -143,6 +144,7 @@ async def _score_entry(
         compute_cross_metrics(
             reference_text=entry["golden_summary"],
             summary_text=summary_text,
+            language=set_language,
         ),
         compute_pairwise_cross_deepeval_metrics(
             source_text=source_text,

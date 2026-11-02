@@ -30,7 +30,21 @@ def combine_pairwise_orders(
     ai_first: DeepEvalMetricResult, golden_first: DeepEvalMetricResult
 ) -> dict[str, Any]:
     """Averages both presentation orders into one AI-vs-golden score and flags whether they agree."""
-    raise NotImplementedError
+    ai_score_when_ai_first = ai_first.score
+    ai_score_when_golden_first = 1 - golden_first.score
+    same_winner = (ai_score_when_ai_first - 0.5) * (ai_score_when_golden_first - 0.5) > 0
+
+    return {
+        "name": ai_first.name,
+        "score": round((ai_score_when_ai_first + ai_score_when_golden_first) / 2, 4),
+        "reason": ai_first.reason,
+        "score_ai_first": round(ai_first.score, 4),
+        "score_golden_first": round(golden_first.score, 4),
+        "consistent": same_winner,
+        "reason_golden_first": golden_first.reason,
+        "judge_model": ai_first.judge_model,
+        "rubric_version": ai_first.rubric_version,
+    }
 
 
 def rouge_meteor_scores(
@@ -98,33 +112,34 @@ _PAIRWISE_SPECS = [
 async def evaluate_pairwise_cross_deepeval(
     settings: Settings,
     source_text: str,
-    summary_actual: str,
-    summary_expected: str,
+    ai_summary: str,
+    golden_summary: str,
 ) -> list[dict[str, Any]]:
-    """Generic actual-vs-expected pairwise GEval — deliberately unaware of golden/AI.
+    """Runs every pairwise rubric twice, once with each summary in the A slot.
 
-    The GEval prompt only ever sees "Summary A (actual_output)" / "Summary B (expected_output)"
-    to avoid biasing the judge toward either side. Callers decide which summary goes into
-    actual_output vs expected_output, and are responsible for mapping the resulting
-    "actual"/"expected" winner back to their own domain labels (e.g. golden/AI).
+    The judge only ever sees "Summary A (actual_output)" / "Summary B (expected_output)", so a
+    preference for the first slot shows up as the two orders disagreeing (`consistent=False`)
+    and cancels out in the averaged `score`, where higher favors the AI summary.
 
     The first spec judges against the source document, the second on summary quality alone,
     so they differ only in whether the test case carries the source text.
     """
-    work = [
-        (
-            spec,
-            LLMTestCase(
-                input=source_text if LLMTestCaseParams.INPUT in spec.params else "",
-                actual_output=summary_actual,
-                expected_output=summary_expected,
+    work = []
+    for spec in _PAIRWISE_SPECS:
+        source = source_text if LLMTestCaseParams.INPUT in spec.params else ""
+        work += [
+            (
+                spec,
+                LLMTestCase(input=source, actual_output=ai_summary, expected_output=golden_summary),
             ),
-        )
-        for spec in _PAIRWISE_SPECS
-    ]
+            (
+                spec,
+                LLMTestCase(input=source, actual_output=golden_summary, expected_output=ai_summary),
+            ),
+        ]
     results = await evaluate_geval(settings, work)
 
     return [
-        {"name": result.name, "score": round(result.score, 4), "reason": result.reason}
-        for result in results
+        combine_pairwise_orders(ai_first, golden_first)
+        for ai_first, golden_first in zip(results[::2], results[1::2], strict=True)
     ]

@@ -2,7 +2,8 @@ import pytest
 from rouge_score import rouge_scorer
 
 from app.services.metrics import cross
-from app.services.metrics.cross import rouge_meteor_scores
+from app.services.metrics.cross import combine_pairwise_orders, rouge_meteor_scores
+from app.services.metrics.deepeval import DeepEvalMetricResult
 
 _POLISH_REFERENCE = "Zażółć gęślą jaźń — Łódź i Kraków."
 
@@ -41,3 +42,34 @@ def test_empty_tokenization_scores_zero() -> None:
     scores = rouge_meteor_scores(_POLISH_REFERENCE, "— …", language="pl")
 
     assert (scores["rouge1"], scores["rouge2"], scores["rougeL"]) == (0.0, 0.0, 0.0)
+
+
+def _judged(score: float, reason: str) -> DeepEvalMetricResult:
+    return DeepEvalMetricResult(
+        name="pairwise_with_input",
+        score=score,
+        reason=reason,
+        passed=score >= 0.5,
+        judge_model="gemini:judge",
+        rubric_version="abcd1234",
+    )
+
+
+def test_pairwise_score_averages_both_orders() -> None:
+    combined = combine_pairwise_orders(_judged(0.9, "ai first"), _judged(0.3, "golden first"))
+
+    assert combined["score"] == 0.8  # (0.9 + (1 - 0.3)) / 2
+    assert (combined["score_ai_first"], combined["score_golden_first"]) == (0.9, 0.3)
+    assert (combined["reason"], combined["reason_golden_first"]) == ("ai first", "golden first")
+
+
+def test_pairwise_consistent_when_both_orders_pick_same_winner() -> None:
+    assert combine_pairwise_orders(_judged(0.8, ""), _judged(0.2, ""))["consistent"] is True
+
+
+def test_pairwise_inconsistent_when_orders_disagree() -> None:
+    # Slot A wins both times: the judge followed position, not content.
+    combined = combine_pairwise_orders(_judged(0.8, ""), _judged(0.8, ""))
+
+    assert combined["consistent"] is False
+    assert combined["score"] == 0.5

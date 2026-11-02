@@ -10,7 +10,7 @@ locals {
     AUTH_ENABLED               = "true"
     LOG_FORMAT                 = "json"
     PUBLIC_RATE_LIMIT_REQUESTS = "5" # The steady-state value: a temporary raise is a manual gcloud override, and the next deploy brings this back.
-    DEEPEVAL_JUDGE_MODEL       = jsonencode({ model_provider = "gemini", model_name = "gemini-flash-latest" })
+    DEEPEVAL_JUDGE_MODEL       = jsonencode({ model_provider = "gemini", model_name = "gemini-3.8-flash" })
     CORS_ALLOWED_ORIGINS = jsonencode([
       "https://${var.project_id}.web.app",
       "https://${var.project_id}.firebaseapp.com",

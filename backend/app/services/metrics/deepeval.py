@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -63,6 +65,8 @@ class DeepEvalMetricResult:
     score: float
     reason: str
     passed: bool
+    judge_model: str
+    rubric_version: str
 
 
 _timeout_applied = False
@@ -102,13 +106,17 @@ def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
     return _judge_model
 
 
-def run_metric(metric: Any, test_case: LLMTestCase) -> DeepEvalMetricResult:
+def run_metric(
+    metric: Any, test_case: LLMTestCase, judge_model: str, rubric: str
+) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
     result = DeepEvalMetricResult(
         name=metric.name,
         score=metric.score,
         reason=metric.reason,
         passed=metric.success,
+        judge_model=judge_model,
+        rubric_version=rubric,
     )
     log.info(
         "deepeval metric measured",
@@ -131,13 +139,18 @@ class GEvalSpec:
 
 
 def rubric_version(spec: GEvalSpec) -> str:
-    """First 8 hex chars of sha256 over the spec's name, criteria and evaluation steps."""
-    raise NotImplementedError
+    """First 8 hex chars of sha256 over everything the judge is shown, so any wording change is a new version."""
+    rubric = {
+        "name": spec.name,
+        "criteria": spec.criteria,
+        "params": [param.value for param in spec.params],
+        "evaluation_steps": spec.evaluation_steps,
+    }
+    return hashlib.sha256(json.dumps(rubric, sort_keys=True).encode()).hexdigest()[:8]
 
 
 def judge_model_id(settings: Settings) -> str:
-    """'provider:model' of the configured judge."""
-    raise NotImplementedError
+    return f"{settings.deepeval_judge_model['model_provider']}:{settings.deepeval_judge_model['model_name']}"
 
 
 SUMMARY_SPECS = [
@@ -207,6 +220,7 @@ async def evaluate_geval(
     if not work:
         return []
     model = get_deepeval_judge_model(settings)
+    judge_model = judge_model_id(settings)
 
     def measure(spec: GEvalSpec, test_case: LLMTestCase) -> DeepEvalMetricResult:
         metric = GEval(
@@ -218,7 +232,7 @@ async def evaluate_geval(
             async_mode=False,  # this already runs on its own thread; deepeval's async path opens an event loop per worker thread and never closes it
             **({"evaluation_steps": spec.evaluation_steps} if spec.evaluation_steps else {}),
         )
-        return run_metric(metric, test_case)
+        return run_metric(metric, test_case, judge_model, rubric_version(spec))
 
     return list(
         await asyncio.gather(*(run_geval(measure, spec, test_case) for spec, test_case in work))

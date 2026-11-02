@@ -34,7 +34,10 @@ from ..schemas.evaluation_set_db import (
     GoldenMetricsPassStatus,
 )
 from ..services.evaluation_set_metrics import run_golden_metrics_pass
-from ..services.interrupted_work import claim_golden_metrics_pass_for_queue
+from ..services.interrupted_work import (
+    claim_golden_metrics_pass_for_queue,
+    judge_pass_provenance,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -102,6 +105,7 @@ async def create_evaluation_set(
         golden_metrics_pass=GoldenMetricsPassDocument(
             status="pending" if needs_golden_metrics_pass else "skipped",
             heartbeat_at=created_at,
+            **judge_pass_provenance(),
         ),
     )
 

@@ -146,6 +146,26 @@ async def test_deepeval_claim_requires_a_finished_run_and_resets_the_pass(
     assert await interrupted_work.claim_deepeval_pass_for_queue(ObjectId()) is False
 
 
+async def test_claim_deepeval_pass_records_provenance(
+    runs_collection: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "git_sha", "abc1234")
+    monkeypatch.setattr(settings, "llm_temperature", 1.0)
+    monkeypatch.setattr(
+        settings, "deepeval_judge_model", {"model_provider": "gemini", "model_name": "judge"}
+    )
+    runs_collection.update_one.return_value.modified_count = 1
+
+    await interrupted_work.claim_deepeval_pass_for_queue(ObjectId())
+
+    new_pass = runs_collection.update_one.call_args.args[1]["$set"]["aggregate_metrics.deepeval"]
+    assert (new_pass["git_sha"], new_pass["temperature"], new_pass["judge_model"]) == (
+        "abc1234",
+        1.0,
+        "gemini:judge",
+    )
+
+
 async def test_deepeval_passes_are_resumed_by_attempt_budget_not_heartbeat(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:

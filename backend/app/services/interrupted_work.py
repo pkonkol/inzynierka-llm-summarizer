@@ -29,6 +29,7 @@ from ..core.mongo import (
 from .evaluation_run_metrics import run_deepeval_pass
 from .evaluation_runner import run_evaluation_batch
 from .evaluation_set_metrics import run_golden_metrics_pass
+from .metrics.deepeval import judge_model_id
 from .summarization_runner import run_summarization_job
 
 log = structlog.get_logger(__name__)
@@ -83,6 +84,15 @@ async def claim_evaluation_run_for_resume(
     return result.modified_count == 1
 
 
+def judge_pass_provenance() -> dict[str, Any]:
+    """What a judge pass records about the code and settings it scored with."""
+    return {
+        "git_sha": settings.git_sha,
+        "temperature": settings.llm_temperature,
+        "judge_model": judge_model_id(settings),
+    }
+
+
 async def claim_golden_metrics_pass_for_queue(set_id: ObjectId) -> bool:
     """Takes a golden-metrics pass for POST .../golden-metrics. False means it is not claimable.
 
@@ -108,6 +118,10 @@ async def claim_golden_metrics_pass_for_queue(set_id: ObjectId) -> bool:
                 "golden_metrics_pass.heartbeat_at": datetime.now(UTC),
                 "golden_metrics_pass.resume_attempts": 0,
                 "golden_metrics_pass.error": None,
+                **{
+                    f"golden_metrics_pass.{key}": value
+                    for key, value in judge_pass_provenance().items()
+                },
             }
         },
     )
@@ -140,6 +154,7 @@ async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
                     "status": "pending",
                     "heartbeat_at": datetime.now(UTC),
                     "resume_attempts": 0,
+                    **judge_pass_provenance(),
                 }
             }
         },

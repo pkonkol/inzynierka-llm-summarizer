@@ -34,14 +34,15 @@ Bump `version` in `manifest.json` for every release.
 ## Public rate limit for a test period
 
 Anonymous callers get `PUBLIC_RATE_LIMIT_REQUESTS` summaries per hour per IP (5, set in
-`infra/terraform/main/cloudrun.tf`). To raise it temporarily:
+`infra/terraform/main/cloudrun.tf`). For a demo, raise it and keep one instance warm:
 
 ```bash
-gcloud run services update llm-summarizer-backend --region europe-central2 \
-  --update-env-vars PUBLIC_RATE_LIMIT_REQUESTS=100
+just demo-on rate_limit=100   # billed per hour while on
+just demo-status
+just demo-off                 # back to 5 and scale-to-zero
 ```
 
-The next deploy restores the value from Terraform.
+The next deploy also restores the Terraform values.
 
 ## Instalacja (dla promotora)
 

@@ -195,7 +195,7 @@ extension-zip:
     grep -q 'ACTIVE_ENVIRONMENT = ENVIRONMENTS.prod;' config.js || (echo "config.js does not point at prod — a released extension would call the local API" && exit 1)
     rm -rf dist
     mkdir dist
-    zip -qr dist/podsumowania-extension.zip . -x 'dist/*' 'README.md'
+    zip -qr dist/podsumowania-extension.zip . -x 'dist/*' 'README.md' '*.DS_Store'
 
 # Kept alongside trivy, not instead of it: trivy reported 0 on this same lockfile while
 # npm audit found 5 highs in vite/postcss. Different advisory sources, different blind spots.

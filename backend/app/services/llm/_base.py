@@ -65,7 +65,11 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
     if provider == "gemini":
         if not settings.gemini_api_key:
             raise ValueError("Missing GEMINI_API_KEY")
-        return ChatGoogleGenerativeAI(model=model_name, api_key=settings.gemini_api_key)
+        return ChatGoogleGenerativeAI(
+            model=model_name,
+            api_key=settings.gemini_api_key,
+            temperature=settings.llm_temperature,
+        )
 
     if provider == "openrouter":
         if not settings.openrouter_api_key:
@@ -74,10 +78,15 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
             model=model_name,
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
+            temperature=settings.llm_temperature,
         )
 
     if provider == "ollama":
-        return ChatOllama(model=model_name, base_url=settings.ollama_url)
+        return ChatOllama(
+            model=model_name,
+            base_url=settings.ollama_url,
+            temperature=settings.llm_temperature,
+        )
 
     raise NotImplementedError(f"Provider {model_provider} is not implemented yet")
 

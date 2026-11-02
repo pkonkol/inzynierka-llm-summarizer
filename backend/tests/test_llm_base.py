@@ -8,11 +8,14 @@ shapes langchain-core's UsageMetadata actually carries.
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import SecretStr
 
 from app.schemas.summary_spec import ResolvedLength, SummarySpec
+from app.services.llm import _base
 from app.services.llm._base import (
     BULLETS_FORMAT_GUIDANCE,
     build_detail_guidance,
+    build_llm,
     extract_usage,
     prompt_texts,
 )
@@ -94,3 +97,17 @@ def test_detail_guidance_asks_for_a_markdown_list_only_for_bullets_output() -> N
     assert BULLETS_FORMAT_GUIDANCE not in prose_guidance
     assert BULLETS_FORMAT_GUIDANCE in bullets_guidance
     assert "key_takeaways" not in bullets_guidance  # the final answer is a summary, not a JSON list
+
+
+@pytest.mark.parametrize("provider", ["gemini", "openrouter", "ollama"])
+def test_build_llm_passes_configured_temperature(
+    monkeypatch: pytest.MonkeyPatch, provider: str
+) -> None:
+    monkeypatch.setattr(
+        _base.settings, "supported_models", {"gemini": ["m"], "openrouter": ["m"], "ollama": ["m"]}
+    )
+    monkeypatch.setattr(_base.settings, "gemini_api_key", SecretStr("test-key"))
+    monkeypatch.setattr(_base.settings, "openrouter_api_key", SecretStr("test-key"))
+    monkeypatch.setattr(_base.settings, "llm_temperature", 0.7)
+
+    assert build_llm(provider, "m").temperature == 0.7

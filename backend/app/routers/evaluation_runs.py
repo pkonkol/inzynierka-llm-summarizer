@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pymongo import DESCENDING
 
 from ..core.auth import require_auth
+from ..core.config import settings
 from ..core.mongo import get_evaluation_runs_collection, get_evaluation_sets_collection
 from ..schemas.evaluation_run_api import (
     DeepevalQueuedResponse,
@@ -85,6 +86,8 @@ async def create_evaluation_run(
         summary_spec=payload.summary_spec,
         language=payload.language,
         rate_limit_delay_ms=payload.rate_limit_delay_ms,
+        git_sha=settings.git_sha,
+        temperature=settings.llm_temperature,
         status="pending",
         created_at=created_at,
         heartbeat_at=created_at,
@@ -158,6 +161,8 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
                     "created_at": 1,
                     "finished_at": 1,
                     "aggregate_metrics": 1,
+                    "git_sha": 1,
+                    "temperature": 1,
                     "entry_count": {"$size": "$entries"},
                 }
             },
@@ -183,6 +188,8 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),
         entry_count=document["entry_count"],
+        git_sha=document.get("git_sha"),  # absent on runs created before provenance was stored
+        temperature=document.get("temperature"),
         aggregate_metrics=document.get("aggregate_metrics", {}),
     )
 

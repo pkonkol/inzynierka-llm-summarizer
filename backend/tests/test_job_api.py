@@ -5,7 +5,7 @@ from app.schemas.job_api import MANUAL_SOURCE_PREFIX, JobCreateRequest
 
 
 def _request(**source: str) -> JobCreateRequest:
-    return JobCreateRequest(model_provider="gemini", model_name="gemini-flash-latest", **source)
+    return JobCreateRequest(model_provider="gemini", model_name="gemini-3.8-flash", **source)
 
 
 def test_a_pasted_text_is_keyed_by_its_first_sentence() -> None:

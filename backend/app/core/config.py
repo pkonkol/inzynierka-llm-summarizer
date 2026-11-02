@@ -58,18 +58,40 @@ class Settings(BaseSettings):
     supported_summary_languages: list[str] = ["auto", "en", "pl"]
     supported_models: dict[str, list[str]] = {
         "gemini": [
-            "gemini-flash-lite-latest",
-            "gemini-flash-latest",
+            "gemini-3.8-flash",
             "gemma-4-31b-it",
         ],
         "openrouter": [
-            "openrouter/free",
-            "openai/gpt-oss-20b:free",
+            "deepseek/deepseek-v4.1-flash-1017",
+            "deepseek/deepseek-v4-pro-0813",
+            "deepseek/deepseek-v3.2",
+            "qwen/qwen3.8-flash",
+            "qwen/qwen3.8-27b",
+            "qwen/qwen3.5-27b",
+            "qwen/qwen3.5-9b",
+            "openai/gpt-oss-20b",
+            "google/gemma-4-26b-a4b-it",
+            "ibm-granite/granite-4.2-8b",
+            "google/gemma-3-4b-it",
+            "mistralai/ministral-3b-2512",
+            "liquid/lfm-2.5-2.6b",
             "nvidia/nemotron-3.5-lightning:free",
             "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "~deepseek/deepseek-v4-flash-latest",
-            "deepseek/deepseek-v3.2",
-            "~z-ai/glm-flash-latest",
+            "openai/gpt-oss-120b",
+            "openai/gpt-5.6-luna",
+            "openai/gpt-5.6-terra",
+            "qwen/qwen3.8-max-0902",
+            "xiaomi/mimo-v2.5",
+            "inclusionai/ling-3.0-flash",
+            "upstage/solar-pro4",
+        ],
+        "ollama": [
+            "qwen3.8:27b",
+            "qwen3.5:0.8b",
+            "qwen3.5:2b",
+            "qwen3.5:4b",
+            "gpt-oss:20b",
+            "gemma4-26b-a4b-hauhau:latest",
         ],
     }
     # strategy -> human-readable label
@@ -83,11 +105,11 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 168
     deepeval_judge_model: dict[str, str] = {
         "model_provider": "gemini",
-        "model_name": "gemini-flash-latest",
+        "model_name": "gemini-3.8-flash",
     }
     public_summary_model: dict[str, str] = {
         "model_provider": "gemini",
-        "model_name": "gemini-flash-latest",
+        "model_name": "gemini-3.8-flash",
     }
     # Characters of source text a public job may carry, whether pasted or scraped from a URL.
     public_max_input_chars: int = 30_000
@@ -95,7 +117,7 @@ class Settings(BaseSettings):
     public_rate_limit_window_minutes: int = 60
     title_model: dict[str, str] = {
         "model_provider": "gemini",
-        "model_name": "gemini-flash-latest",
+        "model_name": "gemini-3.8-flash",
     }
     # Sent explicitly to every model, judge included, and stored on each run and judge pass.
     llm_temperature: float = 1.0

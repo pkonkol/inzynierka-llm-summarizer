@@ -13,7 +13,7 @@ def _job(origin: str) -> dict:
         "job_id": "j",
         "source_url": "https://example.com/long",
         "model_provider": "gemini",
-        "model_name": "gemini-flash-latest",
+        "model_name": "gemini-3.8-flash",
         "processing_strategy": "direct",
         "summary_spec": {},
         "language": "auto",

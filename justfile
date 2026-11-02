@@ -311,19 +311,34 @@ steady_rate_limit := "5"
 # GCP: one warm instance and a raised public rate limit for a live demo; billed per hour until demo-off
 [group('gcp')]
 demo-on cpu=steady_cpu memory=steady_memory rate_limit="100":
-    @echo "not implemented" && exit 1
+    gcloud run services update {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --min-instances 1 --cpu {{cpu}} --memory {{memory}} \
+        --update-env-vars PUBLIC_RATE_LIMIT_REQUESTS={{rate_limit}}
+    @echo "One instance stays warm and billed until: just demo-off"
 
 # GCP: back to scale-to-zero and the Terraform values
 [group('gcp')]
 demo-off:
-    @echo "not implemented" && exit 1
+    gcloud run services update {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --min-instances 0 --cpu {{steady_cpu}} --memory {{steady_memory}} \
+        --update-env-vars PUBLIC_RATE_LIMIT_REQUESTS={{steady_rate_limit}}
+
+# An empty RATE_LIMIT means the variable is unset and the app default from backend/app/core/config.py applies.
 
 # GCP: min instances, cpu, memory and public rate limit of the serving revision
 [group('gcp')]
 demo-status:
-    @echo "not implemented" && exit 1
+    @gcloud run services describe {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --format='table(spec.template.metadata.annotations."autoscaling.knative.dev/minScale":label=MIN_INSTANCES, spec.template.spec.containers[0].resources.limits.cpu:label=CPU, spec.template.spec.containers[0].resources.limits.memory:label=MEMORY, spec.template.spec.containers[0].env.filter("name=PUBLIC_RATE_LIMIT_REQUESTS").extract(value).flatten():label=RATE_LIMIT)'
 
 # GCP: fresh revision of the current image, no build (e.g. to pick up a new secret version)
 [group('gcp')]
 restart-backend:
-    @echo "not implemented" && exit 1
+    #!/usr/bin/env bash
+    set -euo pipefail
+    image=$(gcloud run services describe {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --format="value(spec.template.spec.containers[0].image)")
+    echo "Redeploying $image"
+    # A changed env var is what forces a new revision when the image is identical.
+    gcloud run deploy {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --image "$image" --update-env-vars RESTARTED_AT="$(date +%s)"

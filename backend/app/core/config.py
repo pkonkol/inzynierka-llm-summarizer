@@ -121,6 +121,8 @@ class Settings(BaseSettings):
     public_max_input_chars: int = 30_000
     public_rate_limit_requests: int = 5
     public_rate_limit_window_minutes: int = 60
+    # Each staged expansion costs a paid Exa search and ~8k tokens, so the public page gets a fixed daily budget.
+    public_context_expansion_daily_limit: int = 50
     context_queries_per_channel: int = 2
     context_results_per_query: int = 5
     context_selected_sources: int = 4

@@ -5,7 +5,7 @@ import structlog
 from fastapi import HTTPException, Request
 
 from .config import settings
-from .mongo import get_rate_limits_collection
+from .mongo import get_jobs_collection, get_rate_limits_collection
 
 log = structlog.get_logger(__name__)
 
@@ -45,3 +45,34 @@ async def enforce_public_rate_limit(request: Request) -> None:
         )
 
     await collection.insert_one({"key": key, "at": now})
+
+
+_CONTEXT_EXPANSION_WINDOW = timedelta(hours=24)
+
+
+async def enforce_public_context_expansion_limit() -> None:
+    """One budget for every visitor together, since a per-IP limit does not stop a pool of addresses.
+    Counted from the jobs themselves; like the per-IP limit, parallel requests can overshoot by a few."""
+    now = datetime.now(UTC)
+    in_window = {
+        "origin": "public",
+        "context_expansion_mode": "staged",
+        "created_at": {"$gte": now - _CONTEXT_EXPANSION_WINDOW},
+    }
+    jobs_collection = get_jobs_collection()
+    used = await jobs_collection.count_documents(in_window)
+    log.debug("checking public context expansion limit", used=used)
+    if used < settings.public_context_expansion_daily_limit:
+        return
+
+    oldest = await jobs_collection.find_one(in_window, sort=[("created_at", 1)])
+    seconds_left = (
+        (oldest["created_at"] + _CONTEXT_EXPANSION_WINDOW - now).total_seconds() if oldest else 0
+    )
+    retry_after = max(1, math.ceil(seconds_left))
+    log.info("public context expansion limit exceeded", used=used, retry_after=retry_after)
+    raise HTTPException(
+        status_code=429,
+        detail="Wyczerpano dzienny limit podsumowań z kontekstem z sieci. Spróbuj bez tej opcji albo jutro.",
+        headers={"Retry-After": str(retry_after)},
+    )

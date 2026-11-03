@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from pydantic import Field, model_validator
 
 from ..core.config import settings
-from ..core.rate_limit import enforce_public_rate_limit
+from ..core.rate_limit import enforce_public_context_expansion_limit, enforce_public_rate_limit
 from ..schemas.job_api import JobCreatedResponse, SummarizeSourceRequest
 from .summarize import queue_summarization_job
 
@@ -48,6 +48,8 @@ async def create_public_summarize_job(
 ) -> JobCreatedResponse:
     # Inside the handler so a request the body validation rejects does not spend the caller's quota.
     await enforce_public_rate_limit(request)
+    if payload.add_web_context:
+        await enforce_public_context_expansion_limit()
 
     return await queue_summarization_job(
         payload,

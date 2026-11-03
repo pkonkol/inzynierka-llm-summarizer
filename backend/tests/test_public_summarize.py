@@ -105,6 +105,7 @@ async def test_case_24_the_web_context_toggle_maps_to_a_mode(
 ) -> None:
     queue = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "enforce_public_context_expansion_limit", AsyncMock())
     monkeypatch.setattr(public_summarize, "queue_summarization_job", queue)
     payload = PublicSummarizeRequest.model_validate(
         {"input_text": "An article to summarize.", **toggle}
@@ -115,3 +116,44 @@ async def test_case_24_the_web_context_toggle_maps_to_a_mode(
     )
 
     assert queue.await_args.kwargs["context_expansion_mode"] == expected_mode
+
+
+@pytest.fixture
+def public_jobs(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    collection = AsyncMock()
+    monkeypatch.setattr(rate_limit, "get_jobs_collection", lambda: collection)
+    return collection
+
+
+async def test_the_daily_context_expansion_budget_refuses_once_spent(
+    public_jobs: AsyncMock,
+) -> None:
+    public_jobs.count_documents.return_value = settings.public_context_expansion_daily_limit
+    public_jobs.find_one.return_value = {"created_at": datetime.now(UTC) - timedelta(hours=23)}
+
+    with pytest.raises(HTTPException) as refused:
+        await rate_limit.enforce_public_context_expansion_limit()
+
+    assert refused.value.status_code == 429
+    assert refused.value.headers is not None
+    assert 3590 <= int(refused.value.headers["Retry-After"]) <= 3601
+    assert public_jobs.count_documents.call_args.args[0]["context_expansion_mode"] == "staged"
+
+
+async def test_the_budget_is_checked_only_when_the_toggle_is_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    budget_check = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "enforce_public_context_expansion_limit", budget_check)
+    monkeypatch.setattr(public_summarize, "queue_summarization_job", AsyncMock())
+
+    for add_web_context in (False, True):
+        payload = PublicSummarizeRequest.model_validate(
+            {"input_text": "An article to summarize.", "add_web_context": add_web_context}
+        )
+        await public_summarize.create_public_summarize_job(
+            payload, MagicMock(), _request("203.0.113.9")
+        )
+
+    budget_check.assert_awaited_once()

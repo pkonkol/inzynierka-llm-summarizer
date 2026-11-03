@@ -410,3 +410,12 @@ restart-backend:
     # A changed env var is what forces a new revision when the image is identical.
     gcloud run deploy {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
         --image "$image" --update-env-vars RESTARTED_AT="$(date +%s)"
+
+# GCP: terraform plan|apply on infra/terraform/main, pinned to the image Cloud Run serves now, since CI deploys the images
+[group('gcp')]
+tf action="plan" *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    image=$(gcloud run services describe {{gcp_service}} --project {{gcp_project}} --region {{gcp_region}} \
+        --format="value(spec.template.spec.containers[0].image)")
+    terraform -chdir=infra/terraform/main {{action}} -var-file=../common.tfvars -var="image_tag=${image##*:}" {{args}}

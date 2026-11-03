@@ -5,6 +5,7 @@ import { AdminGate } from "./components/AdminGate";
 import { NavDock } from "./components/NavDock";
 import { useBackgroundWorkKeepalive } from "./hooks/useBackgroundWorkKeepalive";
 import { useIsLoggedIn } from "./hooks/useIsLoggedIn";
+import { ContextExpansionDevPage } from "./pages/ContextExpansionDevPage";
 import { DesignPage } from "./pages/DesignPage";
 import { EvaluationImportPage } from "./pages/EvaluationImportPage";
 import { EvaluationRunPage } from "./pages/EvaluationRunPage";
@@ -35,6 +36,8 @@ function CurrentPage({ route }: { route: Route }) {
       return <EvaluationSetPage key={route.setId} setId={route.setId} />;
     case "run":
       return <EvaluationRunPage runId={route.runId} />;
+    case "contextExpansionDev":
+      return <ContextExpansionDevPage runId={route.runId} />;
   }
 }
 

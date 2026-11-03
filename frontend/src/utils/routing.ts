@@ -24,14 +24,18 @@ export const SUMMARIES_NEW_PATH = ADMIN_PREFIX;
 export const SUMMARIES_ALL_PATH = `${ADMIN_PREFIX}/jobs`;
 export const EVALUATION_SETS_PATH = `${ADMIN_PREFIX}/research`;
 export const EVALUATION_IMPORT_PATH = `${EVALUATION_SETS_PATH}/import`;
+// Reached only by typing the address: NavDock links nowhere here.
+const CONTEXT_EXPANSION_DEV_PATH = `${ADMIN_PREFIX}/dev/context-expansion`;
 
 export const jobPath = (jobId: string) => `${SUMMARIES_ALL_PATH}/${jobId}`;
 export const evaluationSetPath = (setId: string) => `${EVALUATION_SETS_PATH}/${setId}`;
 export const evaluationRunPath = (runId: string) => `${EVALUATION_SETS_PATH}/runs/${runId}`;
+export const contextExpansionDevPath = (runId: string) => `${CONTEXT_EXPANSION_DEV_PATH}/${runId}`;
 
 const JOB_PATTERN = new RegExp(`^${SUMMARIES_ALL_PATH}/([^/]+)$`);
 const EVALUATION_RUN_PATTERN = new RegExp(`^${EVALUATION_SETS_PATH}/runs/([^/]+)$`);
 const EVALUATION_SET_PATTERN = new RegExp(`^${EVALUATION_SETS_PATH}/([^/]+)$`);
+const CONTEXT_EXPANSION_DEV_PATTERN = new RegExp(`^${CONTEXT_EXPANSION_DEV_PATH}/([^/]+)$`);
 
 /** `tab` is what the navigation bar highlights; the rest is what the page needs to render. */
 export type AdminRoute =
@@ -40,7 +44,8 @@ export type AdminRoute =
   | { tab: "import" }
   | { tab: "sets" }
   | { tab: "set"; setId: string }
-  | { tab: "run"; runId: string };
+  | { tab: "run"; runId: string }
+  | { tab: "contextExpansionDev"; runId: string };
 
 export type Route = AdminRoute | { tab: "public" } | { tab: "login" };
 
@@ -64,6 +69,9 @@ export function matchRoute(pathname: string): Route {
   if (!isAdminPath(pathname)) return { tab: "public" };
 
   if (pathname === EVALUATION_IMPORT_PATH) return { tab: "import" };
+
+  const contextExpansionRunId = pathname.match(CONTEXT_EXPANSION_DEV_PATTERN)?.[1];
+  if (contextExpansionRunId) return { tab: "contextExpansionDev", runId: contextExpansionRunId };
 
   if (pathname.startsWith(`${EVALUATION_SETS_PATH}/runs`)) {
     const runId = pathname.match(EVALUATION_RUN_PATTERN)?.[1];

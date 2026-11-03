@@ -1,5 +1,6 @@
 import {
   type AdminRoute,
+  contextExpansionDevPath,
   EVALUATION_IMPORT_PATH,
   EVALUATION_SETS_PATH,
   evaluationRunPath,
@@ -79,6 +80,7 @@ const NAV_TAB: Record<AdminRoute["tab"], NavTab["tab"]> = {
   sets: "sets",
   set: "sets",
   run: "sets",
+  contextExpansionDev: "sets",
 };
 
 /** The breadcrumb ancestors of a set or a run, so the labels are written in one place only. */
@@ -94,6 +96,7 @@ const DESIGN_PATH = "/design";
 function currentSubpath(route: AdminRoute): string | null {
   if (route.tab === "set") return evaluationSetPath(route.setId);
   if (route.tab === "run") return evaluationRunPath(route.runId);
+  if (route.tab === "contextExpansionDev") return contextExpansionDevPath(route.runId);
   if (route.tab === "all" && route.jobId) return jobPath(route.jobId);
   return null;
 }

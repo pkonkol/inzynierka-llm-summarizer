@@ -8,6 +8,7 @@ from pymongo.errors import DuplicateKeyError
 
 from ..core.auth import require_auth
 from ..core.mongo import get_jobs_collection
+from ..schemas.context_expansion import ContextExpansionMode
 from ..schemas.job_api import (
     JobCreatedResponse,
     JobCreateRequest,
@@ -53,6 +54,7 @@ async def create_summarize_job(
         processing_strategy=payload.processing_strategy,
         run_deepeval=payload.run_deepeval,
         origin="admin",
+        context_expansion_mode="none",
     )
 
 
@@ -66,6 +68,7 @@ async def queue_summarization_job(
     processing_strategy: ProcessingStrategy,
     run_deepeval: bool,
     origin: JobOrigin,
+    context_expansion_mode: ContextExpansionMode,
 ) -> JobCreatedResponse:
     job_id = str(uuid4())
     now = datetime.now(UTC)
@@ -85,6 +88,7 @@ async def queue_summarization_job(
         language=language,
         origin=origin,
         run_deepeval=run_deepeval,
+        context_expansion_mode=context_expansion_mode,
         status="pending",
         input_text=input_text,
         created_at=now,

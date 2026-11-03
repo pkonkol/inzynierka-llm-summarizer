@@ -1349,6 +1349,114 @@
         ],
         "title": "AuthStatusResponse"
       },
+      "ChannelOutcome": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "discussions",
+              "science"
+            ],
+            "title": "Channel"
+          },
+          "queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Queries"
+          },
+          "result_count": {
+            "type": "integer",
+            "title": "Result Count"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "queries",
+          "result_count",
+          "duration_ms",
+          "cost_usd",
+          "error"
+        ],
+        "title": "ChannelOutcome"
+      },
+      "ContextExpansionResult": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "single_search",
+              "staged"
+            ],
+            "title": "Mode"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelOutcome"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "candidate_count": {
+            "type": "integer",
+            "title": "Candidate Count"
+          },
+          "selected": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedSource"
+            },
+            "type": "array",
+            "title": "Selected"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "channels",
+          "candidate_count",
+          "selected",
+          "usage",
+          "duration_ms"
+        ],
+        "title": "ContextExpansionResult"
+      },
       "CrossMetrics": {
         "properties": {
           "rouge1": {
@@ -2959,6 +3067,26 @@
             ],
             "title": "Origin"
           },
+          "context_expansion_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "single_search",
+              "staged"
+            ],
+            "title": "Context Expansion Mode",
+            "default": "none"
+          },
+          "context_expansion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextExpansionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "resolved_length": {
             "anyOf": [
               {
@@ -3077,7 +3205,10 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "source_too_long"
+                "enum": [
+                  "source_too_long",
+                  "context_expansion_failed"
+                ]
               },
               {
                 "type": "null"
@@ -3097,6 +3228,8 @@
           "summary_spec",
           "language",
           "origin",
+          "context_expansion_mode",
+          "context_expansion",
           "resolved_length",
           "summary_data",
           "metrics",
@@ -3286,10 +3419,60 @@
             "type": "string",
             "title": "Language",
             "default": "auto"
+          },
+          "add_web_context": {
+            "type": "boolean",
+            "title": "Add Web Context",
+            "default": false
           }
         },
         "type": "object",
         "title": "PublicSummarizeRequest"
+      },
+      "RelatedSource": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "discussions",
+              "science"
+            ],
+            "title": "Channel"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "selection_reason": {
+            "type": "string",
+            "title": "Selection Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "url",
+          "title",
+          "excerpt",
+          "selection_reason"
+        ],
+        "title": "RelatedSource"
       },
       "ResolvedLength": {
         "properties": {

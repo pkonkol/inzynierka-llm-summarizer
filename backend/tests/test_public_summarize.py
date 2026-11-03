@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from app.core import rate_limit
 from app.core.config import settings
+from app.routers import public_summarize
 from app.routers.public_summarize import PublicSummarizeRequest
 
 
@@ -90,3 +91,27 @@ def test_the_public_endpoint_rejects_a_language_it_does_not_offer() -> None:
 def test_the_public_endpoint_caps_pasted_text_below_the_admin_limit() -> None:
     with pytest.raises(ValidationError):
         PublicSummarizeRequest(input_text="x" * 30_001)
+
+
+@pytest.mark.parametrize(
+    ("toggle", "expected_mode"),
+    [
+        pytest.param({}, "none", id="toggle-omitted"),
+        pytest.param({"add_web_context": True}, "staged", id="toggle-on"),
+    ],
+)
+async def test_case_24_the_web_context_toggle_maps_to_a_mode(
+    monkeypatch: pytest.MonkeyPatch, toggle: dict, expected_mode: str
+) -> None:
+    queue = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "queue_summarization_job", queue)
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", **toggle}
+    )
+
+    await public_summarize.create_public_summarize_job(
+        payload, MagicMock(), _request("203.0.113.9")
+    )
+
+    assert queue.await_args.kwargs["context_expansion_mode"] == expected_mode

@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from .base import ApiModel
+from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .shared_metrics import (
     DeepevalItem,
     SourceMetrics,
@@ -37,6 +38,10 @@ class JobDocument(BaseModel):
     language: str
     origin: Literal["admin", "public"]
     run_deepeval: bool
+    context_expansion_mode: ContextExpansionMode = (
+        "none"  # jobs stored before context expansion had none
+    )
+    context_expansion: ContextExpansionResult | None = None
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)

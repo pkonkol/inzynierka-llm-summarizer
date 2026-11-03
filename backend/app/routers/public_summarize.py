@@ -18,6 +18,7 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
         default=None, min_length=1, max_length=settings.public_max_input_chars
     )
     language: str = "auto"
+    add_web_context: bool = False
 
     @model_validator(mode="after")
     def _reject_free_text_instructions(self) -> Self:
@@ -57,4 +58,5 @@ async def create_public_summarize_job(
         processing_strategy="direct",
         run_deepeval=False,
         origin="public",
+        context_expansion_mode="staged" if payload.add_web_context else "none",
     )

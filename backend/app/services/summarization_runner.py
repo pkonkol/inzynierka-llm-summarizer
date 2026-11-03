@@ -15,6 +15,7 @@ from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.job_db import JobErrorCode
 from ..schemas.summary import LlmSummaryRequest, LlmSummaryResult, SummaryResponse
 from ..schemas.summary_spec import ResolvedLength, SummarySpec, resolve_target_length
+from ..services.context_expansion import ContextExpansionError, expand_context
 from ..services.job_metrics import (
     store_deepeval_metrics_for_job,
     store_source_metrics_for_job,
@@ -81,6 +82,19 @@ async def run_summarization_job(job_id: str) -> None:
         )
         spawn_metrics_task(store_source_metrics_for_job(job_id, source_text))
 
+        context_expansion = await expand_context(
+            source_text, source_url, job["context_expansion_mode"], model_provider, model_name
+        )
+        await jobs_collection.update_one(
+            {"job_id": job_id},
+            {
+                "$set": {
+                    "context_expansion": context_expansion.model_dump(),
+                    "heartbeat_at": datetime.now(UTC),
+                }
+            },
+        )
+
         length = resolve_target_length(
             spec.length, input_words=len(source_text.split()), golden_summary=None
         )
@@ -94,7 +108,7 @@ async def run_summarization_job(job_id: str) -> None:
                     language=job["language"],
                     spec=spec,
                     length=length,
-                    related_sources=[],
+                    related_sources=context_expansion.selected,
                 ),
                 strategy=processing_strategy,
             ),
@@ -193,7 +207,9 @@ async def _store_failed_job(
                 "finished_at": finished_at,
                 "duration_ms": duration_ms,
                 "error": str(exc),
-                "error_code": exc.code if isinstance(exc, SourceTooLongError) else None,
+                "error_code": exc.code
+                if isinstance(exc, (SourceTooLongError, ContextExpansionError))
+                else None,
                 "updated_at": finished_at,
             }
         },

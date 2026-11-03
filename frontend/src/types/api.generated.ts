@@ -466,6 +466,41 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** ChannelOutcome */
+        ChannelOutcome: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "web" | "discussions" | "science";
+            /** Queries */
+            queries: string[];
+            /** Result Count */
+            result_count: number;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Cost Usd */
+            cost_usd: number | null;
+            /** Error */
+            error: string | null;
+        };
+        /** ContextExpansionResult */
+        ContextExpansionResult: {
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "none" | "single_search" | "staged";
+            /** Channels */
+            channels: components["schemas"]["ChannelOutcome"][];
+            /** Candidate Count */
+            candidate_count: number;
+            /** Selected */
+            selected: components["schemas"]["RelatedSource"][];
+            usage: components["schemas"]["UsageMetadata"];
+            /** Duration Ms */
+            duration_ms: number;
+        };
         /** CrossMetrics */
         CrossMetrics: {
             /** Rouge1 */
@@ -1055,6 +1090,13 @@ export interface components {
              * @enum {string}
              */
             origin: "admin" | "public";
+            /**
+             * Context Expansion Mode
+             * @default none
+             * @enum {string}
+             */
+            context_expansion_mode: "none" | "single_search" | "staged";
+            context_expansion: components["schemas"]["ContextExpansionResult"] | null;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
@@ -1098,7 +1140,7 @@ export interface components {
             /** Error */
             error: string | null;
             /** Error Code */
-            error_code: "source_too_long" | null;
+            error_code: ("source_too_long" | "context_expansion_failed") | null;
         };
         /** KeepaliveResponse */
         KeepaliveResponse: {
@@ -1162,6 +1204,27 @@ export interface components {
              * @default auto
              */
             language: string;
+            /**
+             * Add Web Context
+             * @default false
+             */
+            add_web_context: boolean;
+        };
+        /** RelatedSource */
+        RelatedSource: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "web" | "discussions" | "science";
+            /** Url */
+            url: string;
+            /** Title */
+            title: string | null;
+            /** Excerpt */
+            excerpt: string;
+            /** Selection Reason */
+            selection_reason: string;
         };
         /** ResolvedLength */
         ResolvedLength: {
@@ -1339,6 +1402,8 @@ export interface components {
 }
 export type AiMetrics = components['schemas']['AiMetrics'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
+export type ChannelOutcome = components['schemas']['ChannelOutcome'];
+export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
 export type DeepevalItemInput = components['schemas']['DeepevalItem-Input'];
 export type DeepevalItemOutput = components['schemas']['DeepevalItem-Output'];
@@ -1379,6 +1444,7 @@ export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
 export type PublicSummarizeRequest = components['schemas']['PublicSummarizeRequest'];
+export type RelatedSource = components['schemas']['RelatedSource'];
 export type ResolvedLength = components['schemas']['ResolvedLength'];
 export type ScaledLength = components['schemas']['ScaledLength'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];

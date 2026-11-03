@@ -501,6 +501,23 @@ export interface components {
             /** Duration Ms */
             duration_ms: number;
         };
+        /**
+         * ContextSection
+         * @description A section after the summary that is about the related sources; the summary itself then uses the content alone.
+         *     Written only when context expansion selected at least one source.
+         */
+        ContextSection: {
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "supplement" | "assessment";
+            /**
+             * Target Words
+             * @default 150
+             */
+            target_words: number;
+        };
         /** CrossMetrics */
         CrossMetrics: {
             /** Rouge1 */
@@ -1012,6 +1029,12 @@ export interface components {
              * @default false
              */
             run_deepeval: boolean;
+            /**
+             * Context Expansion Mode
+             * @default none
+             * @enum {string}
+             */
+            context_expansion_mode: "none" | "single_search" | "staged";
         };
         /** JobCreatedResponse */
         JobCreatedResponse: {
@@ -1323,6 +1346,7 @@ export interface components {
             length?: components["schemas"]["ExplicitLength"] | components["schemas"]["ScaledLength"] | components["schemas"]["MatchReferenceLength"];
             /** Extra Instructions */
             extra_instructions?: string | null;
+            context_section?: components["schemas"]["ContextSection"] | null;
         };
         /** SummaryStatisticalMetrics */
         SummaryStatisticalMetrics: {
@@ -1416,6 +1440,7 @@ export type AiMetrics = components['schemas']['AiMetrics'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
 export type ChannelOutcome = components['schemas']['ChannelOutcome'];
 export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
+export type ContextSection = components['schemas']['ContextSection'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
 export type DeepevalItemInput = components['schemas']['DeepevalItem-Input'];
 export type DeepevalItemOutput = components['schemas']['DeepevalItem-Output'];

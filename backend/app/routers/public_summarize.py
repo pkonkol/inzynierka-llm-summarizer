@@ -29,6 +29,12 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
         return self
 
     @model_validator(mode="after")
+    def _reject_context_section(self) -> Self:
+        if self.summary_spec.context_section is not None:
+            raise ValueError("context_section is only available in the admin console for now")
+        return self
+
+    @model_validator(mode="after")
     def _require_supported_language(self) -> Self:
         # The value is interpolated into the prompt, so it must be one we chose.
         if self.language not in settings.supported_summary_languages:

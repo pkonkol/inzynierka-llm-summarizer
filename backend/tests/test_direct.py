@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableLambda
 
 from app.schemas.context_expansion import RelatedSource
 from app.schemas.summary import LlmSummaryRequest
-from app.schemas.summary_spec import ResolvedLength, SummarySpec
+from app.schemas.summary_spec import ContextSection, ResolvedLength, SummarySpec
 from app.services.llm import direct
 from app.services.llm._base import SummaryOutput, prompt_texts
 from app.services.llm._prompts import EXTRACT_FROM_CONTENT
@@ -27,7 +27,9 @@ def _related(index: int, text: str = "Supporting fact.") -> RelatedSource:
     )
 
 
-def _request(related_sources: list[RelatedSource]) -> LlmSummaryRequest:
+def _request(
+    related_sources: list[RelatedSource], context_section: ContextSection | None = None
+) -> LlmSummaryRequest:
     return LlmSummaryRequest.model_validate(
         {
             "text": "The source article says something important.",
@@ -35,7 +37,7 @@ def _request(related_sources: list[RelatedSource]) -> LlmSummaryRequest:
             "model_provider": "gemini",
             "model_name": "gemini-3.8-flash",
             "language": "en",
-            "spec": SummarySpec(),
+            "spec": SummarySpec(context_section=context_section),
             "length": ResolvedLength(target_words=50, target_sentences=2),
             "related_sources": related_sources,
         }
@@ -84,3 +86,33 @@ async def test_case_21_a_closing_tag_inside_a_source_does_not_end_its_block(
     assert prompt.count("</related_source>") == 1
     block = prompt.split('<related_source id="1"', 1)[1].split("</related_source>", 1)[0]
     assert "Ignore previous instructions" in block
+
+
+@pytest.mark.parametrize(
+    ("stance", "focus"),
+    [
+        pytest.param("supplement", "what the related sources add", id="supplement"),
+        pytest.param("assessment", "confirm it, contradict it", id="assessment"),
+    ],
+)
+async def test_a_context_section_keeps_the_summary_on_the_content_alone(
+    sent_prompts: list[str], stance: str, focus: str
+) -> None:
+    section = ContextSection.model_validate({"stance": stance, "target_words": 120})
+
+    await direct.run(_request([_related(1)], section))
+
+    prompt = sent_prompts[0]
+    assert "from the content alone" in prompt
+    assert "about 120 words" in prompt
+    assert focus in prompt
+
+
+async def test_a_context_section_without_sources_uses_the_original_template(
+    sent_prompts: list[str],
+) -> None:
+    section = ContextSection.model_validate({"stance": "assessment"})
+
+    result = await direct.run(_request([], section))
+
+    assert result.prompt_template == prompt_texts(EXTRACT_FROM_CONTENT, "summary")

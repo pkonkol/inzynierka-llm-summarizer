@@ -66,12 +66,21 @@ LengthSpec = Annotated[
 ]
 
 
+class ContextSection(BaseModel):
+    """A section after the summary that is about the related sources; the summary itself then uses the content alone.
+    Written only when context expansion selected at least one source."""
+
+    stance: Literal["supplement", "assessment"]
+    target_words: int = Field(default=150, ge=30, le=600)
+
+
 class SummarySpec(BaseModel):
     narrative_stance: NarrativeStance = "voice_of_document"
     summary_function: SummaryFunction = "informative"
     output_format: OutputFormat = "prose"
     length: LengthSpec = Field(default_factory=lambda: ScaledLength(slider=0.5))
     extra_instructions: str | None = Field(default=None, max_length=_MAX_EXTRA_INSTRUCTIONS_CHARS)
+    context_section: ContextSection | None = None  # None: related sources are woven into one text
 
 
 class ResolvedLength(BaseModel):

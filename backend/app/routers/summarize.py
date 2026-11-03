@@ -54,7 +54,7 @@ async def create_summarize_job(
         processing_strategy=payload.processing_strategy,
         run_deepeval=payload.run_deepeval,
         origin="admin",
-        context_expansion_mode="none",
+        context_expansion_mode=payload.context_expansion_mode,
     )
 
 

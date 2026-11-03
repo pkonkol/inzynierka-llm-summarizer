@@ -46,10 +46,8 @@ DIRECT_WITH_RELATED_SOURCES = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Generate {what_to_generate} from the content. The related sources add context: use "
-            "them only where they support, extend or contradict the content, and mark every fact "
-            "taken from them with the source number in brackets, e.g. [1]. The content stays the "
-            "main subject. {detail_guidance}\n\nContent:\n{text}\n\nRelated sources:\n{related_sources}",
+            "Generate {what_to_generate} from the content. {context_use} {detail_guidance}"
+            "\n\nContent:\n{text}\n\nRelated sources:\n{related_sources}",
         ),
         _REMINDER_MESSAGE,
     ]

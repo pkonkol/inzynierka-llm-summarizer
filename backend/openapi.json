@@ -1457,6 +1457,31 @@
         ],
         "title": "ContextExpansionResult"
       },
+      "ContextSection": {
+        "properties": {
+          "stance": {
+            "type": "string",
+            "enum": [
+              "supplement",
+              "assessment"
+            ],
+            "title": "Stance"
+          },
+          "target_words": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": 30.0,
+            "title": "Target Words",
+            "default": 150
+          }
+        },
+        "type": "object",
+        "required": [
+          "stance"
+        ],
+        "title": "ContextSection",
+        "description": "A section after the summary that is about the related sources; the summary itself then uses the content alone.\nWritten only when context expansion selected at least one source."
+      },
       "CrossMetrics": {
         "properties": {
           "rouge1": {
@@ -2928,6 +2953,16 @@
             "type": "boolean",
             "title": "Run Deepeval",
             "default": false
+          },
+          "context_expansion_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "single_search",
+              "staged"
+            ],
+            "title": "Context Expansion Mode",
+            "default": "none"
           }
         },
         "type": "object",
@@ -3724,6 +3759,16 @@
               }
             ],
             "title": "Extra Instructions"
+          },
+          "context_section": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextSection"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

@@ -157,3 +157,14 @@ async def test_the_budget_is_checked_only_when_the_toggle_is_on(
         )
 
     budget_check.assert_awaited_once()
+
+
+def test_the_public_endpoint_rejects_a_context_section() -> None:
+    with pytest.raises(ValidationError, match="context_section"):
+        PublicSummarizeRequest.model_validate(
+            {
+                "input_text": "An article to summarize.",
+                "add_web_context": True,
+                "summary_spec": {"context_section": {"stance": "supplement"}},
+            }
+        )

@@ -29,3 +29,14 @@ def test_case_25b_direct_accepts_context_expansion() -> None:
     )
 
     assert request.context_expansion_mode == "staged"
+
+
+def test_a_context_section_needs_context_expansion() -> None:
+    with pytest.raises(ValidationError, match="context_section"):
+        EvaluationRunCreateRequest.model_validate(
+            {
+                "model_provider": "gemini",
+                "model_name": "gemini-3.8-flash",
+                "summary_spec": {"context_section": {"stance": "assessment"}},
+            }
+        )

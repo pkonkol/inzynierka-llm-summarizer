@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 
 from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
+from .job_api import check_context_expansion_settings
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
 from .summary_spec import MatchReferenceLength, ProcessingStrategy, ResolvedLength, SummarySpec
 
@@ -74,9 +75,10 @@ class EvaluationRunCreateRequest(ApiModel):
     context_expansion_mode: ContextExpansionMode = "none"
 
     @model_validator(mode="after")
-    def _require_direct_for_context_expansion(self) -> Self:
-        if self.context_expansion_mode != "none" and self.processing_strategy != "direct":
-            raise ValueError("context_expansion_mode other than none requires the direct strategy")
+    def _check_context_expansion(self) -> Self:
+        check_context_expansion_settings(
+            self.context_expansion_mode, self.processing_strategy, self.summary_spec
+        )
         return self
 
 

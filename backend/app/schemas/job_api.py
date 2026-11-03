@@ -69,12 +69,32 @@ class SummarizeSourceRequest(ApiModel):
         return self
 
 
+def check_context_expansion_settings(
+    mode: ContextExpansionMode, processing_strategy: ProcessingStrategy, spec: SummarySpec
+) -> None:
+    """Shared by admin jobs and evaluation runs: only direct takes related sources, and a context section needs some."""
+    if mode != "none" and processing_strategy != "direct":
+        raise ValueError("context_expansion_mode other than none requires the direct strategy")
+    if spec.context_section is not None and mode == "none":
+        raise ValueError(
+            "summary_spec.context_section requires a context_expansion_mode other than none"
+        )
+
+
 class JobCreateRequest(SummarizeSourceRequest):
     model_name: str
     model_provider: str
     language: str = "en"
     processing_strategy: ProcessingStrategy = "direct"
     run_deepeval: bool = False
+    context_expansion_mode: ContextExpansionMode = "none"
+
+    @model_validator(mode="after")
+    def _check_context_expansion(self) -> Self:
+        check_context_expansion_settings(
+            self.context_expansion_mode, self.processing_strategy, self.summary_spec
+        )
+        return self
 
 
 class JobStatusResponse(ApiModel):

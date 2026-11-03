@@ -10,6 +10,7 @@ imported into the root `CLAUDE.md`, so keep each row to one line.
 | [0003](0003-summary-spec-and-processing-strategy.md) | SummarySpec vs. processing strategy | Output contract (SummarySpec) kept independent of execution strategy (direct/extract_then_synthesize) | Accepted |
 | [0004](0004-public-homepage-and-admin-split.md) | Public homepage vs. /admin | Separate rate-limited public endpoint (Mongo sliding window), console moved under /admin | Accepted |
 | [0005](0005-single-markdown-summary-field.md) | Summary output shape | One markdown `summary` field replaces the exclusive summary/key_takeaways pair; one-off backfill | Accepted |
+| [0006](0006-context-expansion-pre-step.md) | Context expansion | Staged search (Exa, HN Algolia, OpenAlex) and model pick as a step before the strategy; off by default | Accepted |
 
 ## Granularity
 

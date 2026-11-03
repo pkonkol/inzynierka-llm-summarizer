@@ -94,6 +94,7 @@ async def run_summarization_job(job_id: str) -> None:
                     language=job["language"],
                     spec=spec,
                     length=length,
+                    related_sources=[],
                 ),
                 strategy=processing_strategy,
             ),

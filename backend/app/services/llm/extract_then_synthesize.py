@@ -56,6 +56,8 @@ async def _synthesize(
 
 
 async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
+    if request.related_sources:
+        raise NotImplementedError("extract_then_synthesize does not take related sources")
     text = request.text.strip()
     takeaways, takeaways_raw, takeaways_usage, takeaways_metadata = await _extract_takeaways(
         request, text

@@ -74,6 +74,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str
                 language=run_doc["language"],
                 spec=spec,
                 length=length,
+                related_sources=[],
             ),
             strategy=run_doc["processing_strategy"],
         )

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from .base import ApiModel
-from .summary import UsageMetadata
+from .usage import UsageMetadata
 
 SearchChannel = Literal["web", "discussions", "science"]
 ContextExpansionMode = Literal["none", "single_search", "staged"]

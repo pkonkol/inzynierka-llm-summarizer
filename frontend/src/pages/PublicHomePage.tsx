@@ -8,6 +8,7 @@ import { PublicSummaryResult } from "../components/public/PublicSummaryResult";
 import { buildSourcePayload, SourceField } from "../components/SourceField";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
+import { Checkbox } from "../components/ui/Checkbox";
 import { RangeInput } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -42,6 +43,7 @@ export function PublicHomePage() {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(null);
   const [density, setDensity] = useState(DEFAULT_DENSITY);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
+  const [addWebContext, setAddWebContext] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isHandoffErrorDismissed, setIsHandoffErrorDismissed] = useState(false);
 
@@ -93,7 +95,7 @@ export function PublicHomePage() {
       ...presetSpec,
       length: { ...presetLength, slider: density },
     };
-    void submit({ ...source, language, summary_spec: summarySpec, add_web_context: false });
+    void submit({ ...source, language, summary_spec: summarySpec, add_web_context: addWebContext });
   };
 
   return (
@@ -176,6 +178,14 @@ export function PublicHomePage() {
                   ))}
                 </select>
               </label>
+              <Checkbox
+                checked={addWebContext}
+                onChange={(event) => setAddWebContext(event.target.checked)}
+                disabled={isWorking}
+                className="text-caption text-mute"
+              >
+                Dodaj kontekst z sieci
+              </Checkbox>
               <span className="flex flex-1 items-center justify-end gap-3">
                 <kbd className="hidden text-caption text-mute sm:inline">ctrl+enter</kbd>
                 <Button

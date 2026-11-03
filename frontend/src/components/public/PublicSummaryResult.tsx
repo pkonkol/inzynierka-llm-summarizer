@@ -1,7 +1,11 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { PublicSummaryState } from "../../hooks/usePublicSummary";
-import type { SummaryResponse } from "../../types/api.generated";
+import type {
+  ContextExpansionResult,
+  RelatedSource,
+  SummaryResponse,
+} from "../../types/api.generated";
 import type { JobStatus } from "../../types/local";
 import { downloadText } from "../../utils/download";
 import { formatDuration } from "../../utils/format";
@@ -20,6 +24,43 @@ const PHASE_STATUS: Record<PublicSummaryState["phase"], JobStatus | null> = {
   done: "completed",
   error: "failed",
 };
+
+const CHANNEL_LABEL: Record<RelatedSource["channel"], string> = {
+  web: "sieć",
+  discussions: "Hacker News",
+  science: "publikacje",
+};
+
+function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansionResult }) {
+  const failedChannels = contextExpansion.channels.filter((channel) => channel.error !== null);
+  return (
+    <div className="grid gap-2 border-t border-hairline pt-3 text-caption">
+      <h3 className="font-medium">Źródła kontekstu</h3>
+      {contextExpansion.selected.length === 0 ? (
+        <p className="text-mute">Nie znaleziono pasujących źródeł.</p>
+      ) : (
+        <ol className="grid gap-1">
+          {contextExpansion.selected.map((source, index) => (
+            <li key={source.url}>
+              [{index + 1}]{" "}
+              <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline">
+                {source.title ?? source.url}
+              </a>{" "}
+              <span className="text-mute">· {CHANNEL_LABEL[source.channel]}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {failedChannels.length > 0 ? (
+        <p className="text-mute">
+          Bez wyników z:{" "}
+          {failedChannels.map((channel) => CHANNEL_LABEL[channel.channel]).join(", ")} (błąd
+          wyszukiwarki).
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 function ResultState({ state }: { state: PublicSummaryState }) {
   const status = PHASE_STATUS[state.phase];
@@ -59,7 +100,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
     case "error":
       return <Alert tone="danger">{state.message}</Alert>;
     case "done": {
-      const { summary, durationMs } = state;
+      const { summary, durationMs, contextExpansion } = state;
       const copySummary = () => {
         navigator.clipboard
           .writeText(summaryPlainText(summary))
@@ -72,6 +113,9 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
           <div className="markdown max-w-measure flex-1 font-reading text-reading">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
           </div>
+          {contextExpansion !== null && contextExpansion.mode !== "none" ? (
+            <RelatedSources contextExpansion={contextExpansion} />
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
             <p className="flex-1 text-caption text-mute">
               Wygenerowano w {formatDuration(durationMs)}

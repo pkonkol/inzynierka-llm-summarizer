@@ -1,7 +1,11 @@
 import { useCallback, useState } from "react";
 
 import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
-import type { PublicSummarizeRequest, SummaryResponse } from "../types/api.generated";
+import type {
+  ContextExpansionResult,
+  PublicSummarizeRequest,
+  SummaryResponse,
+} from "../types/api.generated";
 import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
 import { logger } from "../utils/logger";
 import { useListPolling } from "./useListPolling";
@@ -9,7 +13,12 @@ import { useListPolling } from "./useListPolling";
 export type PublicSummaryState =
   | { phase: "idle" }
   | { phase: "working" }
-  | { phase: "done"; summary: SummaryResponse; durationMs: number }
+  | {
+      phase: "done";
+      summary: SummaryResponse;
+      durationMs: number;
+      contextExpansion: ContextExpansionResult | null;
+    }
   | { phase: "error"; message: string };
 
 const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Spróbuj ponownie.";
@@ -38,7 +47,12 @@ export function usePublicSummary() {
 
       setJobId(null);
       if (job.status === "completed" && job.summary_data !== null) {
-        setState({ phase: "done", summary: job.summary_data, durationMs: job.duration_ms });
+        setState({
+          phase: "done",
+          summary: job.summary_data,
+          durationMs: job.duration_ms,
+          contextExpansion: job.context_expansion,
+        });
         return;
       }
       logger.warn("public summary job did not complete", { jobId, status: job.status });
@@ -47,7 +61,9 @@ export function usePublicSummary() {
         message:
           job.error_code === "source_too_long"
             ? `Artykuł jest za długi. Limit to ${MAX_PUBLIC_PASTED_CHARS.toLocaleString("pl-PL")} znaków.`
-            : GENERATION_FAILED_MESSAGE,
+            : job.error_code === "context_expansion_failed"
+              ? "Nie udało się pobrać kontekstu z sieci. Spróbuj ponownie albo bez tej opcji."
+              : GENERATION_FAILED_MESSAGE,
       });
     } catch (error) {
       setJobId(null);

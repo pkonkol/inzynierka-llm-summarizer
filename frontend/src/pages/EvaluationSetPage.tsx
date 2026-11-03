@@ -97,7 +97,7 @@ function EntryCard({
       </h4>
 
       <p className="max-w-measure whitespace-pre-wrap font-reading text-reading">
-        {entry.golden_summary}
+        {entry.golden_summary ?? "—"}
       </p>
 
       <DisclosureSections
@@ -251,6 +251,8 @@ type NewRunSectionProps = {
 
 function NewRunSection({ setId, summarizationOptions, onCreated }: NewRunSectionProps) {
   const [newRunDelayMs, setNewRunDelayMs] = useState(1500);
+  const [newRunContextExpansionMode, setNewRunContextExpansionMode] =
+    useState<EvaluationRunCreateRequest["context_expansion_mode"]>("none");
   const {
     models: newRunAvailableModels,
     processingStrategies: newRunAvailableStrategies,
@@ -275,6 +277,7 @@ function NewRunSection({ setId, summarizationOptions, onCreated }: NewRunSection
         summary_spec: newRunSpecForm.buildSpec(),
         language: "auto",
         rate_limit_delay_ms: newRunDelayMs,
+        context_expansion_mode: newRunContextExpansionMode,
       });
     },
     {
@@ -306,6 +309,24 @@ function NewRunSection({ setId, summarizationOptions, onCreated }: NewRunSection
           onProcessingStrategyChange={setNewRunProcessingStrategy}
           disabled={submitNewRun.isPending || isLoadingNewRunOptions}
         />
+
+        <div className="grid shrink-0 gap-2">
+          <FieldLabel htmlFor="new-run-context-expansion">Kontekst z sieci</FieldLabel>
+          <Select
+            id="new-run-context-expansion"
+            value={newRunContextExpansionMode}
+            onChange={(event) =>
+              setNewRunContextExpansionMode(
+                event.target.value as EvaluationRunCreateRequest["context_expansion_mode"],
+              )
+            }
+            disabled={submitNewRun.isPending || isLoadingNewRunOptions}
+          >
+            <option value="none">brak</option>
+            <option value="single_search">jedno wyszukiwanie</option>
+            <option value="staged">etapy (zapytania, kanały, wybór)</option>
+          </Select>
+        </div>
 
         <div className="grid shrink-0 gap-2">
           <FieldLabel htmlFor="new-run-delay">Odstęp (ms)</FieldLabel>

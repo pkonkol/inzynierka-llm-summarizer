@@ -150,6 +150,23 @@ async def _score_run_entries(run_id: str) -> None:
     )
 
 
+async def _reference_metrics(
+    source_text: str, golden_summary: str | None, summary_text: str, language: str
+) -> dict[str, Any] | None:
+    """An entry imported without a reference summary has nothing to compare against."""
+    if golden_summary is None:
+        return None
+    rouge_meteor, pairwise = await asyncio.gather(
+        compute_cross_metrics(
+            reference_text=golden_summary, summary_text=summary_text, language=language
+        ),
+        compute_pairwise_cross_deepeval_metrics(
+            source_text=source_text, golden_summary=golden_summary, ai_summary=summary_text
+        ),
+    )
+    return {**rouge_meteor, "deepeval": pairwise}
+
+
 async def _score_entry(
     runs: AsyncCollection,
     run_id: str,
@@ -163,27 +180,17 @@ async def _score_entry(
     summary_text = entry["ai_summary"].strip()
     source_text = (await find_evaluation_set_entry_or_raise(set_id, entry_id))["input_text"]
 
-    deepeval_metrics, rouge_meteor, pairwise = await asyncio.gather(
+    deepeval_metrics, cross_metrics = await asyncio.gather(
         compute_deepeval_metrics(
             summary_text=summary_text,
             source_text=source_text,
             output_format=output_format,
         ),
-        compute_cross_metrics(
-            reference_text=entry["golden_summary"],
-            summary_text=summary_text,
-            language=set_language,
-        ),
-        compute_pairwise_cross_deepeval_metrics(
-            source_text=source_text,
-            golden_summary=entry["golden_summary"],
-            ai_summary=summary_text,
-        ),
+        _reference_metrics(source_text, entry["golden_summary"], summary_text, set_language),
     )
 
     ai_metrics = entry["ai_metrics"]
     ai_metrics["deepeval"] = deepeval_metrics
-    cross_metrics: dict[str, Any] = {**rouge_meteor, "deepeval": pairwise}
 
     await runs.update_one(
         {"_id": ObjectId(run_id), "entries.entry_id": entry_id},

@@ -10,7 +10,7 @@ from .shared_metrics import GoldenMetrics
 
 class EvaluationSetEntryImport(ApiModel):
     input_text: str
-    golden_summary: str
+    golden_summary: str | None = None  # fresh pages for the context expansion experiment have none
     title: str
     url: str
     golden_metrics: GoldenMetrics | None = None
@@ -29,7 +29,7 @@ class EvaluationSetEntryResponse(ApiModel):
     """input_text is deliberately excluded — fetched separately via the input-text endpoint."""
 
     entry_id: str
-    golden_summary: str
+    golden_summary: str | None
     title: str
     url: str
     golden_metrics: GoldenMetrics | None = None

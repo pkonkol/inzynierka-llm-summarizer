@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from app.schemas.context_expansion import ContextExpansionResult
 from app.schemas.evaluation_run_api import EvaluationRunCreateRequest
 from app.schemas.summary import LlmSummaryResult, UsageMetadata
 from app.schemas.summary_spec import SummarySpec
@@ -70,6 +71,7 @@ def _run_doc(spec: SummarySpec) -> dict:
         "model_provider": "p",
         "language": "en",
         "processing_strategy": "extract_then_synthesize",
+        "context_expansion_mode": "none",
         "summary_spec": spec.model_dump(),
     }
 
@@ -124,3 +126,47 @@ async def test_a_markdown_bullet_list_is_stored_and_judged_as_the_summary_itself
     cross_kwargs = mocked_entry_pipeline["compute_cross_metrics"].call_args.kwargs
     assert cross_kwargs["summary_text"] == "- a\n- b"
     assert cross_kwargs["language"] == "en"
+
+
+async def test_case_26b_an_entry_without_golden_summary_skips_reference_metrics(
+    mocked_entry_pipeline: dict[str, AsyncMock],
+) -> None:
+    spec = SummarySpec.model_validate({"length": {"policy": "explicit", "target_words": 40}})
+    run_doc = {**_run_doc(spec), "processing_strategy": "direct"}
+
+    result = await evaluation_runner._summarize_one_entry(
+        run_doc, {"entry_id": "e", "golden_summary": None}, "en"
+    )
+
+    assert result["status"] == "completed"
+    assert result["cross_metrics"] is None
+    mocked_entry_pipeline["compute_cross_metrics"].assert_not_awaited()
+    mocked_entry_pipeline["compute_statistical_metrics"].assert_awaited_once()
+
+
+async def test_case_27_a_staged_run_stores_the_context_on_each_entry(
+    mocked_entry_pipeline: dict[str, AsyncMock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expansion = ContextExpansionResult(
+        mode="staged",
+        channels=[],
+        candidate_count=0,
+        selected=[],
+        usage=UsageMetadata(),
+        duration_ms=5,
+    )
+    monkeypatch.setattr(
+        evaluation_runner, "expand_context", AsyncMock(return_value=expansion), raising=False
+    )
+    spec = SummarySpec.model_validate({"length": {"policy": "explicit", "target_words": 40}})
+    run_doc = {
+        **_run_doc(spec),
+        "processing_strategy": "direct",
+        "context_expansion_mode": "staged",
+    }
+
+    result = await evaluation_runner._summarize_one_entry(
+        run_doc, {"entry_id": "e", "golden_summary": _GOLDEN}, "en"
+    )
+
+    assert result["context_expansion"] == expansion.model_dump()

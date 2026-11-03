@@ -1868,6 +1868,16 @@
             "type": "integer",
             "title": "Rate Limit Delay Ms",
             "default": 0
+          },
+          "context_expansion_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "single_search",
+              "staged"
+            ],
+            "title": "Context Expansion Mode",
+            "default": "none"
           }
         },
         "type": "object",
@@ -1957,7 +1967,14 @@
             "title": "Url"
           },
           "golden_summary": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Golden Summary"
           },
           "golden_metrics": {
@@ -1980,6 +1997,16 @@
               }
             ],
             "title": "Ai Summary"
+          },
+          "context_expansion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextExpansionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "resolved_length": {
             "anyOf": [
@@ -2042,6 +2069,7 @@
           "golden_summary",
           "golden_metrics",
           "ai_summary",
+          "context_expansion",
           "resolved_length",
           "ai_metrics",
           "cross_metrics",
@@ -2170,6 +2198,15 @@
             "type": "string",
             "title": "Language"
           },
+          "context_expansion_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "single_search",
+              "staged"
+            ],
+            "title": "Context Expansion Mode"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -2237,6 +2274,7 @@
           "processing_strategy",
           "summary_spec",
           "language",
+          "context_expansion_mode",
           "status",
           "created_at",
           "finished_at",
@@ -2373,7 +2411,14 @@
             "title": "Input Text"
           },
           "golden_summary": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Golden Summary"
           },
           "title": {
@@ -2398,7 +2443,6 @@
         "type": "object",
         "required": [
           "input_text",
-          "golden_summary",
           "title",
           "url"
         ],
@@ -2411,7 +2455,14 @@
             "title": "Input Text"
           },
           "golden_summary": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Golden Summary"
           },
           "title": {
@@ -2468,7 +2519,14 @@
             "title": "Entry Id"
           },
           "golden_summary": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Golden Summary"
           },
           "title": {

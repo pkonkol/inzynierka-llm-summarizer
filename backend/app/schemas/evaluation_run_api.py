@@ -1,11 +1,12 @@
 # schemas/evaluation_run_api.py — request/response shapes for /api/v1/research evaluation runs
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from .base import ApiModel
+from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
 from .summary_spec import MatchReferenceLength, ProcessingStrategy, ResolvedLength, SummarySpec
 
@@ -50,9 +51,10 @@ class EvaluationRunEntryResponse(ApiModel):
     entry_id: str
     title: str
     url: str
-    golden_summary: str
+    golden_summary: str | None
     golden_metrics: GoldenMetrics | None = None
     ai_summary: str | None = None
+    context_expansion: ContextExpansionResult | None = None
     resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None
@@ -69,6 +71,13 @@ class EvaluationRunCreateRequest(ApiModel):
     )
     language: str = "auto"
     rate_limit_delay_ms: int = 0
+    context_expansion_mode: ContextExpansionMode = "none"
+
+    @model_validator(mode="after")
+    def _require_direct_for_context_expansion(self) -> Self:
+        if self.context_expansion_mode != "none" and self.processing_strategy != "direct":
+            raise ValueError("context_expansion_mode other than none requires the direct strategy")
+        return self
 
 
 class EvaluationRunResponse(ApiModel):
@@ -80,6 +89,7 @@ class EvaluationRunResponse(ApiModel):
     processing_strategy: ProcessingStrategy
     summary_spec: SummarySpec
     language: str
+    context_expansion_mode: ContextExpansionMode
     status: RunStatus
     created_at: datetime
     finished_at: datetime | None = None

@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .evaluation_run_api import EntryStatus, EvaluationRunAggregateMetrics, RunStatus
 from .shared_metrics import AiMetrics, CrossMetrics
 from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
@@ -17,8 +18,9 @@ class EvaluationRunEntryDocument(BaseModel):
     """
 
     entry_id: str
-    golden_summary: str
+    golden_summary: str | None
     ai_summary: str | None = None
+    context_expansion: ContextExpansionResult | None = None
     resolved_length: ResolvedLength | None = None
     ai_metrics: AiMetrics | None = None
     cross_metrics: CrossMetrics | None = None
@@ -35,6 +37,9 @@ class EvaluationRunDocument(BaseModel):
     summary_spec: SummarySpec
     language: str
     rate_limit_delay_ms: int
+    context_expansion_mode: ContextExpansionMode = (
+        "none"  # runs stored before context expansion had none
+    )
     git_sha: str | None = None  # None on runs created before provenance was stored
     temperature: float | None = None
     status: RunStatus

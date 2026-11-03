@@ -86,6 +86,7 @@ async def create_evaluation_run(
         summary_spec=payload.summary_spec,
         language=payload.language,
         rate_limit_delay_ms=payload.rate_limit_delay_ms,
+        context_expansion_mode=payload.context_expansion_mode,
         git_sha=settings.git_sha,
         temperature=settings.llm_temperature,
         status="pending",
@@ -157,6 +158,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
                     "processing_strategy": 1,
                     "summary_spec": 1,
                     "language": 1,
+                    "context_expansion_mode": 1,
                     "status": 1,
                     "created_at": 1,
                     "finished_at": 1,
@@ -184,6 +186,9 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         processing_strategy=document["processing_strategy"],
         summary_spec=document["summary_spec"],
         language=document["language"],
+        context_expansion_mode=document.get(
+            "context_expansion_mode", "none"
+        ),  # absent on runs created before context expansion
         status=document["status"],
         created_at=document["created_at"],
         finished_at=document.get("finished_at"),

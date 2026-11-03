@@ -19,6 +19,7 @@ from ..services.metrics import (
     compute_cross_metrics,
     compute_statistical_metrics,
 )
+from .context_expansion import expand_context
 from .llm import generate_summary
 
 log = structlog.get_logger(__name__)
@@ -52,6 +53,17 @@ async def _mark_run_failed(runs: AsyncCollection, run_id: str, error: str) -> No
     )
 
 
+async def _reference_metrics(
+    golden_summary: str | None, summary_text: str, language: str
+) -> dict[str, float | None] | None:
+    """An entry imported without a reference summary has nothing to compare against."""
+    if golden_summary is None:
+        return None
+    return await compute_cross_metrics(
+        reference_text=golden_summary, summary_text=summary_text, language=language
+    )
+
+
 async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str) -> dict:
     """Everything written back about a single entry, including the failure case."""
     entry_id = run_entry["entry_id"]
@@ -65,6 +77,13 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str
             input_words=len(source_entry["input_text"].split()),
             golden_summary=run_entry["golden_summary"],
         )
+        context_expansion = await expand_context(
+            source_entry["input_text"],
+            source_entry["url"],
+            run_doc["context_expansion_mode"],
+            run_doc["model_provider"],
+            run_doc["model_name"],
+        )
         summary = await generate_summary(
             LlmSummaryRequest(
                 text=source_entry["input_text"],
@@ -74,7 +93,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str
                 language=run_doc["language"],
                 spec=spec,
                 length=length,
-                related_sources=[],
+                related_sources=context_expansion.selected,
             ),
             strategy=run_doc["processing_strategy"],
         )
@@ -83,11 +102,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str
                 summary_text=summary.summary,
                 source_text=source_entry["input_text"],
             ),
-            compute_cross_metrics(
-                reference_text=run_entry["golden_summary"],
-                summary_text=summary.summary,
-                language=set_language,
-            ),
+            _reference_metrics(run_entry["golden_summary"], summary.summary, set_language),
         )
     except Exception as exc:
         log.exception("evaluation entry failed", entry_id=entry_id, run_id=str(run_doc["_id"]))
@@ -97,6 +112,7 @@ async def _summarize_one_entry(run_doc: dict, run_entry: dict, set_language: str
         "status": "completed",
         "error": None,
         "ai_summary": summary.summary,
+        "context_expansion": context_expansion.model_dump(),
         "resolved_length": length.model_dump(),
         "ai_metrics": ai_metrics,
         "cross_metrics": cross_metrics,
@@ -155,6 +171,7 @@ async def run_evaluation_batch(run_id: str) -> None:
             "processing_strategy": 1,
             "summary_spec": 1,
             "rate_limit_delay_ms": 1,
+            "context_expansion_mode": 1,
             "entries.entry_id": 1,
             "entries.golden_summary": 1,
             "entries.status": 1,

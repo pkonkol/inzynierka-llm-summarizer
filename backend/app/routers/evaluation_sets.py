@@ -94,7 +94,7 @@ async def create_evaluation_set(
         for entry in payload.entries
     ]
     needs_golden_metrics_pass = payload.compute_golden_metrics and any(
-        entry.golden_metrics is None for entry in entries
+        entry.golden_metrics is None and entry.golden_summary is not None for entry in entries
     )
 
     document = EvaluationSetDocument(

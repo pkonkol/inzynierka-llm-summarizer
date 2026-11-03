@@ -93,7 +93,7 @@ export function PublicHomePage() {
       ...presetSpec,
       length: { ...presetLength, slider: density },
     };
-    void submit({ ...source, language, summary_spec: summarySpec });
+    void submit({ ...source, language, summary_spec: summarySpec, add_web_context: false });
   };
 
   return (

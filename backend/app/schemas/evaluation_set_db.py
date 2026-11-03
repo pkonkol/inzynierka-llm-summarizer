@@ -13,7 +13,7 @@ GoldenMetricsPassStatus = Literal["skipped", "pending", "running", "completed", 
 class EvaluationSetEntryDocument(BaseModel):
     entry_id: str
     input_text: str
-    golden_summary: str
+    golden_summary: str | None
     title: str
     url: str
     golden_metrics: GoldenMetrics | None = None

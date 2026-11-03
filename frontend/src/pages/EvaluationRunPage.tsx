@@ -299,7 +299,7 @@ function RunEntryCard({
             <div className="grid min-w-0 content-start gap-2">
               <h4>Podsumowanie wzorcowe</h4>
               <p className="whitespace-pre-wrap font-reading text-reading">
-                {entry.golden_summary}
+                {entry.golden_summary ?? "—"}
               </p>
             </div>
 

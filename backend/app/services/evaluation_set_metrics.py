@@ -57,7 +57,7 @@ async def run_golden_metrics_pass(set_id: str) -> None:
     try:
         document = await get_evaluation_sets_collection().find_one(
             {"_id": ObjectId(set_id)},
-            {"entries.entry_id": 1, "entries.golden_metrics": 1},
+            {"entries.entry_id": 1, "entries.golden_metrics": 1, "entries.golden_summary": 1},
         )
         if document is None:
             # Reachable: DELETE /evaluation-sets/{id} can land while this pass is still queued.
@@ -65,7 +65,9 @@ async def run_golden_metrics_pass(set_id: str) -> None:
             return
 
         pending_entry_ids = [
-            entry["entry_id"] for entry in document["entries"] if entry["golden_metrics"] is None
+            entry["entry_id"]
+            for entry in document["entries"]
+            if entry["golden_metrics"] is None and entry["golden_summary"] is not None
         ]
         await _store_pass_status(set_id, {"status": "running", "started_at": datetime.now(UTC)})
 

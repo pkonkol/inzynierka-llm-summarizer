@@ -63,7 +63,7 @@ async def test_a_judge_failure_leaves_the_pass_marked_failed_with_a_message(
     sets_collection: AsyncMock, find_entry: AsyncMock, build_metrics: AsyncMock
 ) -> None:
     sets_collection.find_one.return_value = _set_document(
-        [{"entry_id": "e1", "golden_metrics": None}]
+        [{"entry_id": "e1", "golden_metrics": None, "golden_summary": "G"}]
     )
     find_entry.return_value = {"input_text": "text", "golden_summary": "summary"}
     build_metrics.side_effect = RuntimeError("judge unavailable")
@@ -81,8 +81,8 @@ async def test_a_clean_pass_writes_each_entry_and_finishes_completed(
 ) -> None:
     sets_collection.find_one.return_value = _set_document(
         [
-            {"entry_id": "e1", "golden_metrics": None},
-            {"entry_id": "e2", "golden_metrics": None},
+            {"entry_id": "e1", "golden_metrics": None, "golden_summary": "G"},
+            {"entry_id": "e2", "golden_metrics": None, "golden_summary": "G"},
         ]
     )
     find_entry.side_effect = [

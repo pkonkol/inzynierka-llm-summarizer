@@ -628,6 +628,12 @@ export interface components {
              * @default 0
              */
             rate_limit_delay_ms: number;
+            /**
+             * Context Expansion Mode
+             * @default none
+             * @enum {string}
+             */
+            context_expansion_mode: "none" | "single_search" | "staged";
         };
         /** EvaluationRunCreateResponse */
         EvaluationRunCreateResponse: {
@@ -671,10 +677,11 @@ export interface components {
             /** Url */
             url: string;
             /** Golden Summary */
-            golden_summary: string;
+            golden_summary: string | null;
             golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
             /** Ai Summary */
             ai_summary: string | null;
+            context_expansion: components["schemas"]["ContextExpansionResult"] | null;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             ai_metrics: components["schemas"]["AiMetrics"] | null;
             cross_metrics: components["schemas"]["CrossMetrics"] | null;
@@ -741,6 +748,11 @@ export interface components {
             summary_spec: components["schemas"]["SummarySpec"];
             /** Language */
             language: string;
+            /**
+             * Context Expansion Mode
+             * @enum {string}
+             */
+            context_expansion_mode: "none" | "single_search" | "staged";
             /**
              * Status
              * @enum {string}
@@ -822,7 +834,7 @@ export interface components {
             /** Input Text */
             input_text: string;
             /** Golden Summary */
-            golden_summary: string;
+            golden_summary?: string | null;
             /** Title */
             title: string;
             /** Url */
@@ -834,7 +846,7 @@ export interface components {
             /** Input Text */
             input_text: string;
             /** Golden Summary */
-            golden_summary: string;
+            golden_summary: string | null;
             /** Title */
             title: string;
             /** Url */
@@ -856,7 +868,7 @@ export interface components {
             /** Entry Id */
             entry_id: string;
             /** Golden Summary */
-            golden_summary: string;
+            golden_summary: string | null;
             /** Title */
             title: string;
             /** Url */

@@ -13,7 +13,7 @@ ContextExpansionMode = Literal["none", "single_search", "staged"]
 class SearchCandidate(ApiModel):
     channel: SearchChannel
     url: str
-    title: str
+    title: str | None  # Exa does not always return a title
     text: str
     published_at: datetime | None  # Exa does not always return a date
 
@@ -30,7 +30,7 @@ class ChannelOutcome(ApiModel):
 class RelatedSource(ApiModel):
     channel: SearchChannel
     url: str
-    title: str
+    title: str | None
     excerpt: str
     selection_reason: str
 

@@ -5,7 +5,11 @@ import {
   type LengthSpec,
   type SummarySpecForm,
 } from "../hooks/useSummarySpecForm";
-import type { SummarySpec } from "../types/api.generated";
+import type {
+  ContextSection,
+  EvaluationRunCreateRequest,
+  SummarySpec,
+} from "../types/api.generated";
 import {
   FUNCTION_LABELS,
   LENGTH_POLICY_LABELS,
@@ -56,6 +60,107 @@ export function ProcessingStrategySelect({
         ))}
       </Select>
     </div>
+  );
+}
+
+export type ContextExpansionMode = EvaluationRunCreateRequest["context_expansion_mode"];
+
+interface ContextExpansionModeSelectProps {
+  value: ContextExpansionMode;
+  onChange: (mode: ContextExpansionMode) => void;
+  disabled: boolean;
+}
+
+export function ContextExpansionModeSelect({
+  value,
+  onChange,
+  disabled,
+}: ContextExpansionModeSelectProps) {
+  const idPrefix = useId();
+  return (
+    <div className="grid shrink-0 gap-2">
+      <FieldLabel htmlFor={`${idPrefix}-context-expansion`}>Kontekst z sieci</FieldLabel>
+      <Select
+        id={`${idPrefix}-context-expansion`}
+        value={value}
+        onChange={(event) => onChange(event.target.value as ContextExpansionMode)}
+        disabled={disabled}
+      >
+        <option value="none">brak</option>
+        <option value="single_search">jedno wyszukiwanie</option>
+        <option value="staged">etapy (zapytania, kanały, wybór)</option>
+      </Select>
+    </div>
+  );
+}
+
+const CONTEXT_SECTION_LABELS = {
+  integrated: "wplecione w tekst",
+  supplement: "osobna sekcja: co dodają",
+  assessment: "osobna sekcja: ocena artykułu",
+} as const;
+
+function ContextSectionFields({
+  form,
+  disabled,
+  fieldId,
+}: {
+  form: SummarySpecForm;
+  disabled: boolean;
+  fieldId: (name: string) => string;
+}) {
+  const section = form.spec.context_section ?? null;
+  const setSection = (contextSection: ContextSection | null) =>
+    form.updateSpec({ context_section: contextSection });
+
+  return (
+    <>
+      <div className="grid shrink-0 gap-2">
+        <div className="flex items-baseline gap-2">
+          <FieldLabel htmlFor={fieldId("context-section")}>Użycie kontekstu</FieldLabel>
+          <HelpTip description="Działa tylko z kontekstem z sieci. Osobna sekcja: podsumowanie tylko z artykułu, potem sekcja o źródłach." />
+        </div>
+        <Select
+          id={fieldId("context-section")}
+          value={section?.stance ?? "integrated"}
+          onChange={(event) =>
+            setSection(
+              event.target.value === "integrated"
+                ? null
+                : {
+                    stance: event.target.value as ContextSection["stance"],
+                    target_words: section?.target_words ?? 150,
+                  },
+            )
+          }
+          disabled={disabled}
+          className="truncate"
+        >
+          {Object.entries(CONTEXT_SECTION_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </div>
+      {section ? (
+        <div className="grid shrink-0 gap-2">
+          <FieldLabel htmlFor={fieldId("context-section-words")}>Słowa w sekcji</FieldLabel>
+          <Input
+            id={fieldId("context-section-words")}
+            type="number"
+            min={30}
+            max={600}
+            className="max-w-24"
+            value={section.target_words}
+            onChange={(event) =>
+              setSection({ ...section, target_words: Number(event.target.value) })
+            }
+            disabled={disabled}
+          />
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -280,6 +385,8 @@ export function SummarySpecFields({ form, disabled }: SummarySpecFieldsProps) {
         {lengthMatchesReference ? null : (
           <LengthFields form={form} disabled={disabled} fieldId={fieldId} />
         )}
+
+        <ContextSectionFields form={form} disabled={disabled} fieldId={fieldId} />
       </div>
 
       <div className="grid gap-2">

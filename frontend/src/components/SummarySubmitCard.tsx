@@ -5,7 +5,12 @@ import { useSummarySpecForm } from "../hooks/useSummarySpecForm";
 import type { JobCreateRequest } from "../types/api.generated";
 import { MAX_PASTED_CHARS, splitProviderModel } from "../utils/jobs";
 import { buildSourcePayload, SourceField } from "./SourceField";
-import { ProcessingStrategySelect, SummarySpecFields } from "./SummarySpecFields";
+import {
+  type ContextExpansionMode,
+  ContextExpansionModeSelect,
+  ProcessingStrategySelect,
+  SummarySpecFields,
+} from "./SummarySpecFields";
 import { Button } from "./ui/Button";
 import { Checkbox } from "./ui/Checkbox";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
@@ -20,6 +25,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [runDeepeval, setRunDeepeval] = useState(false);
+  const [contextExpansionMode, setContextExpansionMode] = useState<ContextExpansionMode>("none");
   const {
     models,
     processingStrategies,
@@ -61,6 +67,7 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       processing_strategy: selectedProcessingStrategy as JobCreateRequest["processing_strategy"],
       summary_spec: specForm.buildSpec(),
       run_deepeval: runDeepeval,
+      context_expansion_mode: contextExpansionMode,
     });
     if (!isCreated) return;
     setContent("");
@@ -115,6 +122,12 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
               ))}
             </Select>
           </div>
+
+          <ContextExpansionModeSelect
+            value={contextExpansionMode}
+            onChange={setContextExpansionMode}
+            disabled={isSubmitting || isLoadingMeta}
+          />
 
           <Checkbox
             checked={runDeepeval}

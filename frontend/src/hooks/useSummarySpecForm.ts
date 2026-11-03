@@ -21,6 +21,7 @@ const DEFAULT_SPEC: SummarySpec = {
   output_format: "prose",
   length: DEFAULT_SCALED_LENGTH,
   extra_instructions: null,
+  context_section: null,
 };
 
 interface SummarySpecFormOptions {

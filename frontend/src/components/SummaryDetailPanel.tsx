@@ -15,6 +15,7 @@ import {
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
+import { ContextExpansionDetails } from "./ContextExpansionDetails";
 import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoList, InfoRow } from "./InfoRow";
@@ -275,6 +276,15 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
               <JobMetricsPanel metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
             ),
           },
+          ...(fullJob?.context_expansion
+            ? [
+                {
+                  key: "contextExpansion",
+                  label: "Kontekst z sieci",
+                  content: <ContextExpansionDetails expansion={fullJob.context_expansion} />,
+                },
+              ]
+            : []),
           {
             key: "prompt",
             label: "Prompt",

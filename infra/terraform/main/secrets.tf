@@ -3,6 +3,8 @@ locals {
     mongodb_uri        = { env = "MONGODB_URI", version = "latest" }
     gemini_key         = { env = "GEMINI_API_KEY", version = "1" }
     openrouter_api_key = { env = "OPENROUTER_API_KEY", version = "latest" }
+    exa_api_key        = { env = "EXA_API_KEY", version = "latest" }
+    openalex_api_key   = { env = "OPENALEX_API_KEY", version = "latest" }
     auth_secret        = { env = "AUTH_SECRET", version = "latest" }
     jwt_secret         = { env = "JWT_SECRET", version = "latest" }
     supported_models   = { env = "SUPPORTED_MODELS", version = "latest" }

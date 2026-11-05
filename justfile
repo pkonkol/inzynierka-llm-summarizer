@@ -190,8 +190,8 @@ calibration-judges *args:
 # Calibration: TPR/TNR per candidate against the author's labels → report.md
 [group('calibration')]
 [working-directory('backend')]
-calibration-report:
-    uv run python -m calibration.report
+calibration-report *args:
+    uv run python -m calibration.report {{args}}
 
 # E2E: install from the lockfile (enough for lint-e2e)
 [group('e2e')]

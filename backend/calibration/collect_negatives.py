@@ -48,7 +48,9 @@ def collect(data_dir: Path) -> None:
     accepted_by_kind = Counter(negative.kind for negative in accepted)
     for kind, proposed in sorted(proposed_by_kind.items()):
         rejected = proposed - accepted_by_kind[kind]
-        print(f"{kind:18} accepted {accepted_by_kind[kind]:3} / {proposed:3}  rejected {rejected / proposed:.0%}")
+        print(
+            f"{kind:18} accepted {accepted_by_kind[kind]:3} / {proposed:3}  rejected {rejected / proposed:.0%}"
+        )
     print(f"wrote {len(accepted)} negatives to {data_dir / 'negatives.json'}")
 
 

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
-from ..schemas.calibration_api import CalibrationLabels, CalibrationSample
+from ..schemas.calibration_api import CalibrationLabels, CalibrationSample, CalibrationSplit
+from ..schemas.judges import CoherenceResult, FactLevelResult
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 # Committed: ids and verdicts only, no source text.
@@ -17,6 +19,7 @@ _SAMPLE_FILE = "sample.json"
 _NEGATIVES_FILE = "negatives.json"
 _NEGATIVE_CANDIDATES_FILE = "negative_candidates.json"
 _REVIEW_DIR = "review"
+_PREDICTIONS_DIR = "predictions"
 _LABELS_FILE = "labels.json"
 
 
@@ -70,6 +73,10 @@ def write_labels(labels: CalibrationLabels) -> None:
     _write_atomically(LABELS_DIR / _LABELS_FILE, labels.model_dump_json(indent=2))
 
 
+def negatives_collected(data_dir: Path) -> bool:
+    return (data_dir / _NEGATIVES_FILE).exists()
+
+
 def read_negatives(data_dir: Path) -> list[Negative]:
     return _NEGATIVES.validate_json((data_dir / _NEGATIVES_FILE).read_text("utf-8"))
 
@@ -97,3 +104,57 @@ def write_negative_candidates(data_dir: Path, negatives: list[Negative]) -> None
     _write_atomically(
         negative_candidates_path(data_dir), _NEGATIVES.dump_json(negatives, indent=2).decode()
     )
+
+
+class JudgedItem(BaseModel):
+    """One summary or negative as one candidate judged it; error holds why the judge's answer was unusable."""
+
+    item_id: str
+    split: CalibrationSplit
+    origin: Literal["golden", "ai", "negative"]
+    fact_level: FactLevelResult | None
+    coherence: CoherenceResult | None
+    error: str | None
+
+
+class PairPrediction(BaseModel):
+    source_id: str
+    preferred: Literal["ai", "golden", "tie"]
+    score: float  # above 0.5 favours the AI summary, averaged over both presentation orders
+    consistent: bool
+
+
+class SummarizationReference(BaseModel):
+    summary_id: str
+    score: float
+    passed: bool
+
+
+class CandidatePredictions(BaseModel):
+    judge_model: str
+    prompt_version: str
+    items: dict[str, JudgedItem] = Field(default_factory=dict)
+    pairs: dict[str, PairPrediction] = Field(default_factory=dict)
+    summarization_metric: dict[str, SummarizationReference] = Field(default_factory=dict)
+
+
+def predictions_path(data_dir: Path, judge_model: str, prompt_version: str) -> Path:
+    file_name = f"{judge_model.replace('/', '_').replace(':', '__')}__{prompt_version}.json"
+    return data_dir / _PREDICTIONS_DIR / file_name
+
+
+def all_predictions(data_dir: Path) -> list[CandidatePredictions]:
+    return [
+        CandidatePredictions.model_validate_json(path.read_text("utf-8"))
+        for path in sorted((data_dir / _PREDICTIONS_DIR).glob("*.json"))
+    ]
+
+
+def read_predictions(path: Path, judge_model: str, prompt_version: str) -> CandidatePredictions:
+    if not path.exists():
+        return CandidatePredictions(judge_model=judge_model, prompt_version=prompt_version)
+    return CandidatePredictions.model_validate_json(path.read_text("utf-8"))
+
+
+def write_predictions(path: Path, predictions: CandidatePredictions) -> None:
+    _write_atomically(path, predictions.model_dump_json(indent=2))

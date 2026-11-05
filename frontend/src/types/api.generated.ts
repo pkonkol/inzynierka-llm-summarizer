@@ -451,6 +451,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/research/calibration/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Calibration Sample */
+        get: operations["get_calibration_sample_api_v1_research_calibration_sample_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/calibration/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Calibration Labels */
+        get: operations["get_calibration_labels_api_v1_research_calibration_labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/calibration/labels/{summary_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Summary Labels */
+        put: operations["save_summary_labels_api_v1_research_calibration_labels__summary_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/calibration/keyfacts/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Keyfacts Approval */
+        put: operations["save_keyfacts_approval_api_v1_research_calibration_keyfacts__source_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research/calibration/pairs/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Pair Verdict */
+        put: operations["save_pair_verdict_api_v1_research_calibration_pairs__source_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -465,6 +550,70 @@ export interface components {
         AuthStatusResponse: {
             /** Enabled */
             enabled: boolean;
+        };
+        /** BlindPair */
+        BlindPair: {
+            /** Source Id */
+            source_id: string;
+            /** First Summary Id */
+            first_summary_id: string;
+            /** Second Summary Id */
+            second_summary_id: string;
+        };
+        /** BlindSummary */
+        BlindSummary: {
+            /** Summary Id */
+            summary_id: string;
+            /** Source Id */
+            source_id: string;
+            /** Sentences */
+            sentences: string[];
+        };
+        /** CalibrationLabels */
+        CalibrationLabels: {
+            /** Summaries */
+            summaries: {
+                [key: string]: components["schemas"]["SummaryLabels"];
+            };
+            /** Keyfacts */
+            keyfacts: {
+                [key: string]: components["schemas"]["KeyfactsApproval"];
+            };
+            /** Pairs */
+            pairs: {
+                [key: string]: components["schemas"]["PairVerdict"];
+            };
+        };
+        /** CalibrationSampleResponse */
+        CalibrationSampleResponse: {
+            /** Sources */
+            sources: components["schemas"]["CalibrationSource"][];
+            /** Summaries */
+            summaries: components["schemas"]["BlindSummary"][];
+            /** Pairs */
+            pairs: components["schemas"]["BlindPair"][];
+        };
+        /** CalibrationSource */
+        CalibrationSource: {
+            /** Source Id */
+            source_id: string;
+            /** Set Name */
+            set_name: string;
+            /** Language */
+            language: string;
+            /** Entry Id */
+            entry_id: string;
+            /** Input Text */
+            input_text: string;
+            /** Keyfacts */
+            keyfacts: string[];
+            /** Keyfacts Approved */
+            keyfacts_approved: boolean;
+            /**
+             * Split
+             * @enum {string}
+             */
+            split: "train" | "dev" | "test";
         };
         /** ChannelOutcome */
         ChannelOutcome: {
@@ -1184,6 +1333,11 @@ export interface components {
             /** Held Seconds */
             held_seconds: number;
         };
+        /** KeyfactsApproval */
+        KeyfactsApproval: {
+            /** Keyfacts */
+            keyfacts: string[];
+        };
         /**
          * MatchReferenceLength
          * @description Evaluation-only: target_words/target_sentences are derived from a golden_summary at
@@ -1202,6 +1356,11 @@ export interface components {
              * @default 15
              */
             tolerance_pct: number;
+        };
+        /** PairVerdict */
+        PairVerdict: {
+            /** Better Summary Id */
+            better_summary_id: string;
         };
         /**
          * PairwiseDeepevalItem
@@ -1290,12 +1449,28 @@ export interface components {
              */
             words_multiplier: number;
         };
+        /** SentenceLabel */
+        SentenceLabel: {
+            /** Faithful */
+            faithful: boolean | null;
+            /** Carries Keyfact */
+            carries_keyfact: boolean | null;
+        };
         /** SourceMetrics */
         SourceMetrics: {
             /** Char Count */
             char_count: number;
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
+        };
+        /** SummaryLabels */
+        SummaryLabels: {
+            /** Sentences */
+            sentences: components["schemas"]["SentenceLabel"][];
+            /** Keyfacts Present */
+            keyfacts_present: (boolean | null)[];
+            /** Coherent */
+            coherent: boolean;
         };
         /** SummaryPresetResponse */
         SummaryPresetResponse: {
@@ -1438,6 +1613,11 @@ export interface components {
 }
 export type AiMetrics = components['schemas']['AiMetrics'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
+export type BlindPair = components['schemas']['BlindPair'];
+export type BlindSummary = components['schemas']['BlindSummary'];
+export type CalibrationLabels = components['schemas']['CalibrationLabels'];
+export type CalibrationSampleResponse = components['schemas']['CalibrationSampleResponse'];
+export type CalibrationSource = components['schemas']['CalibrationSource'];
 export type ChannelOutcome = components['schemas']['ChannelOutcome'];
 export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
 export type ContextSection = components['schemas']['ContextSection'];
@@ -1478,13 +1658,17 @@ export type JobListItemResponse = components['schemas']['JobListItemResponse'];
 export type JobMetrics = components['schemas']['JobMetrics'];
 export type JobStatusResponse = components['schemas']['JobStatusResponse'];
 export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
+export type KeyfactsApproval = components['schemas']['KeyfactsApproval'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
+export type PairVerdict = components['schemas']['PairVerdict'];
 export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem'];
 export type PublicSummarizeRequest = components['schemas']['PublicSummarizeRequest'];
 export type RelatedSource = components['schemas']['RelatedSource'];
 export type ResolvedLength = components['schemas']['ResolvedLength'];
 export type ScaledLength = components['schemas']['ScaledLength'];
+export type SentenceLabel = components['schemas']['SentenceLabel'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
+export type SummaryLabels = components['schemas']['SummaryLabels'];
 export type SummaryPresetResponse = components['schemas']['SummaryPresetResponse'];
 export type SummaryResponse = components['schemas']['SummaryResponse'];
 export type SummarySpec = components['schemas']['SummarySpec'];
@@ -2375,6 +2559,151 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvaluationRunResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_calibration_sample_api_v1_research_calibration_sample_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationSampleResponse"];
+                };
+            };
+        };
+    };
+    get_calibration_labels_api_v1_research_calibration_labels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationLabels"];
+                };
+            };
+        };
+    };
+    save_summary_labels_api_v1_research_calibration_labels__summary_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                summary_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryLabels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationLabels"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_keyfacts_approval_api_v1_research_calibration_keyfacts__source_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyfactsApproval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationLabels"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_pair_verdict_api_v1_research_calibration_pairs__source_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PairVerdict"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationLabels"];
                 };
             };
             /** @description Validation Error */

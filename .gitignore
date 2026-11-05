@@ -7,6 +7,9 @@ AGENTS.md
 # .terraform.lock.hcl is committed on purpose - it pins provider versions.
 # Non-secret .tfvars are committed; anything holding a credential must use this suffix.
 *.secret.tfvars
+# Judge calibration: source texts (PSC included) stay local; the author's labels are committed under eval/calibration/labels/.
+data/calibration/
+data/psc/
 terraform.tfstate
 terraform.tfstate.backup
 .firebase/

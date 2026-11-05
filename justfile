@@ -152,6 +152,36 @@ deps-sync:
 test-backend:
     uv run pytest -q
 
+# Calibration: pick the sources, write AI summaries and key facts, assign train/dev/test (CALIBRATION_DATA_DIR)
+[group('calibration')]
+[working-directory('backend')]
+calibration-sample:
+    uv run python -m calibration.build_sample
+
+# Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
+[group('calibration')]
+[working-directory('backend')]
+calibration-negatives:
+    uv run python -m calibration.make_negatives
+
+# Calibration: staged changes in review/ become negatives.json
+[group('calibration')]
+[working-directory('backend')]
+calibration-collect:
+    uv run python -m calibration.collect_negatives
+
+# Calibration: run one judge candidate over a split
+[group('calibration')]
+[working-directory('backend')]
+calibration-judges *args:
+    uv run python -m calibration.run_judges {{args}}
+
+# Calibration: TPR/TNR per candidate against the author's labels → report.md
+[group('calibration')]
+[working-directory('backend')]
+calibration-report:
+    uv run python -m calibration.report
+
 # E2E: install from the lockfile (enough for lint-e2e)
 [group('e2e')]
 [working-directory('e2e')]

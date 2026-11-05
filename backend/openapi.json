@@ -1305,6 +1305,229 @@
           }
         }
       }
+    },
+    "/api/v1/research/calibration/sample": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Get Calibration Sample",
+        "operationId": "get_calibration_sample_api_v1_research_calibration_sample_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSampleResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/research/calibration/labels": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Get Calibration Labels",
+        "operationId": "get_calibration_labels_api_v1_research_calibration_labels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationLabels"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/research/calibration/labels/{summary_id}": {
+      "put": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Save Summary Labels",
+        "operationId": "save_summary_labels_api_v1_research_calibration_labels__summary_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "summary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Summary Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryLabels"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationLabels"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/calibration/keyfacts/{source_id}": {
+      "put": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Save Keyfacts Approval",
+        "operationId": "save_keyfacts_approval_api_v1_research_calibration_keyfacts__source_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyfactsApproval"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationLabels"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/calibration/pairs/{source_id}": {
+      "put": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Save Pair Verdict",
+        "operationId": "save_pair_verdict_api_v1_research_calibration_pairs__source_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairVerdict"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationLabels"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1348,6 +1571,175 @@
           "enabled"
         ],
         "title": "AuthStatusResponse"
+      },
+      "BlindPair": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "first_summary_id": {
+            "type": "string",
+            "title": "First Summary Id"
+          },
+          "second_summary_id": {
+            "type": "string",
+            "title": "Second Summary Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "first_summary_id",
+          "second_summary_id"
+        ],
+        "title": "BlindPair"
+      },
+      "BlindSummary": {
+        "properties": {
+          "summary_id": {
+            "type": "string",
+            "title": "Summary Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sentences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary_id",
+          "source_id",
+          "sentences"
+        ],
+        "title": "BlindSummary"
+      },
+      "CalibrationLabels": {
+        "properties": {
+          "summaries": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SummaryLabels"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
+          "keyfacts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/KeyfactsApproval"
+            },
+            "type": "object",
+            "title": "Keyfacts"
+          },
+          "pairs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PairVerdict"
+            },
+            "type": "object",
+            "title": "Pairs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summaries",
+          "keyfacts",
+          "pairs"
+        ],
+        "title": "CalibrationLabels"
+      },
+      "CalibrationSampleResponse": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "summaries": {
+            "items": {
+              "$ref": "#/components/schemas/BlindSummary"
+            },
+            "type": "array",
+            "title": "Summaries"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/BlindPair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "summaries",
+          "pairs"
+        ],
+        "title": "CalibrationSampleResponse"
+      },
+      "CalibrationSource": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "set_name": {
+            "type": "string",
+            "title": "Set Name"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "input_text": {
+            "type": "string",
+            "title": "Input Text"
+          },
+          "keyfacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keyfacts"
+          },
+          "keyfacts_approved": {
+            "type": "boolean",
+            "title": "Keyfacts Approved"
+          },
+          "split": {
+            "type": "string",
+            "enum": [
+              "train",
+              "dev",
+              "test"
+            ],
+            "title": "Split"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "set_name",
+          "language",
+          "entry_id",
+          "input_text",
+          "keyfacts",
+          "keyfacts_approved",
+          "split"
+        ],
+        "title": "CalibrationSource"
       },
       "ChannelOutcome": {
         "properties": {
@@ -3360,6 +3752,22 @@
         ],
         "title": "KeepaliveResponse"
       },
+      "KeyfactsApproval": {
+        "properties": {
+          "keyfacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keyfacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyfacts"
+        ],
+        "title": "KeyfactsApproval"
+      },
       "MatchReferenceLength": {
         "properties": {
           "policy": {
@@ -3379,6 +3787,19 @@
         "type": "object",
         "title": "MatchReferenceLength",
         "description": "Evaluation-only: target_words/target_sentences are derived from a golden_summary at\nresolve time, not stored here. tolerance_pct is not consumed by resolve_target_length \u2014\nit is metadata for later metrics/reporting on how far actual output drifted from the\n(exactly-matched) target, not an input to generation."
+      },
+      "PairVerdict": {
+        "properties": {
+          "better_summary_id": {
+            "type": "string",
+            "title": "Better Summary Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "better_summary_id"
+        ],
+        "title": "PairVerdict"
       },
       "PairwiseDeepevalItem": {
         "properties": {
@@ -3627,6 +4048,38 @@
         "title": "ScaledLength",
         "description": "max_sentences pins the sentence count instead of deriving it from the words, and\nwords_multiplier shrinks the whole word range: a one-sentence summary still gets a slider,\nbut over roughly a tenth of the words a multi-sentence one spans."
       },
+      "SentenceLabel": {
+        "properties": {
+          "faithful": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faithful"
+          },
+          "carries_keyfact": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carries Keyfact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "faithful",
+          "carries_keyfact"
+        ],
+        "title": "SentenceLabel"
+      },
       "SourceMetrics": {
         "properties": {
           "char_count": {
@@ -3644,6 +4097,42 @@
           "flesch_kincaid_grade"
         ],
         "title": "SourceMetrics"
+      },
+      "SummaryLabels": {
+        "properties": {
+          "sentences": {
+            "items": {
+              "$ref": "#/components/schemas/SentenceLabel"
+            },
+            "type": "array",
+            "title": "Sentences"
+          },
+          "keyfacts_present": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Keyfacts Present"
+          },
+          "coherent": {
+            "type": "boolean",
+            "title": "Coherent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentences",
+          "keyfacts_present",
+          "coherent"
+        ],
+        "title": "SummaryLabels"
       },
       "SummaryPresetResponse": {
         "properties": {

@@ -26,6 +26,8 @@ export const EVALUATION_SETS_PATH = `${ADMIN_PREFIX}/research`;
 export const EVALUATION_IMPORT_PATH = `${EVALUATION_SETS_PATH}/import`;
 // Reached only by typing the address: NavDock links nowhere here.
 const CONTEXT_EXPANSION_DEV_PATH = `${ADMIN_PREFIX}/dev/context-expansion`;
+// Dev server only: matchRoute ignores it in a production build.
+export const CALIBRATION_DEV_PATH = `${ADMIN_PREFIX}/dev/calibration`;
 
 export const jobPath = (jobId: string) => `${SUMMARIES_ALL_PATH}/${jobId}`;
 export const evaluationSetPath = (setId: string) => `${EVALUATION_SETS_PATH}/${setId}`;
@@ -45,7 +47,8 @@ export type AdminRoute =
   | { tab: "sets" }
   | { tab: "set"; setId: string }
   | { tab: "run"; runId: string }
-  | { tab: "contextExpansionDev"; runId: string };
+  | { tab: "contextExpansionDev"; runId: string }
+  | { tab: "calibrationDev" };
 
 export type Route = AdminRoute | { tab: "public" } | { tab: "login" };
 
@@ -69,6 +72,8 @@ export function matchRoute(pathname: string): Route {
   if (!isAdminPath(pathname)) return { tab: "public" };
 
   if (pathname === EVALUATION_IMPORT_PATH) return { tab: "import" };
+
+  if (import.meta.env.DEV && pathname === CALIBRATION_DEV_PATH) return { tab: "calibrationDev" };
 
   const contextExpansionRunId = pathname.match(CONTEXT_EXPANSION_DEV_PATTERN)?.[1];
   if (contextExpansionRunId) return { tab: "contextExpansionDev", runId: contextExpansionRunId };

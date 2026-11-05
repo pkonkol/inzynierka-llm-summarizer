@@ -12,6 +12,7 @@ from .core.mongo import close_mongo, init_mongo
 from .core.nltk_data import ensure_wordnet_resources
 from .routers import (
     auth,
+    calibration,
     evaluation_runs,
     evaluation_sets,
     health,
@@ -52,3 +53,4 @@ app.include_router(public_summarize.router)
 app.include_router(meta.router)
 app.include_router(evaluation_sets.router)
 app.include_router(evaluation_runs.router)
+app.include_router(calibration.router)

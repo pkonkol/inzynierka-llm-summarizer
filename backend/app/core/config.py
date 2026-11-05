@@ -143,6 +143,8 @@ class Settings(BaseSettings):
     blocking_work_max_threads: int = 5
     stale_work_timeout_minutes: int = 15
     max_resume_attempts: int = 3
+    # Local judge-calibration data (sample, negatives, predictions); unset in production, which turns the calibration API off.
+    calibration_data_dir: Path | None = None
 
     @model_validator(mode="after")
     def _require_secrets_when_auth_enabled(self) -> Settings:

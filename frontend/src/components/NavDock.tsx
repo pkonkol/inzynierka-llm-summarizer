@@ -1,5 +1,6 @@
 import {
   type AdminRoute,
+  CALIBRATION_DEV_PATH,
   contextExpansionDevPath,
   EVALUATION_IMPORT_PATH,
   EVALUATION_SETS_PATH,
@@ -81,6 +82,7 @@ const NAV_TAB: Record<AdminRoute["tab"], NavTab["tab"]> = {
   set: "sets",
   run: "sets",
   contextExpansionDev: "sets",
+  calibrationDev: "sets",
 };
 
 /** The breadcrumb ancestors of a set or a run, so the labels are written in one place only. */
@@ -97,6 +99,7 @@ function currentSubpath(route: AdminRoute): string | null {
   if (route.tab === "set") return evaluationSetPath(route.setId);
   if (route.tab === "run") return evaluationRunPath(route.runId);
   if (route.tab === "contextExpansionDev") return contextExpansionDevPath(route.runId);
+  if (route.tab === "calibrationDev") return CALIBRATION_DEV_PATH;
   if (route.tab === "all" && route.jobId) return jobPath(route.jobId);
   return null;
 }

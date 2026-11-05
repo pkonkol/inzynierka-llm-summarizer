@@ -207,6 +207,13 @@ TAKEAWAYS_INPUT_SPECS = [
 ]
 
 
+async def evaluate_summarization_metric(
+    settings: Settings, source_text: str, summary: str
+) -> DeepEvalMetricResult:
+    """deepeval's SummarizationMetric in strict mode, as an off-the-shelf reference point."""
+    raise NotImplementedError
+
+
 async def evaluate_geval(
     settings: Settings, work: list[tuple[GEvalSpec, LLMTestCase]]
 ) -> list[DeepEvalMetricResult]:

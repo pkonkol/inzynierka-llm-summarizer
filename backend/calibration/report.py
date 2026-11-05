@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .files import Negative
+from app.services.calibration_files import Negative
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,7 +2,7 @@
 
 import pytest
 
-from calibration.files import Negative, NegativeExpectation
+from app.services.calibration_files import Negative, NegativeExpectation
 from calibration.report import degree_curve, true_positive_and_negative_rates
 
 

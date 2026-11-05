@@ -16,7 +16,7 @@ from app.schemas.calibration_api import (
     SentenceLabel,
     SummaryLabels,
 )
-from calibration import files
+from app.services import calibration_files as files
 
 PREFIX = "/api/v1/research/calibration"
 SAMPLE = CalibrationSample(

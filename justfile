@@ -152,11 +152,22 @@ deps-sync:
 test-backend:
     uv run pytest -q
 
+# Calibration: export one PSC evaluation set from prod into the gitignored data/psc/ (its source texts stay out of the public repo)
+[group('calibration')]
+calibration-psc name="psc-abstract-a-20":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    api=$(sed -n 's/^VITE_API_URL=//p' frontend/.env.production)
+    set_id=$(curl -fsS "$api/api/v1/research/evaluation-sets" | jq -r --arg name "{{name}}" '[.[] | select(.name == $name)] | if length == 1 then .[0].evaluation_set_id else error("expected one set named \($name)") end')
+    mkdir -p data/psc
+    curl -fsS "$api/api/v1/research/evaluation-sets/$set_id/export" -o data/psc/evaluation_set_psc.json
+    jq -r '"\(.name): \(.entries | length) entries, language \(.language)"' data/psc/evaluation_set_psc.json
+
 # Calibration: pick the sources, write AI summaries and key facts, assign train/dev/test (CALIBRATION_DATA_DIR)
 [group('calibration')]
 [working-directory('backend')]
-calibration-sample:
-    uv run python -m calibration.build_sample
+calibration-sample *args:
+    uv run python -m calibration.build_sample {{args}}
 
 # Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
 [group('calibration')]

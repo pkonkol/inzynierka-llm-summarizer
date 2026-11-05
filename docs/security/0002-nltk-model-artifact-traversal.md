@@ -37,20 +37,25 @@ przekazanym do analizy, nie nad wynikiem modelu — nad samym identyfikatorem ar
 
 ## 3. Dlaczego ta aplikacja nie jest podatna
 
-Nazwa zasobu nigdy nie pochodzi z żądania. Cały kontakt z tym API jest w
-`backend/app/core/nltk_data.py` i sprowadza się do dwóch stałych zapisanych w module:
+Nazwa zasobu nigdy nie pochodzi z żądania. Pobieranie zasobów jest w
+`backend/app/core/nltk_data.py` i sprowadza się do stałej zapisanej w module:
 
 ```python
-_WORDNET_RESOURCES = ("wordnet", "omw-1.4")
+_RESOURCES = {"wordnet": "corpora", "punkt_tab": "tokenizers"}
 ```
 
-Pętla przechodzi wyłącznie po tej krotce, wołając `nltk.data.find(f"corpora/{resource}")`
-i `nltk.download(resource, download_dir=data_dir, ...)`. Funkcja jest wywoływana raz, przy
-starcie aplikacji (`app/main.py`), i nie przyjmuje argumentów.
+Pętla przechodzi wyłącznie po tym słowniku, wołając `nltk.data.find(f"{category}/{resource}")`
+i `nltk.download(resource, download_dir=data_dir, ...)`. Funkcja jest wywoływana przy
+starcie aplikacji (`app/main.py`), w obrazie Dockera i w testach; nie przyjmuje argumentów.
 
-Drugie i jedyne pozostałe użycie NLTK to `meteor_score` w
-`backend/app/services/metrics/cross.py`. Operuje na listach tokenów przekazanych w
-pamięci; nie rozwiązuje żadnej ścieżki i nie sięga po artefakty po nazwie.
+Pozostałe użycia NLTK:
+
+- `meteor_score` w `backend/app/services/metrics/cross.py` operuje na listach tokenów
+  przekazanych w pamięci; nie rozwiązuje żadnej ścieżki.
+- `PunktTokenizer` w `backend/app/services/metrics/fact_level_judges.py` wewnętrznie woła
+  `nltk.data.find(f"tokenizers/punkt_tab/{lang}/")`. `lang` pochodzi wyłącznie ze słownika
+  `_PUNKT_LANGUAGES = {"en": "english", "pl": "polish"}`; `split_sentences` odrzuca każdy
+  inny kod języka przed utworzeniem tokenizera, więc do `find` trafia jedna z dwóch stałych nazw.
 
 Nie istnieje więc ścieżka wykonania, w której dane od użytkownika docierają do podatnego
 kodu. Zagrożenie stałoby się realne, gdyby pojawił się kod pobierający korpus lub model
@@ -81,5 +86,6 @@ jednego polecenia:
 grep -rn "nltk.download\|nltk.data.find" backend/app/
 ```
 
-Dopóki zwraca wyłącznie `backend/app/core/nltk_data.py`, analiza z sekcji 3 pozostaje w
-mocy.
+Dopóki zwraca wyłącznie `backend/app/core/nltk_data.py`, a `PunktTokenizer` tworzy się
+tylko w `fact_level_judges.py` z nazwą ze słownika `_PUNKT_LANGUAGES`, analiza z sekcji 3
+pozostaje w mocy.

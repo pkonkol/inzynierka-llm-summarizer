@@ -86,7 +86,7 @@ def test_case_4_sentence_with_an_old_and_a_new_keyfact_counts() -> None:
 
 def test_case_5_order_of_keyfacts_in_the_judge_answer_does_not_matter() -> None:
     faithfulness = _faithfulness(True, True, True, True)
-    alignment = _alignment([3], [1], [2], [0, 3])
+    alignment = _alignment([1], [2], [3, 0])
     shuffled = AlignmentJudgement(keyfacts=list(reversed(alignment.keyfacts)))
 
     assert fact_level_scores(faithfulness, shuffled, 4) == fact_level_scores(

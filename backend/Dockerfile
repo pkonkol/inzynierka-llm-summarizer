@@ -40,9 +40,9 @@ ENV NLTK_DATA=/app/nltk_data
 # Unpacked rather than left zipped: nltk reads a zipped corpus by inflating whole members into
 # memory and caching them, putting ~22 MB in anonymous heap. Extracted, those bytes are page
 # cache the kernel can reclaim, and this container is memory-bound before it is size-bound.
-# Which corpora to fetch is stated once, in app/core/nltk_data.py.
-RUN python -c "from app.core.nltk_data import ensure_wordnet_resources; ensure_wordnet_resources()" \
-    && python -c "import zipfile,pathlib; d=pathlib.Path('/app/nltk_data/corpora'); [(zipfile.ZipFile(z).extractall(d), z.unlink()) for z in d.glob('*.zip')]" \
+# Which resources to fetch is stated once, in app/core/nltk_data.py.
+RUN python -c "from app.core.nltk_data import ensure_nltk_resources; ensure_nltk_resources()" \
+    && python -c "import zipfile,pathlib; d=pathlib.Path('/app/nltk_data'); [(zipfile.ZipFile(z).extractall(z.parent), z.unlink()) for z in d.glob('*/*.zip')]" \
     # nltk writes 0600 root, and the container runs as uid 1000.
     && chmod -R a+rX /app/nltk_data \
     && adduser -D -u 1000 appuser \

@@ -7,7 +7,11 @@ are counted from those two judgements.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from functools import cache
+
+from nltk.tokenize.punkt import PunktTokenizer
 
 from ...schemas.judges import (
     AlignmentJudgement,
@@ -15,6 +19,12 @@ from ...schemas.judges import (
     FactLevelScores,
     FaithfulnessJudgement,
 )
+
+_PUNKT_LANGUAGES = {"en": "english", "pl": "polish"}
+# Titles before a name that the Polish Punkt table lacks, so "Dr. Kowalski" stays one sentence.
+_EXTRA_ABBREVIATIONS = {"en": set(), "pl": {"dr", "mgr", "płk"}}
+_MARKDOWN_HEADING = re.compile(r"#{1,6}\s")
+_LIST_ITEM_MARKER = re.compile(r"(?:[-*+]|\d+[.)])\s+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,9 +35,44 @@ class JudgeModelRef:
     name: str
 
 
+@cache
+def _sentence_tokenizer(language: str) -> PunktTokenizer:
+    tokenizer = PunktTokenizer(_PUNKT_LANGUAGES[language])
+    tokenizer._params.abbrev_types.update(_EXTRA_ABBREVIATIONS[language])
+    return tokenizer
+
+
+def _text_blocks(text: str) -> list[str]:
+    """Paragraphs and list items of a markdown text, headings dropped; each block ends a sentence."""
+    blocks: list[str] = []
+    paragraph: list[str] = []
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        list_item = _LIST_ITEM_MARKER.match(line)
+        ends_paragraph = not line or _MARKDOWN_HEADING.match(line) or list_item
+        if ends_paragraph and paragraph:
+            blocks.append(" ".join(paragraph))
+            paragraph = []
+        if list_item:
+            blocks.append(line[list_item.end() :])
+        elif line and not ends_paragraph:
+            paragraph.append(line)
+
+    if paragraph:
+        blocks.append(" ".join(paragraph))
+    return blocks
+
+
 def split_sentences(text: str, language: str) -> list[str]:
     """Sentence split shared by the labelling page and every judge, so sentence indices line up."""
-    raise NotImplementedError
+    if language not in _PUNKT_LANGUAGES:
+        raise ValueError(f"no sentence splitter for language {language!r}")
+    if not text.strip():
+        raise ValueError("text must not be blank")
+
+    tokenizer = _sentence_tokenizer(language)
+    return [sentence for block in _text_blocks(text) for sentence in tokenizer.tokenize(block)]
 
 
 async def extract_keyfacts(source_text: str, language: str, judge: JudgeModelRef) -> list[str]:
@@ -49,11 +94,54 @@ async def align_keyfacts(
     raise NotImplementedError
 
 
+def _require_consistent_judgements(
+    faithfulness: FaithfulnessJudgement, alignment: AlignmentJudgement, sentence_count: int
+) -> None:
+    if sentence_count == 0:
+        raise ValueError("summary has no sentences")
+    if not alignment.keyfacts:
+        raise ValueError("no key facts to align")
+
+    judged_sentences = sorted(verdict.sentence_index for verdict in faithfulness.sentences)
+    if judged_sentences != list(range(sentence_count)):
+        raise ValueError(
+            f"faithfulness judged sentences {judged_sentences}, expected 0..{sentence_count - 1}"
+        )
+
+    for match in alignment.keyfacts:
+        if match.present != bool(match.sentence_indices):
+            raise ValueError(
+                f"key fact {match.keyfact_index}: present={match.present} "
+                f"with sentences {match.sentence_indices}"
+            )
+        outside = [index for index in match.sentence_indices if not 0 <= index < sentence_count]
+        if outside:
+            raise ValueError(
+                f"key fact {match.keyfact_index} aligned to missing sentences {outside}"
+            )
+
+
 def fact_level_scores(
     faithfulness: FaithfulnessJudgement, alignment: AlignmentJudgement, sentence_count: int
 ) -> FactLevelScores:
     """Faithfulness, completeness, conciseness (new key fact only) and repetition from the two judgements."""
-    raise NotImplementedError
+    _require_consistent_judgements(faithfulness, alignment, sentence_count)
+
+    present_keyfacts = [match for match in alignment.keyfacts if match.present]
+    sentences_with_new_keyfact = {min(match.sentence_indices) for match in present_keyfacts}
+    sentences_with_any_keyfact = {
+        index for match in present_keyfacts for index in match.sentence_indices
+    }
+    repeated_sentence_indices = sorted(sentences_with_any_keyfact - sentences_with_new_keyfact)
+    faithful_sentences = sum(verdict.faithful for verdict in faithfulness.sentences)
+
+    return FactLevelScores(
+        faithfulness=faithful_sentences / sentence_count,
+        completeness=len(present_keyfacts) / len(alignment.keyfacts),
+        conciseness=len(sentences_with_new_keyfact) / sentence_count,
+        has_repetition=bool(repeated_sentence_indices),
+        repeated_sentence_indices=repeated_sentence_indices,
+    )
 
 
 async def judge_fact_level(

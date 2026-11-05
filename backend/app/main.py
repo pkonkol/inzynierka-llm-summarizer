@@ -9,7 +9,7 @@ from .core.config import settings
 from .core.executors import run_blocking
 from .core.logging import setup_logging
 from .core.mongo import close_mongo, init_mongo
-from .core.nltk_data import ensure_wordnet_resources
+from .core.nltk_data import ensure_nltk_resources
 from .routers import (
     auth,
     calibration,
@@ -28,7 +28,7 @@ log = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    await run_blocking(ensure_wordnet_resources)
+    await run_blocking(ensure_nltk_resources)
     await init_mongo()
     await recover_interrupted_work()
     yield

@@ -370,19 +370,22 @@ scan-image image="inzynierka-backend:local":
 build-backend:
     docker build -t inzynierka-backend:local ./backend
 
-# The Dockerfile leaves out deepeval's pytest dependency and unpacks the wordnet corpus.
+# The Dockerfile leaves out deepeval's pytest dependency and unpacks the nltk data.
 # Both are invisible to every other check: the image builds, imports pass, and the failure
-# only shows up when a run reaches a GEval or a METEOR score. This is that check.
+# only shows up when a run reaches a GEval, a METEOR score or a sentence split. This is that check.
 [group('backend')]
 smoke-image image="inzynierka-backend:local":
     docker run --rm {{image}} python -c "\
     import importlib.util; \
     from deepeval.metrics import GEval; \
     from nltk.translate.meteor_score import meteor_score; \
+    from nltk.tokenize.punkt import PunktTokenizer; \
     assert importlib.util.find_spec('pytest') is None, 'pytest survived the prune'; \
     score = meteor_score([['the','cat','sat']], ['a','feline','sat']); \
     assert score > 0, f'wordnet synonyms unreadable, METEOR returned {score}'; \
-    print(f'image smoke ok - GEval importable, pytest gone, METEOR {score:.4f}')"
+    sentences = PunktTokenizer('polish').tokenize('Ala ma kota. Kot ma Alę.'); \
+    assert len(sentences) == 2, f'punkt_tab unreadable, got {sentences}'; \
+    print(f'image smoke ok - GEval importable, pytest gone, METEOR {score:.4f}, punkt_tab polish')"
 
 # Full misconfiguration report at every severity — what the gate deliberately lets past
 [group('security')]

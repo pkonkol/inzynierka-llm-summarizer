@@ -3,6 +3,8 @@ from collections.abc import Callable
 import httpx
 import pytest
 
+from app.core.nltk_data import ensure_nltk_resources
+
 HttpHandler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -19,3 +21,9 @@ def serve_http(monkeypatch: pytest.MonkeyPatch) -> Callable[[HttpHandler], None]
         monkeypatch.setattr(httpx, "AsyncClient", client_with_mock_transport)
 
     return install
+
+
+@pytest.fixture(scope="session", autouse=True)
+def nltk_resources() -> None:
+    """The sentence splitter and METEOR read nltk data that a fresh CI runner does not have yet."""
+    ensure_nltk_resources()

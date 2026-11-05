@@ -172,8 +172,8 @@ calibration-sample *args:
 # Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
 [group('calibration')]
 [working-directory('backend')]
-calibration-negatives:
-    uv run python -m calibration.make_negatives
+calibration-negatives *args:
+    uv run python -m calibration.make_negatives {{args}}
 
 # Calibration: staged changes in review/ become negatives.json
 [group('calibration')]

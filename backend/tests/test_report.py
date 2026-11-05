@@ -49,7 +49,13 @@ def _negative(negative_id: str, degree: str) -> Negative:
         degree=degree,
         generator_model="anthropic/claude-sonnet",
         sentences=["Alpha rose."],
-        expected=NegativeExpectation(sentence_faithful=[False], keyfact_present=[], coherent=True),
+        expected=NegativeExpectation(
+            sentence_faithful=[False],
+            sentence_carries_keyfact=[None],
+            keyfact_present=[],
+            coherent=True,
+            has_repetition=None,
+        ),
     )
 
 

@@ -15,13 +15,19 @@ LABELS_DIR = REPO_ROOT / "eval" / "calibration" / "labels"
 
 _SAMPLE_FILE = "sample.json"
 _NEGATIVES_FILE = "negatives.json"
+_NEGATIVE_CANDIDATES_FILE = "negative_candidates.json"
+_REVIEW_DIR = "review"
 _LABELS_FILE = "labels.json"
 
 
 class NegativeExpectation(BaseModel):
-    sentence_faithful: list[bool]
-    keyfact_present: list[bool]
-    coherent: bool
+    """What a perfect judge answers on the negative; None where the perturbation leaves it undetermined."""
+
+    sentence_faithful: list[bool | None]
+    sentence_carries_keyfact: list[bool | None]
+    keyfact_present: list[bool | None]
+    coherent: bool | None
+    has_repetition: bool | None
 
 
 class Negative(BaseModel):
@@ -71,4 +77,23 @@ def read_negatives(data_dir: Path) -> list[Negative]:
 def write_negatives(data_dir: Path, negatives: list[Negative]) -> None:
     _write_atomically(
         data_dir / _NEGATIVES_FILE, _NEGATIVES.dump_json(negatives, indent=2).decode()
+    )
+
+
+def review_dir(data_dir: Path) -> Path:
+    """Nested git repository: originals committed, negatives in the working tree for `git add -p`."""
+    return data_dir / _REVIEW_DIR
+
+
+def negative_candidates_path(data_dir: Path) -> Path:
+    return data_dir / _NEGATIVE_CANDIDATES_FILE
+
+
+def read_negative_candidates(data_dir: Path) -> list[Negative]:
+    return _NEGATIVES.validate_json(negative_candidates_path(data_dir).read_text("utf-8"))
+
+
+def write_negative_candidates(data_dir: Path, negatives: list[Negative]) -> None:
+    _write_atomically(
+        negative_candidates_path(data_dir), _NEGATIVES.dump_json(negatives, indent=2).decode()
     )

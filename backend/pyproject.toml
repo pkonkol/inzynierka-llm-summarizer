@@ -84,8 +84,9 @@ extend-immutable-calls = [
 # The boundary where untyped LangChain and deepeval output is narrowed with isinstance/getattr.
 "app/services/llm/_base.py" = ["ANN401"]
 "app/services/metrics/deepeval.py" = ["ANN401"]
-# Offline calibration steps: the terminal is their output, and their randomness is a seeded sample, never a secret.
-"calibration/**" = ["T201", "S311"]
+# Offline calibration steps: the terminal is their output, their randomness is a seeded sample, never a secret,
+# and they run git with fixed arguments on the review repository they created.
+"calibration/**" = ["T201", "S311", "S603", "S607"]
 
 [tool.ruff.format]
 docstring-code-format = true

@@ -1,14 +1,77 @@
-import type { ReactNode } from "react";
+import { useState } from "react";
 
-type KeyfactChecklistProps = {
+import { Button } from "../ui/Button";
+import { Textarea } from "../ui/Field";
+import { type Choice, LabelChoice } from "./LabelChoice";
+
+type KeyfactEditorProps = {
+  sourceId: string;
   keyfacts: string[];
-  isApproved: boolean;
-  presence: (boolean | null)[];
   onApprove: (keyfacts: string[]) => void;
-  onPresenceChange: (presence: (boolean | null)[]) => void;
 };
 
-/** Key facts of the source: edited and approved once per source, then ticked as present or missing per summary. */
-export function KeyfactChecklist(_props: KeyfactChecklistProps): ReactNode {
-  throw new Error("not implemented");
+/** One key fact per line; approving fixes the list every summary of the source is labelled against. */
+export function KeyfactEditor({ sourceId, keyfacts, onApprove }: KeyfactEditorProps) {
+  const [text, setText] = useState(keyfacts.join("\n"));
+  const edited = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const textareaId = `keyfacts-${sourceId}`;
+
+  return (
+    <div className="grid gap-3">
+      <label htmlFor={textareaId} className="field-label">
+        Keyfacty źródła, jeden w linii ({edited.length}). Popraw i zatwierdź przed etykietowaniem
+        streszczeń.
+      </label>
+      <Textarea
+        id={textareaId}
+        rows={12}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+      />
+      <div>
+        <Button variant="primary" disabled={edited.length === 0} onClick={() => onApprove(edited)}>
+          Zatwierdź keyfacty
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+type KeyfactChecklistProps = {
+  summaryId: string;
+  keyfacts: string[];
+  presence: Choice[];
+  onPresenceChange: (presence: Choice[]) => void;
+};
+
+/** Approved key facts of the source, each ticked as present, missing or unclear in one summary. */
+export function KeyfactChecklist({
+  summaryId,
+  keyfacts,
+  presence,
+  onPresenceChange,
+}: KeyfactChecklistProps) {
+  return (
+    <ol className="grid gap-3">
+      {keyfacts.map((keyfact, index) => (
+        <li key={keyfact} className="grid gap-1">
+          <p>
+            <span className="text-mute">K{index}</span> {keyfact}
+          </p>
+          <LabelChoice
+            name={`${summaryId}-present-${index}`}
+            legend="jest w streszczeniu?"
+            value={presence[index]}
+            allowUnclear
+            onChange={(value) =>
+              onPresenceChange(presence.map((old, at) => (at === index ? value : old)))
+            }
+          />
+        </li>
+      ))}
+    </ol>
+  );
 }

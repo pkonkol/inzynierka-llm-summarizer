@@ -174,12 +174,20 @@ export function NavDock({ route, isLoggedIn }: NavDockProps) {
         ) : null}
         <span aria-hidden="true" className="flex-1" />
         {import.meta.env.DEV ? (
-          <PathLink
-            href={DESIGN_PATH}
-            description="Katalog systemu wizualnego: tokeny i prymitywy. Tylko w trybie deweloperskim."
-            isCurrent={false}
-            className="text-mute"
-          />
+          <>
+            <PathLink
+              href={CALIBRATION_DEV_PATH}
+              description="Kalibracja sędziów: etykiety zdań, keyfactów i par na ślepo. Tylko w trybie deweloperskim."
+              isCurrent={false}
+              className="text-mute"
+            />
+            <PathLink
+              href={DESIGN_PATH}
+              description="Katalog systemu wizualnego: tokeny i prymitywy. Tylko w trybie deweloperskim."
+              isCurrent={false}
+              className="text-mute"
+            />
+          </>
         ) : null}
         {isLoggedIn ? (
           <span className="flex min-h-11 shrink-0 items-center">[✓] Zalogowano</span>

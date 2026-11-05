@@ -34,12 +34,19 @@ from app.services.metrics.fact_level_judges import JudgeModelRef, extract_keyfac
 
 log = structlog.get_logger(__name__)
 
-SOURCES_PER_SET = {"cnn_dailymail": 4, "curation": 4, "gumsum": 4, "psc": 12}
+SOURCES_PER_SET = {
+    "cnn_dailymail": 4,
+    "curation": 4,
+    "gumsum": 4,
+    "psc-abstract-a-20": 6,
+    "psc-extract-k-5": 6,
+}
 SET_FILES = {
     "cnn_dailymail": REPO_ROOT / "data" / "evaluation_set_cnn_dailymail.json",
     "curation": REPO_ROOT / "data" / "evaluation_set_curation.json",
     "gumsum": REPO_ROOT / "data" / "evaluation_set_gumsum.json",
-    "psc": REPO_ROOT / "data" / "psc" / "evaluation_set_psc.json",
+    "psc-abstract-a-20": REPO_ROOT / "data" / "psc" / "psc-abstract-a-20.json",
+    "psc-extract-k-5": REPO_ROOT / "data" / "psc" / "psc-extract-k-5.json",
 }
 SPLIT_SHARES: dict[CalibrationSplit, float] = {"train": 0.15, "dev": 0.45, "test": 0.40}
 # Several families and one weak model, so the AI summaries carry natural errors for the labels.

@@ -3,6 +3,7 @@
 from typing import Literal
 
 from .base import ApiModel
+from .usage import UsageMetadata
 
 FactErrorType = Literal["unsupported", "contradicted", "out_of_context", "other"]
 
@@ -51,4 +52,12 @@ class FactLevelResult(ApiModel):
     faithfulness: FaithfulnessJudgement
     alignment: AlignmentJudgement
     judge_model: str
+    prompt_version: str  # faithfulness and alignment prompt versions, joined with "+"
+    usage: UsageMetadata
+
+
+class CoherenceResult(ApiModel):
+    judgement: CoherenceJudgement
+    judge_model: str
     prompt_version: str
+    usage: UsageMetadata

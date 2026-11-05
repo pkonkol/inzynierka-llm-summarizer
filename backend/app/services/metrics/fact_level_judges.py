@@ -7,17 +7,40 @@ are counted from those two judgements.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 from dataclasses import dataclass
 from functools import cache
+from typing import Any
 
+import structlog
+from langchain_core.prompts import ChatPromptTemplate
 from nltk.tokenize.punkt import PunktTokenizer
 
 from ...schemas.judges import (
     AlignmentJudgement,
+    ExtractedKeyfacts,
     FactLevelResult,
     FactLevelScores,
     FaithfulnessJudgement,
+)
+from ...schemas.usage import UsageMetadata
+from ..llm._base import LlmOutputError, build_structured_llm, parse_structured_output
+from .judge_prompts import (
+    ALIGNMENT_PROMPT,
+    FAITHFULNESS_PROMPT,
+    KEYFACT_PROMPT,
+    judge_prompt_version,
+    prompt_wording,
+)
+
+log = structlog.get_logger(__name__)
+
+MAX_KEYFACTS = 16
+FACT_LEVEL_PROMPT_VERSION = "+".join(
+    judge_prompt_version(prompt_wording(prompt))
+    for prompt in (FAITHFULNESS_PROMPT, ALIGNMENT_PROMPT)
 )
 
 _PUNKT_LANGUAGES = {"en": "english", "pl": "polish"}
@@ -33,6 +56,44 @@ class JudgeModelRef:
 
     provider: str
     name: str
+
+    def model_id(self) -> str:
+        return f"{self.provider}:{self.name}"
+
+
+def _as_data(text: str, tag: str) -> str:
+    """Closing tags inside the text cannot end the data block the prompt wraps it in."""
+    return text.replace(f"</{tag}", f"&lt;/{tag}")
+
+
+def _numbered(lines: list[str]) -> str:
+    return "\n".join(f"[{index}] {line}" for index, line in enumerate(lines))
+
+
+async def ask_judge(
+    prompt: ChatPromptTemplate,
+    structure: type,
+    variables: dict[str, Any],
+    judge: JudgeModelRef,
+    stage: str,
+) -> tuple[Any, UsageMetadata]:
+    """One structured call to the judge model; every judge in this package goes through it."""
+    log.debug("judge call", stage=stage, provider=judge.provider, model=judge.name)
+    started = time.monotonic()
+
+    llm = build_structured_llm(structure, judge.provider, judge.name)
+    raw = await (prompt | llm).ainvoke(variables)
+    parsed, _raw_str, usage, _raw_metadata = parse_structured_output(raw, "judge", stage)
+
+    log.info(
+        "judge answered",
+        stage=stage,
+        provider=judge.provider,
+        model=judge.name,
+        duration_ms=round((time.monotonic() - started) * 1000),
+        token_usage=usage.total_tokens,
+    )
+    return parsed, usage
 
 
 @cache
@@ -77,21 +138,50 @@ def split_sentences(text: str, language: str) -> list[str]:
 
 async def extract_keyfacts(source_text: str, language: str, judge: JudgeModelRef) -> list[str]:
     """Up to 16 key facts of the source, one short sentence each (REALSum guideline)."""
-    raise NotImplementedError
+    extracted, _usage = await ask_judge(
+        KEYFACT_PROMPT,
+        ExtractedKeyfacts,
+        {
+            "max_keyfacts": MAX_KEYFACTS,
+            "language": language,
+            "source": _as_data(source_text, "source"),
+        },
+        judge,
+        "keyfacts",
+    )
+    keyfacts = [keyfact.strip() for keyfact in extracted.keyfacts if keyfact.strip()]
+    if not keyfacts or len(keyfacts) > MAX_KEYFACTS:
+        raise LlmOutputError(
+            f"keyfact extraction returned {len(keyfacts)} key facts, expected 1..{MAX_KEYFACTS}",
+            raw_output=str(extracted.keyfacts),
+        )
+    return keyfacts
 
 
 async def check_faithfulness(
     source_text: str, sentences: list[str], judge: JudgeModelRef
-) -> FaithfulnessJudgement:
+) -> tuple[FaithfulnessJudgement, UsageMetadata]:
     """One verdict per summary sentence: supported by the source or not, with error type and reason."""
-    raise NotImplementedError
+    return await ask_judge(
+        FAITHFULNESS_PROMPT,
+        FaithfulnessJudgement,
+        {"source": _as_data(source_text, "source"), "numbered_sentences": _numbered(sentences)},
+        judge,
+        "faithfulness",
+    )
 
 
 async def align_keyfacts(
     keyfacts: list[str], sentences: list[str], judge: JudgeModelRef
-) -> AlignmentJudgement:
+) -> tuple[AlignmentJudgement, UsageMetadata]:
     """For every key fact: present in the summary or not, and which sentences carry it."""
-    raise NotImplementedError
+    return await ask_judge(
+        ALIGNMENT_PROMPT,
+        AlignmentJudgement,
+        {"numbered_keyfacts": _numbered(keyfacts), "numbered_sentences": _numbered(sentences)},
+        judge,
+        "alignment",
+    )
 
 
 def _require_consistent_judgements(
@@ -148,4 +238,16 @@ async def judge_fact_level(
     source_text: str, summary: str, keyfacts: list[str], language: str, judge: JudgeModelRef
 ) -> FactLevelResult:
     """Split the summary, run both judges, count the scores."""
-    raise NotImplementedError
+    sentences = split_sentences(summary, language)
+    (faithfulness, faithfulness_usage), (alignment, alignment_usage) = await asyncio.gather(
+        check_faithfulness(source_text, sentences, judge),
+        align_keyfacts(keyfacts, sentences, judge),
+    )
+    return FactLevelResult(
+        scores=fact_level_scores(faithfulness, alignment, len(sentences)),
+        faithfulness=faithfulness,
+        alignment=alignment,
+        judge_model=judge.model_id(),
+        prompt_version=FACT_LEVEL_PROMPT_VERSION,
+        usage=faithfulness_usage + alignment_usage,
+    )

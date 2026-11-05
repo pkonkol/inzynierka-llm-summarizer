@@ -8,7 +8,7 @@ from typing import Any
 
 import structlog
 from deepeval.config.settings import get_settings as get_deepeval_settings
-from deepeval.metrics import GEval
+from deepeval.metrics import GEval, SummarizationMetric
 from deepeval.models import DeepEvalBaseLLM
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from langchain_core.language_models import BaseChatModel
@@ -107,11 +107,11 @@ def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
 
 
 def run_metric(
-    metric: Any, test_case: LLMTestCase, judge_model: str, rubric: str
+    metric: Any, test_case: LLMTestCase, name: str, judge_model: str, rubric: str
 ) -> DeepEvalMetricResult:
     metric.measure(test_case, _show_indicator=False)
     result = DeepEvalMetricResult(
-        name=metric.name,
+        name=name,
         score=metric.score,
         reason=metric.reason,
         passed=metric.success,
@@ -207,11 +207,35 @@ TAKEAWAYS_INPUT_SPECS = [
 ]
 
 
+SUMMARIZATION_METRIC_QUESTIONS = 5
+# deepeval generates its own questions and truths, so the version names the settings rather than a rubric text.
+SUMMARIZATION_METRIC_RUBRIC = f"summarization-strict-n{SUMMARIZATION_METRIC_QUESTIONS}"
+
+
 async def evaluate_summarization_metric(
     settings: Settings, source_text: str, summary: str
 ) -> DeepEvalMetricResult:
     """deepeval's SummarizationMetric in strict mode, as an off-the-shelf reference point."""
-    raise NotImplementedError
+    model = get_deepeval_judge_model(settings)
+    test_case = LLMTestCase(input=source_text, actual_output=summary)
+
+    def measure() -> DeepEvalMetricResult:
+        metric = SummarizationMetric(
+            model=model,
+            threshold=DEEPEVAL_THRESHOLD,
+            n=SUMMARIZATION_METRIC_QUESTIONS,
+            strict_mode=True,
+            async_mode=False,  # same reason as in evaluate_geval
+        )
+        return run_metric(
+            metric,
+            test_case,
+            "summarization_metric",
+            judge_model_id(settings),
+            SUMMARIZATION_METRIC_RUBRIC,
+        )
+
+    return await run_geval(measure)
 
 
 async def evaluate_geval(
@@ -239,7 +263,7 @@ async def evaluate_geval(
             async_mode=False,  # this already runs on its own thread; deepeval's async path opens an event loop per worker thread and never closes it
             **({"evaluation_steps": spec.evaluation_steps} if spec.evaluation_steps else {}),
         )
-        return run_metric(metric, test_case, judge_model, rubric_version(spec))
+        return run_metric(metric, test_case, spec.name, judge_model, rubric_version(spec))
 
     return list(
         await asyncio.gather(*(run_geval(measure, spec, test_case) for spec, test_case in work))

@@ -1,9 +1,28 @@
-"""Cases cs26-cs31: judge agreement with the author's labels, and the score-by-degree curve."""
+"""Cases cs26-cs31 and review rv4, rv6: judge agreement with the author's labels, the score-by-degree curve, and what a split's report counts."""
 
 import pytest
 
-from app.services.calibration_files import Negative, NegativeExpectation
-from calibration.report import degree_curve, true_positive_and_negative_rates
+from app.schemas.calibration_api import (
+    CalibrationLabels,
+    CalibrationSample,
+    CalibrationSource,
+    CalibrationSummary,
+    PairVerdict,
+)
+from app.services.calibration_files import (
+    CandidatePredictions,
+    JudgedItem,
+    Negative,
+    NegativeExpectation,
+    PairPrediction,
+)
+from calibration.report import (
+    _candidate_section,
+    _item_atoms,
+    _Truth,
+    degree_curve,
+    true_positive_and_negative_rates,
+)
 
 
 def test_case_26_rates_from_labels_and_predictions() -> None:
@@ -81,3 +100,84 @@ def test_case_31_negative_without_a_judge_score_is_an_error() -> None:
 
     with pytest.raises((KeyError, ValueError)):
         degree_curve({"one-1": 0.9}, negatives)
+
+
+def _source(source_id: str, split: str) -> CalibrationSource:
+    return CalibrationSource(
+        source_id=source_id,
+        set_name="cnn_dailymail",
+        language="en",
+        entry_id=source_id,
+        input_text="Alpha rose.",
+        keyfacts=["Alpha rose."],
+        keyfacts_approved=True,
+        split=split,
+    )
+
+
+def _summary(source_id: str, origin: str) -> CalibrationSummary:
+    return CalibrationSummary(
+        summary_id=f"{source_id}-{origin}",
+        source_id=source_id,
+        origin=origin,
+        generator_model=None if origin == "golden" else "qwen/qwen3.8-flash",
+        processing_strategy=None if origin == "golden" else "direct",
+        text="Alpha rose.",
+        sentences=["Alpha rose."],
+    )
+
+
+def test_rv4_report_of_a_split_counts_only_its_own_pairs() -> None:
+    sample = CalibrationSample(
+        sources=[_source("dev-source", "dev"), _source("test-source", "test")],
+        summaries=[
+            _summary(source_id, origin)
+            for source_id in ("dev-source", "test-source")
+            for origin in ("golden", "ai")
+        ],
+    )
+    labels = CalibrationLabels(
+        pairs={
+            source_id: PairVerdict(better_summary_id=f"{source_id}-ai")
+            for source_id in ("dev-source", "test-source")
+        }
+    )
+    candidate = CandidatePredictions(
+        judge_model="openrouter:deepseek/deepseek-v4-pro-0813",
+        prompt_version="v1",
+        pairs={
+            source_id: PairPrediction(
+                source_id=source_id, preferred="ai", score=0.8, consistent=True
+            )
+            for source_id in ("dev-source", "test-source")
+        },
+    )
+
+    report = "\n".join(_candidate_section(candidate, "test", sample, labels, []))
+
+    assert "pairs judged 1," in report
+
+
+def test_rv6_unusable_answer_is_wrong_on_repetition_too() -> None:
+    truth = _Truth(
+        origin="negative",
+        family="anthropic",
+        sentence_faithful=[True],
+        sentence_carries_keyfact=[True],
+        keyfact_present=[True],
+        coherent=True,
+        has_repetition=True,
+    )
+    item = JudgedItem(
+        item_id="summary-1-duplicate-one_sentence",
+        split="dev",
+        origin="negative",
+        fact_level=None,
+        coherence=None,
+        error="unparseable",
+    )
+
+    atoms = {atom.metric: atom for atom in _item_atoms(truth, item, "deepseek")}
+
+    assert atoms["no repetition"].label is False
+    assert atoms["no repetition"].prediction is True

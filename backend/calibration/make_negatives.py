@@ -18,7 +18,12 @@ from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.nltk_data import ensure_nltk_resources
-from app.schemas.calibration_api import CalibrationSample, CalibrationSummary, SummaryLabels
+from app.schemas.calibration_api import (
+    CalibrationLabels,
+    CalibrationSample,
+    CalibrationSummary,
+    SummaryLabels,
+)
 from app.services.calibration_files import (
     Negative,
     NegativeExpectation,
@@ -340,6 +345,42 @@ def _whole_control(
     )
 
 
+def whole_controls(
+    sample: CalibrationSample, labels: CalibrationLabels, rng: random.Random
+) -> list[tuple[Negative, list[str]]]:
+    """One control per source: the golden summary of another source in the same language, under this source's key facts."""
+    controls = []
+    for source in sample.sources:
+        base_summary = next(
+            (
+                summary
+                for summary in sample.summaries
+                if summary.source_id == source.source_id and summary.summary_id in labels.summaries
+            ),
+            None,
+        )
+        if base_summary is None:
+            raise SystemExit(f"{source.source_id} has no labelled summary; finish labelling first")
+
+        other_source = rng.choice(
+            [
+                other
+                for other in sample.sources
+                if other.language == source.language and other.source_id != source.source_id
+            ]
+        )
+        other_summary = next(
+            summary
+            for summary in sample.summaries
+            if summary.source_id == other_source.source_id and summary.origin == "golden"
+        )
+        keyfact_count = len(labels.summaries[base_summary.summary_id].keyfacts_present)
+        controls.append(
+            (_whole_control(base_summary, other_summary, keyfact_count), base_summary.sentences)
+        )
+    return controls
+
+
 def _git(review_dir: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(review_dir), *args], check=True, capture_output=True)
 
@@ -390,6 +431,7 @@ async def generate(data_dir: Path, per_summary: int, seed: int, limit: int | Non
     labelled = [summary for summary in sample.summaries if summary.summary_id in labels.summaries]
     plans = plan_negatives(labelled, per_summary, seed)[:limit]
     rng = random.Random(seed)
+    controls = whole_controls(sample, labels, rng) if limit is None else []
     limiter = asyncio.Semaphore(_CONCURRENT_CALLS)
 
     def foreign_pool(summary: CalibrationSummary) -> list[str]:
@@ -447,33 +489,9 @@ async def generate(data_dir: Path, per_summary: int, seed: int, limit: int | Non
     negatives = [negative for negative, _original in results]
     originals = {negative.negative_id: original for negative, original in results}
 
-    # One whole-summary control per source: the golden summary of the next source in the same language.
-    if limit is None:
-        for source in sample.sources:
-            same_language = [
-                other
-                for other in sample.sources
-                if other.language == source.language and other.source_id != source.source_id
-            ]
-            other_summary = next(
-                summary
-                for summary in sample.summaries
-                if summary.source_id == rng.choice(same_language).source_id
-            )
-            base_summary = next(
-                (summary for summary in labelled if summary.source_id == source.source_id), None
-            )
-            if base_summary is None:
-                raise SystemExit(
-                    f"{source.source_id} has no labelled summary; finish labelling first"
-                )
-            control = _whole_control(
-                base_summary,
-                other_summary,
-                len(labels.summaries[base_summary.summary_id].keyfacts_present),
-            )
-            negatives.append(control)
-            originals[control.negative_id] = base_summary.sentences
+    for control, original in controls:
+        negatives.append(control)
+        originals[control.negative_id] = original
 
     write_negative_candidates(data_dir, negatives)
     stage_for_review(review_dir(data_dir), originals, negatives)

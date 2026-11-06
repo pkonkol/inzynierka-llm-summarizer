@@ -151,6 +151,7 @@ def _item_atoms(truth: _Truth, item: JudgedItem, judge_family: str) -> list[_Ato
         "same family" if truth.family == judge_family else "other family",
     )
     pairs: list[tuple[str, bool | None, bool | None]] = []
+    no_repetition = None if truth.has_repetition is None else not truth.has_repetition
 
     if item.fact_level and item.coherence:
         carried = {
@@ -178,7 +179,6 @@ def _item_atoms(truth: _Truth, item: JudgedItem, judge_family: str) -> list[_Ato
             for index, label in enumerate(truth.keyfact_present)
         ]
         pairs.append(("coherence", truth.coherent, item.coherence.judgement.coherent))
-        no_repetition = None if truth.has_repetition is None else not truth.has_repetition
         pairs.append(("no repetition", no_repetition, not item.fact_level.scores.has_repetition))
     else:
         # An unusable answer is a judge mistake on every atom it should have decided.
@@ -186,6 +186,7 @@ def _item_atoms(truth: _Truth, item: JudgedItem, judge_family: str) -> list[_Ato
         pairs += [("carries key fact", label, None) for label in truth.sentence_carries_keyfact]
         pairs += [("key fact present", label, None) for label in truth.keyfact_present]
         pairs.append(("coherence", truth.coherent, None))
+        pairs.append(("no repetition", no_repetition, None))
 
     return [
         _Atom(metric, label, (not label) if prediction is None else prediction, subsets)
@@ -232,10 +233,11 @@ def _candidate_section(
     ]
 
     origin_by_summary = {summary.summary_id: summary.origin for summary in sample.summaries}
+    split_by_source = {source.source_id: source.split for source in sample.sources}
     pair_labels = [
         (origin_by_summary[verdict.better_summary_id] == "ai", candidate.pairs[source_id])
         for source_id, verdict in labels.pairs.items()
-        if source_id in candidate.pairs
+        if source_id in candidate.pairs and split_by_source[source_id] == split
     ]
     atoms += [
         _Atom(

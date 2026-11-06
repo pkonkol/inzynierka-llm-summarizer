@@ -1,4 +1,4 @@
-"""Cases cs1-cs15: fact-level scores from the two judgements, and the shared sentence split."""
+"""Cases cs1-cs15 and review rv3: fact-level scores from the two judgements, the alignment answer check, and the shared sentence split."""
 
 import pytest
 
@@ -8,7 +8,15 @@ from app.schemas.judges import (
     KeyfactMatch,
     SentenceFaithfulness,
 )
-from app.services.metrics.fact_level_judges import fact_level_scores, split_sentences
+from app.schemas.usage import UsageMetadata
+from app.services.llm import LlmOutputError
+from app.services.metrics import fact_level_judges
+from app.services.metrics.fact_level_judges import (
+    JudgeModelRef,
+    align_keyfacts,
+    fact_level_scores,
+    split_sentences,
+)
 
 
 def _faithfulness(*verdicts: bool) -> FaithfulnessJudgement:
@@ -219,3 +227,39 @@ def test_case_14_blank_text_is_rejected(text: str) -> None:
 def test_case_15_unsupported_language_is_rejected() -> None:
     with pytest.raises(ValueError):
         split_sentences("Der Hund lief weg.", "de")
+
+
+@pytest.mark.parametrize(
+    "carriers",
+    [
+        pytest.param(([0],), id="rv3_keyfact_left_out"),
+        pytest.param(([0], [1], [0]), id="rv3_index_past_the_keyfacts"),
+    ],
+)
+async def test_rv3_alignment_must_cover_every_keyfact_once(
+    monkeypatch: pytest.MonkeyPatch, carriers: tuple[list[int], ...]
+) -> None:
+    async def answer(*_args: object) -> tuple[AlignmentJudgement, UsageMetadata]:
+        return _alignment(*carriers), UsageMetadata()
+
+    monkeypatch.setattr(fact_level_judges, "ask_judge", answer)
+
+    with pytest.raises(LlmOutputError):
+        await align_keyfacts(
+            ["Alpha rose.", "Beta fell."], ["Alpha rose.", "Beta fell."], JudgeModelRef("x", "y")
+        )
+
+
+async def test_rv3_alignment_in_any_order_is_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    alignment = AlignmentJudgement(keyfacts=list(reversed(_alignment([0], []).keyfacts)))
+
+    async def answer(*_args: object) -> tuple[AlignmentJudgement, UsageMetadata]:
+        return alignment, UsageMetadata()
+
+    monkeypatch.setattr(fact_level_judges, "ask_judge", answer)
+
+    judged, _usage = await align_keyfacts(
+        ["Alpha rose.", "Beta fell."], ["Alpha rose."], JudgeModelRef("x", "y")
+    )
+
+    assert judged == alignment

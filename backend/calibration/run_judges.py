@@ -36,14 +36,12 @@ from app.services.calibration_files import (
 )
 from app.services.llm import LlmOutputError
 from app.services.metrics.coherence import COHERENCE_PROMPT_VERSION, judge_coherence
-from app.services.metrics.cross import evaluate_pairwise_cross_deepeval
+from app.services.metrics.cross import PAIRWISE_WITH_INPUT, evaluate_pairwise_cross_deepeval
 from app.services.metrics.deepeval import evaluate_summarization_metric
 from app.services.metrics.fact_level_judges import (
     FACT_LEVEL_PROMPT_VERSION,
     JudgeModelRef,
-    align_keyfacts,
-    check_faithfulness,
-    fact_level_scores,
+    judge_fact_level_sentences,
 )
 
 log = structlog.get_logger(__name__)
@@ -56,24 +54,10 @@ async def _judge_sentences(
     source_text: str, sentences: list[str], keyfacts: list[str], judge: JudgeModelRef
 ) -> tuple[FactLevelResult, CoherenceResult]:
     """The labelled sentences go to the judges as they are, so their indices match the labels."""
-    (
-        (faithfulness, faithfulness_usage),
-        (alignment, alignment_usage),
-        coherence,
-    ) = await asyncio.gather(
-        check_faithfulness(source_text, sentences, judge),
-        align_keyfacts(keyfacts, sentences, judge),
+    return await asyncio.gather(
+        judge_fact_level_sentences(source_text, sentences, keyfacts, judge),
         judge_coherence(" ".join(sentences), judge),
     )
-    fact_level = FactLevelResult(
-        scores=fact_level_scores(faithfulness, alignment, len(sentences)),
-        faithfulness=faithfulness,
-        alignment=alignment,
-        judge_model=judge.model_id(),
-        prompt_version=FACT_LEVEL_PROMPT_VERSION,
-        usage=faithfulness_usage + alignment_usage,
-    )
-    return fact_level, coherence
 
 
 def _keyfacts(sample: CalibrationSample, labels: CalibrationLabels, source_id: str) -> list[str]:
@@ -171,10 +155,13 @@ async def _judge_pairs(
             for summary in sample.summaries
             if summary.source_id == source_id
         }
-        results = await evaluate_pairwise_cross_deepeval(
-            settings, sources[source_id].input_text, by_origin["ai"], by_origin["golden"]
+        (with_input,) = await evaluate_pairwise_cross_deepeval(
+            settings,
+            sources[source_id].input_text,
+            by_origin["ai"],
+            by_origin["golden"],
+            specs=[PAIRWISE_WITH_INPUT],
         )
-        with_input = next(result for result in results if result["name"] == "pairwise_with_input")
         score = with_input["score"]
         predictions.pairs[source_id] = PairPrediction(
             source_id=source_id,

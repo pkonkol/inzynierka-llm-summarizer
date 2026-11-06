@@ -1,4 +1,4 @@
-"""Cases cs33-cs39: the dev-only calibration API behind /admin/dev/calibration."""
+"""Cases cs33-cs39 and review rv5: the dev-only calibration API behind /admin/dev/calibration."""
 
 from pathlib import Path
 
@@ -178,3 +178,21 @@ def test_case_39_pair_verdict_outside_the_pair_is_422(
     response = client.put(f"{PREFIX}/pairs/source-1", json={"better_summary_id": "elsewhere-9"})
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("keyfacts", "status"),
+    [
+        pytest.param(["Alpha rose.", "Beta fell."], 200, id="rv5_same_keyfacts_saved_again"),
+        pytest.param(["Alpha rose.", "Gamma held."], 409, id="rv5_changed_wording"),
+        pytest.param(["Alpha rose."], 409, id="rv5_changed_count"),
+    ],
+)
+def test_rv5_labelled_source_keeps_its_keyfacts(
+    client: TestClient, calibration_data: Path, keyfacts: list[str], status: int
+) -> None:
+    client.put(f"{PREFIX}/labels/golden-x7", json=GOLDEN_LABELS.model_dump(mode="json"))
+
+    response = client.put(f"{PREFIX}/keyfacts/source-1", json={"keyfacts": keyfacts})
+
+    assert response.status_code == status

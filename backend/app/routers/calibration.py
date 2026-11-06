@@ -148,10 +148,10 @@ async def save_keyfacts_approval(
         for summary in _source_summaries(sample, source_id)
         if summary.summary_id in labels.summaries
     ]
-    if labelled_summaries and len(payload.keyfacts) != len(_current_keyfacts(source, labels)):
+    if labelled_summaries and payload.keyfacts != _current_keyfacts(source, labels):
         raise HTTPException(
             status_code=409,
-            detail="Summaries of this source are labelled against the current key facts; keep their count",
+            detail="Summaries of this source are labelled against the current key facts; they can no longer change",
         )
 
     labels.keyfacts[source_id] = payload

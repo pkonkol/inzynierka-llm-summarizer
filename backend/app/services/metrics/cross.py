@@ -83,26 +83,27 @@ def rouge_meteor_scores(
     }
 
 
-_PAIRWISE_SPECS = [
-    GEvalSpec(
-        name="pairwise_with_input",
-        criteria=(
-            "Evaluate whether Summary A (actual_output) is better than Summary B (expected_output) "
-            "for the given source document, using faithfulness to source, coverage of key information, "
-            "coherence, and readability."
-        ),
-        params=[
-            LLMTestCaseParams.INPUT,
-            LLMTestCaseParams.ACTUAL_OUTPUT,
-            LLMTestCaseParams.EXPECTED_OUTPUT,
-        ],
-        evaluation_steps=[
-            "Read the source document and identify the main points.",
-            "Compare Summary A and Summary B against the source.",
-            "Decide whether Summary A is better overall than Summary B.",
-            "Assign higher score when Summary A is better, lower score when Summary B is better.",
-        ],
+PAIRWISE_WITH_INPUT = GEvalSpec(
+    name="pairwise_with_input",
+    criteria=(
+        "Evaluate whether Summary A (actual_output) is better than Summary B (expected_output) "
+        "for the given source document, using faithfulness to source, coverage of key information, "
+        "coherence, and readability."
     ),
+    params=[
+        LLMTestCaseParams.INPUT,
+        LLMTestCaseParams.ACTUAL_OUTPUT,
+        LLMTestCaseParams.EXPECTED_OUTPUT,
+    ],
+    evaluation_steps=[
+        "Read the source document and identify the main points.",
+        "Compare Summary A and Summary B against the source.",
+        "Decide whether Summary A is better overall than Summary B.",
+        "Assign higher score when Summary A is better, lower score when Summary B is better.",
+    ],
+)
+_PAIRWISE_SPECS = [
+    PAIRWISE_WITH_INPUT,
     GEvalSpec(
         name="pairwise_without_input",
         criteria=(
@@ -125,8 +126,9 @@ async def evaluate_pairwise_cross_deepeval(
     source_text: str,
     ai_summary: str,
     golden_summary: str,
+    specs: list[GEvalSpec] = _PAIRWISE_SPECS,
 ) -> list[dict[str, Any]]:
-    """Runs every pairwise rubric twice, once with each summary in the A slot.
+    """Runs every pairwise rubric in `specs` twice, once with each summary in the A slot.
 
     The judge only ever sees "Summary A (actual_output)" / "Summary B (expected_output)", so a
     preference for the first slot shows up as the two orders disagreeing (`consistent=False`)
@@ -136,7 +138,7 @@ async def evaluate_pairwise_cross_deepeval(
     so they differ only in whether the test case carries the source text.
     """
     work = []
-    for spec in _PAIRWISE_SPECS:
+    for spec in specs:
         source = source_text if LLMTestCaseParams.INPUT in spec.params else ""
         work += [
             (

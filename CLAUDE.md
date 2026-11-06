@@ -30,6 +30,7 @@ just ci           # everything CI runs
 - **Reviewable batches.** Prefer several small, reviewable steps over one large diff.
 - **Architecture pushback.** If a requested approach isn't the best option, say so in the reply and propose the alternative — don't silently comply or silently deviate.
 - **Naming: verbose first, narrow later.** Prefer long, self-explanatory names over short ones, especially for state, function, and variable names that aren't obviously scoped by their immediate context. A name should let a reader understand its purpose without re-reading the surrounding module. Don't abbreviate to save keystrokes (`client` → `firestoreClient` if there are multiple clients in scope; `runModel` → `newRunSelectedModel` if "run" is ambiguous between "existing run" and "the run being created"). It's fine to shorten a name later once its scope is small and unambiguous (e.g. a loop variable `i` is fine) — but don't start short and hope to remember to rename it later; that rarely happens.
+- **Script arguments.** The offline scripts in `backend/calibration/` parse arguments with `argparse`; keep it there so they stay alike. Any new standalone script outside that folder takes its arguments through `typer`.
 
 ## Choosing a library or tool
 

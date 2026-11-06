@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ...schemas.judges import CoherenceJudgement, CoherenceResult
-from .fact_level_judges import JudgeModelRef, ask_judge
+from .fact_level_judges import JudgeModelRef, as_data, ask_judge
 from .judge_prompts import COHERENCE_PROMPT, judge_prompt_version, prompt_wording
 
 COHERENCE_PROMPT_VERSION = judge_prompt_version(prompt_wording(COHERENCE_PROMPT))
@@ -12,7 +12,7 @@ async def judge_coherence(summary: str, judge: JudgeModelRef) -> CoherenceResult
     judgement, usage = await ask_judge(
         COHERENCE_PROMPT,
         CoherenceJudgement,
-        {"summary": summary.replace("</summary", "&lt;/summary")},
+        {"summary": as_data(summary, "summary")},
         judge,
         "coherence",
     )

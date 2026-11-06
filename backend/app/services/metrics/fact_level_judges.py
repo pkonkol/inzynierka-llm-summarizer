@@ -61,7 +61,7 @@ class JudgeModelRef:
         return f"{self.provider}:{self.name}"
 
 
-def _as_data(text: str, tag: str) -> str:
+def as_data(text: str, tag: str) -> str:
     """Closing tags inside the text cannot end the data block the prompt wraps it in."""
     return text.replace(f"</{tag}", f"&lt;/{tag}")
 
@@ -144,7 +144,7 @@ async def extract_keyfacts(source_text: str, language: str, judge: JudgeModelRef
         {
             "max_keyfacts": MAX_KEYFACTS,
             "language": language,
-            "source": _as_data(source_text, "source"),
+            "source": as_data(source_text, "source"),
         },
         judge,
         "keyfacts",
@@ -165,7 +165,7 @@ async def check_faithfulness(
     return await ask_judge(
         FAITHFULNESS_PROMPT,
         FaithfulnessJudgement,
-        {"source": _as_data(source_text, "source"), "numbered_sentences": _numbered(sentences)},
+        {"source": as_data(source_text, "source"), "numbered_sentences": _numbered(sentences)},
         judge,
         "faithfulness",
     )
@@ -175,13 +175,20 @@ async def align_keyfacts(
     keyfacts: list[str], sentences: list[str], judge: JudgeModelRef
 ) -> tuple[AlignmentJudgement, UsageMetadata]:
     """For every key fact: present in the summary or not, and which sentences carry it."""
-    return await ask_judge(
+    alignment, usage = await ask_judge(
         ALIGNMENT_PROMPT,
         AlignmentJudgement,
         {"numbered_keyfacts": _numbered(keyfacts), "numbered_sentences": _numbered(sentences)},
         judge,
         "alignment",
     )
+    aligned_keyfacts = sorted(match.keyfact_index for match in alignment.keyfacts)
+    if aligned_keyfacts != list(range(len(keyfacts))):
+        raise LlmOutputError(
+            f"alignment covered key facts {aligned_keyfacts}, expected 0..{len(keyfacts) - 1} once each",
+            raw_output=alignment.model_dump_json(),
+        )
+    return alignment, usage
 
 
 def _require_consistent_judgements(
@@ -238,7 +245,15 @@ async def judge_fact_level(
     source_text: str, summary: str, keyfacts: list[str], language: str, judge: JudgeModelRef
 ) -> FactLevelResult:
     """Split the summary, run both judges, count the scores."""
-    sentences = split_sentences(summary, language)
+    return await judge_fact_level_sentences(
+        source_text, split_sentences(summary, language), keyfacts, judge
+    )
+
+
+async def judge_fact_level_sentences(
+    source_text: str, sentences: list[str], keyfacts: list[str], judge: JudgeModelRef
+) -> FactLevelResult:
+    """Both judges on sentences already split, so their indices match labels made on the same split."""
     (faithfulness, faithfulness_usage), (alignment, alignment_usage) = await asyncio.gather(
         check_faithfulness(source_text, sentences, judge),
         align_keyfacts(keyfacts, sentences, judge),

@@ -171,6 +171,12 @@ calibration-psc +names="psc-abstract-a-20 psc-extract-k-5":
 calibration-sample *args:
     uv run python -m calibration.build_sample {{args}}
 
+# E3: 50-entry subsets of every evaluation set, calibration sources excluded
+[group('calibration')]
+[working-directory('backend')]
+e3-subsets *args:
+    uv run python -m calibration.build_e3_subsets {{args}}
+
 # Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
 [group('calibration')]
 [working-directory('backend')]

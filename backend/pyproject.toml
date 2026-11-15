@@ -88,6 +88,7 @@ extend-immutable-calls = [
 # and they run git with fixed arguments on the review repository they created.
 "calibration/**" = ["T201", "S311", "S603", "S607"]
 "tests/test_make_negatives.py" = ["S311"]
+"tests/test_build_e3_subsets.py" = ["S311"]
 
 [tool.ruff.format]
 docstring-code-format = true

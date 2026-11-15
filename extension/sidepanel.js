@@ -128,12 +128,11 @@ async function submit(event) {
       summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
     });
     await openResultTab(jobId, settings.presetKey);
-    window.close();
   } catch (error) {
     showError(`Nie udało się podsumować: ${error.message}`);
-    submitButton.disabled = false;
-    submitButton.textContent = "Podsumuj";
   }
+  submitButton.disabled = false;
+  submitButton.textContent = "Podsumuj";
 }
 
 async function start() {

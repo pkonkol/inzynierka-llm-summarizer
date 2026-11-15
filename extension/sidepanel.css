@@ -40,12 +40,54 @@ h1 {
   font-size: 16px;
 }
 
+#result[hidden] {
+  display: none;
+}
+
+main {
+  padding: 16px;
+  overflow-y: auto;
+}
+
 #result {
   display: grid;
   gap: 12px;
   align-content: start;
-  padding: 16px;
-  overflow-y: auto;
+}
+
+#history-toggle {
+  padding: 4px 8px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font-weight: 400;
+  text-align: left;
+}
+
+.history-item[aria-current="true"] {
+  border-color: currentColor;
+}
+
+.history-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 #result h2 {

@@ -9,9 +9,22 @@
   <body>
     <header class="panel-header">
       <h1>Podsumowania</h1>
+      <button
+        id="history-toggle"
+        type="button"
+        aria-controls="history"
+        aria-expanded="false"
+        aria-label="Historia"
+        title="Historia"
+      >
+        <span aria-hidden="true">🕘</span>
+      </button>
     </header>
 
-    <main id="result" aria-live="polite"></main>
+    <main>
+      <section id="result" aria-live="polite"></section>
+      <section id="history" aria-label="Historia" hidden></section>
+    </main>
 
     <form id="summary-form">
       <fieldset>

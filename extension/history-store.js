@@ -16,6 +16,8 @@ export const HISTORY_LIMIT = 20;
 
 const HISTORY_KEY = "summaryHistory";
 const CURRENT_JOB_KEY = "currentJobId";
+// The panel and the service worker both rewrite the list; the lock is shared by every page of the extension's origin.
+const HISTORY_LOCK = "summary-history";
 
 /** History entries, newest first. */
 export async function readHistory() {
@@ -25,20 +27,24 @@ export async function readHistory() {
 
 /** Adds an entry at the top, drops the oldest past HISTORY_LIMIT, and makes it current. */
 export async function addHistoryEntry(entry) {
-  const history = await readHistory();
-  await chrome.storage.local.set({
-    [HISTORY_KEY]: [entry, ...history].slice(0, HISTORY_LIMIT),
-    [CURRENT_JOB_KEY]: entry.jobId,
+  await navigator.locks.request(HISTORY_LOCK, async () => {
+    const history = await readHistory();
+    await chrome.storage.local.set({
+      [HISTORY_KEY]: [entry, ...history].slice(0, HISTORY_LIMIT),
+      [CURRENT_JOB_KEY]: entry.jobId,
+    });
   });
 }
 
 /** Merges fields (status, title, summary, error) into the entry with this jobId. */
 export async function updateHistoryEntry(jobId, fields) {
-  const history = await readHistory();
-  const updatedHistory = history.map((entry) =>
-    entry.jobId === jobId ? { ...entry, ...fields } : entry,
-  );
-  await chrome.storage.local.set({ [HISTORY_KEY]: updatedHistory });
+  await navigator.locks.request(HISTORY_LOCK, async () => {
+    const history = await readHistory();
+    const updatedHistory = history.map((entry) =>
+      entry.jobId === jobId ? { ...entry, ...fields } : entry,
+    );
+    await chrome.storage.local.set({ [HISTORY_KEY]: updatedHistory });
+  });
 }
 
 export async function setCurrentJobId(jobId) {

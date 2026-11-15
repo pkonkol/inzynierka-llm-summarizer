@@ -93,7 +93,39 @@ export function renderCurrentEntry(container, entry) {
   container.replaceChildren(...entryContent(entry));
 }
 
+const STATUS_LABELS = {
+  pending: "w kolejce",
+  running: "w trakcie",
+  completed: "gotowe",
+  failed: "błąd",
+};
+
+function historyItem(entry, isCurrent, onSelect) {
+  const button = element("button", { type: "button", className: "history-item" }, [
+    element("span", { className: "history-title", textContent: entry.title ?? entry.sourceLabel }),
+    element("span", {
+      className: "muted",
+      textContent: `${STATUS_LABELS[entry.status]} · ${new Date(entry.createdAt).toLocaleString("pl-PL")}`,
+    }),
+  ]);
+  if (isCurrent) button.setAttribute("aria-current", "true");
+  button.addEventListener("click", () => onSelect(entry.jobId));
+  return element("li", {}, [button]);
+}
+
 /** Newest first; clicking an entry calls onSelect with its jobId. */
-export function renderHistoryList(_container, _entries, _handlers) {
-  throw new Error("not implemented");
+export function renderHistoryList(container, entries, { currentJobId, onSelect }) {
+  if (entries.length === 0) {
+    container.replaceChildren(
+      element("p", { className: "muted", textContent: "Historia jest pusta." }),
+    );
+    return;
+  }
+  container.replaceChildren(
+    element(
+      "ul",
+      { className: "history-list" },
+      entries.map((entry) => historyItem(entry, entry.jobId === currentJobId, onSelect)),
+    ),
+  );
 }

@@ -3,9 +3,10 @@ import {
   onHistoryChanged,
   readCurrentJobId,
   readHistory,
+  setCurrentJobId,
   updateHistoryEntry,
 } from "./history-store.js";
-import { renderCurrentEntry } from "./result-view.js";
+import { renderCurrentEntry, renderHistoryList } from "./result-view.js";
 import { initSummaryForm, readSource } from "./summary-form.js";
 import { startSummaryJob } from "./summary-request.js";
 
@@ -13,7 +14,12 @@ const POLL_INTERVAL_MS = 2000;
 const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Spróbuj ponownie.";
 
 const resultContainer = document.getElementById("result");
+const historyContainer = document.getElementById("history");
+const historyToggle = document.getElementById("history-toggle");
 const jobsBeingPolled = new Set();
+
+let isHistoryOpen = false;
+let shownCurrentJobId = null;
 
 async function activeTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -32,6 +38,7 @@ function waitForNextPoll() {
 async function pollUntilDone(jobId) {
   if (jobsBeingPolled.has(jobId)) return;
   jobsBeingPolled.add(jobId);
+  let lastStatus = null;
   try {
     for (;;) {
       const job = await fetchJobStatus(jobId);
@@ -44,7 +51,8 @@ async function pollUntilDone(jobId) {
         await updateHistoryEntry(jobId, { status: "failed", error: describeJobFailure(job) });
         return;
       }
-      await updateHistoryEntry(jobId, { status: job.status });
+      if (job.status !== lastStatus) await updateHistoryEntry(jobId, { status: job.status });
+      lastStatus = job.status;
       await waitForNextPoll();
     }
   } catch (error) {
@@ -61,10 +69,31 @@ function isUnfinished(entry) {
   return entry.status === "pending" || entry.status === "running";
 }
 
+function showView() {
+  resultContainer.hidden = isHistoryOpen;
+  historyContainer.hidden = !isHistoryOpen;
+  historyToggle.setAttribute("aria-expanded", String(isHistoryOpen));
+}
+
+async function selectEntry(jobId) {
+  await setCurrentJobId(jobId);
+  isHistoryOpen = false;
+  showView();
+}
+
 async function showHistory() {
   const [history, currentJobId] = await Promise.all([readHistory(), readCurrentJobId()]);
+
+  // a new summary, or one picked from the history, always brings the current view forward
+  if (currentJobId !== shownCurrentJobId) {
+    shownCurrentJobId = currentJobId;
+    isHistoryOpen = false;
+    showView();
+  }
+
   const currentEntry = history.find((entry) => entry.jobId === currentJobId) ?? null;
   renderCurrentEntry(resultContainer, currentEntry);
+  renderHistoryList(historyContainer, history, { currentJobId, onSelect: selectEntry });
   for (const entry of history.filter(isUnfinished)) pollUntilDone(entry.jobId);
 }
 
@@ -78,6 +107,10 @@ async function summarizeActiveTab(settings, presets) {
   );
 }
 
+historyToggle.addEventListener("click", () => {
+  isHistoryOpen = !isHistoryOpen;
+  showView();
+});
 onHistoryChanged(showHistory);
 showHistory();
 initSummaryForm({ onSubmit: summarizeActiveTab });

@@ -1,4 +1,4 @@
-import { createPublicSummaryJob } from "./api.js";
+import { createPublicSummaryJob, fetchSummaryPresets } from "./api.js";
 import { addHistoryEntry } from "./history-store.js";
 
 const SETTINGS_KEY = "lastSettings";
@@ -48,4 +48,31 @@ export async function startSummaryJob(source, settings, presets) {
     error: null,
     createdAt: new Date().toISOString(),
   });
+}
+
+/**
+ * Summarizes a link by its address with the settings of the last panel submit. A failure to
+ * create the job becomes a failed history entry, since the context menu has nowhere else to show it.
+ */
+export async function startLinkSummaryJob(linkUrl) {
+  const settings = { ...(await readSavedSettings()), source: "url" };
+  const source = { apiSource: { url: linkUrl }, sourceUrl: linkUrl, sourceLabel: linkUrl };
+  try {
+    const presets = await fetchSummaryPresets();
+    // No saved settings yet, or a preset removed from the API since: the first one, as in the form.
+    if (!Object.hasOwn(presets, settings.presetKey)) settings.presetKey = Object.keys(presets)[0];
+    await startSummaryJob(source, settings, presets);
+  } catch (error) {
+    await addHistoryEntry({
+      jobId: `failed-${crypto.randomUUID()}`,
+      presetKey: settings.presetKey,
+      sourceUrl: linkUrl,
+      sourceLabel: linkUrl,
+      status: "failed",
+      title: null,
+      summary: null,
+      error: `Nie udało się podsumować: ${error.message}`,
+      createdAt: new Date().toISOString(),
+    });
+  }
 }

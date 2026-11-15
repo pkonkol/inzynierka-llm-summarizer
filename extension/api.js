@@ -41,8 +41,8 @@ export function fetchSupportedLanguages() {
 }
 
 /** Job status and, once completed, its summary_data; throws with the API's detail message. */
-export function fetchJobStatus(_jobId) {
-  throw new Error("not implemented");
+export function fetchJobStatus(jobId) {
+  return request(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
 }
 
 /** Creates a public summary job; resolves to its job_id or throws with the API's detail message. */

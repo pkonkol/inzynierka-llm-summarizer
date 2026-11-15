@@ -7,6 +7,12 @@
     <script type="module" src="sidepanel.js"></script>
   </head>
   <body>
+    <header class="panel-header">
+      <h1>Podsumowania</h1>
+    </header>
+
+    <main id="result" aria-live="polite"></main>
+
     <form id="summary-form">
       <fieldset>
         <legend>Źródło</legend>
@@ -14,16 +20,21 @@
         <label><input type="radio" name="source" value="pageText" /> Treść strony</label>
       </fieldset>
 
-      <label for="preset">Rodzaj</label>
-      <select id="preset" name="preset"></select>
+      <div class="form-row">
+        <label>
+          Rodzaj
+          <select id="preset" name="preset"></select>
+        </label>
+        <label>
+          Język
+          <select id="language" name="language"></select>
+        </label>
+      </div>
 
       <label for="density">Długość: <span id="density-label"></span></label>
       <input id="density" name="density" type="range" min="0" max="1" step="0.05" />
 
-      <label for="language">Język</label>
-      <select id="language" name="language"></select>
-
-      <button id="submit" type="submit" disabled>Podsumuj</button>
+      <button id="submit" type="submit" disabled>Podsumuj tę stronę</button>
       <p id="error" role="alert" hidden></p>
     </form>
   </body>

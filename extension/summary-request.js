@@ -1,4 +1,5 @@
 import { createPublicSummaryJob } from "./api.js";
+import { addHistoryEntry } from "./history-store.js";
 
 const SETTINGS_KEY = "lastSettings";
 
@@ -26,13 +27,25 @@ export function buildSummarySpec(preset, density) {
 }
 
 /**
- * Creates the public job for a source; resolves to its job id.
- * source.apiSource is { url } or { input_text }, as the public endpoint takes it.
+ * Creates the public job for a source and records it as the current history entry.
+ * source.apiSource is { url } or { input_text }, as the public endpoint takes it; sourceUrl and
+ * sourceLabel name the page in the history until the summary brings its own title.
  */
 export async function startSummaryJob(source, settings, presets) {
-  return createPublicSummaryJob({
+  const jobId = await createPublicSummaryJob({
     ...source.apiSource,
     language: settings.language,
     summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
+  });
+  await addHistoryEntry({
+    jobId,
+    presetKey: settings.presetKey,
+    sourceUrl: source.sourceUrl,
+    sourceLabel: source.sourceLabel,
+    status: "pending",
+    title: null,
+    summary: null,
+    error: null,
+    createdAt: new Date().toISOString(),
   });
 }

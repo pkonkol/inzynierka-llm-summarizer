@@ -40,6 +40,11 @@ export function fetchSupportedLanguages() {
   return request("/api/v1/meta/languages");
 }
 
+/** Job status and, once completed, its summary_data; throws with the API's detail message. */
+export function fetchJobStatus(_jobId) {
+  throw new Error("not implemented");
+}
+
 /** Creates a public summary job; resolves to its job_id or throws with the API's detail message. */
 export async function createPublicSummaryJob(payload) {
   const { job_id } = await request("/api/v1/public/summarize", {

@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Podsumowania",
-  "version": "0.1.0",
-  "description": "Podsumuj bieżącą stronę jednym kliknięciem.",
+  "version": "0.2.0",
+  "description": "Podsumuj bieżącą stronę albo link w panelu bocznym.",
+  "minimum_chrome_version": "116",
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Podsumuj tę stronę"
+    "default_title": "Otwórz panel Podsumowań"
   },
-  "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": [
-    "https://llm-summarizer-backend-644995789676.europe-central2.run.app/",
-    "http://127.0.0.1:8000/"
-  ]
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel", "contextMenus"],
+  "host_permissions": ["<all_urls>"]
 }

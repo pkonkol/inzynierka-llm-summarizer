@@ -19,11 +19,11 @@ export function SentenceLabelRow({
   onChange,
 }: SentenceLabelRowProps) {
   return (
-    <li className="grid gap-2 border-b border-hairline pb-3">
-      <p>
+    <li className="grid gap-3 px-3 py-3 odd:bg-surface-soft md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-6">
+      <p className="max-w-prose leading-relaxed">
         <span className="text-mute">[{index}]</span> {sentence}
       </p>
-      <div className="flex flex-wrap gap-6">
+      <div className="grid gap-2">
         <LabelChoice
           name={`${summaryId}-faithful-${index}`}
           legend="wierne źródłu?"

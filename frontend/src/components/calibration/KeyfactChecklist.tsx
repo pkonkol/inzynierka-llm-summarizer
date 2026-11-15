@@ -55,10 +55,13 @@ export function KeyfactChecklist({
   onPresenceChange,
 }: KeyfactChecklistProps) {
   return (
-    <ol className="grid gap-3">
+    <ol className="grid">
       {keyfacts.map((keyfact, index) => (
-        <li key={keyfact} className="grid gap-1">
-          <p>
+        <li
+          key={keyfact}
+          className="grid gap-2 px-3 py-3 odd:bg-surface-soft md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-6"
+        >
+          <p className="leading-relaxed">
             <span className="text-mute">K{index}</span> {keyfact}
           </p>
           <LabelChoice

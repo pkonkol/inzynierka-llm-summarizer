@@ -87,3 +87,13 @@ async def test_case_3_a_closing_tag_inside_a_source_does_not_end_its_block(
     assert prompt.count("</related_source>") == 1
     block = prompt.split('<related_source id="1"', 1)[1].split("</related_source>", 1)[0]
     assert "Ignore previous instructions" in block
+
+
+async def test_rv11_one_citation_form_and_none_for_silent_sources(sent_prompts: list[str]) -> None:
+    await assessment.generate_assessment(_request([_related(1)]))
+
+    prompt = sent_prompts[0]
+    assert "at the end of the sentence" in prompt
+    assert "never name it in the sentence" in prompt
+    assert "according to" not in prompt.lower()
+    assert "do not cover a claim cites nothing" in prompt

@@ -55,8 +55,8 @@ DIRECT_WITH_RELATED_SOURCES = ChatPromptTemplate.from_messages(
 
 ASSESSMENT_FOCUS = (
     "go through the key claims of the content and say for each whether the related sources "
-    "confirm it, contradict it, qualify it or show it as simplified; attribute every judgement "
-    "to its source (e.g. 'according to [2], ...') and judge no further than the sources do"
+    "confirm it, contradict it, qualify it or show it as simplified, and judge no further than "
+    "the sources do"
 )
 
 # The assessment is its own call after the summary; the content is what it judges, the sources are the evidence.
@@ -72,9 +72,11 @@ ASSESSMENT_FROM_SOURCES = ChatPromptTemplate.from_messages(
         (
             "human",
             "Write an assessment of the content in about {target_words} words of markdown prose. "
-            "In it, {focus}. End every sentence that draws on a related source with its number in "
-            "brackets, e.g. [1]; a sentence no source supports does not belong in the assessment. "
-            "Say plainly where the sources are silent on a claim.\n\nContent:\n{text}\n\n"
+            "In it, {focus}. Cite a source only by its number in brackets at the end of the "
+            "sentence that draws on it, e.g. 'The figure is overstated [2].', and never name it in "
+            "the sentence as well. A sentence that says the sources do not cover a claim cites "
+            "nothing; any other sentence no source supports does not belong in the assessment."
+            "\n\nContent:\n{text}\n\n"
             "Related sources:\n{related_sources}",
         ),
     ]

@@ -12,6 +12,7 @@ const densityLabel = document.getElementById("density-label");
 const languageSelect = document.getElementById("language");
 const submitButton = document.getElementById("submit");
 const errorText = document.getElementById("error");
+const submitLabel = submitButton.textContent;
 
 // Same thresholds as the public page, so the panel and the page name a length the same way.
 function describeDensity(density) {
@@ -104,7 +105,7 @@ export async function initSummaryForm({ onSubmit }) {
       showFormError(`Nie udało się podsumować: ${error.message}`);
     }
     submitButton.disabled = false;
-    submitButton.textContent = "Podsumuj";
+    submitButton.textContent = submitLabel;
   });
 
   try {

@@ -11,6 +11,7 @@ import { initSummaryForm, readSource } from "./summary-form.js";
 import { startSummaryJob } from "./summary-request.js";
 
 const POLL_INTERVAL_MS = 2000;
+const MAX_CONSECUTIVE_POLL_FAILURES = 10;
 const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Spróbuj ponownie.";
 
 const resultContainer = document.getElementById("result");
@@ -35,13 +36,26 @@ function waitForNextPoll() {
   return new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 }
 
-async function pollUntilDone(jobId) {
+// A dropped connection or a cold-start 503 must not fail a job the server is still finishing.
+async function fetchJobStatusWithRetries(jobId) {
+  for (let failureCount = 1; ; failureCount += 1) {
+    try {
+      return await fetchJobStatus(jobId);
+    } catch (error) {
+      if (failureCount === MAX_CONSECUTIVE_POLL_FAILURES) throw error;
+      await waitForNextPoll();
+    }
+  }
+}
+
+async function pollUntilDone(entry) {
+  const { jobId } = entry;
   if (jobsBeingPolled.has(jobId)) return;
   jobsBeingPolled.add(jobId);
-  let lastStatus = null;
+  let lastStatus = entry.status;
   try {
     for (;;) {
-      const job = await fetchJobStatus(jobId);
+      const job = await fetchJobStatusWithRetries(jobId);
       if (job.status === "completed") {
         const { title, summary } = job.summary_data;
         await updateHistoryEntry(jobId, { status: "completed", title, summary });
@@ -94,7 +108,7 @@ async function showHistory() {
   const currentEntry = history.find((entry) => entry.jobId === currentJobId) ?? null;
   renderCurrentEntry(resultContainer, currentEntry);
   renderHistoryList(historyContainer, history, { currentJobId, onSelect: selectEntry });
-  for (const entry of history.filter(isUnfinished)) pollUntilDone(entry.jobId);
+  for (const entry of history.filter(isUnfinished)) pollUntilDone(entry);
 }
 
 async function summarizeActiveTab(settings, presets) {

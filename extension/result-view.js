@@ -10,10 +10,18 @@ function element(tagName, properties = {}, children = []) {
   return created;
 }
 
-// The summary is model output, so the HTML marked produces is sanitized before it reaches the page.
+// A link followed inside the panel would replace the panel itself.
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName !== "A") return;
+  node.setAttribute("target", "_blank");
+  node.setAttribute("rel", "noopener");
+});
+
+// The summary is model output, so the HTML marked produces is sanitized before it reaches the page;
+// images are dropped because a remote one is fetched as soon as it renders.
 function renderMarkdown(markdown) {
   const container = element("div", { className: "markdown" });
-  container.innerHTML = DOMPurify.sanitize(marked.parse(markdown));
+  container.innerHTML = DOMPurify.sanitize(marked.parse(markdown), { FORBID_TAGS: ["img"] });
   return container;
 }
 

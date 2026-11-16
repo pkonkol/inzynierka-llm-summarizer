@@ -32,6 +32,8 @@ def _completed_job() -> dict[str, Any]:
         "language": "en",
         "origin": "public",
         "status": "completed",
+        "context_expansion_mode": "none",
+        "context_expansion": None,
         "summary_data": SUMMARY_DATA,
         "resolved_length": {"target_words": 120, "target_sentences": 6},
         "fact_check": {
@@ -202,6 +204,37 @@ async def test_case_8_9_failure_marks_fact_check_failed_and_keeps_summary(
 
     state = _fact_check_state(jobs_collection)
     assert state["status"] == "failed"
-    assert state["error"]
+    assert (
+        state["error"] == fact_check_runner.FAILED_MESSAGE
+    )  # rv3: no provider detail reaches visitors
     assert state["text"] is None
     assert _fields_outside_fact_check(jobs_collection) <= {"updated_at"}
+
+
+async def test_rv1_the_result_is_written_only_over_a_running_fact_check(
+    jobs_collection: AsyncMock, assess: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _search_returning(monkeypatch, return_value=_expansion([_related(1)]))
+
+    await fact_check_runner.run_fact_check("j", SOURCE_TEXT)
+
+    final_filter = jobs_collection.update_one.call_args_list[-1].args[0]
+    assert final_filter == {"job_id": "j", "fact_check.status": "running"}
+
+
+async def test_rv5_a_job_with_web_context_reuses_its_search(
+    jobs_collection: AsyncMock, assess: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stored = _expansion([_related(1), _related(2)])
+    jobs_collection.find_one.return_value = {
+        **_completed_job(),
+        "context_expansion_mode": "staged",
+        "context_expansion": stored.model_dump(),
+    }
+    search = _search_returning(monkeypatch, side_effect=AssertionError("searched twice"))
+
+    await fact_check_runner.run_fact_check("j", SOURCE_TEXT)
+
+    search.assert_not_awaited()
+    assert assess.await_args.args[0].related_sources == stored.selected
+    assert _fact_check_state(jobs_collection)["status"] == "completed"

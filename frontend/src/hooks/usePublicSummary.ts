@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
 import type {
@@ -39,6 +39,11 @@ function toFactCheckView(factCheck: FactCheck): FactCheckView {
   return { status: "completed", text: factCheck.text, sources: factCheck.sources };
 }
 
+const FACT_CHECK_UNREACHABLE: FactCheckView = {
+  status: "failed",
+  message: "Nie udało się pobrać wyniku sprawdzania faktów.",
+};
+
 const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Spróbuj ponownie.";
 
 // Lives only in component state, so a reload starts clean: the page keeps nothing for the
@@ -46,27 +51,37 @@ const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Sp
 export function usePublicSummary() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [state, setState] = useState<PublicSummaryState>({ phase: "idle" });
+  // Set together with jobId: a reply for a job the visitor has already moved on from is dropped.
+  const activeJobIdRef = useRef<string | null>(null);
 
-  const submit = useCallback(async (payload: PublicSummarizeRequest) => {
-    setState({ phase: "working" });
-    try {
-      const { job_id } = await createPublicSummaryJob(payload);
-      setJobId(job_id);
-    } catch (error) {
-      setState({ phase: "error", message: `Nie udało się podsumować: ${errorText(error)}` });
-    }
+  const trackJob = useCallback((nextJobId: string | null) => {
+    activeJobIdRef.current = nextJobId;
+    setJobId(nextJobId);
   }, []);
+
+  const submit = useCallback(
+    async (payload: PublicSummarizeRequest) => {
+      setState({ phase: "working" });
+      try {
+        const { job_id } = await createPublicSummaryJob(payload);
+        trackJob(job_id);
+      } catch (error) {
+        setState({ phase: "error", message: `Nie udało się podsumować: ${errorText(error)}` });
+      }
+    },
+    [trackJob],
+  );
 
   const reloadJob = useCallback(async () => {
     if (jobId === null) return;
     try {
       const job = await getJobStatus(jobId);
-      if (isJobInProgress(job.status)) return;
+      if (activeJobIdRef.current !== jobId || isJobInProgress(job.status)) return;
 
       if (job.status === "completed" && job.summary_data !== null) {
         const factCheck = job.fact_check === null ? null : toFactCheckView(job.fact_check);
         // The summary shows at once; polling goes on until the fact check under it settles.
-        if (factCheck?.status !== "working") setJobId(null);
+        if (factCheck?.status !== "working") trackJob(null);
         setState({
           phase: "done",
           summary: job.summary_data,
@@ -76,7 +91,7 @@ export function usePublicSummary() {
         });
         return;
       }
-      setJobId(null);
+      trackJob(null);
       logger.warn("public summary job did not complete", { jobId, status: job.status });
       setState({
         phase: "error",
@@ -88,19 +103,25 @@ export function usePublicSummary() {
               : GENERATION_FAILED_MESSAGE,
       });
     } catch (error) {
-      setJobId(null);
-      setState({
-        phase: "error",
-        message: `Nie udało się pobrać podsumowania: ${errorText(error)}`,
-      });
+      if (activeJobIdRef.current !== jobId) return;
+      trackJob(null);
+      // A summary already on screen stays; only the fact check still being fetched is lost.
+      setState((current) =>
+        current.phase === "done"
+          ? { ...current, factCheck: FACT_CHECK_UNREACHABLE }
+          : { phase: "error", message: `Nie udało się pobrać podsumowania: ${errorText(error)}` },
+      );
     }
-  }, [jobId]);
+  }, [jobId, trackJob]);
 
   // Shows the result of a job created elsewhere (the browser extension).
-  const followJob = useCallback((handedOverJobId: string) => {
-    setState({ phase: "working" });
-    setJobId(handedOverJobId);
-  }, []);
+  const followJob = useCallback(
+    (handedOverJobId: string) => {
+      setState({ phase: "working" });
+      trackJob(handedOverJobId);
+    },
+    [trackJob],
+  );
 
   useListPolling(reloadJob, true, jobId !== null);
 

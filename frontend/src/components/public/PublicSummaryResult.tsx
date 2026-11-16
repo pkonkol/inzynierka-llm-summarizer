@@ -73,7 +73,7 @@ function FactCheckBody({ factCheck }: { factCheck: FactCheckView }) {
     case "working":
       return <p className="text-caption text-mute">Sprawdzam fakty w innych źródłach...</p>;
     case "failed":
-      return <Alert tone="danger">Nie udało się sprawdzić faktów: {factCheck.message}</Alert>;
+      return <Alert tone="danger">{factCheck.message}</Alert>;
     case "completed":
       return (
         <>

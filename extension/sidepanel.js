@@ -78,13 +78,10 @@ async function storeCompletedJob(jobId, job, lastStatus) {
   return isFactCheckWorking;
 }
 
-// A summary already shown stays shown when only the fact check under it can no longer be fetched.
+// A summary already shown stays shown, and its fact check stays in progress: the server still
+// finishes it, and the panel asks again the next time it opens.
 async function storePollFailure(jobId, lastStatus, error) {
-  if (lastStatus === "completed") {
-    const factCheck = { status: "failed", error: `nie udało się pobrać wyniku: ${error.message}` };
-    await updateHistoryEntry(jobId, { factCheck });
-    return;
-  }
+  if (lastStatus === "completed") return;
   await updateHistoryEntry(jobId, {
     status: "failed",
     error: `Nie udało się pobrać podsumowania: ${error.message}`,

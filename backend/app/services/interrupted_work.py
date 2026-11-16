@@ -249,13 +249,18 @@ async def cleanup_stale_pending_jobs() -> int:
 async def cleanup_stale_fact_checks() -> int:
     """Marks fact checks left pending/running by a dead process as failed; returns how many.
 
-    Only completed jobs: a job still summarizing has just been resumed and starts its own fact check."""
+    Only finished jobs: a job still summarizing has just been resumed and starts its own fact check.
+    A fact check touches updated_at when it starts, so a fresh one may belong to another live instance."""
     result = await get_jobs_collection().update_many(
-        {"status": "completed", "fact_check.status": {"$in": ["pending", "running"]}},
+        {
+            "status": {"$in": ["completed", "failed"]},
+            "fact_check.status": {"$in": ["pending", "running"]},
+            "updated_at": {"$lt": stale_work_cutoff()},
+        },
         {
             "$set": {
                 "fact_check.status": "failed",
-                "fact_check.error": "Sprawdzanie faktów przerwane przez restart serwera",
+                "fact_check.error": "Sprawdzanie faktów przerwał restart serwera. Spróbuj ponownie.",
                 "updated_at": datetime.now(UTC),
             }
         },

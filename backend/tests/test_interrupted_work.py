@@ -234,7 +234,10 @@ async def test_case_18_19_20_only_unfinished_fact_checks_of_completed_jobs_fail(
 
     query, update = jobs_collection.update_many.call_args.args
     # cs19: a job still summarizing is resumed before cleanup and will start its own fact check.
-    assert query["status"] == "completed"
+    # rv4: a job that failed while summarizing must not keep a pending fact check.
+    assert query["status"] == {"$in": ["completed", "failed"]}
+    # rv1: a fresh fact check may run on another instance that is still alive.
+    assert "updated_at" in query
     # cs20: completed fact checks and jobs without one stay as they are.
     assert query["fact_check.status"] == {"$in": ["pending", "running"]}
     assert update["$set"]["fact_check.status"] == "failed"

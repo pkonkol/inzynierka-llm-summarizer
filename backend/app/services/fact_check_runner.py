@@ -17,6 +17,7 @@ from .llm.assessment import generate_assessment
 log = structlog.get_logger(__name__)
 
 NO_SOURCES_TEXT = "Nie znaleziono źródeł do porównania."
+FAILED_MESSAGE = "Nie udało się sprawdzić faktów. Spróbuj ponownie później."
 
 
 @track_background_work("fact_check")
@@ -33,8 +34,9 @@ async def run_fact_check(job_id: str, source_text: str) -> None:
         await _set_fact_check_fields(jobs_collection, job_id, {"status": "running"})
         log.info("fact check started")
         fact_check = await _check_facts(job, source_text, started_at)
+        # A fact check that startup cleanup already failed stays failed: clients stopped polling it.
         await jobs_collection.update_one(
-            {"job_id": job_id},
+            {"job_id": job_id, "fact_check.status": "running"},
             {"$set": {"fact_check": fact_check.model_dump(), "updated_at": datetime.now(UTC)}},
         )
         log.info(
@@ -45,7 +47,7 @@ async def run_fact_check(job_id: str, source_text: str) -> None:
     except Exception as exc:
         log.exception("fact check failed", error_type=type(exc).__name__)
         await _set_fact_check_fields(
-            jobs_collection, job_id, {"status": "failed", "error": str(exc)}
+            jobs_collection, job_id, {"status": "failed", "error": FAILED_MESSAGE}
         )
     finally:
         structlog.contextvars.unbind_contextvars("job_id")
@@ -56,9 +58,7 @@ def spawn_fact_check(job_id: str, source_text: str) -> None:
 
 
 async def _check_facts(job: dict[str, Any], source_text: str, started_at: datetime) -> FactCheck:
-    context_expansion = await expand_context(
-        source_text, job["source_url"], "staged", job["model_provider"], job["model_name"]
-    )
+    context_expansion = await _search_related_sources(job, source_text)
     if not context_expansion.selected:
         return _completed(NO_SOURCES_TEXT, context_expansion, UsageMetadata(), started_at)
 
@@ -74,6 +74,15 @@ async def _check_facts(job: dict[str, Any], source_text: str, started_at: dateti
         )
     )
     return _completed(assessment.text, context_expansion, assessment.usage, started_at)
+
+
+async def _search_related_sources(job: dict[str, Any], source_text: str) -> ContextExpansionResult:
+    """The web context toggle already ran the same staged search for the summary; paying for it twice buys nothing."""
+    if job["context_expansion_mode"] == "staged":
+        return ContextExpansionResult.model_validate(job["context_expansion"])
+    return await expand_context(
+        source_text, job["source_url"], "staged", job["model_provider"], job["model_name"]
+    )
 
 
 def _completed(

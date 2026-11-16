@@ -68,7 +68,7 @@ function factCheckBody(factCheck) {
       return [
         element("p", {
           className: "error",
-          textContent: `Nie udało się sprawdzić faktów: ${factCheck.error}`,
+          textContent: factCheck.error,
         }),
       ];
     case "completed":

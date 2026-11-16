@@ -36,7 +36,7 @@ from app.services.calibration_files import (
     read_sample,
     write_predictions,
 )
-from app.services.llm import LlmOutputError
+from app.services.llm import LlmOutputError, validate_model
 from app.services.metrics.coherence import COHERENCE_PROMPT_VERSION, judge_coherence
 from app.services.metrics.cross import PAIRWISE_WITH_INPUT, evaluate_pairwise_cross_deepeval
 from app.services.metrics.deepeval import evaluate_summarization_metric
@@ -106,6 +106,9 @@ async def run_candidate(
     limit: int | None,
     with_reference: bool,
 ) -> Path:
+    validate_model(
+        judge.provider, judge.name
+    )  # outside the per-item catch, so it is never stored as a judge answer
     sample = read_sample(data_dir)
     labels = read_labels()
     negatives = (
@@ -227,14 +230,6 @@ async def _summarization_reference(
         write_predictions(path, predictions)
 
 
-def candidates_outside_the_catalog() -> list[str]:
-    return [
-        judge.model_id()
-        for judge in JUDGE_CANDIDATES
-        if judge.name not in settings.supported_models.get(judge.provider, [])
-    ]
-
-
 def run_all_candidates(
     split: CalibrationSplit, limit: int | None, with_reference: bool
 ) -> list[str]:
@@ -288,10 +283,6 @@ def main() -> None:
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
     if args.all_candidates:
-        # A model missing from the catalog would store every item as an error that later runs skip.
-        missing = candidates_outside_the_catalog()
-        if missing:
-            raise SystemExit(f"judge candidates outside SUPPORTED_MODELS: {', '.join(missing)}")
         failed = run_all_candidates(args.split, args.limit, args.summarization_metric)
         if failed:
             raise SystemExit(f"failed judge candidates: {', '.join(failed)}")

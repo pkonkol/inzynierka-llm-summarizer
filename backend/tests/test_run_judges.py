@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import sys
 from pathlib import Path
@@ -5,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
+from app.services.metrics.fact_level_judges import JudgeModelRef
 from calibration import run_judges
 from calibration.run_judges import JUDGE_CANDIDATES
 
@@ -86,17 +88,14 @@ def test_all_candidates_continue_after_a_failed_candidate(monkeypatch: pytest.Mo
     ]
 
 
-@pytest.mark.usefixtures("default_catalog")
-def test_all_candidates_refuse_to_start_with_a_model_outside_the_catalog(
-    monkeypatch: pytest.MonkeyPatch,
+def test_a_model_outside_the_catalog_stops_the_run_before_any_item_is_stored(
+    tmp_path: Path,
 ) -> None:
-    catalog_without_first = {
-        provider: [name for name in names if name != JUDGE_CANDIDATES[0].name]
-        for provider, names in Settings.model_fields["supported_models"].default.items()
-    }
-    monkeypatch.setattr(run_judges.settings, "supported_models", catalog_without_first)
-    monkeypatch.setattr(run_judges.subprocess, "run", pytest.fail)
-    monkeypatch.setattr(sys, "argv", _all_candidates_argv())
+    judge_outside_the_catalog = JudgeModelRef("openrouter", "example/not-in-the-catalog")
 
-    with pytest.raises(SystemExit, match=JUDGE_CANDIDATES[0].model_id()):
-        run_judges.main()
+    with pytest.raises(ValueError, match="Unsupported model name"):
+        asyncio.run(
+            run_judges.run_candidate(tmp_path, judge_outside_the_catalog, "test", None, False)
+        )
+
+    assert list(tmp_path.rglob("*.json")) == []

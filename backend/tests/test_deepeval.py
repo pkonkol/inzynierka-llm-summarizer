@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.config import Settings
+from app.core.config import Settings, settings
 from app.services.metrics import deepeval
 
 
@@ -16,9 +16,15 @@ def test_deepeval_judge_model_follows_a_changed_setting(monkeypatch: pytest.Monk
     first_judge = {"model_provider": "openrouter", "model_name": "qwen/qwen3.8-flash"}
     second_judge = {"model_provider": "openrouter", "model_name": "z-ai/glm-5.3-flash"}
 
-    first = deepeval.get_deepeval_judge_model(Settings(deepeval_judge_model=first_judge))
-    second = deepeval.get_deepeval_judge_model(Settings(deepeval_judge_model=second_judge))
-    first_again = deepeval.get_deepeval_judge_model(Settings(deepeval_judge_model=first_judge))
+    first = deepeval.get_deepeval_judge_model(
+        settings.model_copy(update={"deepeval_judge_model": first_judge})
+    )
+    second = deepeval.get_deepeval_judge_model(
+        settings.model_copy(update={"deepeval_judge_model": second_judge})
+    )
+    first_again = deepeval.get_deepeval_judge_model(
+        settings.model_copy(update={"deepeval_judge_model": first_judge})
+    )
 
     assert (first, second, first_again) == (
         "openrouter:qwen/qwen3.8-flash",

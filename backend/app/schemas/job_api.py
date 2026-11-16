@@ -8,6 +8,7 @@ from pydantic import Field, HttpUrl, model_validator
 
 from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
+from .fact_check import FactCheck
 from .job_db import JobErrorCode, JobMetrics
 from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
@@ -109,6 +110,7 @@ class JobStatusResponse(ApiModel):
     origin: JobOrigin
     context_expansion_mode: ContextExpansionMode = "none"
     context_expansion: ContextExpansionResult | None = None
+    fact_check: FactCheck | None = None
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics

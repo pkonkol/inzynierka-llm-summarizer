@@ -105,7 +105,7 @@ async def test_case_24_the_web_context_toggle_maps_to_a_mode(
 ) -> None:
     queue = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
-    monkeypatch.setattr(public_summarize, "enforce_public_context_expansion_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", AsyncMock())
     monkeypatch.setattr(public_summarize, "queue_summarization_job", queue)
     payload = PublicSummarizeRequest.model_validate(
         {"input_text": "An article to summarize.", **toggle}
@@ -132,12 +132,11 @@ async def test_the_daily_context_expansion_budget_refuses_once_spent(
     public_jobs.find_one.return_value = {"created_at": datetime.now(UTC) - timedelta(hours=23)}
 
     with pytest.raises(HTTPException) as refused:
-        await rate_limit.enforce_public_context_expansion_limit()
+        await rate_limit.enforce_public_web_search_limit()
 
     assert refused.value.status_code == 429
     assert refused.value.headers is not None
     assert 3590 <= int(refused.value.headers["Retry-After"]) <= 3601
-    assert public_jobs.count_documents.call_args.args[0]["context_expansion_mode"] == "staged"
 
 
 async def test_the_budget_is_checked_only_when_the_toggle_is_on(
@@ -145,7 +144,7 @@ async def test_the_budget_is_checked_only_when_the_toggle_is_on(
 ) -> None:
     budget_check = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
-    monkeypatch.setattr(public_summarize, "enforce_public_context_expansion_limit", budget_check)
+    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", budget_check)
     monkeypatch.setattr(public_summarize, "queue_summarization_job", AsyncMock())
 
     for add_web_context in (False, True):
@@ -168,3 +167,76 @@ def test_the_public_endpoint_rejects_a_context_section() -> None:
                 "summary_spec": {"context_section": {"stance": "supplement"}},
             }
         )
+
+
+def _queued_with(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+    queue = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "queue_summarization_job", queue)
+    return queue
+
+
+@pytest.mark.parametrize(
+    ("toggle", "expected"),
+    [
+        pytest.param({"check_facts": True}, True, id="case_13_toggle_on"),
+        pytest.param({}, False, id="case_14_toggle_omitted"),
+    ],
+)
+async def test_case_13_14_the_fact_check_toggle_reaches_the_queue(
+    monkeypatch: pytest.MonkeyPatch, toggle: dict, expected: bool
+) -> None:
+    queue = _queued_with(monkeypatch)
+    payload = PublicSummarizeRequest.model_validate({"url": "https://example.com/a", **toggle})
+
+    await public_summarize.create_public_summarize_job(
+        payload, MagicMock(), _request("203.0.113.9")
+    )
+
+    assert queue.await_args.kwargs["check_facts"] is expected
+
+
+async def test_case_15_pasted_text_can_be_fact_checked(monkeypatch: pytest.MonkeyPatch) -> None:
+    queue = _queued_with(monkeypatch)
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", "check_facts": True}
+    )
+
+    await public_summarize.create_public_summarize_job(
+        payload, MagicMock(), _request("203.0.113.9")
+    )
+
+    assert queue.await_args.kwargs["check_facts"] is True
+
+
+async def test_case_16_the_budget_is_checked_for_a_fact_check_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    budget_check = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
+    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", budget_check)
+    monkeypatch.setattr(public_summarize, "queue_summarization_job", AsyncMock())
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", "check_facts": True}
+    )
+
+    await public_summarize.create_public_summarize_job(
+        payload, MagicMock(), _request("203.0.113.9")
+    )
+
+    budget_check.assert_awaited_once()
+
+
+async def test_case_16_17_one_query_counts_web_context_or_fact_check_jobs(
+    public_jobs: AsyncMock,
+) -> None:
+    public_jobs.count_documents.return_value = 0
+
+    await rate_limit.enforce_public_web_search_limit()
+
+    public_jobs.count_documents.assert_awaited_once()
+    query = public_jobs.count_documents.call_args.args[0]
+    assert query["origin"] == "public"
+    assert {"context_expansion_mode": "staged"} in query["$or"]
+    assert {"fact_check": {"$ne": None}} in query["$or"]

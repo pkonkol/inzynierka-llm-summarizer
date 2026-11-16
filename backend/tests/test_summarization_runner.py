@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.config import settings
 from app.schemas.context_expansion import ContextExpansionResult, RelatedSource
-from app.schemas.summary import UsageMetadata
+from app.schemas.summary import LlmSummaryResult, UsageMetadata
 from app.services import summarization_runner
 from app.services.context_expansion import ContextExpansionError
 
@@ -144,3 +144,95 @@ async def test_case_23_context_expansion_failure_sets_error_code(
     failure = staged_job.update_one.call_args.args[1]["$set"]
     assert failure["status"] == "failed"
     assert failure["error_code"] == "context_expansion_failed"
+
+
+ARTICLE_TEXT = "A short article about a topic. " * 10
+PENDING_FACT_CHECK = {
+    "status": "pending",
+    "text": None,
+    "sources": [],
+    "context_expansion": None,
+    "usage": None,
+    "duration_ms": None,
+    "error": None,
+}
+
+
+def _summary_result() -> LlmSummaryResult:
+    return LlmSummaryResult(
+        summary="Summary.",
+        source_url="https://example.com/long",
+        usage=UsageMetadata(),
+        raw_metadata={},
+        raw_output="{}",
+        input_text=ARTICLE_TEXT,
+        prompt_template=[],
+        prompt_params={},
+    )
+
+
+@pytest.fixture
+def fact_check_spawns(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    spawn = MagicMock()
+    monkeypatch.setattr(summarization_runner, "spawn_fact_check", spawn, raising=False)
+    return spawn
+
+
+def _job_runner(
+    monkeypatch: pytest.MonkeyPatch, fact_check: dict | None, summary: AsyncMock
+) -> AsyncMock:
+    collection = AsyncMock()
+    collection.find_one.return_value = {**_job("public"), "fact_check": fact_check}
+    monkeypatch.setattr(summarization_runner, "get_jobs_collection", lambda: collection)
+    monkeypatch.setattr(
+        summarization_runner,
+        "extract_text_from_url",
+        AsyncMock(return_value={"text": ARTICLE_TEXT}),
+    )
+    monkeypatch.setattr(summarization_runner, "generate_title", AsyncMock(return_value="Title"))
+    monkeypatch.setattr(summarization_runner, "generate_summary", summary)
+    monkeypatch.setattr(summarization_runner, "spawn_metrics_task", lambda coro: coro.close())
+    return collection
+
+
+async def test_case_10_spawns_fact_check_after_the_summary_is_stored(
+    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
+) -> None:
+    collection = _job_runner(
+        monkeypatch, PENDING_FACT_CHECK, AsyncMock(return_value=_summary_result())
+    )
+    status_at_spawn: list[str] = []
+    fact_check_spawns.side_effect = lambda *_args: status_at_spawn.append(
+        _all_set_fields(collection)["status"]
+    )
+
+    await summarization_runner.run_summarization_job("j")
+
+    fact_check_spawns.assert_called_once_with("j", ARTICLE_TEXT)
+    assert status_at_spawn == ["completed"]
+
+
+async def test_case_11_does_not_spawn_fact_check_by_default(
+    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
+) -> None:
+    _job_runner(monkeypatch, None, AsyncMock(return_value=_summary_result()))
+
+    await summarization_runner.run_summarization_job("j")
+
+    fact_check_spawns.assert_not_called()
+
+
+async def test_case_12_failed_summary_fails_the_fact_check_without_spawning_it(
+    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
+) -> None:
+    collection = _job_runner(
+        monkeypatch, PENDING_FACT_CHECK, AsyncMock(side_effect=RuntimeError("model down"))
+    )
+
+    await summarization_runner.run_summarization_job("j")
+
+    fact_check_spawns.assert_not_called()
+    failure = _all_set_fields(collection)
+    assert failure["status"] == "failed"
+    assert failure["fact_check.status"] == "failed"
+    assert failure["fact_check.error"]

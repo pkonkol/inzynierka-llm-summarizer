@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import type { PublicSummaryState } from "../../hooks/usePublicSummary";
 import type {
   ContextExpansionResult,
+  FactCheck,
   RelatedSource,
   SummaryResponse,
 } from "../../types/api.generated";
@@ -60,6 +61,10 @@ function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansi
       ) : null}
     </div>
   );
+}
+
+export function FactCheckSection({ factCheck }: { factCheck: FactCheck }): React.JSX.Element {
+  throw new Error(`not implemented: ${factCheck.status}`);
 }
 
 function ResultState({ state }: { state: PublicSummaryState }) {

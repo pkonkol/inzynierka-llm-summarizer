@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
+from .fact_check import FactCheck
 from .shared_metrics import (
     DeepevalItem,
     SourceMetrics,
@@ -42,6 +43,7 @@ class JobDocument(BaseModel):
         "none"  # jobs stored before context expansion had none
     )
     context_expansion: ContextExpansionResult | None = None
+    fact_check: FactCheck | None = None
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)

@@ -52,3 +52,9 @@ DIRECT_WITH_RELATED_SOURCES = ChatPromptTemplate.from_messages(
         _REMINDER_MESSAGE,
     ]
 )
+
+ASSESSMENT_FOCUS = (
+    "go through the key claims of the content and say for each whether the related sources "
+    "confirm it, contradict it, qualify it or show it as simplified; attribute every judgement "
+    "to its source (e.g. 'according to [2], ...') and judge no further than the sources do"
+)

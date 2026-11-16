@@ -1104,6 +1104,24 @@ export interface components {
             /** Target Sentences */
             target_sentences?: number | null;
         };
+        /** FactCheck */
+        FactCheck: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Text */
+            text: string | null;
+            /** Sources */
+            sources: components["schemas"]["RelatedSource"][];
+            context_expansion: components["schemas"]["ContextExpansionResult"] | null;
+            usage: components["schemas"]["UsageMetadata"] | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Error */
+            error: string | null;
+        };
         /** GoldenMetrics */
         "GoldenMetrics-Input": {
             source: components["schemas"]["SourceMetrics"];
@@ -1281,6 +1299,7 @@ export interface components {
              */
             context_expansion_mode: "none" | "single_search" | "staged";
             context_expansion: components["schemas"]["ContextExpansionResult"] | null;
+            fact_check: components["schemas"]["FactCheck"] | null;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
@@ -1646,6 +1665,7 @@ export type EvaluationSetExportResponse = components['schemas']['EvaluationSetEx
 export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImportRequest'];
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
+export type FactCheck = components['schemas']['FactCheck'];
 export type GoldenMetricsInput = components['schemas']['GoldenMetrics-Input'];
 export type GoldenMetricsOutput = components['schemas']['GoldenMetrics-Output'];
 export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];

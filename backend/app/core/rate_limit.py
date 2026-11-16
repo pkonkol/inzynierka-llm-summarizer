@@ -50,7 +50,7 @@ async def enforce_public_rate_limit(request: Request) -> None:
 _CONTEXT_EXPANSION_WINDOW = timedelta(hours=24)
 
 
-async def enforce_public_context_expansion_limit() -> None:
+async def enforce_public_web_search_limit() -> None:
     """One budget for every visitor together, since a per-IP limit does not stop a pool of addresses.
     Counted from the jobs themselves; like the per-IP limit, parallel requests can overshoot by a few."""
     now = datetime.now(UTC)

@@ -15,7 +15,7 @@ from ._base import (
     parse_structured_output,
     prompt_texts,
 )
-from ._prompts import DIRECT_WITH_RELATED_SOURCES, EXTRACT_FROM_CONTENT
+from ._prompts import ASSESSMENT_FOCUS, DIRECT_WITH_RELATED_SOURCES, EXTRACT_FROM_CONTENT
 
 log = structlog.get_logger(__name__)
 
@@ -47,12 +47,7 @@ _SECTION_FOCUS = {
         "what other sources add",
         "report what the related sources add: facts, background or perspectives the content lacks",
     ),
-    "assessment": (
-        "how other sources assess the content",
-        "go through the key claims of the content and say for each whether the related sources "
-        "confirm it, contradict it, qualify it or show it as simplified; attribute every judgement "
-        "to its source (e.g. 'according to [2], ...') and judge no further than the sources do",
-    ),
+    "assessment": ("how other sources assess the content", ASSESSMENT_FOCUS),
 }
 
 

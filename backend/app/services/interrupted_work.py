@@ -245,6 +245,11 @@ async def cleanup_stale_pending_jobs() -> int:
     return result.modified_count
 
 
+async def cleanup_stale_fact_checks() -> int:
+    """Marks fact checks left pending/running by a dead process as failed; returns how many."""
+    raise NotImplementedError
+
+
 async def cleanup_stale_evaluation_runs() -> int:
     result = await get_evaluation_runs_collection().update_many(
         {**_UNFINISHED, "heartbeat_at": {"$lt": stale_work_cutoff()}},

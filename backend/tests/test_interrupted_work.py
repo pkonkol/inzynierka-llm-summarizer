@@ -214,6 +214,7 @@ async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.M
         "cleanup_stale_evaluation_runs",
         "cleanup_stale_golden_metrics_passes",
         "cleanup_stale_deepeval_passes",
+        "cleanup_stale_fact_checks",
     ]
     for name in ["_resume_resumable_work", *cleanups]:
         monkeypatch.setattr(interrupted_work, name, record(name))
@@ -222,3 +223,19 @@ async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.M
 
     # Cleaning first would mark every resumable document failed before resume could see it.
     assert calls == ["_resume_resumable_work", *cleanups]
+
+
+async def test_case_18_19_20_only_unfinished_fact_checks_of_completed_jobs_fail(
+    jobs_collection: AsyncMock,
+) -> None:
+    jobs_collection.update_many.return_value.modified_count = 1
+
+    assert await interrupted_work.cleanup_stale_fact_checks() == 1
+
+    query, update = jobs_collection.update_many.call_args.args
+    # cs19: a job still summarizing is resumed before cleanup and will start its own fact check.
+    assert query["status"] == "completed"
+    # cs20: completed fact checks and jobs without one stay as they are.
+    assert query["fact_check.status"] == {"$in": ["pending", "running"]}
+    assert update["$set"]["fact_check.status"] == "failed"
+    assert update["$set"]["fact_check.error"]

@@ -3131,6 +3131,91 @@
         ],
         "title": "ExplicitLength"
       },
+      "FactCheck": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "context_expansion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextExpansionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "text",
+          "sources",
+          "context_expansion",
+          "usage",
+          "duration_ms",
+          "error"
+        ],
+        "title": "FactCheck"
+      },
       "GoldenMetrics-Input": {
         "properties": {
           "source": {
@@ -3572,6 +3657,16 @@
               }
             ]
           },
+          "fact_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "resolved_length": {
             "anyOf": [
               {
@@ -3715,6 +3810,7 @@
           "origin",
           "context_expansion_mode",
           "context_expansion",
+          "fact_check",
           "resolved_length",
           "summary_data",
           "metrics",

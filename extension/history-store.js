@@ -1,4 +1,12 @@
 /**
+ * @typedef {(
+ *   { status: "working" }
+ *   | { status: "failed", error: string }
+ *   | { status: "completed", text: string, sources: { url: string, title: string | null }[] }
+ * )} FactCheckEntry
+ */
+
+/**
  * @typedef {{
  *   jobId: string,
  *   presetKey: string,
@@ -8,6 +16,7 @@
  *   title: string | null,
  *   summary: string | null,
  *   error: string | null,
+ *   factCheck?: FactCheckEntry | null,
  *   createdAt: string,
  * }} HistoryEntry
  */
@@ -36,7 +45,7 @@ export async function addHistoryEntry(entry) {
   });
 }
 
-/** Merges fields (status, title, summary, error) into the entry with this jobId. */
+/** Merges fields (status, title, summary, error, factCheck) into the entry with this jobId. */
 export async function updateHistoryEntry(jobId, fields) {
   await navigator.locks.request(HISTORY_LOCK, async () => {
     const history = await readHistory();

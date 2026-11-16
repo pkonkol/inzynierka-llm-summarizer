@@ -4,7 +4,7 @@ How to install, develop and release the Chrome extension that summarizes the cur
 link in the browser's side panel. Recipes run from the repository root.
 
 - The toolbar icon opens the side panel; right-clicking a link offers **Podsumuj link**.
-- The panel form holds the summary settings (kind, length, language) and the source: the page
+- The panel form holds the summary settings (kind, length, language, fact check) and the source: the page
   address, which the server fetches, or the page text, which the extension extracts with
   Mozilla Readability. A link is always summarized by its address, with the last form settings.
 - Jobs go through the public, rate-limited endpoint. The panel polls them and shows the result;
@@ -67,6 +67,8 @@ Użycie:
 - Prawy przycisk myszy na linku → **Podsumuj link**: panel streści stronę spod linku bez jej otwierania.
 - Ikona 🕘 w panelu pokazuje ostatnie podsumowania. **Otwórz na stronie** pokazuje wynik
   w aplikacji, **Kopiuj** kopiuje go do schowka.
+- **Sprawdź fakty** dopisuje pod streszczeniem ocenę artykułu na tle innych źródeł; pojawia się
+  chwilę po streszczeniu. Wybór zostaje zapamiętany, także dla **Podsumuj link**.
 - „Treść strony” działa także na stronach za logowaniem albo paywallem.
 
 Aktualizacja: podmień zawartość folderu na nowy zip i kliknij ikonę odświeżania przy

@@ -58,11 +58,58 @@ function sourceLink(entry) {
   });
 }
 
+function factCheckBody(factCheck) {
+  switch (factCheck.status) {
+    case "working":
+      return [
+        element("p", { className: "muted", textContent: "Sprawdzam fakty w innych źródłach..." }),
+      ];
+    case "failed":
+      return [
+        element("p", {
+          className: "error",
+          textContent: `Nie udało się sprawdzić faktów: ${factCheck.error}`,
+        }),
+      ];
+    case "completed":
+      return [
+        renderMarkdown(factCheck.text),
+        element(
+          "ol",
+          {},
+          factCheck.sources.map((source, index) =>
+            element("li", {}, [
+              `[${index + 1}] `,
+              element("a", {
+                href: source.url,
+                target: "_blank",
+                rel: "noopener",
+                textContent: source.title ?? source.url,
+              }),
+            ]),
+          ),
+        ),
+      ];
+    default:
+      throw new Error(`unknown fact check status "${factCheck.status}"`);
+  }
+}
+
+function factCheckSection(factCheck) {
+  return element("section", { className: "fact-check" }, [
+    element("h3", { textContent: "Weryfikacja faktów" }),
+    ...factCheckBody(factCheck),
+  ]);
+}
+
 function completedEntry(entry) {
+  // entries saved before the fact check have no factCheck field
+  const factCheck = entry.factCheck ?? null;
   return [
     element("h2", { textContent: entry.title }),
     sourceLink(entry),
     renderMarkdown(entry.summary),
+    ...(factCheck === null ? [] : [factCheckSection(factCheck)]),
     element("div", { className: "actions" }, [
       element("a", {
         className: "button",

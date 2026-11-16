@@ -3,7 +3,13 @@ import { addHistoryEntry } from "./history-store.js";
 
 const SETTINGS_KEY = "lastSettings";
 
-export const DEFAULT_SETTINGS = { source: "url", presetKey: null, density: 0.5, language: "auto" };
+export const DEFAULT_SETTINGS = {
+  source: "url",
+  presetKey: null,
+  density: 0.5,
+  language: "auto",
+  checkFacts: false,
+};
 
 /** The settings of the last submit, or the defaults when nothing was submitted yet. */
 export async function readSavedSettings() {
@@ -36,6 +42,7 @@ export async function startSummaryJob(source, settings, presets) {
     ...source.apiSource,
     language: settings.language,
     summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
+    check_facts: settings.checkFacts,
   });
   await addHistoryEntry({
     jobId,
@@ -46,6 +53,7 @@ export async function startSummaryJob(source, settings, presets) {
     title: null,
     summary: null,
     error: null,
+    factCheck: settings.checkFacts ? { status: "working" } : null,
     createdAt: new Date().toISOString(),
   });
 }
@@ -72,6 +80,7 @@ export async function startLinkSummaryJob(linkUrl) {
       title: null,
       summary: null,
       error: `Nie udało się podsumować: ${error.message}`,
+      factCheck: null,
       createdAt: new Date().toISOString(),
     });
   }

@@ -32,6 +32,25 @@ function describeJobFailure(job) {
   return GENERATION_FAILED_MESSAGE;
 }
 
+function toFactCheckEntry(factCheck) {
+  if (factCheck === null) return null;
+  switch (factCheck.status) {
+    case "pending":
+    case "running":
+      return { status: "working" };
+    case "failed":
+      return { status: "failed", error: factCheck.error };
+    case "completed":
+      return {
+        status: "completed",
+        text: factCheck.text,
+        sources: factCheck.sources.map(({ url, title }) => ({ url, title })),
+      };
+    default:
+      throw new Error(`unknown fact check status "${factCheck.status}"`);
+  }
+}
+
 function waitForNextPoll() {
   return new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 }
@@ -48,6 +67,31 @@ async function fetchJobStatusWithRetries(jobId) {
   }
 }
 
+/** Stores the completed summary; returns whether its fact check still runs and polling must go on. */
+async function storeCompletedJob(jobId, job, lastStatus) {
+  const { title, summary } = job.summary_data;
+  const factCheck = toFactCheckEntry(job.fact_check);
+  const isFactCheckWorking = factCheck?.status === "working";
+  if (lastStatus !== "completed" || !isFactCheckWorking) {
+    await updateHistoryEntry(jobId, { status: "completed", title, summary, factCheck });
+  }
+  return isFactCheckWorking;
+}
+
+// A summary already shown stays shown when only the fact check under it can no longer be fetched.
+async function storePollFailure(jobId, lastStatus, error) {
+  if (lastStatus === "completed") {
+    const factCheck = { status: "failed", error: `nie udało się pobrać wyniku: ${error.message}` };
+    await updateHistoryEntry(jobId, { factCheck });
+    return;
+  }
+  await updateHistoryEntry(jobId, {
+    status: "failed",
+    error: `Nie udało się pobrać podsumowania: ${error.message}`,
+    factCheck: null,
+  });
+}
+
 async function pollUntilDone(entry) {
   const { jobId } = entry;
   if (jobsBeingPolled.has(jobId)) return;
@@ -57,30 +101,31 @@ async function pollUntilDone(entry) {
     for (;;) {
       const job = await fetchJobStatusWithRetries(jobId);
       if (job.status === "completed") {
-        const { title, summary } = job.summary_data;
-        await updateHistoryEntry(jobId, { status: "completed", title, summary });
+        const isFactCheckWorking = await storeCompletedJob(jobId, job, lastStatus);
+        if (!isFactCheckWorking) return;
+      } else if (job.status === "failed") {
+        await updateHistoryEntry(jobId, {
+          status: "failed",
+          error: describeJobFailure(job),
+          factCheck: null,
+        });
         return;
+      } else if (job.status !== lastStatus) {
+        await updateHistoryEntry(jobId, { status: job.status });
       }
-      if (job.status === "failed") {
-        await updateHistoryEntry(jobId, { status: "failed", error: describeJobFailure(job) });
-        return;
-      }
-      if (job.status !== lastStatus) await updateHistoryEntry(jobId, { status: job.status });
       lastStatus = job.status;
       await waitForNextPoll();
     }
   } catch (error) {
-    await updateHistoryEntry(jobId, {
-      status: "failed",
-      error: `Nie udało się pobrać podsumowania: ${error.message}`,
-    });
+    await storePollFailure(jobId, lastStatus, error);
   } finally {
     jobsBeingPolled.delete(jobId);
   }
 }
 
 function isUnfinished(entry) {
-  return entry.status === "pending" || entry.status === "running";
+  const isFactCheckWorking = entry.factCheck?.status === "working"; // entries saved before the fact check have no field
+  return entry.status === "pending" || entry.status === "running" || isFactCheckWorking;
 }
 
 function showView() {

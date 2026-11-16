@@ -1,5 +1,6 @@
 """Shared LLM utilities: model factory, prompt helpers, output parsers."""
 
+import html
 from typing import Any, cast
 
 import structlog
@@ -12,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from ...core.config import settings
+from ...schemas.context_expansion import RelatedSource
 from ...schemas.summary import UsageMetadata
 from ...schemas.summary_spec import (
     NarrativeStance,
@@ -35,6 +37,22 @@ class LlmOutputError(ValueError):
     def __init__(self, message: str, raw_output: str) -> None:
         super().__init__(message)
         self.raw_output = raw_output
+
+
+def neutralize_block_tags(text: str) -> str:
+    """A source quoting the delimiter must not be able to close its block and speak outside it."""
+    return text.replace("<related_source", "&lt;related_source").replace(
+        "</related_source", "&lt;/related_source"
+    )
+
+
+def related_source_blocks(related_sources: list[RelatedSource]) -> str:
+    return "\n\n".join(
+        f'<related_source id="{number}" url="{html.escape(source.url)}">\n'
+        f"{neutralize_block_tags(source.title or '')}\n{neutralize_block_tags(source.excerpt)}\n"
+        "</related_source>"
+        for number, source in enumerate(related_sources, start=1)
+    )
 
 
 def validate_model(model_provider: str, model_name: str) -> None:

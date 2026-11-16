@@ -1,10 +1,7 @@
 """Direct summarization strategy — extractor + abstractor in one LLM call."""
 
-import html
-
 import structlog
 
-from ...schemas.context_expansion import RelatedSource
 from ...schemas.summary import LlmSummaryRequest, LlmSummaryResult
 from ...schemas.summary_spec import ContextSection
 from ._base import (
@@ -12,28 +9,14 @@ from ._base import (
     build_detail_guidance,
     build_language_instruction,
     build_structured_llm,
+    neutralize_block_tags,
     parse_structured_output,
     prompt_texts,
+    related_source_blocks,
 )
 from ._prompts import ASSESSMENT_FOCUS, DIRECT_WITH_RELATED_SOURCES, EXTRACT_FROM_CONTENT
 
 log = structlog.get_logger(__name__)
-
-
-def _neutralize_block_tags(text: str) -> str:
-    """A source quoting the delimiter must not be able to close its block and speak outside it."""
-    return text.replace("<related_source", "&lt;related_source").replace(
-        "</related_source", "&lt;/related_source"
-    )
-
-
-def _related_source_blocks(related_sources: list[RelatedSource]) -> str:
-    return "\n\n".join(
-        f'<related_source id="{number}" url="{html.escape(source.url)}">\n'
-        f"{_neutralize_block_tags(source.title or '')}\n{_neutralize_block_tags(source.excerpt)}\n"
-        "</related_source>"
-        for number, source in enumerate(related_sources, start=1)
-    )
 
 
 _INTEGRATED_CONTEXT_USE = (
@@ -75,8 +58,8 @@ async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
         "text": text,
     }
     if request.related_sources:
-        invoke_params["text"] = _neutralize_block_tags(text)
-        invoke_params["related_sources"] = _related_source_blocks(request.related_sources)
+        invoke_params["text"] = neutralize_block_tags(text)
+        invoke_params["related_sources"] = related_source_blocks(request.related_sources)
         section = request.spec.context_section
         invoke_params["context_use"] = (
             _INTEGRATED_CONTEXT_USE if section is None else _section_context_use(section)

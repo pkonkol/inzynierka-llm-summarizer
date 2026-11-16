@@ -189,7 +189,7 @@ calibration-negatives *args:
 calibration-collect:
     uv run python -m calibration.collect_negatives
 
-# Calibration: run one judge candidate over a split
+# Calibration: run judge candidates over a split (--model or --all-candidates)
 [group('calibration')]
 [working-directory('backend')]
 calibration-judges *args:

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import subprocess
+import sys
 from pathlib import Path
 
 import structlog
@@ -48,12 +50,23 @@ log = structlog.get_logger(__name__)
 
 PROMPT_VERSION = f"{FACT_LEVEL_PROMPT_VERSION}+{COHERENCE_PROMPT_VERSION}"
 _CONCURRENT_ITEMS = 4
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 JUDGE_CANDIDATES: list[JudgeModelRef] = [
-    JudgeModelRef("ollama", "mimo-v2.6:9b"),
-    # floor: expected to miss the threshold
-    JudgeModelRef("openrouter", "inclusionai/ling-3.0-tiny"),
+    # small judges, smallest first: where a judge starts to return a usable verdict
+    JudgeModelRef("openrouter", "liquid/lfm-3-1.7b"),  # floor
+    JudgeModelRef("openrouter", "liquid/lfm-2.5-24b-a2b"),
+    JudgeModelRef("openrouter", "mistralai/ministral-3b-2512"),
+    JudgeModelRef("openrouter", "upstage/solar-mini4"),
+    JudgeModelRef("openrouter", "nvidia/nemotron-3.5-lightning"),
+    JudgeModelRef("openrouter", "google/gemma-3-4b-it"),
+    JudgeModelRef("openrouter", "meta-llama/llama-3.1-8b-instruct"),
+    JudgeModelRef("openrouter", "mistralai/ministral-8b-2512"),
+    JudgeModelRef("openrouter", "ibm-granite/granite-4.2-8b"),
+    JudgeModelRef("openrouter", "prism-ml/ternary-bonsai-2-9b"),  # Qwen3.5 9B in 2-bit weights
     JudgeModelRef("openrouter", "qwen/qwen3.5-9b"),
+    JudgeModelRef("openrouter", "mistralai/ministral-14b-2512"),
+    # the rest, cheapest first
     JudgeModelRef("openrouter", "deepseek/deepseek-v4.1-flash-1017"),
     JudgeModelRef("openrouter", "z-ai/glm-5.3-flash"),
     JudgeModelRef("openrouter", "xiaomi/mimo-v2.6-flash"),
@@ -63,9 +76,11 @@ JUDGE_CANDIDATES: list[JudgeModelRef] = [
     JudgeModelRef("openrouter", "qwen/qwen3.8-flash"),
     JudgeModelRef("openrouter", "openai/gpt-oss-120b"),
     JudgeModelRef("openrouter", "z-ai/glm-5.3"),
-    # ceiling: the model the prompts were tuned on
-    JudgeModelRef("openrouter", "deepseek/deepseek-v4-pro-0813"),
     JudgeModelRef("openrouter", "google/gemini-4-hydrogen"),
+    JudgeModelRef(
+        "openrouter", "deepseek/deepseek-v4-pro-0813"
+    ),  # ceiling: the model the prompts were tuned on
+    JudgeModelRef("ollama", "mimo-v2.6:9b"),  # last: needs the local daemon and a pulled model
 ]
 
 
@@ -213,6 +228,31 @@ async def _summarization_reference(
         write_predictions(path, predictions)
 
 
+def run_all_candidates(split: str, limit: int | None, with_reference: bool) -> list[str]:
+    """Each candidate in its own process: deepeval keeps one judge per process, and one failure must not stop the rest."""
+    failed: list[str] = []
+    for judge in JUDGE_CANDIDATES:
+        command = [
+            sys.executable,
+            "-m",
+            "calibration.run_judges",
+            "--model",
+            judge.model_id(),
+            "--split",
+            split,
+        ]
+        if limit is not None:
+            command += ["--limit", str(limit)]
+        if with_reference:
+            command.append("--summarization-metric")
+        log.info("judge candidate started", model=judge.model_id(), split=split)
+        exit_code = subprocess.run(command, cwd=_BACKEND_ROOT, check=False).returncode
+        if exit_code != 0:
+            log.warning("judge candidate failed", model=judge.model_id(), exit_code=exit_code)
+            failed.append(judge.model_id())
+    return failed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     which_judges = parser.add_mutually_exclusive_group(required=True)
@@ -239,24 +279,25 @@ def main() -> None:
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
     if args.all_candidates:
-        judges = JUDGE_CANDIDATES
-    else:
-        provider, name = args.model.split(":", 1)
-        judges = [JudgeModelRef(provider, name)]
+        failed = run_all_candidates(args.split, args.limit, args.summarization_metric)
+        if failed:
+            raise SystemExit(f"failed judge candidates: {', '.join(failed)}")
+        return
+
+    provider, name = args.model.split(":", 1)
+    # Pairwise and SummarizationMetric run through deepeval, whose judge comes from settings.
+    settings.deepeval_judge_model = {"model_provider": provider, "model_name": name}
     ensure_nltk_resources()
-    for judge in judges:  # one at a time, so a local Ollama judge does not share the GPU
-        # Pairwise and SummarizationMetric run through deepeval, whose judge comes from settings.
-        settings.deepeval_judge_model = {"model_provider": judge.provider, "model_name": judge.name}
-        path = asyncio.run(
-            run_candidate(
-                settings.calibration_data_dir,
-                judge,
-                args.split,
-                args.limit,
-                args.summarization_metric,
-            )
+    path = asyncio.run(
+        run_candidate(
+            settings.calibration_data_dir,
+            JudgeModelRef(provider, name),
+            args.split,
+            args.limit,
+            args.summarization_metric,
         )
-        print(f"predictions: {path}")
+    )
+    print(f"predictions: {path}")
 
 
 if __name__ == "__main__":

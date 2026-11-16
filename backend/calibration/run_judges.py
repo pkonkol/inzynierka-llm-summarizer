@@ -106,9 +106,7 @@ async def run_candidate(
     limit: int | None,
     with_reference: bool,
 ) -> Path:
-    validate_model(
-        judge.provider, judge.name
-    )  # outside the per-item catch, so it is never stored as a judge answer
+    validate_model(judge.provider, judge.name)  # raised here, never stored as a judge answer
     sample = read_sample(data_dir)
     labels = read_labels()
     negatives = (

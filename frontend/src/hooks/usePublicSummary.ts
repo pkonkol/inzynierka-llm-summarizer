@@ -3,12 +3,19 @@ import { useCallback, useState } from "react";
 import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
 import type {
   ContextExpansionResult,
+  FactCheck,
   PublicSummarizeRequest,
+  RelatedSource,
   SummaryResponse,
 } from "../types/api.generated";
 import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
 import { logger } from "../utils/logger";
 import { useListPolling } from "./useListPolling";
+
+export type FactCheckView =
+  | { status: "working" }
+  | { status: "failed"; message: string }
+  | { status: "completed"; text: string; sources: RelatedSource[] };
 
 export type PublicSummaryState =
   | { phase: "idle" }
@@ -18,8 +25,19 @@ export type PublicSummaryState =
       summary: SummaryResponse;
       durationMs: number;
       contextExpansion: ContextExpansionResult | null;
+      factCheck: FactCheckView | null;
     }
   | { phase: "error"; message: string };
+
+function toFactCheckView(factCheck: FactCheck): FactCheckView {
+  if (isJobInProgress(factCheck.status)) return { status: "working" };
+  if (factCheck.status === "failed") {
+    if (factCheck.error === null) throw new Error("a failed fact check has no error");
+    return { status: "failed", message: factCheck.error };
+  }
+  if (factCheck.text === null) throw new Error("a completed fact check has no text");
+  return { status: "completed", text: factCheck.text, sources: factCheck.sources };
+}
 
 const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Spróbuj ponownie.";
 
@@ -45,16 +63,20 @@ export function usePublicSummary() {
       const job = await getJobStatus(jobId);
       if (isJobInProgress(job.status)) return;
 
-      setJobId(null);
       if (job.status === "completed" && job.summary_data !== null) {
+        const factCheck = job.fact_check === null ? null : toFactCheckView(job.fact_check);
+        // The summary shows at once; polling goes on until the fact check under it settles.
+        if (factCheck?.status !== "working") setJobId(null);
         setState({
           phase: "done",
           summary: job.summary_data,
           durationMs: job.duration_ms,
           contextExpansion: job.context_expansion,
+          factCheck,
         });
         return;
       }
+      setJobId(null);
       logger.warn("public summary job did not complete", { jobId, status: job.status });
       setState({
         phase: "error",

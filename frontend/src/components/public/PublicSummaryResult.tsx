@@ -1,9 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { PublicSummaryState } from "../../hooks/usePublicSummary";
+import type { FactCheckView, PublicSummaryState } from "../../hooks/usePublicSummary";
 import type {
   ContextExpansionResult,
-  FactCheck,
   RelatedSource,
   SummaryResponse,
 } from "../../types/api.generated";
@@ -32,6 +31,22 @@ const CHANNEL_LABEL: Record<RelatedSource["channel"], string> = {
   science: "publikacje",
 };
 
+function SourceList({ sources }: { sources: RelatedSource[] }) {
+  return (
+    <ol className="grid gap-1">
+      {sources.map((source, index) => (
+        <li key={source.url}>
+          [{index + 1}]{" "}
+          <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline">
+            {source.title ?? source.url}
+          </a>{" "}
+          <span className="text-mute">· {CHANNEL_LABEL[source.channel]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansionResult }) {
   const failedChannels = contextExpansion.channels.filter((channel) => channel.error !== null);
   return (
@@ -40,17 +55,7 @@ function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansi
       {contextExpansion.selected.length === 0 ? (
         <p className="text-mute">Nie znaleziono pasujących źródeł.</p>
       ) : (
-        <ol className="grid gap-1">
-          {contextExpansion.selected.map((source, index) => (
-            <li key={source.url}>
-              [{index + 1}]{" "}
-              <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline">
-                {source.title ?? source.url}
-              </a>{" "}
-              <span className="text-mute">· {CHANNEL_LABEL[source.channel]}</span>
-            </li>
-          ))}
-        </ol>
+        <SourceList sources={contextExpansion.selected} />
       )}
       {failedChannels.length > 0 ? (
         <p className="text-mute">
@@ -63,8 +68,35 @@ function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansi
   );
 }
 
-export function FactCheckSection({ factCheck }: { factCheck: FactCheck }): React.JSX.Element {
-  throw new Error(`not implemented: ${factCheck.status}`);
+function FactCheckBody({ factCheck }: { factCheck: FactCheckView }) {
+  switch (factCheck.status) {
+    case "working":
+      return <p className="text-caption text-mute">Sprawdzam fakty w innych źródłach...</p>;
+    case "failed":
+      return <Alert tone="danger">Nie udało się sprawdzić faktów: {factCheck.message}</Alert>;
+    case "completed":
+      return (
+        <>
+          <div className="markdown max-w-measure font-reading text-reading">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{factCheck.text}</ReactMarkdown>
+          </div>
+          {factCheck.sources.length > 0 ? (
+            <div className="text-caption">
+              <SourceList sources={factCheck.sources} />
+            </div>
+          ) : null}
+        </>
+      );
+  }
+}
+
+function FactCheckSection({ factCheck }: { factCheck: FactCheckView }) {
+  return (
+    <section className="grid gap-2 border-t border-hairline pt-3">
+      <h3 className="font-medium">Weryfikacja faktów</h3>
+      <FactCheckBody factCheck={factCheck} />
+    </section>
+  );
 }
 
 function ResultState({ state }: { state: PublicSummaryState }) {
@@ -105,7 +137,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
     case "error":
       return <Alert tone="danger">{state.message}</Alert>;
     case "done": {
-      const { summary, durationMs, contextExpansion } = state;
+      const { summary, durationMs, contextExpansion, factCheck } = state;
       const copySummary = () => {
         navigator.clipboard
           .writeText(summaryPlainText(summary))
@@ -118,6 +150,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
           <div className="markdown max-w-measure flex-1 font-reading text-reading">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
           </div>
+          {factCheck !== null ? <FactCheckSection factCheck={factCheck} /> : null}
           {contextExpansion !== null && contextExpansion.mode !== "none" ? (
             <RelatedSources contextExpansion={contextExpansion} />
           ) : null}

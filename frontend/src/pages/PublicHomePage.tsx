@@ -44,6 +44,7 @@ export function PublicHomePage() {
   const [density, setDensity] = useState(DEFAULT_DENSITY);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [addWebContext, setAddWebContext] = useState(false);
+  const [checkFacts, setCheckFacts] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isHandoffErrorDismissed, setIsHandoffErrorDismissed] = useState(false);
 
@@ -95,7 +96,13 @@ export function PublicHomePage() {
       ...presetSpec,
       length: { ...presetLength, slider: density },
     };
-    void submit({ ...source, language, summary_spec: summarySpec, add_web_context: addWebContext });
+    void submit({
+      ...source,
+      language,
+      summary_spec: summarySpec,
+      add_web_context: addWebContext,
+      check_facts: checkFacts,
+    });
   };
 
   return (
@@ -185,6 +192,14 @@ export function PublicHomePage() {
                 className="text-caption text-mute"
               >
                 Dodaj kontekst z sieci
+              </Checkbox>
+              <Checkbox
+                checked={checkFacts}
+                onChange={(event) => setCheckFacts(event.target.checked)}
+                disabled={isWorking}
+                className="text-caption text-mute"
+              >
+                Sprawdź fakty
               </Checkbox>
               <span className="flex flex-1 items-center justify-end gap-3">
                 <kbd className="hidden text-caption text-mute sm:inline">ctrl+enter</kbd>

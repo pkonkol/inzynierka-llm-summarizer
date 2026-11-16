@@ -16,6 +16,7 @@ from ..schemas.job_db import JobErrorCode
 from ..schemas.summary import LlmSummaryRequest, LlmSummaryResult, SummaryResponse
 from ..schemas.summary_spec import ResolvedLength, SummarySpec, resolve_target_length
 from ..services.context_expansion import ContextExpansionError, expand_context
+from ..services.fact_check_runner import spawn_fact_check
 from ..services.job_metrics import (
     store_deepeval_metrics_for_job,
     store_source_metrics_for_job,
@@ -26,6 +27,12 @@ from ..services.llm.title import generate_title
 from ..services.scraper import extract_text_from_url
 
 log = structlog.get_logger(__name__)
+
+
+_FAILED_FACT_CHECK_FIELDS = {
+    "fact_check.status": "failed",
+    "fact_check.error": "Streszczenie nie powstało, więc nie było czego sprawdzać.",
+}
 
 
 class SourceTooLongError(ValueError):
@@ -53,6 +60,7 @@ async def run_summarization_job(job_id: str) -> None:
     model_provider = job["model_provider"]
     processing_strategy = job["processing_strategy"]
     spec = SummarySpec.model_validate(job["summary_spec"])
+    has_fact_check = job.get("fact_check") is not None  # older jobs have no such field
 
     # Bind once here and every log line below this point carries these fields, including
     # ones emitted deep in the scraper, the LLM layer and the metrics writers.
@@ -123,6 +131,8 @@ async def run_summarization_job(job_id: str) -> None:
                     job_id, summary.summary, source_text, spec.output_format
                 )
             )
+        if has_fact_check:
+            spawn_fact_check(job_id, source_text)
 
     except Exception as exc:
         log.exception(
@@ -130,7 +140,7 @@ async def run_summarization_job(job_id: str) -> None:
             error_type=type(exc).__name__,
             duration_ms=int((datetime.now(UTC) - started_at).total_seconds() * 1000),
         )
-        await _store_failed_job(jobs_collection, job_id, exc, started_at)
+        await _store_failed_job(jobs_collection, job_id, exc, started_at, has_fact_check)
     finally:
         structlog.contextvars.unbind_contextvars("job_id", "strategy", "provider", "model", "url")
 
@@ -190,7 +200,11 @@ async def _store_completed_job(
 
 
 async def _store_failed_job(
-    jobs_collection: AsyncCollection, job_id: str, exc: Exception, started_at: datetime
+    jobs_collection: AsyncCollection,
+    job_id: str,
+    exc: Exception,
+    started_at: datetime,
+    has_fact_check: bool,
 ) -> None:
     log.debug("storing failed job")
     finished_at = datetime.now(UTC)
@@ -211,6 +225,7 @@ async def _store_failed_job(
                 if isinstance(exc, (SourceTooLongError, ContextExpansionError))
                 else None,
                 "updated_at": finished_at,
+                **(_FAILED_FACT_CHECK_FIELDS if has_fact_check else {}),
             }
         },
     )

@@ -176,6 +176,7 @@ async def recover_interrupted_work() -> None:
         stale_runs=await cleanup_stale_evaluation_runs(),
         stale_golden_metrics_passes=await cleanup_stale_golden_metrics_passes(),
         stale_deepeval_passes=await cleanup_stale_deepeval_passes(),
+        stale_fact_checks=await cleanup_stale_fact_checks(),
     )
 
 
@@ -246,8 +247,20 @@ async def cleanup_stale_pending_jobs() -> int:
 
 
 async def cleanup_stale_fact_checks() -> int:
-    """Marks fact checks left pending/running by a dead process as failed; returns how many."""
-    raise NotImplementedError
+    """Marks fact checks left pending/running by a dead process as failed; returns how many.
+
+    Only completed jobs: a job still summarizing has just been resumed and starts its own fact check."""
+    result = await get_jobs_collection().update_many(
+        {"status": "completed", "fact_check.status": {"$in": ["pending", "running"]}},
+        {
+            "$set": {
+                "fact_check.status": "failed",
+                "fact_check.error": "Sprawdzanie faktów przerwane przez restart serwera",
+                "updated_at": datetime.now(UTC),
+            }
+        },
+    )
+    return result.modified_count
 
 
 async def cleanup_stale_evaluation_runs() -> int:

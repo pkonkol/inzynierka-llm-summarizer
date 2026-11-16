@@ -1,4 +1,4 @@
-"""Step 5: run one judge candidate with the current prompts over a split and store its verdicts in predictions/.
+"""Step 5: run judge candidates with the current prompts over a split and store their verdicts in predictions/.
 
 Re-running skips what is already stored, so an interrupted run resumes where it stopped.
 """
@@ -48,6 +48,25 @@ log = structlog.get_logger(__name__)
 
 PROMPT_VERSION = f"{FACT_LEVEL_PROMPT_VERSION}+{COHERENCE_PROMPT_VERSION}"
 _CONCURRENT_ITEMS = 4
+
+JUDGE_CANDIDATES: list[JudgeModelRef] = [
+    JudgeModelRef("ollama", "mimo-v2.6:9b"),
+    # floor: expected to miss the threshold
+    JudgeModelRef("openrouter", "inclusionai/ling-3.0-tiny"),
+    JudgeModelRef("openrouter", "qwen/qwen3.5-9b"),
+    JudgeModelRef("openrouter", "deepseek/deepseek-v4.1-flash-1017"),
+    JudgeModelRef("openrouter", "z-ai/glm-5.3-flash"),
+    JudgeModelRef("openrouter", "xiaomi/mimo-v2.6-flash"),
+    JudgeModelRef("openrouter", "anthropic/claude-haiku-5.5"),
+    JudgeModelRef("openrouter", "openai/gpt-6-luna"),
+    JudgeModelRef("openrouter", "meta/muse-ember"),
+    JudgeModelRef("openrouter", "qwen/qwen3.8-flash"),
+    JudgeModelRef("openrouter", "openai/gpt-oss-120b"),
+    JudgeModelRef("openrouter", "z-ai/glm-5.3"),
+    # ceiling: the model the prompts were tuned on
+    JudgeModelRef("openrouter", "deepseek/deepseek-v4-pro-0813"),
+    JudgeModelRef("openrouter", "google/gemini-4-hydrogen"),
+]
 
 
 async def _judge_sentences(
@@ -196,10 +215,15 @@ async def _summarization_reference(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    which_judges = parser.add_mutually_exclusive_group(required=True)
+    which_judges.add_argument(
         "--model",
-        required=True,
         help="provider:model, e.g. openrouter:deepseek/deepseek-v4-pro-0813",
+    )
+    which_judges.add_argument(
+        "--all-candidates",
+        action="store_true",
+        help="run every JUDGE_CANDIDATES entry, one after another",
     )
     parser.add_argument("--split", required=True, choices=["train", "dev", "test"])
     parser.add_argument(
@@ -214,20 +238,25 @@ def main() -> None:
 
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
-    provider, name = args.model.split(":", 1)
-    # Pairwise and SummarizationMetric run through deepeval, whose judge comes from settings.
-    settings.deepeval_judge_model = {"model_provider": provider, "model_name": name}
+    if args.all_candidates:
+        judges = JUDGE_CANDIDATES
+    else:
+        provider, name = args.model.split(":", 1)
+        judges = [JudgeModelRef(provider, name)]
     ensure_nltk_resources()
-    path = asyncio.run(
-        run_candidate(
-            settings.calibration_data_dir,
-            JudgeModelRef(provider, name),
-            args.split,
-            args.limit,
-            args.summarization_metric,
+    for judge in judges:  # one at a time, so a local Ollama judge does not share the GPU
+        # Pairwise and SummarizationMetric run through deepeval, whose judge comes from settings.
+        settings.deepeval_judge_model = {"model_provider": judge.provider, "model_name": judge.name}
+        path = asyncio.run(
+            run_candidate(
+                settings.calibration_data_dir,
+                judge,
+                args.split,
+                args.limit,
+                args.summarization_metric,
+            )
         )
-    )
-    print(f"predictions: {path}")
+        print(f"predictions: {path}")
 
 
 if __name__ == "__main__":

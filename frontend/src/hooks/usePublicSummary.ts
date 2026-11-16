@@ -62,6 +62,7 @@ export function usePublicSummary() {
   const submit = useCallback(
     async (payload: PublicSummarizeRequest) => {
       setState({ phase: "working" });
+      trackJob(null);
       try {
         const { job_id } = await createPublicSummaryJob(payload);
         trackJob(job_id);

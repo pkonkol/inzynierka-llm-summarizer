@@ -4,6 +4,8 @@ import random
 from collections import Counter
 from pathlib import Path
 
+import pytest
+
 from app.schemas.evaluation_set_api import EvaluationSetEntryImport, EvaluationSetImportRequest
 from calibration.build_e3_subsets import (
     PSC_ANNOTATORS,
@@ -89,6 +91,13 @@ def test_gumsum_subset_covers_every_genre(tmp_path: Path) -> None:
 
     assert set(genres) == set(GUMSUM_GENRES)
     assert max(genres.values()) - min(genres.values()) <= 1
+
+
+def test_too_few_gumsum_candidates_raises(tmp_path: Path) -> None:
+    excluded = {f"Text {genre}-{index}." for genre in GUMSUM_GENRES for index in range(10)}
+
+    with pytest.raises(ValueError, match="only 30 candidates"):
+        sample_english_set(_gumsum_file(tmp_path), excluded, random.Random(1))
 
 
 def test_same_seed_gives_same_subsets(tmp_path: Path) -> None:

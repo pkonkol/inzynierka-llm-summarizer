@@ -61,6 +61,8 @@ def _take_round_robin(
     }
     taken: list[EvaluationSetEntryImport] = []
     while len(taken) < SUBSET_SIZE:
+        if not any(shuffled_groups.values()):
+            raise ValueError(f"only {len(taken)} candidates, expected {SUBSET_SIZE}")
         for entries in shuffled_groups.values():
             if entries and len(taken) < SUBSET_SIZE:
                 taken.append(entries.pop())
@@ -70,23 +72,25 @@ def _take_round_robin(
 def sample_psc(
     psc_sets_dir: Path, excluded: set[str], rng: random.Random
 ) -> list[EvaluationSetEntryImport]:
-    """50 distinct texts spread over PSC_CELLS, annotators a-k rotated within each cell."""
+    """50 distinct texts spread over PSC_CELLS, annotators a-k taken in turn across all cells."""
     taken: list[EvaluationSetEntryImport] = []
-    taken_urls: set[str] = set()
+    taken_texts: set[str] = set()
     annotator_turn = 0
 
     for (kind, percent), cell_size in zip(PSC_CELLS, psc_cell_sizes(), strict=True):
         for _ in range(cell_size):
             annotator = PSC_ANNOTATORS[annotator_turn % len(PSC_ANNOTATORS)]
             annotator_turn += 1
-            annotator_set = _read_set(psc_sets_dir / f"psc-{kind}-{annotator}-{percent}.json")
+            annotator_file = psc_sets_dir / f"psc-{kind}-{annotator}-{percent}.json"
             candidates = [
                 entry
-                for entry in annotator_set.entries
-                if entry.input_text not in excluded and entry.url not in taken_urls
+                for entry in _read_set(annotator_file).entries
+                if entry.input_text not in excluded and entry.input_text not in taken_texts
             ]
+            if not candidates:
+                raise ValueError(f"{annotator_file.name}: no unused non-calibration texts left")
             chosen = rng.choice(candidates)
-            taken_urls.add(chosen.url)
+            taken_texts.add(chosen.input_text)
             taken.append(
                 chosen.model_copy(
                     update={"title": f"[{kind}-{percent}-{annotator}] {chosen.title}"}
@@ -114,11 +118,18 @@ def _read_set(path: Path) -> EvaluationSetImportRequest:
 
 def _assert_clean(name: str, entries: list[EvaluationSetEntryImport], excluded: set[str]) -> None:
     texts = [entry.input_text for entry in entries]
-    if len(entries) != SUBSET_SIZE or len(set(texts)) != SUBSET_SIZE:
-        raise ValueError(f"{name}: expected {SUBSET_SIZE} distinct texts, got {len(set(texts))}")
+    if len(entries) != SUBSET_SIZE:
+        raise ValueError(f"{name}: expected {SUBSET_SIZE} entries, got {len(entries)}")
+    if len(set(texts)) != len(texts):
+        raise ValueError(f"{name}: {len(texts) - len(set(texts))} duplicate texts")
     leaked = excluded.intersection(texts)
     if leaked:
         raise ValueError(f"{name}: {len(leaked)} calibration texts in the subset")
+
+
+def _set_rng(set_name: str) -> random.Random:
+    """Own stream per set, so regenerating one set leaves the others unchanged."""
+    return random.Random(f"{SEED}-{set_name}")
 
 
 def _subset_file(set_name: str) -> Path:
@@ -161,10 +172,11 @@ def main() -> None:
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
     excluded = calibration_texts(read_sample(settings.calibration_data_dir))
-    rng = random.Random(SEED)
-
-    subsets = {name: sample_english_set(path, excluded, rng) for name, path in ENGLISH_SETS.items()}
-    subsets["psc"] = sample_psc(args.psc_sets_dir, excluded, rng)
+    subsets = {
+        name: sample_english_set(path, excluded, _set_rng(name))
+        for name, path in ENGLISH_SETS.items()
+    }
+    subsets["psc"] = sample_psc(args.psc_sets_dir, excluded, _set_rng("psc"))
 
     for name, entries in subsets.items():
         _assert_clean(name, entries, excluded)

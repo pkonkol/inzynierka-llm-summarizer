@@ -95,15 +95,15 @@ def _build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
     return _LangchainDeepEvalModel(chat_model, model_name)
 
 
-_judge_model: DeepEvalBaseLLM | None = None
+_judge_models: dict[str, DeepEvalBaseLLM] = {}
 
 
 def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
-    """One judge per process. Each build opens an HTTP client that is never closed."""
-    global _judge_model
-    if _judge_model is None:
-        _judge_model = _build_deepeval_model(settings)
-    return _judge_model
+    """One build per judge model. Each build opens an HTTP client that is never closed."""
+    judge_model = judge_model_id(settings)
+    if judge_model not in _judge_models:
+        _judge_models[judge_model] = _build_deepeval_model(settings)
+    return _judge_models[judge_model]
 
 
 def run_metric(

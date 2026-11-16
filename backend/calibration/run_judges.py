@@ -77,9 +77,8 @@ JUDGE_CANDIDATES: list[JudgeModelRef] = [
     JudgeModelRef("openrouter", "openai/gpt-oss-120b"),
     JudgeModelRef("openrouter", "z-ai/glm-5.3"),
     JudgeModelRef("openrouter", "google/gemini-4-hydrogen"),
-    JudgeModelRef(
-        "openrouter", "deepseek/deepseek-v4-pro-0813"
-    ),  # ceiling: the model the prompts were tuned on
+    # ceiling: the model the prompts were tuned on
+    JudgeModelRef("openrouter", "deepseek/deepseek-v4-pro-0813"),
     JudgeModelRef("ollama", "mimo-v2.6:9b"),  # last: needs the local daemon and a pulled model
 ]
 
@@ -228,8 +227,18 @@ async def _summarization_reference(
         write_predictions(path, predictions)
 
 
-def run_all_candidates(split: str, limit: int | None, with_reference: bool) -> list[str]:
-    """Each candidate in its own process: deepeval keeps one judge per process, and one failure must not stop the rest."""
+def candidates_outside_the_catalog() -> list[str]:
+    return [
+        judge.model_id()
+        for judge in JUDGE_CANDIDATES
+        if judge.name not in settings.supported_models.get(judge.provider, [])
+    ]
+
+
+def run_all_candidates(
+    split: CalibrationSplit, limit: int | None, with_reference: bool
+) -> list[str]:
+    """Each candidate in its own process, so one failure does not stop the rest."""
     failed: list[str] = []
     for judge in JUDGE_CANDIDATES:
         command = [
@@ -279,6 +288,10 @@ def main() -> None:
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
     if args.all_candidates:
+        # A model missing from the catalog would store every item as an error that later runs skip.
+        missing = candidates_outside_the_catalog()
+        if missing:
+            raise SystemExit(f"judge candidates outside SUPPORTED_MODELS: {', '.join(missing)}")
         failed = run_all_candidates(args.split, args.limit, args.summarization_metric)
         if failed:
             raise SystemExit(f"failed judge candidates: {', '.join(failed)}")

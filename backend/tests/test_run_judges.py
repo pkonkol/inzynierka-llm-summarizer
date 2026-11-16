@@ -39,23 +39,64 @@ def test_model_and_all_candidates_are_mutually_exclusive(monkeypatch: pytest.Mon
     assert exit_info.value.code == 2
 
 
-def test_all_candidates_continue_after_a_failed_candidate(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    launched_models: list[str] = []
+def _all_candidates_argv(*extra: str) -> list[str]:
+    return ["run_judges", "--all-candidates", "--split", "test", *extra]
 
-    def fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        model = command[command.index("--model") + 1]
-        launched_models.append(model)
-        is_first_candidate = len(launched_models) == 1
+
+@pytest.fixture
+def default_catalog(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(run_judges.settings, "calibration_data_dir", tmp_path)
+    monkeypatch.setattr(
+        run_judges.settings,
+        "supported_models",
+        Settings.model_fields["supported_models"].default,
+    )
+
+
+@pytest.mark.usefixtures("default_catalog")
+def test_all_candidates_continue_after_a_failed_candidate(monkeypatch: pytest.MonkeyPatch) -> None:
+    launched_commands: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert kwargs["cwd"] == run_judges._BACKEND_ROOT
+        launched_commands.append(command)
+        is_first_candidate = len(launched_commands) == 1
         exit_code = 1 if is_first_candidate else 0
         return subprocess.CompletedProcess(command, exit_code)
 
     monkeypatch.setattr(run_judges.subprocess, "run", fake_run)
-    monkeypatch.setattr(run_judges.settings, "calibration_data_dir", tmp_path)
-    monkeypatch.setattr(sys, "argv", ["run_judges", "--all-candidates", "--split", "test"])
+    monkeypatch.setattr(sys, "argv", _all_candidates_argv("--limit", "3", "--summarization-metric"))
 
     with pytest.raises(SystemExit, match=JUDGE_CANDIDATES[0].model_id()):
         run_judges.main()
 
-    assert launched_models == [judge.model_id() for judge in JUDGE_CANDIDATES]
+    assert [command[command.index("--model") + 1] for command in launched_commands] == [
+        judge.model_id() for judge in JUDGE_CANDIDATES
+    ]
+    assert launched_commands[0][1:] == [
+        "-m",
+        "calibration.run_judges",
+        "--model",
+        JUDGE_CANDIDATES[0].model_id(),
+        "--split",
+        "test",
+        "--limit",
+        "3",
+        "--summarization-metric",
+    ]
+
+
+@pytest.mark.usefixtures("default_catalog")
+def test_all_candidates_refuse_to_start_with_a_model_outside_the_catalog(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    catalog_without_first = {
+        provider: [name for name in names if name != JUDGE_CANDIDATES[0].name]
+        for provider, names in Settings.model_fields["supported_models"].default.items()
+    }
+    monkeypatch.setattr(run_judges.settings, "supported_models", catalog_without_first)
+    monkeypatch.setattr(run_judges.subprocess, "run", pytest.fail)
+    monkeypatch.setattr(sys, "argv", _all_candidates_argv())
+
+    with pytest.raises(SystemExit, match=JUDGE_CANDIDATES[0].model_id()):
+        run_judges.main()

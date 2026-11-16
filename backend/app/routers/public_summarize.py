@@ -19,6 +19,7 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
     )
     language: str = "auto"
     add_web_context: bool = False
+    check_facts: bool = False
 
     @model_validator(mode="after")
     def _reject_free_text_instructions(self) -> Self:
@@ -54,7 +55,7 @@ async def create_public_summarize_job(
 ) -> JobCreatedResponse:
     # Inside the handler so a request the body validation rejects does not spend the caller's quota.
     await enforce_public_rate_limit(request)
-    if payload.add_web_context:
+    if payload.add_web_context or payload.check_facts:
         await enforce_public_web_search_limit()
 
     return await queue_summarization_job(
@@ -67,4 +68,5 @@ async def create_public_summarize_job(
         run_deepeval=False,
         origin="public",
         context_expansion_mode="staged" if payload.add_web_context else "none",
+        check_facts=payload.check_facts,
     )

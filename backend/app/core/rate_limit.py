@@ -47,7 +47,7 @@ async def enforce_public_rate_limit(request: Request) -> None:
     await collection.insert_one({"key": key, "at": now})
 
 
-_CONTEXT_EXPANSION_WINDOW = timedelta(hours=24)
+_WEB_SEARCH_WINDOW = timedelta(hours=24)
 
 
 async def enforce_public_web_search_limit() -> None:
@@ -56,23 +56,23 @@ async def enforce_public_web_search_limit() -> None:
     now = datetime.now(UTC)
     in_window = {
         "origin": "public",
-        "context_expansion_mode": "staged",
-        "created_at": {"$gte": now - _CONTEXT_EXPANSION_WINDOW},
+        "$or": [{"context_expansion_mode": "staged"}, {"fact_check": {"$ne": None}}],
+        "created_at": {"$gte": now - _WEB_SEARCH_WINDOW},
     }
     jobs_collection = get_jobs_collection()
     used = await jobs_collection.count_documents(in_window)
-    log.debug("checking public context expansion limit", used=used)
+    log.debug("checking public web search limit", used=used)
     if used < settings.public_context_expansion_daily_limit:
         return
 
     oldest = await jobs_collection.find_one(in_window, sort=[("created_at", 1)])
     seconds_left = (
-        (oldest["created_at"] + _CONTEXT_EXPANSION_WINDOW - now).total_seconds() if oldest else 0
+        (oldest["created_at"] + _WEB_SEARCH_WINDOW - now).total_seconds() if oldest else 0
     )
     retry_after = max(1, math.ceil(seconds_left))
-    log.info("public context expansion limit exceeded", used=used, retry_after=retry_after)
+    log.info("public web search limit exceeded", used=used, retry_after=retry_after)
     raise HTTPException(
         status_code=429,
-        detail="Wyczerpano dzienny limit podsumowań z kontekstem z sieci. Spróbuj bez tej opcji albo jutro.",
+        detail="Wyczerpano dzienny limit podsumowań z wyszukiwaniem w sieci (kontekst z sieci, sprawdzanie faktów). Spróbuj bez tych opcji albo jutro.",
         headers={"Retry-After": str(retry_after)},
     )

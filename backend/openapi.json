@@ -4034,6 +4034,11 @@
             "type": "boolean",
             "title": "Add Web Context",
             "default": false
+          },
+          "check_facts": {
+            "type": "boolean",
+            "title": "Check Facts",
+            "default": false
           }
         },
         "type": "object",

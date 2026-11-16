@@ -1422,6 +1422,11 @@ export interface components {
              * @default false
              */
             add_web_context: boolean;
+            /**
+             * Check Facts
+             * @default false
+             */
+            check_facts: boolean;
         };
         /** RelatedSource */
         RelatedSource: {

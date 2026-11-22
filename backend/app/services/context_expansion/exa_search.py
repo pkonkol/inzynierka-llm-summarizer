@@ -26,6 +26,7 @@ FACT_CHECK_DOMAINS = [
     "factcheck.afp.com",
     "leadstories.com",
 ]
+_FACT_CHECK_RESULTS_PER_CLAIM = 1  # five claims already make five paid searches per fact check
 
 
 class _ExaResult(BaseModel):
@@ -77,13 +78,17 @@ def _require_api_key() -> str:
 
 
 def _candidates(
-    responses: list[_ExaResponse], channel: SearchChannel, queries: list[str | None]
+    responses: list[_ExaResponse], channel: SearchChannel, claim_queries: list[str] | None
 ) -> list[SearchCandidate]:
+    """claim_queries, one per response, name the claim each fact check result was found for."""
     candidates = []
-    for query, response in zip(queries, responses, strict=True):
+    for index, response in enumerate(responses):
+        claim_query = None if claim_queries is None else claim_queries[index]
         for result in response.results:
             text = to_prompt_text(result.text, settings.context_excerpt_chars)
-            if not text:
+            # The url ends up in a link on the public page, so a javascript: scheme must not get through.
+            is_web_url = result.url.startswith(("https://", "http://"))
+            if not (text and is_web_url):
                 continue
             candidates.append(
                 SearchCandidate(
@@ -92,7 +97,7 @@ def _candidates(
                     title=result.title,
                     text=text,
                     published_at=result.publishedDate,
-                    query=query,
+                    query=claim_query,
                 )
             )
     return candidates
@@ -112,7 +117,7 @@ async def search_web(queries: list[str]) -> tuple[list[SearchCandidate], float |
             )
         )
     cost_usd = sum(response.costDollars.total for response in responses)
-    return _candidates(responses, "web", [None] * len(responses)), cost_usd
+    return _candidates(responses, "web", claim_queries=None), cost_usd
 
 
 async def search_fact_check_sites(queries: list[str]) -> tuple[list[SearchCandidate], float | None]:
@@ -122,7 +127,10 @@ async def search_fact_check_sites(queries: list[str]) -> tuple[list[SearchCandid
 
     async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
         responses = await asyncio.gather(
-            *(_search(client, api_key, query, FACT_CHECK_DOMAINS, 1) for query in queries)
+            *(
+                _search(client, api_key, query, FACT_CHECK_DOMAINS, _FACT_CHECK_RESULTS_PER_CLAIM)
+                for query in queries
+            )
         )
     cost_usd = sum(response.costDollars.total for response in responses)
-    return _candidates(responses, "factcheck_web", list(queries)), cost_usd
+    return _candidates(responses, "factcheck_web", claim_queries=queries), cost_usd

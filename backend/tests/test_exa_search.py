@@ -168,3 +168,26 @@ async def test_empty_exa_warnings_log_nothing_at_warning_level(
         await search_web(["summarization of web pages"])
 
     assert [entry for entry in logs if entry["log_level"] == "warning"] == []
+
+
+NON_HTTP_RESPONSE = {
+    "requestId": "r3",
+    "results": [
+        {"url": "javascript:alert(1)", "title": "Script", "text": "Script text."},
+        {"url": "ftp://files.example/a", "title": "Ftp", "text": "Ftp text."},
+        {"url": "https://kept.example/a", "title": "Kept", "text": "Kept text."},
+    ],
+    "costDollars": {"total": 0.008},
+}
+
+
+@pytest.mark.parametrize("search", [search_web, search_fact_check_sites])
+async def test_a_result_with_a_non_http_url_is_dropped_and_the_others_are_kept(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch, search: Callable
+) -> None:
+    monkeypatch.setattr(settings, "exa_api_key", SecretStr("exa-test-key"))
+    serve_http(lambda _request: httpx.Response(200, json=NON_HTTP_RESPONSE))
+
+    candidates, _cost_usd = await search(["coffee cures colds"])
+
+    assert {candidate.url for candidate in candidates} == {"https://kept.example/a"}

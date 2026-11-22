@@ -1,5 +1,6 @@
 """Google Fact Check Tools claims:search (E8b2): one request per claim query."""
 
+import copy
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -140,3 +141,68 @@ async def test_missing_api_key_fails_before_any_request(
         await search_claim_reviews(["coffee"])
 
     assert received == []
+
+
+GOOD_CLAIM = {
+    "text": "Vitamin C prevents colds.",
+    "claimReview": [
+        {
+            "publisher": {"name": "Snopes"},
+            "url": "https://snopes.com/vitamin-c",
+            "title": "Vitamin C and colds",
+            "textualRating": "Mixture",
+        }
+    ],
+}
+
+
+def _without_rating() -> dict:
+    claim = copy.deepcopy(CLAIM_RESPONSE["claims"][0])
+    del claim["claimReview"][0]["textualRating"]
+    return claim
+
+
+def _without_claim_text() -> dict:
+    claim = copy.deepcopy(CLAIM_RESPONSE["claims"][0])
+    del claim["text"]
+    return claim
+
+
+def _with_review(**changes: object) -> dict:
+    claim = copy.deepcopy(CLAIM_RESPONSE["claims"][0])
+    claim["claimReview"][0].update(changes)
+    return claim
+
+
+@pytest.mark.parametrize(
+    "unusable_claim",
+    [
+        pytest.param(_without_rating(), id="no-textual-rating"),
+        pytest.param(_without_claim_text(), id="no-claim-text"),
+        pytest.param(_with_review(publisher={}), id="publisher-without-name-or-site"),
+        pytest.param(_with_review(url="javascript:alert(1)"), id="javascript-url"),
+        pytest.param(_with_review(url="ftp://politifact.com/coffee"), id="non-http-url"),
+    ],
+)
+async def test_an_unusable_claim_is_skipped_and_the_others_are_kept(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch, unusable_claim: dict
+) -> None:
+    monkeypatch.setattr(settings, "factcheck_api_key", SecretStr(API_KEY))
+    serve_http(lambda _request: httpx.Response(200, json={"claims": [unusable_claim, GOOD_CLAIM]}))
+
+    candidates, _cost_usd = await search_claim_reviews(["coffee"])
+
+    assert [candidate.url for candidate in candidates] == ["https://snopes.com/vitamin-c"]
+
+
+async def test_review_title_has_its_html_stripped(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "factcheck_api_key", SecretStr(API_KEY))
+    serve_http(
+        lambda _request: httpx.Response(200, json={"claims": [_with_review(title="<b>Title</b>")]})
+    )
+
+    [candidate] = (await search_claim_reviews(["coffee"]))[0]
+
+    assert candidate.title == "Title"

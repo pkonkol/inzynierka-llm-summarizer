@@ -10,7 +10,7 @@ from pymongo.asynchronous.collection import AsyncCollection
 from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.mongo import get_jobs_collection
 from ..schemas.context_expansion import ContextExpansionResult, RelatedSource
-from ..schemas.fact_check import AssessedSource, FactCheck, FactCheckSearch, LlmAssessmentRequest
+from ..schemas.fact_check import AssessedSource, ClaimSearch, FactCheck, LlmAssessmentRequest
 from ..schemas.usage import UsageMetadata
 from .context_expansion import expand_context, search_fact_checks
 from .llm.assessment import generate_assessment
@@ -35,7 +35,7 @@ async def start_fact_check(job_id: str) -> None:
         text=None,
         sources=[],
         context_expansion=None,
-        fact_check_search=None,
+        claim_search=None,
         usage=None,
         duration_ms=None,
         error=None,
@@ -91,24 +91,42 @@ async def run_fact_check(job_id: str) -> None:
 
 async def _check_facts(job: dict[str, Any], started_at: datetime) -> FactCheck:
     source_text = job["input_text"]  # the completed summary stored the full text its model read
-    (fact_check_search, fact_check_sources), context_expansion = await asyncio.gather(
-        search_fact_checks(
-            source_text, job["source_url"], job["model_provider"], job["model_name"]
-        ),
-        _search_related_sources(job, source_text),
-    )
+    claim_search, fact_check_sources, context_expansion = await _search_sources(job, source_text)
     related_sources = _fact_checks_first(fact_check_sources, context_expansion.selected)
-    requested_at = job["fact_check"]["requested_at"]
-    if not related_sources:
-        return _completed(
-            NO_SOURCES_TEXT,
-            [],
-            requested_at,
-            context_expansion,
-            fact_check_search,
-            UsageMetadata(),
-            started_at,
+    text, assessed_sources, usage = await _assess(job, source_text, related_sources)
+    return FactCheck(
+        status="completed",
+        requested_at=job["fact_check"]["requested_at"],
+        text=text,
+        sources=assessed_sources,
+        context_expansion=context_expansion,
+        claim_search=claim_search,
+        usage=usage,
+        duration_ms=int((datetime.now(UTC) - started_at).total_seconds() * 1000),
+        error=None,
+    )
+
+
+async def _search_sources(
+    job: dict[str, Any], source_text: str
+) -> tuple[ClaimSearch, list[RelatedSource], ContextExpansionResult]:
+    """Both searches at once; a failure in one cancels the other, which would otherwise keep paying for searches."""
+    async with asyncio.TaskGroup() as searches:
+        fact_check_search = searches.create_task(
+            search_fact_checks(
+                source_text, job["source_url"], job["model_provider"], job["model_name"]
+            )
         )
+        general_search = searches.create_task(_search_related_sources(job, source_text))
+    claim_search, fact_check_sources = fact_check_search.result()
+    return claim_search, fact_check_sources, general_search.result()
+
+
+async def _assess(
+    job: dict[str, Any], source_text: str, related_sources: list[RelatedSource]
+) -> tuple[str, list[AssessedSource], UsageMetadata]:
+    if not related_sources:
+        return NO_SOURCES_TEXT, [], UsageMetadata()
 
     assessment = await generate_assessment(
         LlmAssessmentRequest(
@@ -125,15 +143,7 @@ async def _check_facts(job: dict[str, Any], started_at: datetime) -> FactCheck:
         AssessedSource(**source.model_dump(), stance=stance)
         for source, stance in zip(related_sources, assessment.source_stances, strict=True)
     ]
-    return _completed(
-        assessment.text,
-        assessed_sources,
-        requested_at,
-        context_expansion,
-        fact_check_search,
-        assessment.usage,
-        started_at,
-    )
+    return assessment.text, assessed_sources, assessment.usage
 
 
 def _fact_checks_first(
@@ -151,28 +161,6 @@ async def _search_related_sources(job: dict[str, Any], source_text: str) -> Cont
         return ContextExpansionResult.model_validate(job["context_expansion"])
     return await expand_context(
         source_text, job["source_url"], "staged", job["model_provider"], job["model_name"]
-    )
-
-
-def _completed(
-    text: str,
-    sources: list[AssessedSource],
-    requested_at: datetime,
-    context_expansion: ContextExpansionResult,
-    fact_check_search: FactCheckSearch,
-    usage: UsageMetadata,
-    started_at: datetime,
-) -> FactCheck:
-    return FactCheck(
-        status="completed",
-        requested_at=requested_at,
-        text=text,
-        sources=sources,
-        context_expansion=context_expansion,
-        fact_check_search=fact_check_search,
-        usage=usage,
-        duration_ms=int((datetime.now(UTC) - started_at).total_seconds() * 1000),
-        error=None,
     )
 
 

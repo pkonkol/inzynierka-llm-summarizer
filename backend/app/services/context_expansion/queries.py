@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from ...core.config import settings
 from ...schemas.context_expansion import PlannedQueries
 from ...schemas.summary import UsageMetadata
-from ..llm._base import build_structured_llm, parse_structured_output
+from ..llm._base import build_structured_llm, neutralize_tag, parse_structured_output
 
 log = structlog.get_logger(__name__)
 
@@ -71,7 +71,7 @@ async def plan_claim_queries(
     raw = await (_CLAIM_PROMPT | llm).ainvoke(
         {
             "claim_count": claim_count,
-            "source": source_text[:_QUERY_INPUT_CHARS].replace("</source", "&lt;/source"),
+            "source": neutralize_tag(source_text[:_QUERY_INPUT_CHARS], "source"),
         }
     )
     parsed, _raw_str, usage, _raw_metadata = parse_structured_output(
@@ -91,7 +91,7 @@ async def plan_search_queries(
     raw = await (_QUERY_PROMPT | llm).ainvoke(
         {
             "per_channel": per_channel,
-            "source": source_text[:_QUERY_INPUT_CHARS].replace("</source", "&lt;/source"),
+            "source": neutralize_tag(source_text[:_QUERY_INPUT_CHARS], "source"),
         }
     )
     parsed, _raw_str, usage, _raw_metadata = parse_structured_output(

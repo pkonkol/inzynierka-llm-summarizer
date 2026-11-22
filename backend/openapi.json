@@ -1953,6 +1953,39 @@
         ],
         "title": "ClaimReview"
       },
+      "ClaimSearch": {
+        "properties": {
+          "claims": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelOutcome"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claims",
+          "channels",
+          "usage",
+          "duration_ms"
+        ],
+        "title": "ClaimSearch"
+      },
       "ContextExpansionResult": {
         "properties": {
           "mode": {
@@ -3328,10 +3361,10 @@
               }
             ]
           },
-          "fact_check_search": {
+          "claim_search": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/FactCheckSearch"
+                "$ref": "#/components/schemas/ClaimSearch"
               },
               {
                 "type": "null"
@@ -3378,45 +3411,12 @@
           "text",
           "sources",
           "context_expansion",
-          "fact_check_search",
+          "claim_search",
           "usage",
           "duration_ms",
           "error"
         ],
         "title": "FactCheck"
-      },
-      "FactCheckSearch": {
-        "properties": {
-          "claims": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Claims"
-          },
-          "channels": {
-            "items": {
-              "$ref": "#/components/schemas/ChannelOutcome"
-            },
-            "type": "array",
-            "title": "Channels"
-          },
-          "usage": {
-            "$ref": "#/components/schemas/UsageMetadata"
-          },
-          "duration_ms": {
-            "type": "integer",
-            "title": "Duration Ms"
-          }
-        },
-        "type": "object",
-        "required": [
-          "claims",
-          "channels",
-          "usage",
-          "duration_ms"
-        ],
-        "title": "FactCheckSearch"
       },
       "GoldenMetrics-Input": {
         "properties": {

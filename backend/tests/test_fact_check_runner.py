@@ -6,14 +6,16 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import BaseModel
 
+from app.schemas import fact_check as fact_check_schemas
 from app.schemas.context_expansion import (
     ChannelOutcome,
     ClaimReview,
     ContextExpansionResult,
     RelatedSource,
 )
-from app.schemas.fact_check import FactCheckSearch, LlmAssessmentResult, SourceStance
+from app.schemas.fact_check import LlmAssessmentResult, SourceStance
 from app.schemas.usage import UsageMetadata
 from app.services import fact_check_runner
 from app.services.context_expansion import ContextExpansionError
@@ -35,7 +37,7 @@ def _fact_check_field(status: str, **overrides: object) -> dict[str, Any]:
         "text": None,
         "sources": [],
         "context_expansion": None,
-        "fact_check_search": None,
+        "claim_search": None,
         "usage": None,
         "duration_ms": None,
         "error": None,
@@ -88,8 +90,8 @@ def _expansion(selected: list[RelatedSource]) -> ContextExpansionResult:
     )
 
 
-def _fact_check_search(claims: list[str]) -> FactCheckSearch:
-    return FactCheckSearch(
+def _claim_search(claims: list[str]) -> BaseModel:
+    return fact_check_schemas.ClaimSearch(  # pyrefly: ignore
         claims=claims,
         channels=[
             ChannelOutcome(
@@ -154,7 +156,7 @@ def assess(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 @pytest.fixture
 def claim_search(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     """The fact-check channels find nothing unless a test says otherwise."""
-    search = AsyncMock(return_value=(_fact_check_search(["coffee cures colds"]), []))
+    search = AsyncMock(return_value=(_claim_search(["coffee cures colds"]), []))
     monkeypatch.setattr(fact_check_runner, "search_fact_checks", search, raising=False)
     return search
 
@@ -191,7 +193,7 @@ async def test_case_4_completed_fact_check_stores_text_and_sources_with_stances(
         ("https://related2.example/", "contradicts"),
     ]
     assert state["context_expansion"] == expansion.model_dump()
-    assert state["fact_check_search"] == claim_search.return_value[0].model_dump()
+    assert state["claim_search"] == claim_search.return_value[0].model_dump()
     assert state["usage"]["total_tokens"] >= 300
     assert isinstance(state["duration_ms"], int)
     assert state["error"] is None
@@ -229,7 +231,7 @@ async def test_fact_check_sources_come_before_general_sources(
         _related(10, channel="factcheck_google", review=review),
         _related(11, channel="factcheck_web"),
     ]
-    claim_search.return_value = (_fact_check_search(["coffee cures colds"]), fact_checks)
+    claim_search.return_value = (_claim_search(["coffee cures colds"]), fact_checks)
     general = _expansion([_related(1), _related(2)])
     _search_returning(monkeypatch, return_value=general)
     assess.return_value = _assessment(["contradicts", "context", "supports", "context"])
@@ -295,7 +297,7 @@ async def test_case_7_no_sources_at_all_completes_without_llm_call(
     assert state["status"] == "completed"
     assert state["text"] == fact_check_runner.NO_SOURCES_TEXT
     assert state["sources"] == []
-    assert state["fact_check_search"] is not None
+    assert state["claim_search"] is not None
 
 
 async def test_fact_check_hits_alone_are_assessed(
@@ -305,7 +307,7 @@ async def test_fact_check_hits_alone_are_assessed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     hit = _related(10, channel="factcheck_web")
-    claim_search.return_value = (_fact_check_search(["coffee cures colds"]), [hit])
+    claim_search.return_value = (_claim_search(["coffee cures colds"]), [hit])
     _search_returning(monkeypatch, return_value=_expansion([]))
 
     await fact_check_runner.run_fact_check("j")
@@ -318,7 +320,7 @@ async def test_fact_check_hits_alone_are_assessed(
     "broken_step",
     [
         pytest.param("search", id="case_8_search_fails"),
-        pytest.param("fact_check_search", id="fact_check_search_fails"),
+        pytest.param("claim_search", id="claim_search_fails"),
         pytest.param("assessment", id="case_9_assessment_fails"),
     ],
 )
@@ -331,7 +333,7 @@ async def test_case_8_9_failure_marks_fact_check_failed_and_keeps_summary(
 ) -> None:
     if broken_step == "search":
         _search_returning(monkeypatch, side_effect=ContextExpansionError("all channels failed"))
-    elif broken_step == "fact_check_search":
+    elif broken_step == "claim_search":
         _search_returning(monkeypatch, return_value=_expansion([_related(1)]))
         claim_search.side_effect = ContextExpansionError("all channels failed")
     else:
@@ -347,6 +349,74 @@ async def test_case_8_9_failure_marks_fact_check_failed_and_keeps_summary(
     )  # rv3: no provider detail reaches visitors
     assert state["text"] is None
     assert _fields_outside_fact_check(jobs_collection) <= {"updated_at"}
+
+
+async def _wait_forever_noting_cancellation(cancelled: asyncio.Event) -> None:
+    try:
+        await asyncio.Event().wait()
+    except asyncio.CancelledError:
+        cancelled.set()
+        raise
+
+
+async def test_a_failing_claim_search_cancels_the_general_search(
+    jobs_collection: AsyncMock,
+    assess: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    general_started = asyncio.Event()
+    general_cancelled = asyncio.Event()
+
+    async def failing_claim_search(*_args: object) -> None:
+        await general_started.wait()
+        raise ContextExpansionError("all channels failed")
+
+    async def hanging_general_search(*_args: object) -> None:
+        general_started.set()
+        await _wait_forever_noting_cancellation(general_cancelled)
+
+    monkeypatch.setattr(
+        fact_check_runner, "search_fact_checks", failing_claim_search, raising=False
+    )
+    monkeypatch.setattr(fact_check_runner, "expand_context", hanging_general_search, raising=False)
+
+    await fact_check_runner.run_fact_check("j")
+
+    assert general_cancelled.is_set()
+    state = _fact_check_state(jobs_collection)
+    assert state["status"] == "failed"
+    assert state["error"] == fact_check_runner.FAILED_MESSAGE
+    assess.assert_not_awaited()
+
+
+async def test_a_failing_general_search_cancels_the_claim_search(
+    jobs_collection: AsyncMock,
+    assess: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim_search_started = asyncio.Event()
+    claim_search_cancelled = asyncio.Event()
+
+    async def hanging_claim_search(*_args: object) -> None:
+        claim_search_started.set()
+        await _wait_forever_noting_cancellation(claim_search_cancelled)
+
+    async def failing_general_search(*_args: object) -> None:
+        await claim_search_started.wait()
+        raise ContextExpansionError("all channels failed")
+
+    monkeypatch.setattr(
+        fact_check_runner, "search_fact_checks", hanging_claim_search, raising=False
+    )
+    monkeypatch.setattr(fact_check_runner, "expand_context", failing_general_search, raising=False)
+
+    await fact_check_runner.run_fact_check("j")
+
+    assert claim_search_cancelled.is_set()
+    state = _fact_check_state(jobs_collection)
+    assert state["status"] == "failed"
+    assert state["error"] == fact_check_runner.FAILED_MESSAGE
+    assess.assert_not_awaited()
 
 
 async def test_rv1_the_result_is_written_only_over_a_running_fact_check(

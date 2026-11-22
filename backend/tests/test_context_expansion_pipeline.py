@@ -7,6 +7,7 @@ import pytest
 from pydantic import SecretStr
 
 from app.core.config import settings
+from app.schemas import fact_check as fact_check_schemas
 from app.schemas.context_expansion import (
     ClaimReview,
     ContextExpansionResult,
@@ -261,6 +262,7 @@ async def test_fact_check_hits_skip_selection(fact_check_stages: dict[str, Async
     assert {source.url for source in sources} == {GOOGLE_URL, "https://snopes.com/coffee"}
     assert {source.channel for source in sources} == {"factcheck_google", "factcheck_web"}
     assert all(source.selection_reason == "coffee cures colds" for source in sources)
+    assert isinstance(search, fact_check_schemas.ClaimSearch)  # pyrefly: ignore
     assert search.claims == ["coffee cures colds"]
     assert {outcome.channel for outcome in search.channels} == {
         "factcheck_google",

@@ -14,7 +14,7 @@ from ...schemas.context_expansion import (
     SearchCandidate,
     SearchChannel,
 )
-from ...schemas.fact_check import FactCheckSearch
+from ...schemas.fact_check import ClaimSearch
 from ...schemas.job_db import JobErrorCode
 from ...schemas.summary import UsageMetadata
 from .claim_review_search import search_claim_reviews
@@ -201,7 +201,7 @@ def _fact_check_source(candidate: SearchCandidate) -> RelatedSource:
 
 async def search_fact_checks(
     source_text: str, source_url: str, model_provider: str, model_name: str
-) -> tuple[FactCheckSearch, list[RelatedSource]]:
+) -> tuple[ClaimSearch, list[RelatedSource]]:
     """Claims of the source searched on fact-checking sites; every hit is kept, without an LLM selection."""
     log.debug("searching fact checks", url=source_url)
     started = time.perf_counter()
@@ -225,5 +225,7 @@ async def search_fact_checks(
         duration_ms=duration_ms,
         token_usage=usage.total_tokens,
     )
-    search = FactCheckSearch(claims=claims, channels=outcomes, usage=usage, duration_ms=duration_ms)
-    return search, sources
+    claim_search = ClaimSearch(
+        claims=claims, channels=outcomes, usage=usage, duration_ms=duration_ms
+    )
+    return claim_search, sources

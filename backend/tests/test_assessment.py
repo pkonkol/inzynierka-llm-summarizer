@@ -140,3 +140,45 @@ async def test_missing_stance_becomes_context(sent_prompts: list[str]) -> None:
     stances = result.source_stances
     stance_values = list(stances.values()) if isinstance(stances, dict) else list(stances)
     assert stance_values == ["context", "context"]
+
+
+def _answering_stances(monkeypatch: pytest.MonkeyPatch, stances: list[dict[str, Any]]) -> None:
+    parsed = assessment.AssessmentOutput.model_validate(
+        {"text": MODEL_TEXT, "source_stances": stances}
+    )
+    raw = AIMessage(
+        content=MODEL_TEXT,
+        usage_metadata={"input_tokens": 100, "output_tokens": 20, "total_tokens": 120},
+    )
+    monkeypatch.setattr(
+        assessment,
+        "build_structured_llm",
+        lambda *_args: RunnableLambda(lambda _prompt: {"parsed": parsed, "raw": raw}),
+        raising=False,
+    )
+
+
+async def test_stances_follow_the_source_numbers_and_unmentioned_sources_are_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _answering_stances(
+        monkeypatch,
+        [{"source": 1, "stance": "supports"}, {"source": 2, "stance": "contradicts"}],
+    )
+
+    result = await assessment.generate_assessment(_request([_related(1), _related(2), _related(3)]))
+
+    assert result.source_stances == ["supports", "contradicts", "context"]
+
+
+async def test_a_stance_for_an_unknown_source_number_is_ignored(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _answering_stances(
+        monkeypatch,
+        [{"source": 1, "stance": "supports"}, {"source": 7, "stance": "contradicts"}],
+    )
+
+    result = await assessment.generate_assessment(_request([_related(1), _related(2), _related(3)]))
+
+    assert result.source_stances == ["supports", "context", "context"]

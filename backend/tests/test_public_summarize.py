@@ -40,10 +40,90 @@ def test_without_a_forwarded_header_the_socket_peer_is_the_client() -> None:
 async def test_a_request_under_the_limit_is_recorded(hits: AsyncMock) -> None:
     hits.count_documents.return_value = settings.public_rate_limit_requests - 1
 
-    await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"))
+    await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"), "summarize")
 
     recorded = hits.insert_one.call_args.args[0]
-    assert recorded["key"] == "203.0.113.9"
+    assert recorded["key"] == "summarize:203.0.113.9"
+
+
+async def test_a_fact_check_request_is_recorded_under_its_own_scope(hits: AsyncMock) -> None:
+    await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"), "fact_check")
+
+    assert hits.insert_one.call_args.args[0]["key"] == "fact_check:203.0.113.9"
+
+
+class _HitsInMemory:
+    """The rate-limit collection over plain dicts: insert_one, count_documents and find_one by key and time."""
+
+    def __init__(self) -> None:
+        self.hits: list[dict[str, Any]] = []
+
+    async def insert_one(self, document: dict[str, Any]) -> None:
+        self.hits.append(document)
+
+    def _in_window(self, query: dict[str, Any]) -> list[dict[str, Any]]:
+        return [
+            hit
+            for hit in self.hits
+            if hit["key"] == query["key"] and hit["at"] >= query["at"]["$gte"]
+        ]
+
+    async def count_documents(self, query: dict[str, Any]) -> int:
+        return len(self._in_window(query))
+
+    async def find_one(
+        self, query: dict[str, Any], sort: list[tuple[str, int]] | None = None
+    ) -> dict[str, Any] | None:
+        found = sorted(self._in_window(query), key=lambda hit: hit["at"])
+        return found[0] if found else None
+
+
+@pytest.fixture
+def stored_hits(monkeypatch: pytest.MonkeyPatch) -> _HitsInMemory:
+    collection = _HitsInMemory()
+    monkeypatch.setattr(rate_limit, "get_rate_limits_collection", lambda: collection)
+    return collection
+
+
+async def test_summaries_up_to_the_limit_do_not_block_a_fact_check_from_the_same_ip(
+    stored_hits: _HitsInMemory,
+) -> None:
+    request = _request("203.0.113.9")
+    for _ in range(settings.public_rate_limit_requests):
+        await rate_limit.enforce_public_rate_limit(request, "summarize")
+
+    await rate_limit.enforce_public_rate_limit(request, "fact_check")
+
+
+async def test_fact_checks_up_to_the_limit_do_not_block_a_summary_from_the_same_ip(
+    stored_hits: _HitsInMemory,
+) -> None:
+    request = _request("203.0.113.9")
+    for _ in range(settings.public_rate_limit_requests):
+        await rate_limit.enforce_public_rate_limit(request, "fact_check")
+
+    await rate_limit.enforce_public_rate_limit(request, "summarize")
+
+
+@pytest.mark.parametrize("scope", ["summarize", "fact_check"])
+async def test_each_scope_is_refused_after_the_same_number_of_requests(
+    stored_hits: _HitsInMemory, scope: str
+) -> None:
+    request = _request("203.0.113.9")
+    for _ in range(settings.public_rate_limit_requests):
+        await rate_limit.enforce_public_rate_limit(request, scope)  # pyrefly: ignore
+
+    with pytest.raises(HTTPException) as refused:
+        await rate_limit.enforce_public_rate_limit(request, scope)  # pyrefly: ignore
+
+    assert refused.value.status_code == 429
+
+
+async def test_the_scope_counter_is_kept_per_client_ip(stored_hits: _HitsInMemory) -> None:
+    for _ in range(settings.public_rate_limit_requests):
+        await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"), "fact_check")
+
+    await rate_limit.enforce_public_rate_limit(_request("203.0.113.77"), "fact_check")
 
 
 async def test_a_request_over_the_limit_is_refused_until_the_oldest_hit_expires(
@@ -54,7 +134,7 @@ async def test_a_request_over_the_limit_is_refused_until_the_oldest_hit_expires(
     hits.find_one.return_value = {"at": datetime.now(UTC) - window + timedelta(seconds=90)}
 
     with pytest.raises(HTTPException) as refused:
-        await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"))
+        await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"), "summarize")
 
     assert refused.value.status_code == 429
     assert refused.value.headers is not None
@@ -69,7 +149,7 @@ async def test_a_hit_that_expired_mid_check_still_yields_a_valid_retry_after(
     hits.find_one.return_value = None
 
     with pytest.raises(HTTPException) as refused:
-        await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"))
+        await rate_limit.enforce_public_rate_limit(_request("203.0.113.9"), "summarize")
 
     assert refused.value.headers is not None
     assert refused.value.headers["Retry-After"] == "1"
@@ -151,6 +231,11 @@ def test_the_public_endpoint_rejects_a_context_section() -> None:
         )
 
 
+def _scope_of(limit_check: AsyncMock) -> object:
+    call = limit_check.await_args
+    return call.args[1] if len(call.args) > 1 else call.kwargs["scope"]
+
+
 def _queued_with(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     queue = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
@@ -159,7 +244,7 @@ def _queued_with(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return queue
 
 
-def test_check_facts_field_is_rejected() -> None:
+def test_check_facts_field_is_ignored() -> None:
     assert "check_facts" not in PublicSummarizeRequest.model_fields
     payload = PublicSummarizeRequest.model_validate(
         {"input_text": "An article to summarize.", "check_facts": True}
@@ -180,6 +265,21 @@ async def test_the_summarize_endpoint_queues_without_a_fact_check(
     )
 
     assert "check_facts" not in queue.await_args.kwargs
+
+
+async def test_the_summarize_endpoint_spends_the_summarize_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _queued_with(monkeypatch)
+    ip_limit = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", ip_limit)
+    payload = PublicSummarizeRequest.model_validate({"input_text": "An article to summarize."})
+    request = _request("203.0.113.9")
+
+    await public_summarize.create_public_summarize_job(payload, MagicMock(), request)
+
+    ip_limit.assert_awaited_once()
+    assert _scope_of(ip_limit) == "summarize"
 
 
 async def test_the_budget_is_not_spent_by_a_plain_summary(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -292,7 +392,7 @@ def fact_check_endpoint(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 async def _request_fact_check(job_id: str = "j") -> None:
-    await public_summarize.request_public_fact_check(job_id)
+    await public_summarize.request_public_fact_check(job_id, _request("203.0.113.9"))
     for _ in range(3):
         await asyncio.sleep(0)
 
@@ -412,11 +512,38 @@ async def test_fact_check_request_after_a_failed_one_is_accepted(
     assert fact_check_endpoint["runs"] == ["j"]
 
 
-async def test_fact_check_request_does_not_spend_the_per_ip_limit(
+async def test_fact_check_request_spends_the_fact_check_scope_of_the_per_ip_limit(
     fact_check_endpoint: dict[str, Any],
 ) -> None:
     fact_check_endpoint["jobs"].jobs["j"] = _stored_job()
 
     await _request_fact_check()
 
+    ip_limit = fact_check_endpoint["ip_limit"]
+    ip_limit.assert_awaited_once()
+    assert _scope_of(ip_limit) == "fact_check"
+
+
+async def test_fact_check_request_for_unknown_job_does_not_spend_the_per_ip_limit(
+    fact_check_endpoint: dict[str, Any],
+) -> None:
+    with pytest.raises(HTTPException):
+        await _request_fact_check("missing")
+
     fact_check_endpoint["ip_limit"].assert_not_awaited()
+
+
+async def test_fact_check_request_over_the_per_ip_limit_is_429_and_starts_nothing(
+    fact_check_endpoint: dict[str, Any],
+) -> None:
+    fact_check_endpoint["jobs"].jobs["j"] = _stored_job()
+    fact_check_endpoint["ip_limit"].side_effect = HTTPException(
+        status_code=429, headers={"Retry-After": "60"}
+    )
+
+    with pytest.raises(HTTPException) as refused:
+        await _request_fact_check()
+
+    assert refused.value.status_code == 429
+    assert fact_check_endpoint["jobs"].jobs["j"]["fact_check"] is None
+    assert fact_check_endpoint["runs"] == []

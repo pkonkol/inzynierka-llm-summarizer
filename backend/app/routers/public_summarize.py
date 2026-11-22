@@ -55,7 +55,7 @@ async def create_public_summarize_job(
     request: Request,
 ) -> JobCreatedResponse:
     # Inside the handler so a request the body validation rejects does not spend the caller's quota.
-    await enforce_public_rate_limit(request)
+    await enforce_public_rate_limit(request, "summarize")
     if payload.add_web_context:
         await enforce_public_web_search_limit()
 
@@ -78,12 +78,13 @@ async def create_public_summarize_job(
     summary="Start a fact check of a completed public summary (daily limit)",
     responses={404: {"description": "No public job"}, 409: {"description": "Not startable now"}},
 )
-async def request_public_fact_check(job_id: str) -> None:
+async def request_public_fact_check(job_id: str, request: Request) -> None:
     log.debug("public fact check requested", job_id=job_id)
     job = await get_jobs_collection().find_one({"job_id": job_id, "origin": "public"}, {"_id": 1})
     if job is None:
         raise HTTPException(status_code=404, detail="Nie znaleziono podsumowania.")
 
+    await enforce_public_rate_limit(request, "fact_check")
     await enforce_public_web_search_limit()
     try:
         await start_fact_check(job_id)

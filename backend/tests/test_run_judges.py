@@ -6,6 +6,14 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
+from app.schemas.calibration_api import (
+    CalibrationLabels,
+    CalibrationSample,
+    CalibrationSource,
+    CalibrationSummary,
+    PairVerdict,
+)
+from app.services.calibration_files import CandidatePredictions
 from app.services.metrics.fact_level_judges import JudgeModelRef
 from calibration import run_judges
 from calibration.run_judges import JUDGE_CANDIDATES
@@ -99,3 +107,66 @@ def test_a_model_outside_the_catalog_stops_the_run_before_any_item_is_stored(
         )
 
     assert list(tmp_path.rglob("*.json")) == []
+
+
+def _pair_source(source_id: str) -> CalibrationSource:
+    return CalibrationSource(
+        source_id=source_id,
+        set_name="gumsum",
+        language="en",
+        entry_id=source_id,
+        input_text="Source text.",
+        keyfacts=["A fact."],
+        keyfacts_approved=True,
+        split="test",
+    )
+
+
+def _pair_summaries(source_id: str) -> list[CalibrationSummary]:
+    return [
+        CalibrationSummary(
+            summary_id=f"{source_id}-{origin}",
+            source_id=source_id,
+            origin=origin,
+            generator_model=None,
+            processing_strategy=None,
+            text="Text.",
+            sentences=["Text."],
+        )
+        for origin in ("ai", "golden")
+    ]
+
+
+def test_an_unusable_pair_answer_skips_that_pair_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    sources = {source_id: _pair_source(source_id) for source_id in ("broken", "fine")}
+    sample = CalibrationSample(
+        sources=list(sources.values()),
+        summaries=[summary for source_id in sources for summary in _pair_summaries(source_id)],
+    )
+    labels = CalibrationLabels(
+        pairs={source_id: PairVerdict(better_summary_id=f"{source_id}-ai") for source_id in sources}
+    )
+
+    judged_inputs: list[str] = []
+
+    async def fake_pairwise(
+        _settings: object, input_text: str, ai_text: str, *_args: object, **_kwargs: object
+    ) -> tuple[dict[str, object]]:
+        judged_inputs.append(ai_text)
+        if len(judged_inputs) == 1:
+            raise KeyError("score")
+        return ({"score": 0.8, "consistent": True},)
+
+    monkeypatch.setattr(run_judges, "evaluate_pairwise_cross_deepeval", fake_pairwise)
+    predictions = CandidatePredictions(judge_model="m", prompt_version="v")
+
+    asyncio.run(
+        run_judges._judge_pairs(
+            sample, sources, labels, predictions, tmp_path / "predictions.json", None
+        )
+    )
+
+    assert list(predictions.pairs) == ["fine"]
+    assert predictions.pairs["fine"].preferred == "ai"

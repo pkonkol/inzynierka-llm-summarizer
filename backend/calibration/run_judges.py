@@ -195,13 +195,17 @@ async def _judge_pairs(
             for summary in sample.summaries
             if summary.source_id == source_id
         }
-        (with_input,) = await evaluate_pairwise_cross_deepeval(
-            settings,
-            sources[source_id].input_text,
-            by_origin["ai"],
-            by_origin["golden"],
-            specs=[PAIRWISE_WITH_INPUT],
-        )
+        try:
+            (with_input,) = await evaluate_pairwise_cross_deepeval(
+                settings,
+                sources[source_id].input_text,
+                by_origin["ai"],
+                by_origin["golden"],
+                specs=[PAIRWISE_WITH_INPUT],
+            )
+        except (KeyError, ValueError) as error:  # deepeval: KeyError on a missing "score"
+            log.warning("pair answer unusable", source_id=source_id, error=repr(error))
+            continue
         score = with_input["score"]
         predictions.pairs[source_id] = PairPrediction(
             source_id=source_id,

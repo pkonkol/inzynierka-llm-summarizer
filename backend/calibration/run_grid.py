@@ -34,10 +34,15 @@ log = structlog.get_logger(__name__)
 
 RESEARCH_API = "/api/v1/research"
 POLL_INTERVAL_SECONDS = 10
-TIMEOUT_SECONDS_PER_ENTRY = 120  # the 0.8b smoke took ~5 s per entry; bigger models and extract_then_synthesize need the headroom
+TIMEOUT_SECONDS_PER_ENTRY = 120  # the 0.8b smoke took ~5 s per entry; bigger models and extract_then_synthesize need the headroom. The deepeval pass gets the same budget.
+UNREACHABLE_BACKEND_SECONDS = (
+    600  # how long a start or entries call waits out a backend restart before the grid stops
+)
+RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 FINISHED_STATUSES = frozenset({"completed", "failed"})
 
 CellStatus = RunStatus | Literal["timeout"]
+DeepevalCellStatus = Literal["off", "skipped", "timeout", "completed", "failed"]
 
 
 @dataclass(frozen=True)
@@ -67,7 +72,7 @@ class GridCellResult:
     seconds: float
     completed_entries: int
     failed_entries: list[EvaluationRunEntryResponse]
-    deepeval_status: str  # off (no --deepeval), skipped (run not completed), timeout, or the pass's own completed/failed
+    deepeval_status: DeepevalCellStatus
     deepeval_error: str | None
 
 
@@ -151,10 +156,7 @@ def _run_one_cell(
         strategy=strategy,
         run_id=run_id,
     )
-    try:
-        run_status: CellStatus = wait_for_run(client, run_id, timeout_seconds).status
-    except TimeoutError:
-        run_status = "timeout"
+    run_status = _wait_for_run_status(client, run_id, timeout_seconds)
     seconds = time.monotonic() - started
     log.info(
         "evaluation run finished",
@@ -166,7 +168,7 @@ def _run_one_cell(
         duration_ms=round(seconds * 1000),
     )
 
-    deepeval_status, deepeval_error = _judge_run(
+    deepeval_status, deepeval_error = _deepeval_outcome(
         client, run_id, run_status, with_deepeval, timeout_seconds
     )
 
@@ -185,14 +187,21 @@ def _run_one_cell(
     )
 
 
-def _judge_run(
+def _wait_for_run_status(client: httpx.Client, run_id: str, timeout_seconds: float) -> CellStatus:
+    try:
+        return wait_for_run(client, run_id, timeout_seconds).status
+    except TimeoutError:
+        return "timeout"
+
+
+def _deepeval_outcome(
     client: httpx.Client,
     run_id: str,
     run_status: CellStatus,
     with_deepeval: bool,
     timeout_seconds: float,
-) -> tuple[str, str | None]:
-    """Report status and error of the G-Eval pass for one cell."""
+) -> tuple[DeepevalCellStatus, str | None]:
+    """The deepeval column of the report row and the error behind it."""
     if not with_deepeval:
         return "off", None
     if run_status != "completed":
@@ -200,8 +209,12 @@ def _judge_run(
     try:
         deepeval = run_deepeval(client, run_id, timeout_seconds)
     except TimeoutError:
-        return "timeout", None
-    return deepeval.status, deepeval.error
+        return "timeout", "timed out"
+    if deepeval.status == "completed":
+        return "completed", None
+    if deepeval.status == "failed":
+        return "failed", deepeval.error
+    raise RuntimeError(f"run {run_id}: deepeval pass ended as {deepeval.status}")
 
 
 def start_run(
@@ -217,11 +230,13 @@ def start_run(
         processing_strategy=strategy,
         language=evaluation_set.language,
     )
-    response = client.post(
+    response = _call_backend(
+        client,
+        "POST",
         f"{RESEARCH_API}/evaluation-sets/{evaluation_set.evaluation_set_id}/runs",
+        _unreachable_deadline(),
         json=request.model_dump(mode="json"),
     )
-    response.raise_for_status()
     return EvaluationRunCreateResponse.model_validate_json(response.content).evaluation_run_id
 
 
@@ -234,7 +249,7 @@ def wait_for_run(
 
 def run_deepeval(client: httpx.Client, run_id: str, timeout_seconds: float) -> DeepevalPassMetrics:
     """POST /runs/{id}/deepeval and poll aggregate_metrics.deepeval until it finishes."""
-    client.post(f"{RESEARCH_API}/runs/{run_id}/deepeval").raise_for_status()
+    _call_backend(client, "POST", f"{RESEARCH_API}/runs/{run_id}/deepeval", _unreachable_deadline())
     run = _poll_run(client, run_id, timeout_seconds, _deepeval_finished)
     if run.aggregate_metrics.deepeval is None:
         raise RuntimeError(f"run {run_id}: deepeval pass finished without a status")
@@ -242,8 +257,9 @@ def run_deepeval(client: httpx.Client, run_id: str, timeout_seconds: float) -> D
 
 
 def fetch_entries(client: httpx.Client, run_id: str) -> list[EvaluationRunEntryResponse]:
-    response = client.get(f"{RESEARCH_API}/runs/{run_id}/entries")
-    response.raise_for_status()
+    response = _call_backend(
+        client, "GET", f"{RESEARCH_API}/runs/{run_id}/entries", _unreachable_deadline()
+    )
     return EvaluationRunEntriesResponse.model_validate_json(response.content).entries
 
 
@@ -264,9 +280,7 @@ def print_failures(results: list[GridCellResult]) -> None:
     """Each timed-out run, each failed entry's title and error, then each failed or timed-out deepeval pass."""
     timed_out_runs = [result for result in results if result.status == "timeout"]
     entry_failures = [(result, entry) for result in results for entry in result.failed_entries]
-    deepeval_failures = [
-        result for result in results if result.deepeval_status in ("failed", "timeout")
-    ]
+    deepeval_failures = [result for result in results if result.deepeval_error is not None]
     if not timed_out_runs and not entry_failures and not deepeval_failures:
         return
     print("\nFailures:\n")
@@ -277,10 +291,7 @@ def print_failures(results: list[GridCellResult]) -> None:
     for result, entry in entry_failures:
         print(f"- {_cell_label(result)}: {entry.title}: {_one_line(entry.error)}")
     for result in deepeval_failures:
-        reason = (
-            "timed out" if result.deepeval_status == "timeout" else _one_line(result.deepeval_error)
-        )
-        print(f"- {_cell_label(result)}: deepeval pass: {reason}")
+        print(f"- {_cell_label(result)}: deepeval pass: {_one_line(result.deepeval_error)}")
 
 
 def _cell_label(result: GridCellResult) -> str:
@@ -300,32 +311,46 @@ def _poll_run(
 ) -> EvaluationRunResponse:
     deadline = time.monotonic() + timeout_seconds
     while True:
-        run = _fetch_run_unless_unreachable(client, run_id)
-        if run is not None and is_done(run):
+        response = _call_backend(client, "GET", f"{RESEARCH_API}/runs/{run_id}", deadline)
+        run = EvaluationRunResponse.model_validate_json(response.content)
+        if is_done(run):
             return run
         if time.monotonic() > deadline:
             raise TimeoutError(f"run {run_id} unfinished after {timeout_seconds:.0f} s")
         time.sleep(POLL_INTERVAL_SECONDS)
 
 
-def _fetch_run_unless_unreachable(
-    client: httpx.Client, run_id: str
-) -> EvaluationRunResponse | None:
-    """None when the backend is briefly unreachable (network error or 5xx), so one blip does not end an overnight grid."""
-    try:
-        response = client.get(f"{RESEARCH_API}/runs/{run_id}")
-        response.raise_for_status()
-    except httpx.TransportError as error:
-        log.warning("polling the run failed, retrying", run_id=run_id, error=str(error))
-        return None
-    except httpx.HTTPStatusError as error:
-        if not error.response.is_server_error:
-            raise
-        log.warning(
-            "polling the run failed, retrying", run_id=run_id, status=error.response.status_code
-        )
-        return None
-    return EvaluationRunResponse.model_validate_json(response.content)
+def _call_backend(
+    client: httpx.Client,
+    method: Literal["GET", "POST"],
+    path: str,
+    deadline: float,
+    json: object = None,
+) -> httpx.Response:
+    """The response once the backend answers; TimeoutError if it is still unreachable at the deadline.
+
+    Unreachable means 502/503/504 or a network error. A POST is retried only when the connection
+    was never made, so a lost response cannot start the same run twice.
+    """
+    retried_errors = httpx.TransportError if method == "GET" else httpx.ConnectError
+    while True:
+        try:
+            response = client.request(method, path, json=json)
+        except retried_errors as error:
+            failure = str(error)
+        else:
+            if response.status_code not in RETRYABLE_STATUS_CODES:
+                response.raise_for_status()
+                return response
+            failure = f"HTTP {response.status_code}"
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"{method} {path}: backend unreachable ({failure})")
+        log.warning("backend unreachable, retrying", method=method, path=path, error=failure)
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _unreachable_deadline() -> float:
+    return time.monotonic() + UNREACHABLE_BACKEND_SECONDS
 
 
 def _deepeval_finished(run: EvaluationRunResponse) -> bool:

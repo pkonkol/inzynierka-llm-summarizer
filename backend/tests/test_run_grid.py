@@ -34,6 +34,9 @@ class FakeBackend:
         self.run_finishes = True
         self.stuck_runs: set[str] = set()
         self.unreachable_polls = 0  # first polls answer 503
+        self.unreachable_entry_reads = 0  # first entry reads answer 503
+        self.broken_polls = False  # every poll answers 500
+        self.lost_run_responses = 0  # first POST /runs time out after reaching the server
         self.deepeval_outcome: dict = {"status": "completed", "error": None}
         self.runs_accepted: int | None = None  # later POST /runs get 500
 
@@ -53,6 +56,9 @@ class FakeBackend:
             return httpx.Response(200, json=_created_set(body["name"], len(body["entries"])))
         if path.endswith("/runs") and request.method == "POST":
             self.run_requests.append(json.loads(request.content))
+            if self.lost_run_responses:
+                self.lost_run_responses -= 1
+                raise httpx.ReadTimeout("response lost", request=request)
             if self.runs_accepted is not None and len(self.polls) >= self.runs_accepted:
                 return httpx.Response(500, json={"detail": "backend restarted"})
             run_id = f"run-{len(self.polls)}"
@@ -67,10 +73,15 @@ class FakeBackend:
             )
         if path.endswith("/deepeval"):
             return httpx.Response(200, json={"status": "queued", "run_id": path.split("/")[-2]})
+        if path.endswith("/entries") and self.unreachable_entry_reads:
+            self.unreachable_entry_reads -= 1
+            return httpx.Response(503, json={"detail": "restarting"})
         if path.endswith("/entries"):
             return httpx.Response(
                 200, json={"entries": [_entry("ok", None), _entry("bad", "boom")]}
             )
+        if self.broken_polls:
+            return httpx.Response(500, json={"detail": "bug"})
         if self.unreachable_polls:
             self.unreachable_polls -= 1
             return httpx.Response(503, json={"detail": "cold start"})
@@ -365,3 +376,31 @@ def test_run_grid_asks_for_summaries_in_the_set_language(backend: FakeBackend) -
     run_grid.run_grid(client, ["a", "psc"], [ModelRef("ollama", "m")], ["direct"], False)
 
     assert [body["language"] for body in backend.run_requests] == ["en", "pl"]
+
+
+def test_a_server_error_on_polling_stops_at_once(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.polls["broken"] = 0
+    backend.broken_polls = True
+
+    with pytest.raises(httpx.HTTPStatusError, match="500"):
+        wait_for_run(client, "broken", 30)
+    assert backend.requests.count(("GET", "/api/v1/research/runs/broken")) == 1
+
+
+def test_reading_entries_survives_a_backend_restart(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.unreachable_entry_reads = 2
+
+    results = run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert [len(result.failed_entries) for result in results] == [1]
+
+
+def test_a_lost_response_to_starting_a_run_is_not_retried(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.lost_run_responses = 1
+
+    with pytest.raises(httpx.ReadTimeout):
+        run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+    assert len(backend.run_requests) == 1

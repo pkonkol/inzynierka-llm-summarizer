@@ -91,6 +91,7 @@ class Settings(BaseSettings):
             "anthropic/claude-sonnet-5.5",
             "openai/gpt-5.4-nano",
             "xiaomi/mimo-v2.6-flash",
+            "tencent/hy4-flash",
             "upstage/solar-pro4",
             "google/gemini-4-hydrogen",
             "meta/muse-ember",

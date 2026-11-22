@@ -70,6 +70,7 @@ JUDGE_CANDIDATES: list[JudgeModelRef] = [
     JudgeModelRef("openrouter", "deepseek/deepseek-v4.1-flash-1017"),
     JudgeModelRef("openrouter", "z-ai/glm-5.3-flash"),
     JudgeModelRef("openrouter", "xiaomi/mimo-v2.6-flash"),
+    JudgeModelRef("openrouter", "tencent/hy4-flash"),
     JudgeModelRef("openrouter", "anthropic/claude-haiku-5.5"),
     JudgeModelRef("openrouter", "openai/gpt-6-luna"),
     JudgeModelRef("openrouter", "meta/muse-ember"),

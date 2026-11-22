@@ -171,7 +171,7 @@ calibration-psc +names="psc-abstract-a-20 psc-extract-k-5":
 calibration-sample *args:
     uv run python -m calibration.build_sample {{args}}
 
-# E3: 50-entry subsets of every evaluation set, calibration sources excluded
+# E3: 50-entry subsets of every evaluation set, calibration sources excluded, plus a 12-entry smoke cut of each
 [group('calibration')]
 [working-directory('backend')]
 e3-subsets *args:

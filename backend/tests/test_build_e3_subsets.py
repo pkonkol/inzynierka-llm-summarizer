@@ -1,4 +1,4 @@
-"""E3 subsets: 50 distinct texts per set, never a calibration source, every PSC cell and GUMSum genre present."""
+"""E3 subsets: 50 distinct texts per set, never a calibration source, every PSC cell and GUMSum genre present; smoke cuts reach the length extremes."""
 
 import random
 from collections import Counter
@@ -10,15 +10,27 @@ from app.schemas.evaluation_set_api import EvaluationSetEntryImport, EvaluationS
 from calibration.build_e3_subsets import (
     PSC_ANNOTATORS,
     PSC_CELLS,
+    SMOKE_SIZE,
     SUBSET_SIZE,
     gumsum_genre,
     psc_cell,
     psc_cell_sizes,
     sample_english_set,
     sample_psc,
+    smoke_subset,
+    spread_by_length,
 )
 
 GUMSUM_GENRES = ["academic", "bio", "fiction", "interview", "news", "whow"]
+ALL_GUMSUM_GENRES = [
+    *GUMSUM_GENRES,
+    "conversation",
+    "reddit",
+    "speech",
+    "textbook",
+    "vlog",
+    "voyage",
+]
 
 
 def _entry(text_id: str, url: str) -> EvaluationSetEntryImport:
@@ -111,3 +123,75 @@ def test_same_seed_gives_same_subsets(tmp_path: Path) -> None:
     )
 
     assert first == second
+
+
+def _entry_of_length(word_count: int, url: str, title: str = "Title") -> EvaluationSetEntryImport:
+    return EvaluationSetEntryImport(
+        input_text=" ".join(["word"] * word_count) + f" {url}",
+        golden_summary="Summary.",
+        title=title,
+        url=url,
+    )
+
+
+def _word_counts(entries: list[EvaluationSetEntryImport]) -> list[int]:
+    return sorted(len(entry.input_text.split()) for entry in entries)
+
+
+def test_spread_by_length_includes_shortest_and_longest() -> None:
+    entries = [_entry_of_length(length, f"doc-{length}") for length in range(10, 60)]
+
+    spread = spread_by_length(entries, SMOKE_SIZE)
+
+    assert len({entry.url for entry in spread}) == SMOKE_SIZE
+    assert _word_counts(spread)[0] == _word_counts(entries)[0]
+    assert _word_counts(spread)[-1] == _word_counts(entries)[-1]
+
+
+def test_smoke_gumsum_takes_one_entry_per_genre_with_the_extremes() -> None:
+    entries = [
+        _entry_of_length(100 + 10 * index + genre_index, f"gumsum:GUM_{genre}_doc{index}")
+        for genre_index, genre in enumerate(ALL_GUMSUM_GENRES)
+        for index in range(4)
+    ]
+
+    smoke = smoke_subset("gumsum", entries)
+
+    assert sorted(gumsum_genre(entry.url) for entry in smoke) == sorted(ALL_GUMSUM_GENRES)
+    assert _word_counts(smoke)[0] == _word_counts(entries)[0]
+    assert _word_counts(smoke)[-1] == _word_counts(entries)[-1]
+
+
+def test_smoke_psc_takes_shortest_and_longest_of_each_cell() -> None:
+    entries = [
+        _entry_of_length(
+            200 + length, f"psc://{kind}-{percent}-{length}", f"[{kind}-{percent}-a] T"
+        )
+        for kind, percent in PSC_CELLS
+        for length in range(5)
+    ]
+
+    smoke = smoke_subset("psc", entries)
+
+    cells = Counter(psc_cell(entry.title) for entry in smoke)
+    assert set(cells) == {f"{kind}-{percent}" for kind, percent in PSC_CELLS}
+    assert set(cells.values()) == {2}
+    assert set(_word_counts(smoke)) == {201, 205}
+
+
+def test_every_smoke_entry_comes_from_its_subset() -> None:
+    entries = [_entry_of_length(length, f"doc-{length}") for length in range(10, 60)]
+
+    smoke = smoke_subset("curation", entries)
+
+    assert all(entry in entries for entry in smoke)
+
+
+def test_smoke_cut_of_the_wrong_size_raises() -> None:
+    entries = [
+        _entry_of_length(100 + index, f"gumsum:GUM_{genre}_doc{index}")
+        for index, genre in enumerate(GUMSUM_GENRES)
+    ]
+
+    with pytest.raises(ValueError, match="6 entries, expected 12"):
+        smoke_subset("gumsum", entries)

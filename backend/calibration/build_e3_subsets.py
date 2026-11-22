@@ -1,10 +1,11 @@
-"""Pick the E3 evaluation subsets: 50 entries per set, none of them a calibration source."""
+"""Pick the E3 evaluation subsets: 50 entries per set, none of them a calibration source, and a 12-entry smoke cut of each."""
 
 from __future__ import annotations
 
 import argparse
 import random
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 import structlog
@@ -17,6 +18,7 @@ from app.services.calibration_files import REPO_ROOT, read_sample
 log = structlog.get_logger(__name__)
 
 SUBSET_SIZE = 50
+SMOKE_SIZE = 12
 SEED = 20261107
 PSC_CELLS = [(kind, percent) for kind in ("abstract", "extract") for percent in (5, 10, 20)]
 PSC_ANNOTATORS = "abcdefghijk"
@@ -26,6 +28,7 @@ ENGLISH_SETS = {
     "gumsum": REPO_ROOT / "data" / "evaluation_set_gumsum.json",
 }
 PSC_SUBSET_FILE = REPO_ROOT / "data" / "psc" / "evaluation_set_e3_psc_50.json"
+PSC_SMOKE_FILE = REPO_ROOT / "data" / "psc" / "evaluation_set_e3_smoke_psc_12.json"
 
 
 def calibration_texts(sample: CalibrationSample) -> set[str]:
@@ -112,6 +115,66 @@ def psc_cell(title: str) -> str:
     return f"{kind}-{percent}"
 
 
+def smoke_subset(
+    name: str, entries: list[EvaluationSetEntryImport]
+) -> list[EvaluationSetEntryImport]:
+    """12 entries of an E3 subset that reach the length extremes: PSC 2 per cell, GUMSum 1 per genre, others spread by length."""
+    if name == "psc":
+        smoke = _smoke_psc(entries)
+    elif name == "gumsum":
+        smoke = _smoke_gumsum(entries)
+    else:
+        smoke = spread_by_length(entries, SMOKE_SIZE)
+    if len(smoke) != SMOKE_SIZE:
+        raise ValueError(f"{name}: smoke cut has {len(smoke)} entries, expected {SMOKE_SIZE}")
+    return smoke
+
+
+def spread_by_length(
+    entries: list[EvaluationSetEntryImport], count: int
+) -> list[EvaluationSetEntryImport]:
+    """`count` entries at evenly spaced ranks of input word count, shortest and longest included."""
+    by_length = sorted(entries, key=_word_count)
+    last_rank = len(by_length) - 1
+    return [by_length[round(index * last_rank / (count - 1))] for index in range(count)]
+
+
+def _smoke_psc(entries: list[EvaluationSetEntryImport]) -> list[EvaluationSetEntryImport]:
+    """Shortest and longest text of each PSC cell."""
+    entries_by_cell = _group(entries, lambda entry: psc_cell(entry.title))
+    return [
+        picked
+        for cell_entries in entries_by_cell.values()
+        for picked in (min(cell_entries, key=_word_count), max(cell_entries, key=_word_count))
+    ]
+
+
+def _smoke_gumsum(entries: list[EvaluationSetEntryImport]) -> list[EvaluationSetEntryImport]:
+    """One entry per genre: the overall shortest and longest texts for their genres, the median elsewhere."""
+    extremes = [min(entries, key=_word_count), max(entries, key=_word_count)]
+    picked: list[EvaluationSetEntryImport] = []
+    for genre, genre_entries in _group(entries, lambda entry: gumsum_genre(entry.url)).items():
+        genre_extremes = [entry for entry in extremes if gumsum_genre(entry.url) == genre]
+        if len(genre_extremes) > 1:
+            raise ValueError(f"gumsum: shortest and longest text are both in genre {genre}")
+        by_length = sorted(genre_entries, key=_word_count)
+        picked.append(genre_extremes[0] if genre_extremes else by_length[len(by_length) // 2])
+    return picked
+
+
+def _group(
+    entries: list[EvaluationSetEntryImport], key: Callable[[EvaluationSetEntryImport], str]
+) -> dict[str, list[EvaluationSetEntryImport]]:
+    groups: dict[str, list[EvaluationSetEntryImport]] = defaultdict(list)
+    for entry in entries:
+        groups[key(entry)].append(entry)
+    return dict(sorted(groups.items()))
+
+
+def _word_count(entry: EvaluationSetEntryImport) -> int:
+    return len(entry.input_text.split())
+
+
 def _read_set(path: Path) -> EvaluationSetImportRequest:
     return EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
 
@@ -136,6 +199,10 @@ def _subset_file(set_name: str) -> Path:
     return REPO_ROOT / "data" / f"evaluation_set_e3_{set_name}_50.json"
 
 
+def _smoke_file(set_name: str) -> Path:
+    return REPO_ROOT / "data" / f"evaluation_set_e3_smoke_{set_name}_12.json"
+
+
 def _write_subset(
     path: Path, name: str, language: str, entries: list[EvaluationSetEntryImport]
 ) -> None:
@@ -146,14 +213,15 @@ def _write_subset(
     log.info("e3 subset written", path=str(path), entries=len(entries))
 
 
-def _print_composition(name: str, entries: list[EvaluationSetEntryImport]) -> None:
+def _print_composition(label: str, name: str, entries: list[EvaluationSetEntryImport]) -> None:
     if name == "gumsum":
         groups = Counter(gumsum_genre(entry.url) for entry in entries)
     elif name == "psc":
         groups = Counter(psc_cell(entry.title) for entry in entries)
     else:
         groups = Counter({"all": len(entries)})
-    print(name, dict(sorted(groups.items())))
+    words = [_word_count(entry) for entry in entries]
+    print(label, dict(sorted(groups.items())), f"words {min(words)}-{max(words)}")
 
 
 def main() -> None:
@@ -178,17 +246,22 @@ def main() -> None:
     }
     subsets["psc"] = sample_psc(args.psc_sets_dir, excluded, _set_rng("psc"))
 
+    smoke_subsets = {name: smoke_subset(name, entries) for name, entries in subsets.items()}
+
     for name, entries in subsets.items():
         _assert_clean(name, entries, excluded)
-        _print_composition(name, entries)
+        _print_composition(name, name, entries)
+        _print_composition(f"{name} smoke", name, smoke_subsets[name])
     if args.dry_run:
         return
 
     for name, entries in subsets.items():
         if name == "psc":
             _write_subset(PSC_SUBSET_FILE, "e3-psc-50", "pl", entries)
+            _write_subset(PSC_SMOKE_FILE, "e3-smoke-psc-12", "pl", smoke_subsets[name])
         else:
             _write_subset(_subset_file(name), f"e3-{name}-50", "en", entries)
+            _write_subset(_smoke_file(name), f"e3-smoke-{name}-12", "en", smoke_subsets[name])
 
 
 if __name__ == "__main__":

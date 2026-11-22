@@ -72,7 +72,8 @@ ALIGNMENT_PROMPT = ChatPromptTemplate.from_messages(
             "paraphrase, in more general words, or with secondary details such as an exact number "
             "or a qualifier left out. It is absent only when its main point is missing or "
             "contradicted. present is false exactly when sentence_indices is empty.\n"
-            "Answer with one entry per key fact, in order, as "
+            "Answer with one JSON object whose only key is keyfacts, holding one entry per key "
+            "fact in order; never a bare list or a lone entry: "
             '{{"keyfacts": [{{"keyfact_index": 0, "present": true, "sentence_indices": [0, 2]}}]}}.'
             "\n\nKey facts:\n{numbered_keyfacts}\n\n<summary>\n{numbered_sentences}\n</summary>",
         ),

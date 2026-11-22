@@ -2,6 +2,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { FactCheckView, PublicSummaryState } from "../../hooks/usePublicSummary";
 import type {
+  AssessedSource,
+  ClaimReview,
   ContextExpansionResult,
   RelatedSource,
   SummaryResponse,
@@ -29,21 +31,80 @@ const CHANNEL_LABEL: Record<RelatedSource["channel"], string> = {
   web: "sieć",
   discussions: "Hacker News",
   science: "publikacje",
+  factcheck_google: "Google Fact Check",
+  factcheck_web: "serwis fact-checkingowy",
 };
+
+const STANCE_GROUPS: { stance: AssessedSource["stance"]; heading: string }[] = [
+  { stance: "supports", heading: "Potwierdzają" },
+  { stance: "contradicts", heading: "Podważają" },
+  { stance: "context", heading: "Kontekst" },
+];
+
+function ReviewNote({ review }: { review: ClaimReview }) {
+  const reviewedOn =
+    review.reviewed_at === null
+      ? ""
+      : ` (${new Date(review.reviewed_at).toLocaleDateString("pl-PL")})`;
+  return (
+    <>
+      {" "}
+      <span className="text-mute">
+        · {review.publisher}: {review.verdict}
+        {reviewedOn}
+      </span>
+      <span className="block text-mute">Sprawdzane twierdzenie: {review.claim}</span>
+    </>
+  );
+}
+
+function SourceLink({ source, number }: { source: RelatedSource; number: number }) {
+  return (
+    <>
+      [{number}]{" "}
+      <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline">
+        {source.title ?? source.url}
+      </a>{" "}
+      <span className="text-mute">· {CHANNEL_LABEL[source.channel]}</span>
+      {source.review === null ? null : <ReviewNote review={source.review} />}
+    </>
+  );
+}
 
 function SourceList({ sources }: { sources: RelatedSource[] }) {
   return (
     <ol className="grid gap-1">
       {sources.map((source, index) => (
         <li key={source.url}>
-          [{index + 1}]{" "}
-          <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline">
-            {source.title ?? source.url}
-          </a>{" "}
-          <span className="text-mute">· {CHANNEL_LABEL[source.channel]}</span>
+          <SourceLink source={source} number={index + 1} />
         </li>
       ))}
     </ol>
+  );
+}
+
+// Grouped by stance, each source keeps the [n] the assessment text cites it by.
+function SourcesByStance({ sources }: { sources: AssessedSource[] }) {
+  const numbered = sources.map((source, index) => ({ source, number: index + 1 }));
+  return (
+    <div className="grid gap-2 text-caption">
+      {STANCE_GROUPS.map(({ stance, heading }) => {
+        const inGroup = numbered.filter(({ source }) => source.stance === stance);
+        if (inGroup.length === 0) return null;
+        return (
+          <div key={stance} className="grid gap-1">
+            <h4 className="font-medium">{heading}</h4>
+            <ul className="grid gap-1">
+              {inGroup.map(({ source, number }) => (
+                <li key={source.url}>
+                  <SourceLink source={source} number={number} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -68,8 +129,16 @@ function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansi
   );
 }
 
-function FactCheckBody({ factCheck }: { factCheck: FactCheckView }) {
+type FactCheckProps = { factCheck: FactCheckView; onCheckFacts: () => void };
+
+function FactCheckBody({ factCheck, onCheckFacts }: FactCheckProps) {
   switch (factCheck.status) {
+    case "idle":
+      return (
+        <div>
+          <Button onClick={onCheckFacts}>Sprawdź fakty</Button>
+        </div>
+      );
     case "working":
       return (
         <div className="grid gap-2">
@@ -78,28 +147,31 @@ function FactCheckBody({ factCheck }: { factCheck: FactCheckView }) {
         </div>
       );
     case "failed":
-      return <Alert tone="danger">{factCheck.message}</Alert>;
+      return (
+        <div className="grid gap-2">
+          <Alert tone="danger">{factCheck.message}</Alert>
+          <div>
+            <Button onClick={onCheckFacts}>Spróbuj ponownie</Button>
+          </div>
+        </div>
+      );
     case "completed":
       return (
         <>
           <div className="markdown max-w-measure font-reading text-reading">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{factCheck.text}</ReactMarkdown>
           </div>
-          {factCheck.sources.length > 0 ? (
-            <div className="text-caption">
-              <SourceList sources={factCheck.sources} />
-            </div>
-          ) : null}
+          {factCheck.sources.length > 0 ? <SourcesByStance sources={factCheck.sources} /> : null}
         </>
       );
   }
 }
 
-function FactCheckSection({ factCheck }: { factCheck: FactCheckView }) {
+function FactCheckSection({ factCheck, onCheckFacts }: FactCheckProps) {
   return (
     <section className="grid gap-2 border-t border-hairline pt-3">
       <h3 className="font-medium">Weryfikacja faktów</h3>
-      <FactCheckBody factCheck={factCheck} />
+      <FactCheckBody factCheck={factCheck} onCheckFacts={onCheckFacts} />
     </section>
   );
 }
@@ -117,7 +189,9 @@ function ResultState({ state }: { state: PublicSummaryState }) {
   );
 }
 
-function ResultBody({ state }: { state: PublicSummaryState }) {
+type ResultProps = { state: PublicSummaryState; onCheckFacts: () => void };
+
+function ResultBody({ state, onCheckFacts }: ResultProps) {
   const showFlash = useFlash();
 
   switch (state.phase) {
@@ -156,7 +230,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
           <div className="markdown max-w-measure flex-1 font-reading text-reading">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
           </div>
-          {factCheck !== null ? <FactCheckSection factCheck={factCheck} /> : null}
+          <FactCheckSection factCheck={factCheck} onCheckFacts={onCheckFacts} />
           {contextExpansion !== null && contextExpansion.mode !== "none" ? (
             <RelatedSources contextExpansion={contextExpansion} />
           ) : null}
@@ -177,7 +251,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
 
 // The live region is mounted from the first render: it announces only what is inserted after
 // it exists, so rendering it together with its first message would announce nothing.
-export function PublicSummaryResult({ state }: { state: PublicSummaryState }) {
+export function PublicSummaryResult({ state, onCheckFacts }: ResultProps) {
   return (
     <section className="flex min-h-0 flex-col border border-hairline">
       <div className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-hairline px-4">
@@ -185,7 +259,7 @@ export function PublicSummaryResult({ state }: { state: PublicSummaryState }) {
         <ResultState state={state} />
       </div>
       <div aria-live="polite" className="flex flex-1 flex-col overflow-auto p-4">
-        <ResultBody state={state} />
+        <ResultBody state={state} onCheckFacts={onCheckFacts} />
       </div>
     </section>
   );

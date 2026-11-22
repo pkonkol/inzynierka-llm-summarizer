@@ -45,6 +45,11 @@ export function fetchJobStatus(jobId) {
   return request(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
 }
 
+/** Starts the fact check of a completed public summary; throws with the API's detail message. */
+export async function requestFactCheck(jobId) {
+  await request(`/api/v1/public/jobs/${encodeURIComponent(jobId)}/fact-check`, { method: "POST" });
+}
+
 /** Creates a public summary job; resolves to its job_id or throws with the API's detail message. */
 export async function createPublicSummaryJob(payload) {
   const { job_id } = await request("/api/v1/public/summarize", {

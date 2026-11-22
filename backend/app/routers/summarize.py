@@ -9,7 +9,6 @@ from pymongo.errors import DuplicateKeyError
 from ..core.auth import require_auth
 from ..core.mongo import get_jobs_collection
 from ..schemas.context_expansion import ContextExpansionMode
-from ..schemas.fact_check import FactCheck
 from ..schemas.job_api import (
     JobCreatedResponse,
     JobCreateRequest,
@@ -56,19 +55,6 @@ async def create_summarize_job(
         run_deepeval=payload.run_deepeval,
         origin="admin",
         context_expansion_mode=payload.context_expansion_mode,
-        check_facts=False,
-    )
-
-
-def _pending_fact_check() -> FactCheck:
-    return FactCheck(
-        status="pending",
-        text=None,
-        sources=[],
-        context_expansion=None,
-        usage=None,
-        duration_ms=None,
-        error=None,
     )
 
 
@@ -83,7 +69,6 @@ async def queue_summarization_job(
     run_deepeval: bool,
     origin: JobOrigin,
     context_expansion_mode: ContextExpansionMode,
-    check_facts: bool,
 ) -> JobCreatedResponse:
     job_id = str(uuid4())
     now = datetime.now(UTC)
@@ -104,7 +89,6 @@ async def queue_summarization_job(
         origin=origin,
         run_deepeval=run_deepeval,
         context_expansion_mode=context_expansion_mode,
-        fact_check=_pending_fact_check() if check_facts else None,
         status="pending",
         input_text=input_text,
         created_at=now,

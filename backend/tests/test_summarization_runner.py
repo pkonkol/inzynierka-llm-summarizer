@@ -1,12 +1,13 @@
+import asyncio
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
 from app.core.config import settings
 from app.schemas.context_expansion import ContextExpansionResult, RelatedSource
 from app.schemas.summary import LlmSummaryResult, UsageMetadata
-from app.services import summarization_runner
+from app.services import fact_check_runner, summarization_runner
 from app.services.context_expansion import ContextExpansionError
 
 
@@ -79,6 +80,7 @@ def _context_expansion_result() -> ContextExpansionResult:
                 title="Related",
                 excerpt="Supporting fact.",
                 selection_reason="adds context",
+                review=None,
             )
         ],
         usage=UsageMetadata(),
@@ -172,10 +174,21 @@ def _summary_result() -> LlmSummaryResult:
 
 
 @pytest.fixture
-def fact_check_spawns(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    spawn = MagicMock()
-    monkeypatch.setattr(summarization_runner, "spawn_fact_check", spawn, raising=False)
-    return spawn
+def fact_check_starts(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Names of every fact-check entry point the summarization reached."""
+    started: list[str] = []
+
+    async def run_fact_check(*_args: object) -> None:
+        started.append("run_fact_check")
+
+    monkeypatch.setattr(fact_check_runner, "run_fact_check", run_fact_check)
+    monkeypatch.setattr(
+        summarization_runner,
+        "spawn_fact_check",
+        lambda *_args: started.append("spawn_fact_check"),
+        raising=False,
+    )
+    return started
 
 
 def _job_runner(
@@ -195,44 +208,41 @@ def _job_runner(
     return collection
 
 
-async def test_case_10_spawns_fact_check_after_the_summary_is_stored(
-    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
+@pytest.mark.parametrize(
+    "fact_check",
+    [
+        pytest.param(None, id="new_job"),
+        pytest.param(PENDING_FACT_CHECK, id="job_with_pending_check"),
+    ],
+)
+async def test_a_completed_summary_does_not_start_a_fact_check(
+    monkeypatch: pytest.MonkeyPatch, fact_check_starts: list[str], fact_check: dict | None
 ) -> None:
-    collection = _job_runner(
-        monkeypatch, PENDING_FACT_CHECK, AsyncMock(return_value=_summary_result())
-    )
-    status_at_spawn: list[str] = []
-    fact_check_spawns.side_effect = lambda *_args: status_at_spawn.append(
-        _all_set_fields(collection)["status"]
-    )
+    collection = _job_runner(monkeypatch, fact_check, AsyncMock(return_value=_summary_result()))
 
     await summarization_runner.run_summarization_job("j")
+    await asyncio.sleep(0)
 
-    fact_check_spawns.assert_called_once_with("j", ARTICLE_TEXT)
-    assert status_at_spawn == ["completed"]
+    assert _all_set_fields(collection)["status"] == "completed"
+    assert fact_check_starts == []
 
 
-async def test_case_11_does_not_spawn_fact_check_by_default(
-    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
+@pytest.mark.parametrize(
+    "fact_check",
+    [
+        pytest.param(None, id="new_job"),
+        pytest.param(PENDING_FACT_CHECK, id="job_with_pending_check"),
+    ],
+)
+async def test_a_failed_summary_leaves_the_fact_check_field_alone(
+    monkeypatch: pytest.MonkeyPatch, fact_check_starts: list[str], fact_check: dict | None
 ) -> None:
-    _job_runner(monkeypatch, None, AsyncMock(return_value=_summary_result()))
+    collection = _job_runner(monkeypatch, fact_check, AsyncMock(side_effect=RuntimeError("down")))
 
     await summarization_runner.run_summarization_job("j")
+    await asyncio.sleep(0)
 
-    fact_check_spawns.assert_not_called()
-
-
-async def test_case_12_failed_summary_fails_the_fact_check_without_spawning_it(
-    monkeypatch: pytest.MonkeyPatch, fact_check_spawns: MagicMock
-) -> None:
-    collection = _job_runner(
-        monkeypatch, PENDING_FACT_CHECK, AsyncMock(side_effect=RuntimeError("model down"))
-    )
-
-    await summarization_runner.run_summarization_job("j")
-
-    fact_check_spawns.assert_not_called()
-    failure = _all_set_fields(collection)
-    assert failure["status"] == "failed"
-    assert failure["fact_check.status"] == "failed"
-    assert failure["fact_check.error"]
+    written = _all_set_fields(collection)
+    assert written["status"] == "failed"
+    assert not [key for key in written if key.startswith("fact_check")]
+    assert fact_check_starts == []

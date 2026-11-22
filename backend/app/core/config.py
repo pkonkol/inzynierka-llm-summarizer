@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     openrouter_api_key: SecretStr | None = None
     exa_api_key: SecretStr | None = None
     openalex_api_key: SecretStr | None = None
+    factcheck_api_key: SecretStr | None = None
     ollama_url: str = ""
     # Ollama models allowed to think; every other Ollama model runs with reasoning off, since small Qwens loop when thinking.
     ollama_thinking_models: list[str] = []
@@ -138,6 +139,7 @@ class Settings(BaseSettings):
     context_results_per_query: int = 5
     context_selected_sources: int = 4
     context_excerpt_chars: int = 3000
+    fact_check_claim_count: int = 5
     title_model: dict[str, str] = {
         "model_provider": "gemini",
         "model_name": "gemini-3.8-flash",

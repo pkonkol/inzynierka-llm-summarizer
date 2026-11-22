@@ -158,6 +158,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/jobs/{job_id}/fact-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start a fact check of a completed public summary (daily limit) */
+        post: operations["request_public_fact_check_api_v1_public_jobs__job_id__fact_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meta/models": {
         parameters: {
             query?: never;
@@ -546,6 +563,28 @@ export interface components {
             /** Deepeval */
             deepeval: components["schemas"]["DeepevalItem-Output"][] | null;
         };
+        /** AssessedSource */
+        AssessedSource: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "web" | "discussions" | "science" | "factcheck_google" | "factcheck_web";
+            /** Url */
+            url: string;
+            /** Title */
+            title: string | null;
+            /** Excerpt */
+            excerpt: string;
+            /** Selection Reason */
+            selection_reason: string;
+            review: components["schemas"]["ClaimReview"] | null;
+            /**
+             * Stance
+             * @enum {string}
+             */
+            stance: "supports" | "contradicts" | "context";
+        };
         /** AuthStatusResponse */
         AuthStatusResponse: {
             /** Enabled */
@@ -621,7 +660,7 @@ export interface components {
              * Channel
              * @enum {string}
              */
-            channel: "web" | "discussions" | "science";
+            channel: "web" | "discussions" | "science" | "factcheck_google" | "factcheck_web";
             /** Queries */
             queries: string[];
             /** Result Count */
@@ -632,6 +671,17 @@ export interface components {
             cost_usd: number | null;
             /** Error */
             error: string | null;
+        };
+        /** ClaimReview */
+        ClaimReview: {
+            /** Claim */
+            claim: string;
+            /** Publisher */
+            publisher: string;
+            /** Verdict */
+            verdict: string;
+            /** Reviewed At */
+            reviewed_at: string | null;
         };
         /** ContextExpansionResult */
         ContextExpansionResult: {
@@ -1111,16 +1161,32 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "running" | "completed" | "failed";
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
             /** Text */
             text: string | null;
             /** Sources */
-            sources: components["schemas"]["RelatedSource"][];
+            sources: components["schemas"]["AssessedSource"][];
             context_expansion: components["schemas"]["ContextExpansionResult"] | null;
+            fact_check_search: components["schemas"]["FactCheckSearch"] | null;
             usage: components["schemas"]["UsageMetadata"] | null;
             /** Duration Ms */
             duration_ms: number | null;
             /** Error */
             error: string | null;
+        };
+        /** FactCheckSearch */
+        FactCheckSearch: {
+            /** Claims */
+            claims: string[];
+            /** Channels */
+            channels: components["schemas"]["ChannelOutcome"][];
+            usage: components["schemas"]["UsageMetadata"];
+            /** Duration Ms */
+            duration_ms: number;
         };
         /** GoldenMetrics */
         "GoldenMetrics-Input": {
@@ -1422,11 +1488,6 @@ export interface components {
              * @default false
              */
             add_web_context: boolean;
-            /**
-             * Check Facts
-             * @default false
-             */
-            check_facts: boolean;
         };
         /** RelatedSource */
         RelatedSource: {
@@ -1434,7 +1495,7 @@ export interface components {
              * Channel
              * @enum {string}
              */
-            channel: "web" | "discussions" | "science";
+            channel: "web" | "discussions" | "science" | "factcheck_google" | "factcheck_web";
             /** Url */
             url: string;
             /** Title */
@@ -1443,6 +1504,7 @@ export interface components {
             excerpt: string;
             /** Selection Reason */
             selection_reason: string;
+            review: components["schemas"]["ClaimReview"] | null;
         };
         /** ResolvedLength */
         ResolvedLength: {
@@ -1636,6 +1698,7 @@ export interface components {
     pathItems: never;
 }
 export type AiMetrics = components['schemas']['AiMetrics'];
+export type AssessedSource = components['schemas']['AssessedSource'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
 export type BlindPair = components['schemas']['BlindPair'];
 export type BlindSummary = components['schemas']['BlindSummary'];
@@ -1643,6 +1706,7 @@ export type CalibrationLabels = components['schemas']['CalibrationLabels'];
 export type CalibrationSampleResponse = components['schemas']['CalibrationSampleResponse'];
 export type CalibrationSource = components['schemas']['CalibrationSource'];
 export type ChannelOutcome = components['schemas']['ChannelOutcome'];
+export type ClaimReview = components['schemas']['ClaimReview'];
 export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
 export type ContextSection = components['schemas']['ContextSection'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
@@ -1671,6 +1735,7 @@ export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImp
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
 export type FactCheck = components['schemas']['FactCheck'];
+export type FactCheckSearch = components['schemas']['FactCheckSearch'];
 export type GoldenMetricsInput = components['schemas']['GoldenMetrics-Input'];
 export type GoldenMetricsOutput = components['schemas']['GoldenMetrics-Output'];
 export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];
@@ -1996,6 +2061,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["JobCreatedResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_public_fact_check_api_v1_public_jobs__job_id__fact_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description No public job */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not startable now */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

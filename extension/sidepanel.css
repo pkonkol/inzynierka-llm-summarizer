@@ -121,6 +121,10 @@ progress {
   width: 100%;
 }
 
+.checked-claim {
+  display: block;
+}
+
 #result h2 a {
   color: inherit;
 }

@@ -1,8 +1,16 @@
 /**
+ * @typedef {{ claim: string, publisher: string, verdict: string, reviewed_at: string | null }} ClaimReview
+ * @typedef {{
+ *   url: string,
+ *   title: string | null,
+ *   channel: string,
+ *   stance: "supports" | "contradicts" | "context",
+ *   review: ClaimReview | null,
+ * }} FactCheckSource
  * @typedef {(
  *   { status: "working" }
  *   | { status: "failed", error: string }
- *   | { status: "completed", text: string, sources: { url: string, title: string | null }[] }
+ *   | { status: "completed", text: string, sources: FactCheckSource[] }
  * )} FactCheckEntry
  */
 
@@ -16,7 +24,7 @@
  *   title: string | null,
  *   summary: string | null,
  *   error: string | null,
- *   factCheck?: FactCheckEntry | null,
+ *   factCheck?: FactCheckEntry | null,  // null until the reader asks for a fact check
  *   createdAt: string,
  * }} HistoryEntry
  */

@@ -59,28 +59,7 @@ async def test_an_in_progress_job_carries_no_summary_text(jobs_collection: Async
     assert job.summary == ""
 
 
-@pytest.mark.parametrize(
-    ("check_facts", "expected_fact_check"),
-    [
-        pytest.param(
-            True,
-            {
-                "status": "pending",
-                "text": None,
-                "sources": [],
-                "context_expansion": None,
-                "usage": None,
-                "duration_ms": None,
-                "error": None,
-            },
-            id="case_13_pending_fact_check",
-        ),
-        pytest.param(False, None, id="case_14_no_fact_check"),
-    ],
-)
-async def test_case_13_14_check_facts_sets_the_fact_check_on_the_job(
-    jobs_collection: AsyncMock, check_facts: bool, expected_fact_check: dict | None
-) -> None:
+async def test_case_13_14_a_new_job_has_no_fact_check(jobs_collection: AsyncMock) -> None:
     source = SummarizeSourceRequest.model_validate({"url": "https://example.com/a"})
 
     await summarize.queue_summarization_job(
@@ -93,8 +72,7 @@ async def test_case_13_14_check_facts_sets_the_fact_check_on_the_job(
         run_deepeval=False,
         origin="public",
         context_expansion_mode="none",
-        check_facts=check_facts,  # pyrefly: ignore
     )
 
     inserted = jobs_collection.insert_one.call_args.args[0]
-    assert inserted["fact_check"] == expected_fact_check
+    assert inserted["fact_check"] is None

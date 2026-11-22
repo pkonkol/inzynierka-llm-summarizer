@@ -488,6 +488,52 @@
         }
       }
     },
+    "/api/v1/public/jobs/{job_id}/fact-check": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Start a fact check of a completed public summary (daily limit)",
+        "operationId": "request_public_fact_check_api_v1_public_jobs__job_id__fact_check_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "No public job"
+          },
+          "409": {
+            "description": "Not startable now"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/meta/models": {
       "get": {
         "tags": [
@@ -1559,6 +1605,74 @@
         ],
         "title": "AiMetrics"
       },
+      "AssessedSource": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "web",
+              "discussions",
+              "science",
+              "factcheck_google",
+              "factcheck_web"
+            ],
+            "title": "Channel"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "selection_reason": {
+            "type": "string",
+            "title": "Selection Reason"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClaimReview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "supports",
+              "contradicts",
+              "context"
+            ],
+            "title": "Stance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "url",
+          "title",
+          "excerpt",
+          "selection_reason",
+          "review",
+          "stance"
+        ],
+        "title": "AssessedSource"
+      },
       "AuthStatusResponse": {
         "properties": {
           "enabled": {
@@ -1748,7 +1862,9 @@
             "enum": [
               "web",
               "discussions",
-              "science"
+              "science",
+              "factcheck_google",
+              "factcheck_web"
             ],
             "title": "Channel"
           },
@@ -1800,6 +1916,42 @@
           "error"
         ],
         "title": "ChannelOutcome"
+      },
+      "ClaimReview": {
+        "properties": {
+          "claim": {
+            "type": "string",
+            "title": "Claim"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claim",
+          "publisher",
+          "verdict",
+          "reviewed_at"
+        ],
+        "title": "ClaimReview"
       },
       "ContextExpansionResult": {
         "properties": {
@@ -3143,6 +3295,11 @@
             ],
             "title": "Status"
           },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          },
           "text": {
             "anyOf": [
               {
@@ -3156,7 +3313,7 @@
           },
           "sources": {
             "items": {
-              "$ref": "#/components/schemas/RelatedSource"
+              "$ref": "#/components/schemas/AssessedSource"
             },
             "type": "array",
             "title": "Sources"
@@ -3165,6 +3322,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ContextExpansionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fact_check_search": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactCheckSearch"
               },
               {
                 "type": "null"
@@ -3207,14 +3374,49 @@
         "type": "object",
         "required": [
           "status",
+          "requested_at",
           "text",
           "sources",
           "context_expansion",
+          "fact_check_search",
           "usage",
           "duration_ms",
           "error"
         ],
         "title": "FactCheck"
+      },
+      "FactCheckSearch": {
+        "properties": {
+          "claims": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelOutcome"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claims",
+          "channels",
+          "usage",
+          "duration_ms"
+        ],
+        "title": "FactCheckSearch"
       },
       "GoldenMetrics-Input": {
         "properties": {
@@ -4034,11 +4236,6 @@
             "type": "boolean",
             "title": "Add Web Context",
             "default": false
-          },
-          "check_facts": {
-            "type": "boolean",
-            "title": "Check Facts",
-            "default": false
           }
         },
         "type": "object",
@@ -4051,7 +4248,9 @@
             "enum": [
               "web",
               "discussions",
-              "science"
+              "science",
+              "factcheck_google",
+              "factcheck_web"
             ],
             "title": "Channel"
           },
@@ -4077,6 +4276,16 @@
           "selection_reason": {
             "type": "string",
             "title": "Selection Reason"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClaimReview"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -4085,7 +4294,8 @@
           "url",
           "title",
           "excerpt",
-          "selection_reason"
+          "selection_reason",
+          "review"
         ],
         "title": "RelatedSource"
       },

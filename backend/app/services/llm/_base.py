@@ -46,10 +46,21 @@ def neutralize_block_tags(text: str) -> str:
     )
 
 
+def _review_lines(source: RelatedSource) -> str:
+    if source.review is None:
+        return ""
+    review = source.review
+    return (
+        f"Checked claim: {neutralize_block_tags(review.claim)}\n"
+        f"Verdict by {neutralize_block_tags(review.publisher)}: {neutralize_block_tags(review.verdict)}\n"
+    )
+
+
 def related_source_blocks(related_sources: list[RelatedSource]) -> str:
     return "\n\n".join(
         f'<related_source id="{number}" url="{html.escape(source.url)}">\n'
-        f"{neutralize_block_tags(source.title or '')}\n{neutralize_block_tags(source.excerpt)}\n"
+        f"{neutralize_block_tags(source.title or '')}\n{_review_lines(source)}"
+        f"{neutralize_block_tags(source.excerpt)}\n"
         "</related_source>"
         for number, source in enumerate(related_sources, start=1)
     )

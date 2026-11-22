@@ -249,8 +249,7 @@ async def cleanup_stale_pending_jobs() -> int:
 async def cleanup_stale_fact_checks() -> int:
     """Marks fact checks left pending/running by a dead process as failed; returns how many.
 
-    Only finished jobs: a job still summarizing has just been resumed and starts its own fact check.
-    A fact check touches updated_at when it starts, so a fresh one may belong to another live instance."""
+    Only finished summaries carry a fact check. A fact check touches updated_at when it starts, so a fresh one may belong to another live instance."""
     result = await get_jobs_collection().update_many(
         {
             "status": {"$in": ["completed", "failed"]},

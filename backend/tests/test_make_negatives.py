@@ -118,12 +118,16 @@ def test_rv1_every_source_gets_another_sources_golden_summary() -> None:
         assert negative.expected.keyfact_present == [False, False]
 
 
-def test_rv2_unlabelled_source_stops_before_any_model_call() -> None:
+def test_unlabelled_source_gets_no_control() -> None:
     sample = _sample(3)
     labels = _labels(["source-0-ai", "source-1-golden"])
 
-    with pytest.raises(SystemExit, match="source-2"):
-        whole_controls(sample, labels, random.Random(2026))
+    controls = whole_controls(sample, labels, random.Random(2026))
+
+    assert [negative.base_summary_id for negative, _original in controls] == [
+        "source-0-ai",
+        "source-1-golden",
+    ]
 
 
 async def test_outside_writer_answers_the_recorded_request(tmp_path: Path) -> None:

@@ -399,6 +399,780 @@
         false
       ],
       "coherent": true
+    },
+    "1203b5b8": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": false
+    },
+    "acb77b6a": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "09732548": {
+      "sentences": [
+        {
+          "faithful": null,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": false
+    },
+    "9c472bf4": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "39eb029a": {
+      "sentences": [
+        {
+          "faithful": false,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "coherent": true
+    },
+    "5825ae01": {
+      "sentences": [
+        {
+          "faithful": false,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": false,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": false,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "434abe83": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "coherent": true
+    },
+    "df69e346": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "34a9856a": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        null,
+        false,
+        false,
+        null,
+        false,
+        null
+      ],
+      "coherent": true
+    },
+    "ad1a5411": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        false,
+        null,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "2870482b": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        null,
+        null,
+        true,
+        true
+      ],
+      "coherent": true
+    },
+    "42e1e8fc": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        null,
+        null,
+        null,
+        true,
+        null
+      ],
+      "coherent": true
+    },
+    "46042253": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "bb8e58dc": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        true,
+        true,
+        null,
+        null,
+        true,
+        false,
+        true
+      ],
+      "coherent": true
+    },
+    "065e80b5": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        false,
+        true,
+        null,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "78e077ae": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
     }
   },
   "keyfacts": {
@@ -513,6 +1287,99 @@
         "People accept USD because the US government is well-secured.",
         "Fiat currency is a piece of paper that means nothing except what the government says it means."
       ]
+    },
+    "cnn_dailymail-131": {
+      "keyfacts": [
+        "Gender-based violence is at epidemic levels in Guatemala.",
+        "Guatemala ranks third in killings of women worldwide.",
+        "Two women are killed in Guatemala every day, according to the United Nations.",
+        "Adelma Cifuentes was shot by two men sent by her abusive husband and lost her arm.",
+        "The United Nations estimates 98% of cases never make it to court.",
+        "Cifuentes escaped her husband with help from CICAM.",
+        "Her husband was sentenced to 27 years in prison.",
+        "In 2008, Guatemala's Congress passed a law against femicide."
+      ]
+    },
+    "cnn_dailymail-128": {
+      "keyfacts": [
+        "Martin O'Malley told reporters in Iowa that inevitability is not unbreakable.",
+        "Hillary Clinton was considered inevitable to win the 2008 Democratic nomination but lost to Barack Obama.",
+        "Martin O'Malley is a former Maryland governor and possible presidential contender.",
+        "Hillary Clinton leads most polls by upwards of 40 points.",
+        "Hillary Clinton plans to launch her presidential candidacy on Sunday via a social media video.",
+        "A March CNN/ORC poll put O'Malley at 1% nationally.",
+        "O'Malley called Hillary Clinton an eminently qualified candidate.",
+        "O'Malley said the presidency is not some crown to be passed between two families."
+      ]
+    },
+    "curation-057": {
+      "keyfacts": [
+        "The article author is Shan Wang.",
+        "The article was published in Nieman Journalism Lab.",
+        "The publisher is the Nieman Foundation for Journalism at Harvard.",
+        "The article was published on December 9, 2016.",
+        "The article suggests native ads are still very confusing to many readers."
+      ]
+    },
+    "cnn_dailymail-030": {
+      "keyfacts": [
+        "Police in Malegaon, Maharashtra are requiring identity cards for cattle.",
+        "Maharashtra has banned the sale and consumption of beef.",
+        "Residents must submit a photograph of their cattle to police.",
+        "Police are creating a cattle database to enforce the law.",
+        "Cows are considered holy by Maharashtra's majority Hindu population.",
+        "Consumption or sale of beef in Maharashtra can lead to five years in prison.",
+        "Slaughter of buffaloes is still permissible in Maharashtra.",
+        "Beef traders held a month-long strike that ended Wednesday."
+      ]
+    },
+    "psc-abstract-a-20-056": {
+      "keyfacts": [
+        "W Warszawie dyżurujące przychodnie rejonowe miały w niedzielę natłok pacjentów.",
+        "Objawy grypy to gorączka, nasilający się kaszel, ból w klatce piersiowej i niekiedy wymioty.",
+        "Lekarz dyżurny kraju Michał Sobolewski powiedział, że w Polsce jeszcze nie ma epidemii grypy.",
+        "Dr Michał Sobolewski ocenia, że epidemia grypy może nadejść do Polski z Anglii na 20 procent.",
+        "Dr Michał Sobolewski mówi, że Polacy lekceważą profilaktyczne szczepienia przeciwko grypie.",
+        "Szczepionki przeciw grypie są skuteczne w ponad 50 procentach.",
+        "W Polsce co roku na grypę choruje około 7 procent społeczeństwa.",
+        "Szczyt zachorowań na grypę w Polsce przypada między styczniem a marcem."
+      ]
+    },
+    "psc-abstract-a-20-073": {
+      "keyfacts": [
+        "Bogdan Żurawski odkrył nietkniętą przez rabusiów kaplicę-kryptę grobową.",
+        "Na zamurowanym wejściu trzy krzyże wskazują trzech pochowanych królów.",
+        "Archeolodzy sądzą, że w bliźniaczych kryptach spoczywa dwudziestu monarchów.",
+        "Polacy odkryli kościół o wymiarach 25 x 25 m w ubiegłym roku.",
+        "Ściany kościoła w Banganarti pokrywa około 200 inskrypcji pielgrzymich.",
+        "Tak liczne inskrypcje pielgrzymie są niespotykane we wschodnim chrześcijaństwie.",
+        "Banganarti było najpopularniejszym w Nubii miejscem pielgrzymek.",
+        "Kaplice pośmiertnego kultu królewskiego wzniesiono najpóźniej w VII wieku."
+      ]
+    },
+    "psc-extract-k-5-050": {
+      "keyfacts": [
+        "Uzyskanie pełnego członkostwa w UE pozostaje celem strategicznym RP.",
+        "Nasz elementarny interes narodowy wymaga, aby traktować Komisję Europejską jako partnera, a nie jako przeciwnika.",
+        "UE opiera się na zasadzie solidarności wyrażającej się w olbrzymich transferach finansowych.",
+        "Decyzje organów Unii mają dla państw członkowskich moc wiążącą.",
+        "Wszystkie państwa członkowskie UE wyciągnęły wielkie korzyści ekonomiczne i polityczne z przynależności do Unii.",
+        "Polska nie może pozostać na marginesie integracji europejskiej.",
+        "Mniej rozwinięte państwa członkowskie UE dokonały większego postępu w ostatnich 15-20 latach niż w dwóch poprzednich stuleciach.",
+        "Integracja Polski z UE oznacza również koszty."
+      ]
+    },
+    "psc-extract-k-5-147": {
+      "keyfacts": [
+        "W Stoczni Gdynia SA odbył się chrzest samochodowca \"Platinum Ray\".",
+        "Pierwszy raz w historii polskiego okrętownictwa za statek modlił się rabin i ksiądz katolicki.",
+        "Samochodowiec \"Platinum Ray\" przewozi sześć tysięcy pojazdów.",
+        "Statek zamówił armator izraelski.",
+        "Rabin David Lau, syn naczelnego rabina Izraela, modlił się po hebrajsku.",
+        "Ksiądz Krzysztof Niedałtowski pokropił święconą wodą burtę statku.",
+        "Aktor Chaim Topol odśpiewał żydowską pieśń przed hymnami Izraela i Polski.",
+        "Matka chrzestna tradycyjnie rozbiła o burtę butelkę szampana."
+      ]
     }
   },
   "pairs": {
@@ -539,6 +1406,30 @@
     },
     "gumsum-107": {
       "better_summary_id": "ae4c36fa"
+    },
+    "cnn_dailymail-131": {
+      "better_summary_id": "acb77b6a"
+    },
+    "cnn_dailymail-128": {
+      "better_summary_id": "9c472bf4"
+    },
+    "curation-057": {
+      "better_summary_id": "39eb029a"
+    },
+    "cnn_dailymail-030": {
+      "better_summary_id": "df69e346"
+    },
+    "psc-abstract-a-20-056": {
+      "better_summary_id": "ad1a5411"
+    },
+    "psc-abstract-a-20-073": {
+      "better_summary_id": "2870482b"
+    },
+    "psc-extract-k-5-050": {
+      "better_summary_id": "bb8e58dc"
+    },
+    "psc-extract-k-5-147": {
+      "better_summary_id": "065e80b5"
     }
   }
 }

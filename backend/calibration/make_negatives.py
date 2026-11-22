@@ -417,7 +417,7 @@ def _whole_control(
 def whole_controls(
     sample: CalibrationSample, labels: CalibrationLabels, rng: random.Random
 ) -> list[tuple[Negative, list[str]]]:
-    """One control per source: the golden summary of another source in the same language, under this source's key facts."""
+    """One control per labelled source: the golden summary of another source in the same language, under this source's key facts."""
     controls = []
     for source in sample.sources:
         base_summary = next(
@@ -429,7 +429,7 @@ def whole_controls(
             None,
         )
         if base_summary is None:
-            raise SystemExit(f"{source.source_id} has no labelled summary; finish labelling first")
+            continue
 
         other_source = rng.choice(
             [

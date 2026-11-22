@@ -122,6 +122,7 @@ async def run_candidate(
     work = [
         (summary.summary_id, summary.source_id, summary.origin, summary.sentences)
         for summary in summaries.values()
+        if summary.summary_id in labels.summaries
     ] + [
         (
             negative.negative_id,
@@ -169,7 +170,7 @@ async def run_candidate(
         write_predictions(path, predictions)
 
     await asyncio.gather(*(one(*item) for item in work))
-    await _judge_pairs(sample, sources, predictions, path, limit)
+    await _judge_pairs(sample, sources, labels, predictions, path, limit)
     if with_reference:
         await _summarization_reference(sources, summaries, predictions, path, limit)
     return path
@@ -178,11 +179,16 @@ async def run_candidate(
 async def _judge_pairs(
     sample: CalibrationSample,
     sources: dict[str, CalibrationSource],
+    labels: CalibrationLabels,
     predictions: CandidatePredictions,
     path: Path,
     limit: int | None,
 ) -> None:
-    pending = [source_id for source_id in sources if source_id not in predictions.pairs][:limit]
+    pending = [
+        source_id
+        for source_id in sources
+        if source_id in labels.pairs and source_id not in predictions.pairs
+    ][:limit]
     for source_id in pending:
         by_origin = {
             summary.origin: summary.text

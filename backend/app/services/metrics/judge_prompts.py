@@ -41,7 +41,10 @@ FAITHFULNESS_PROMPT = ChatPromptTemplate.from_messages(
             "human",
             "For every numbered summary sentence decide whether the source supports it.\n"
             "- faithful: true when every claim in the sentence is stated in or directly implied "
-            "by the source. Paraphrase and omission are fine.\n"
+            "by the source. Paraphrase, omission, a more general wording, a summarising "
+            "description of what the source does (for example that it explains or argues "
+            "something) and a reasonable inference from the source are fine. Mark a sentence "
+            "unfaithful only for a claim the source contradicts or does not support at all.\n"
             "- error_type when not faithful: unsupported (the source does not say it), "
             "contradicted (the source says otherwise), out_of_context (true in the source but "
             "stated with a wrong subject, time, place or relation), other.\n"
@@ -63,10 +66,12 @@ ALIGNMENT_PROMPT = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "For every numbered key fact decide whether the summary states it, fully or in "
-            "paraphrase, and list the numbers of every summary sentence that states it. A key "
-            "fact stated only partly, or only implied, is not present. present is false exactly "
-            "when sentence_indices is empty.\n"
+            "For every numbered key fact decide whether the summary conveys it, and list the "
+            "numbers of every summary sentence that conveys it. Judge as a human reader would: a "
+            "key fact is present when a reader of the summary learns its main point, whether in "
+            "paraphrase, in more general words, or with secondary details such as an exact number "
+            "or a qualifier left out. It is absent only when its main point is missing or "
+            "contradicted. present is false exactly when sentence_indices is empty.\n"
             "Answer with one entry per key fact, in order, as "
             '{{"keyfacts": [{{"keyfact_index": 0, "present": true, "sentence_indices": [0, 2]}}]}}.'
             "\n\nKey facts:\n{numbered_keyfacts}\n\n<summary>\n{numbered_sentences}\n</summary>",
@@ -86,7 +91,10 @@ COHERENCE_PROMPT = ChatPromptTemplate.from_messages(
             "follow from one another and stay on one subject: no sentence about an unrelated "
             "topic, no sentence contradicting another, no reference to something never "
             "introduced, no abrupt jump that leaves the reader lost. Short, list-like or "
-            "dense summaries can be coherent. Do not judge facts, style or length.\n"
+            "dense summaries can be coherent, and so can one that repeats a point or adds a "
+            "general remark on the same subject. Judge as a reader who is not looking for faults: "
+            "the summary is incoherent only when such a reader would get lost or confused. Do not "
+            "judge facts, style or length.\n"
             'Answer as {{"coherent": true, "reason": "one short sentence in English"}}.'
             "\n\n<summary>\n{summary}\n</summary>",
         ),

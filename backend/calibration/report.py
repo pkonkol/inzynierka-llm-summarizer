@@ -276,28 +276,35 @@ def _candidate_section(
     ]
     if judged_negatives:
         lines += [
-            "| degree | faithfulness | completeness | conciseness | n |",
-            "|---|---:|---:|---:|---:|",
+            "| kind | degree | faithfulness | completeness | conciseness | n |",
+            "|---|---|---:|---:|---:|---:|",
         ]
-        curves = {
-            score: degree_curve(
-                {
-                    negative.negative_id: getattr(
-                        candidate.items[negative.negative_id].fact_level.scores, score
-                    )
-                    for negative in judged_negatives
-                },
-                judged_negatives,
-            )
-            for score in ("faithfulness", "completeness", "conciseness")
-        }
-        for at, point in enumerate(curves["faithfulness"]):
-            lines.append(
-                f"| {point.degree} | {point.mean_score:.2f} | {curves['completeness'][at].mean_score:.2f} | "
-                f"{curves['conciseness'][at].mean_score:.2f} | {point.negatives} |"
-            )
+        for kind in sorted({negative.kind for negative in judged_negatives}):
+            lines += _degree_rows(kind, [n for n in judged_negatives if n.kind == kind], candidate)
         lines.append("")
     return lines
+
+
+def _degree_rows(
+    kind: str, negatives: list[Negative], candidate: CandidatePredictions
+) -> list[str]:
+    curves = {
+        score: degree_curve(
+            {
+                negative.negative_id: getattr(
+                    candidate.items[negative.negative_id].fact_level.scores, score
+                )
+                for negative in negatives
+            },
+            negatives,
+        )
+        for score in ("faithfulness", "completeness", "conciseness")
+    }
+    return [
+        f"| {kind} | {point.degree} | {point.mean_score:.2f} | {curves['completeness'][at].mean_score:.2f} | "
+        f"{curves['conciseness'][at].mean_score:.2f} | {point.negatives} |"
+        for at, point in enumerate(curves["faithfulness"])
+    ]
 
 
 def write_report(data_dir: Path, split: CalibrationSplit) -> Path:

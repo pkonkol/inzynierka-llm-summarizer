@@ -5,9 +5,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import itertools
+import json
 import math
 import random
 import subprocess
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -156,6 +158,10 @@ class _Plan:
     kind: NegativeKind
     degree: NegativeDegree
 
+    @property
+    def negative_id(self) -> str:
+        return f"{self.summary.summary_id}-{self.kind}-{self.degree}"
+
 
 def _is_feasible(plan: _Plan) -> bool:
     sentence_count = len(plan.summary.sentences)
@@ -208,11 +214,67 @@ class _Atoms:
         self.carries_keyfact.insert(index, carries)
 
 
-async def _write_sentences(
-    prompt: ChatPromptTemplate, variables: dict[str, object], expected_count: int, language: str
+# Writes the sentences one negative needs: (negative_id, prompt, variables, expected_count) -> sentences.
+SentenceWriter = Callable[[str, ChatPromptTemplate, dict[str, object], int], Awaitable[list[str]]]
+
+
+async def _write_with_generator(
+    _negative_id: str,
+    prompt: ChatPromptTemplate,
+    variables: dict[str, object],
+    _expected_count: int,
 ) -> list[str]:
     written, _usage = await ask_judge(prompt, _WrittenSentences, variables, GENERATOR, "negatives")
-    sentences = [sentence.strip() for sentence in written.sentences]
+    return written.sentences
+
+
+class WritingRequests:
+    """Records each prompt instead of sending it, for a writer outside this script (a Claude Code subagent)."""
+
+    def __init__(self) -> None:
+        self.requests: dict[str, dict[str, object]] = {}
+
+    async def __call__(
+        self,
+        negative_id: str,
+        prompt: ChatPromptTemplate,
+        variables: dict[str, object],
+        expected_count: int,
+    ) -> list[str]:
+        self.requests[negative_id] = {
+            "expected_count": expected_count,
+            "messages": [
+                {"role": message.type, "content": message.content}
+                for message in prompt.format_messages(**variables)
+            ],
+        }
+        return [f"Pending sentence {index}." for index in range(expected_count)]
+
+
+def written_sentences_from(path: Path) -> SentenceWriter:
+    written: dict[str, list[str]] = json.loads(path.read_text("utf-8"))
+
+    async def write(
+        negative_id: str, _prompt: ChatPromptTemplate, _variables: dict[str, object], _count: int
+    ) -> list[str]:
+        if negative_id not in written:
+            raise ValueError(f"{path.name} has no sentences for {negative_id}")
+        return written[negative_id]
+
+    return write
+
+
+async def _write_sentences(
+    write: SentenceWriter,
+    negative_id: str,
+    prompt: ChatPromptTemplate,
+    variables: dict[str, object],
+    expected_count: int,
+    language: str,
+) -> list[str]:
+    sentences = [
+        sentence.strip() for sentence in await write(negative_id, prompt, variables, expected_count)
+    ]
     single_sentences = all(len(split_sentences(sentence, language)) == 1 for sentence in sentences)
     if len(sentences) != expected_count or not single_sentences:
         raise ValueError(
@@ -221,9 +283,13 @@ async def _write_sentences(
     return sentences
 
 
-async def _rewrite(plan: _Plan, source_text: str, language: str, indices: list[int]) -> list[str]:
+async def _rewrite(
+    write: SentenceWriter, plan: _Plan, source_text: str, language: str, indices: list[int]
+) -> list[str]:
     selected = [plan.summary.sentences[index] for index in indices]
     return await _write_sentences(
+        write,
+        plan.negative_id,
         _REWRITE_PROMPT,
         {
             "instruction": _REWRITE_INSTRUCTIONS[plan.kind],
@@ -245,6 +311,7 @@ async def _perturbed_atoms(
     language: str,
     foreign_sentences: list[str],
     rng: random.Random,
+    write: SentenceWriter,
 ) -> tuple[_Atoms, set[int]]:
     """The perturbed sentences with their expectations, and the positions the diff check expects to differ."""
     sentences = plan.summary.sentences
@@ -258,7 +325,7 @@ async def _perturbed_atoms(
 
     if plan.kind in (NegativeKind.FALSE_FACT, NegativeKind.PARAPHRASE):
         for index, rewritten in zip(
-            indices, await _rewrite(plan, source_text, language, indices), strict=True
+            indices, await _rewrite(write, plan, source_text, language, indices), strict=True
         ):
             atoms.sentences[index] = rewritten
             if plan.kind is NegativeKind.FALSE_FACT:
@@ -274,13 +341,15 @@ async def _perturbed_atoms(
         return atoms, set(indices)
 
     if plan.kind is NegativeKind.DUPLICATE:
-        new_sentences = await _rewrite(plan, source_text, language, indices)
+        new_sentences = await _rewrite(write, plan, source_text, language, indices)
         inserted = [
             (index, sentence, base.sentences[index].faithful)
             for index, sentence in zip(indices, new_sentences, strict=True)
         ]
     elif plan.kind is NegativeKind.FILLER:
         new_sentences = await _write_sentences(
+            write,
+            plan.negative_id,
             _FILLER_PROMPT,
             {"count": count, "language": language, "source": source_text},
             count,
@@ -419,7 +488,14 @@ def stage_for_review(
         )
 
 
-async def generate(data_dir: Path, per_summary: int, seed: int, limit: int | None) -> None:
+async def generate(
+    data_dir: Path,
+    per_summary: int,
+    seed: int,
+    limit: int | None,
+    write: SentenceWriter,
+    generator_model: str,
+) -> None:
     if negative_candidates_path(data_dir).exists():
         raise SystemExit(
             f"{negative_candidates_path(data_dir)} exists; delete it and {review_dir(data_dir)} to regenerate"
@@ -455,7 +531,8 @@ async def generate(data_dir: Path, per_summary: int, seed: int, limit: int | Non
                     source.input_text,
                     source.language,
                     foreign_pool(plan.summary),
-                    random.Random(rng.random()),
+                    random.Random(f"{seed}:{plan.negative_id}"),
+                    write,
                 )
             except ValueError as error:
                 log.warning(
@@ -473,19 +550,26 @@ async def generate(data_dir: Path, per_summary: int, seed: int, limit: int | Non
             )
             return None
         negative = Negative(
-            negative_id=f"{plan.summary.summary_id}-{plan.kind}-{plan.degree}",
+            negative_id=plan.negative_id,
             base_summary_id=plan.summary.summary_id,
             kind=plan.kind,
             degree=plan.degree,
             generator_model="none"
             if plan.kind in (NegativeKind.REMOVED_SENTENCE, NegativeKind.FOREIGN_SENTENCES)
-            else GENERATOR.model_id(),
+            else generator_model,
             sentences=atoms.sentences,
             expected=_expectation(plan, base, atoms),
         )
         return negative, plan.summary.sentences
 
     results = [result for result in await asyncio.gather(*(one(plan) for plan in plans)) if result]
+    if isinstance(write, WritingRequests):
+        requests_path = data_dir / "negative_requests.json"
+        requests_path.write_text(json.dumps(write.requests, ensure_ascii=False, indent=2), "utf-8")
+        print(
+            f"{len(write.requests)} writing requests in {requests_path}; answer them as {{negative_id: [sentences]}}"
+        )
+        return
     negatives = [negative for negative, _original in results]
     originals = {negative.negative_id: original for negative, original in results}
 
@@ -507,12 +591,44 @@ def main() -> None:
     parser.add_argument(
         "--limit", type=int, default=None, help="only the first N planned negatives, no controls"
     )
+    writing = parser.add_mutually_exclusive_group()
+    writing.add_argument(
+        "--export-requests",
+        action="store_true",
+        help="write negative_requests.json for an outside writer and stop",
+    )
+    writing.add_argument(
+        "--written",
+        type=Path,
+        help="JSON {negative_id: [sentences]} answering negative_requests.json",
+    )
+    parser.add_argument(
+        "--generator",
+        default=GENERATOR.model_id(),
+        help="model recorded on the written negatives, e.g. claude-code:claude-opus-5-5 with --written",
+    )
     args = parser.parse_args()
 
     if settings.calibration_data_dir is None:
         raise SystemExit("set CALIBRATION_DATA_DIR")
+    if args.written is not None and args.generator == GENERATOR.model_id():
+        raise SystemExit("--written needs --generator naming who wrote the sentences")
     ensure_nltk_resources()
-    asyncio.run(generate(settings.calibration_data_dir, args.per_summary, args.seed, args.limit))
+    write: SentenceWriter = _write_with_generator
+    if args.export_requests:
+        write = WritingRequests()
+    elif args.written is not None:
+        write = written_sentences_from(args.written)
+    asyncio.run(
+        generate(
+            settings.calibration_data_dir,
+            args.per_summary,
+            args.seed,
+            args.limit,
+            write,
+            args.generator,
+        )
+    )
 
 
 if __name__ == "__main__":

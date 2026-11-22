@@ -1,6 +1,8 @@
 """Cases cs20-cs25 and review rv1-rv2: the diff check that a perturbation touched only the sentences it was asked to, and the whole-summary controls."""
 
+import json
 import random
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +14,13 @@ from app.schemas.calibration_api import (
     SentenceLabel,
     SummaryLabels,
 )
-from calibration.make_negatives import changed_sentences_match, whole_controls
+from calibration.make_negatives import (
+    _FILLER_PROMPT,
+    WritingRequests,
+    changed_sentences_match,
+    whole_controls,
+    written_sentences_from,
+)
 
 ORIGINAL = ["Alpha rose.", "Beta fell.", "Gamma held."]
 
@@ -116,3 +124,22 @@ def test_rv2_unlabelled_source_stops_before_any_model_call() -> None:
 
     with pytest.raises(SystemExit, match="source-2"):
         whole_controls(sample, labels, random.Random(2026))
+
+
+async def test_outside_writer_answers_the_recorded_request(tmp_path: Path) -> None:
+    variables = {"count": 2, "language": "en", "source": "Alpha rose."}
+    requests = WritingRequests()
+
+    placeholders = await requests("summary-1-filler-two_sentences", _FILLER_PROMPT, variables, 2)
+    answers = tmp_path / "written.json"
+    answers.write_text(json.dumps({"summary-1-filler-two_sentences": ["It matters.", "It fits."]}))
+    write = written_sentences_from(answers)
+
+    assert len(placeholders) == 2
+    assert requests.requests["summary-1-filler-two_sentences"]["expected_count"] == 2
+    assert await write("summary-1-filler-two_sentences", _FILLER_PROMPT, variables, 2) == [
+        "It matters.",
+        "It fits.",
+    ]
+    with pytest.raises(ValueError, match="summary-2"):
+        await write("summary-2-filler-half", _FILLER_PROMPT, variables, 2)

@@ -2,6 +2,8 @@ import { createPublicSummaryJob, fetchSummaryPresets } from "./api.js";
 import { addHistoryEntry } from "./history-store.js";
 
 const SETTINGS_KEY = "lastSettings";
+// Mirrors public_max_input_chars in backend/app/core/config.py.
+const MAX_PUBLIC_INPUT_CHARS = 30_000;
 
 export const DEFAULT_SETTINGS = {
   source: "url",
@@ -19,6 +21,16 @@ export async function readSavedSettings() {
 
 export async function saveSettings(settings) {
   await chrome.storage.local.set({ [SETTINGS_KEY]: settings });
+}
+
+/** Throws when the text is longer than the public endpoint accepts; subject names it in the message ("artykuł"). */
+export function assertWithinInputLimit(text, subject) {
+  const characterCount = [...text].length; // Code points, as the backend counts them; emoji are two UTF-16 units.
+  if (characterCount > MAX_PUBLIC_INPUT_CHARS) {
+    throw new Error(
+      `${subject} ma ${characterCount.toLocaleString("pl-PL")} znaków, limit to ${MAX_PUBLIC_INPUT_CHARS.toLocaleString("pl-PL")}`,
+    );
+  }
 }
 
 // The preset supplies the character of the summary and its length shape; the slider only moves
@@ -59,13 +71,15 @@ export async function startSummaryJob(source, settings, presets) {
 }
 
 /**
- * Summarizes a link by its address with the settings of the last panel submit. A failure to
+ * Starts a job from the context menu with the settings of the last panel submit. A failure to
  * create the job becomes a failed history entry, since the context menu has nowhere else to show it.
  */
-export async function startLinkSummaryJob(linkUrl) {
-  const settings = { ...(await readSavedSettings()), source: "url" };
-  const source = { apiSource: { url: linkUrl }, sourceUrl: linkUrl, sourceLabel: linkUrl };
+async function startMenuSummaryJob(source) {
+  const settings = await readSavedSettings();
   try {
+    if (source.apiSource.input_text !== undefined) {
+      assertWithinInputLimit(source.apiSource.input_text, "zaznaczenie");
+    }
     const presets = await fetchSummaryPresets();
     // No saved settings yet, or a preset removed from the API since: the first one, as in the form.
     if (!Object.hasOwn(presets, settings.presetKey)) settings.presetKey = Object.keys(presets)[0];
@@ -74,8 +88,8 @@ export async function startLinkSummaryJob(linkUrl) {
     await addHistoryEntry({
       jobId: `failed-${crypto.randomUUID()}`,
       presetKey: settings.presetKey,
-      sourceUrl: linkUrl,
-      sourceLabel: linkUrl,
+      sourceUrl: source.sourceUrl,
+      sourceLabel: source.sourceLabel,
       status: "failed",
       title: null,
       summary: null,
@@ -84,4 +98,22 @@ export async function startLinkSummaryJob(linkUrl) {
       createdAt: new Date().toISOString(),
     });
   }
+}
+
+/** Summarizes a link by its address. */
+export async function startLinkSummaryJob(linkUrl) {
+  await startMenuSummaryJob({
+    apiSource: { url: linkUrl },
+    sourceUrl: linkUrl,
+    sourceLabel: linkUrl,
+  });
+}
+
+/** Summarizes the text selected on a page; the history names the page it came from. */
+export async function startSelectionSummaryJob(selectionText, pageUrl, pageTitle) {
+  await startMenuSummaryJob({
+    apiSource: { input_text: selectionText },
+    sourceUrl: pageUrl,
+    sourceLabel: `Zaznaczenie: ${pageTitle || pageUrl}`,
+  });
 }

@@ -1,0 +1,544 @@
+{
+  "summaries": {
+    "4a465be3": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        null,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "6bbf3c9f": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "7288e93b": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        null,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "45e7f061": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": null,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        null,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        null,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "251ec433": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        null
+      ],
+      "coherent": true
+    },
+    "ff4392a3": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "coherent": true
+    },
+    "522c5834": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false
+      ],
+      "coherent": true
+    },
+    "f00e20ce": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": null
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "52bdea05": {
+      "sentences": [
+        {
+          "faithful": false,
+          "carries_keyfact": null
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        null,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "e71b6f5a": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "7d6aa4e7": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": false
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        null,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    },
+    "878e1fd4": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        null
+      ],
+      "coherent": true
+    },
+    "12e33279": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        null
+      ],
+      "coherent": true
+    },
+    "cf1ebd79": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        },
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        null,
+        false
+      ],
+      "coherent": true
+    },
+    "ae4c36fa": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        null,
+        false
+      ],
+      "coherent": true
+    },
+    "c488f3cb": {
+      "sentences": [
+        {
+          "faithful": true,
+          "carries_keyfact": true
+        }
+      ],
+      "keyfacts_present": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "coherent": true
+    }
+  },
+  "keyfacts": {
+    "cnn_dailymail-081": {
+      "keyfacts": [
+        "One hundred and forty-seven people were killed in the attack at Garissa University College in Kenya.",
+        "The dead included 142 students, three security officers, and two university security personnel.",
+        "Al-Shabaab terrorists carried out the attack.",
+        "The attack was Kenya's deadliest since the 1998 U.S. Embassy bombing.",
+        "Kenyan authorities have not released a list of the victims.",
+        "Kenyans used the hashtag #147notjustanumber to share the victims' stories.",
+        "The gunmen separated Muslims from Christians and killed the Christians.",
+        "The extremist group has also killed Muslims in recent attacks.",
+        "The Interior Ministry identified one attacker killed by security forces as the son of a government official.",
+        "The father of suspect Abdirahim Abdullahi is a chief in Mandera.",
+        "Abdirahim Abdullahi's father had reported his son missing.",
+        "Al-Shabaab is based in Somalia.",
+        "In 2013, militants attacked Nairobi's Westgate Mall, killing nearly 70 people.",
+        "Kenyan churches held Easter services under armed guard during mourning.",
+        "Churchgoers wept during Easter services nationwide.",
+        "An elderly man had reportedly taken a loan to educate his son."
+      ]
+    },
+    "curation-026": {
+      "keyfacts": [
+        "The ETI claimed delaying CCS rollout could add around £1.2bn a year to meeting the UK’s 2050 carbon reduction targets.",
+        "The ETI called for a commercial CCS plant to be built in the UK.",
+        "The ETI said there is significant storage capacity off the British coast.",
+        "The ETI said no technical barriers prevent the use of CCS technology.",
+        "The ETI said no more than six hubs and 20 offshore stores would be needed to deploy CCS fully around the UK.",
+        "ETI programme manager Andrew Green said bringing CCS forward could reduce costs and risks to the UK’s decarbonisation pathway.",
+        "Andrew Green said long-term policy commitment from government is more important than early funding.",
+        "Andrew Green said the key to early cost reduction for CCS is deployment of investable projects.",
+        "Andrew Green said the challenge CCS presently faces is commercial, not technical.",
+        "Dr Luke Warren said the UK has been in a holding pattern on CCS strategy since the government cancelled the CCS competition in November 2015.",
+        "Dr Luke Warren said a UK CCS industry can be kick-started with modest sums of money pre-2020.",
+        "Dr Luke Warren said investing in CCS in key industrial regions can unlock decarbonisation across the economy.",
+        "Dipali Raniga said CCS provides the only way to lower carbon emissions for many industrial processes in a carbon constrained future.",
+        "Dipali Raniga said policy and support from government should be brought forward for CCS as a cost-effective solution.",
+        "The Treasury denied forcing Decc to axe the CCS pilot projects competition in late 2015."
+      ]
+    },
+    "gumsum-159": {
+      "keyfacts": [
+        "Coron is in the province of Palawan, Philippines on Busuanga Island.",
+        "Coron is famous for its World War II wreck diving.",
+        "In September 1944, a fleet of Japanese ships were sunk in a raid by the US Navy.",
+        "About ten well-preserved underwater shipwrecks lie in Coron waters surrounded by coral reef.",
+        "Coron Island has many white sand beaches surrounded by large limestone cliffs.",
+        "Coron Island is the ancestral domain of an indigenous tribe managing it sustainably.",
+        "Tourism is the major industry in Coron today."
+      ]
+    },
+    "gumsum-142": {
+      "keyfacts": [
+        "Quartiles divide ordered data into quarters.",
+        "Percentiles divide ordered data into hundredths.",
+        "The first quartile, Q1, is the same as the 25th percentile.",
+        "The third quartile, Q3, is the same as the 75th percentile.",
+        "The median is the second quartile and the 50th percentile.",
+        "The interquartile range (IQR) is the difference between Q3 and Q1.",
+        "A potential outlier is less than 1.5 × IQR below Q1 or more than 1.5 × IQR above Q3.",
+        "The five number summary includes the minimum, Q1, median, Q3, and maximum.",
+        "How to calculate median with even and odd list length."
+      ]
+    },
+    "gumsum-200": {
+      "keyfacts": [
+        "A sensitive Environment Canada document was found on an Ottawa street.",
+        "A passerby gave the document to CBC News.",
+        "Every page carried the Protected B stamp.",
+        "The document detailed security vulnerabilities of the NEMISIS database.",
+        "Shutting down or hacking the database could affect prosecutions of lawbreakers.",
+        "Environment Minister John Baird asked government officials how the documents wound up on the street.",
+        "John Baird said the document was neither classified nor secret.",
+        "Paul Dewar said the security lapses raise serious questions about the government's ability to secure sensitive documents."
+      ]
+    },
+    "curation-153": {
+      "keyfacts": [
+        "WP Engine informed customers this week that their credentials may have been compromised in a security breach.",
+        "WP Engine became aware of the breach on December 9.",
+        "The investigation is ongoing.",
+        "WP Engine is collaborating with law enforcement and a cybersecurity firm.",
+        "There is no evidence the exposed information has been misused.",
+        "Passwords associated with WP Engine accounts have been reset.",
+        "Many have complained about the lack of details from WP Engine.",
+        "WP Engine has promised to share information about the data breach as soon as it is available.",
+        "Founded in 2010, WP Engine currently has 40,000 customers across 133 countries, including SoundCloud, Yelp, AMD, and Britain’s Network Rail."
+      ]
+    },
+    "curation-165": {
+      "keyfacts": [
+        "Findel has issued a profit warning for its full year figures.",
+        "Findel anticipates pre-tax profits slightly below the bottom end of predictions.",
+        "Findel's like-for-like sales for the period are expected to have risen by 10 per cent.",
+        "Phil Maudsley has been announced as Findel's new chief executive.",
+        "Phil Maudsley previously led Express Gifts.",
+        "Ian Burke will become Findel's non-executive chairman.",
+        "Tim Kowalski has announced his departure as group finance director.",
+        "Findel is an online retailer backed by Mike Ashley."
+      ]
+    },
+    "gumsum-107": {
+      "keyfacts": [
+        "Federal Reserve notes are technically a debt that the Reserve owes the bearer.",
+        "Printing more money devalues the rest of the currency already in circulation.",
+        "The US government is loaned the very money it prints.",
+        "You cannot keep printing more money or the value of it will deteriorate.",
+        "Zimbabwe printed so much money that it became worthless.",
+        "The only reason money has value is because the US government says it does.",
+        "People accept USD because the US government is well-secured.",
+        "Fiat currency is a piece of paper that means nothing except what the government says it means."
+      ]
+    }
+  },
+  "pairs": {
+    "cnn_dailymail-081": {
+      "better_summary_id": "6bbf3c9f"
+    },
+    "curation-026": {
+      "better_summary_id": "7288e93b"
+    },
+    "gumsum-159": {
+      "better_summary_id": "ff4392a3"
+    },
+    "gumsum-142": {
+      "better_summary_id": "f00e20ce"
+    },
+    "gumsum-200": {
+      "better_summary_id": "e71b6f5a"
+    },
+    "curation-153": {
+      "better_summary_id": "7d6aa4e7"
+    },
+    "curation-165": {
+      "better_summary_id": "12e33279"
+    },
+    "gumsum-107": {
+      "better_summary_id": "ae4c36fa"
+    }
+  }
+}

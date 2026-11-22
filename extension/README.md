@@ -1,12 +1,14 @@
 # Extension (Chrome)
 
-How to install, develop and release the Chrome extension that summarizes the current tab or a
-link in the browser's side panel. Recipes run from the repository root.
+How to install, develop and release the Chrome extension that summarizes the current tab, a
+link, selected text or pasted text in the browser's side panel. Recipes run from the repository root.
 
-- The toolbar icon opens the side panel; right-clicking a link offers **Podsumuj link**.
+- The toolbar icon opens the side panel; right-clicking a link offers **Podsumuj link**, and
+  right-clicking selected text offers **Podsumuj zaznaczenie**.
 - The panel form holds the summary settings (kind, length, language, fact check) and the source: the page
-  address, which the server fetches, or the page text, which the extension extracts with
-  Mozilla Readability. A link is always summarized by its address, with the last form settings.
+  address, which the server fetches, the page text, which the extension extracts with
+  Mozilla Readability, or text pasted into the panel. A link is always summarized by its address
+  and a selection by its text, both with the last form settings.
 - Jobs go through the public, rate-limited endpoint. The panel polls them and shows the result;
   the clock icon lists the last 20 results, kept in the extension's local storage.
 - `host_permissions` is `<all_urls>`: a side panel gets no `activeTab` grant, and reading the
@@ -31,7 +33,7 @@ link in the browser's side panel. Recipes run from the repository root.
 
 ```bash
 just extension-zip      # extension/dist/podsumowania-extension.zip
-gh release create extension-v0.2.0 extension/dist/podsumowania-extension.zip
+gh release create extension-v0.3.0 extension/dist/podsumowania-extension.zip
 ```
 
 Bump `version` in `manifest.json` for every release.
@@ -64,9 +66,10 @@ Użycie:
 
 - Kliknij ikonę **Podsumowania**: po prawej otworzy się panel. Wybierz ustawienia na dole panelu
   i kliknij **Podsumuj tę stronę**; wynik pojawi się w panelu.
+- Źródło **Wklejony tekst** pokazuje pole, do którego wklejasz dowolny tekst.
 - Prawy przycisk myszy na linku → **Podsumuj link**: panel streści stronę spod linku bez jej otwierania.
-- Ikona 🕘 w panelu pokazuje ostatnie podsumowania. **Otwórz na stronie** pokazuje wynik
-  w aplikacji, **Kopiuj** kopiuje go do schowka.
+- Zaznacz tekst na stronie, prawy przycisk → **Podsumuj zaznaczenie**.
+- Ikona 🕘 w panelu pokazuje ostatnie podsumowania. Tytuł podsumowania otwiera wynik w aplikacji.
 - **Sprawdź fakty** dopisuje pod streszczeniem ocenę artykułu na tle innych źródeł; pojawia się
   chwilę po streszczeniu. Wybór zostaje zapamiętany, także dla **Podsumuj link**.
 - „Treść strony” działa także na stronach za logowaniem albo paywallem.

@@ -10,7 +10,7 @@
  * @typedef {{
  *   jobId: string,
  *   presetKey: string,
- *   sourceUrl: string,
+ *   sourceUrl: string | null,  // null for pasted text
  *   sourceLabel: string,
  *   status: "pending" | "running" | "completed" | "failed",
  *   title: string | null,

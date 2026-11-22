@@ -117,10 +117,12 @@ main {
   color: var(--muted);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+progress {
+  width: 100%;
+}
+
+#result h2 a {
+  color: inherit;
 }
 
 form {
@@ -139,29 +141,26 @@ fieldset {
   border: 1px solid var(--border);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
+textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+}
+
+textarea[hidden] {
+  display: none;
+}
+
+.inline-field {
+  display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.form-row label {
-  display: grid;
-  gap: 4px;
-}
-
-button,
-.button {
+button {
   padding: 8px;
   font: inherit;
   font-weight: 600;
-}
-
-.button {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: inherit;
-  text-decoration: none;
 }
 
 .error,

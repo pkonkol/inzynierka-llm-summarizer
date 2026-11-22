@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "validate-evaluator": {
+      "source": "hamelsmu/evals-skills",
+      "sourceType": "github",
+      "skillPath": "skills/validate-evaluator/SKILL.md",
+      "computedHash": "8e6639863c2ce7d9ce98975889e30ad472fe3767e38037ef3c5384ecb50c002b"
+    }
+  }
+}

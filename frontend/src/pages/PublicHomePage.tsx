@@ -109,17 +109,12 @@ export function PublicHomePage() {
     <div className="flex h-dvh flex-col overflow-hidden">
       <header className="shrink-0 border-b border-hairline">
         <div className="mx-auto flex h-nav max-w-frame items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <span className="font-bold">Podsumowania</span>
+          <h1 className="font-bold">Podsumowania</h1>
           <LinkButton href={LOGIN_PATH}>Zaloguj</LinkButton>
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-frame flex-1 flex-col gap-4 px-4 pt-6 pb-4 sm:gap-6 sm:px-6 sm:pt-10 sm:pb-6 lg:px-8">
-        <div className="grid shrink-0 gap-1">
-          <h1 className="text-display text-balance">Podsumuj dowolny artykuł</h1>
-          <p className="text-mute">Wklej adres albo treść. Bez konta, bez instalacji.</p>
-        </div>
-
+      <main className="mx-auto flex min-h-0 w-full max-w-frame flex-1 flex-col gap-4 px-4 pt-4 pb-4 sm:gap-6 sm:px-6 sm:pt-6 sm:pb-6 lg:px-8">
         {/* The page is exactly one screen tall. Stacked, the composer takes its content height and the result the rest. */}
         <form
           onSubmit={handleSubmit}

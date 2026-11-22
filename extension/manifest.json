@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Podsumowania",
-  "version": "0.2.0",
-  "description": "Podsumuj bieżącą stronę albo link w panelu bocznym.",
+  "version": "0.3.0",
+  "description": "Podsumuj bieżącą stronę, link, zaznaczenie albo wklejony tekst w panelu bocznym.",
   "minimum_chrome_version": "116",
   "action": {
     "default_title": "Otwórz panel Podsumowań"

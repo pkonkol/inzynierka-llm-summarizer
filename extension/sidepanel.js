@@ -7,7 +7,7 @@ import {
   updateHistoryEntry,
 } from "./history-store.js";
 import { renderCurrentEntry, renderHistoryList } from "./result-view.js";
-import { initSummaryForm, readSource } from "./summary-form.js";
+import { initSummaryForm, readPastedText, readSource } from "./summary-form.js";
 import { startSummaryJob } from "./summary-request.js";
 
 const POLL_INTERVAL_MS = 2000;
@@ -153,7 +153,23 @@ async function showHistory() {
   for (const entry of history.filter(isUnfinished)) pollUntilDone(entry);
 }
 
-async function summarizeActiveTab(settings, presets) {
+const PASTED_LABEL_CHARS = 60;
+
+function pastedTextSource() {
+  const pastedText = readPastedText();
+  const firstLine = pastedText.split("\n", 1)[0];
+  const sourceLabel =
+    firstLine.length > PASTED_LABEL_CHARS
+      ? `${firstLine.slice(0, PASTED_LABEL_CHARS)}…`
+      : firstLine;
+  return { apiSource: { input_text: pastedText }, sourceUrl: null, sourceLabel };
+}
+
+async function summarizeFromPanel(settings, presets) {
+  if (settings.source === "pastedText") {
+    await startSummaryJob(pastedTextSource(), settings, presets);
+    return;
+  }
   const tab = await activeTab();
   const apiSource = await readSource(tab, settings.source);
   await startSummaryJob(
@@ -169,4 +185,4 @@ historyToggle.addEventListener("click", () => {
 });
 onHistoryChanged(showHistory);
 showHistory();
-initSummaryForm({ onSubmit: summarizeActiveTab });
+initSummaryForm({ onSubmit: summarizeFromPanel });

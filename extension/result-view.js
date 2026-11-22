@@ -2,8 +2,6 @@ import { ACTIVE_ENVIRONMENT } from "./config.js";
 import { marked } from "./vendor/marked.esm.js";
 import DOMPurify from "./vendor/purify.es.mjs";
 
-const COPIED_LABEL_MS = 1500;
-
 function element(tagName, properties = {}, children = []) {
   const created = Object.assign(document.createElement(tagName), properties);
   created.append(...children);
@@ -32,23 +30,10 @@ function resultPageUrl(entry) {
   return resultUrl.href;
 }
 
-function copyButton(text) {
-  const button = element("button", { type: "button", textContent: "Kopiuj" });
-  button.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      button.textContent = "Skopiowano";
-    } catch (error) {
-      button.textContent = `Nie udało się skopiować: ${error.message}`;
-    }
-    setTimeout(() => {
-      button.textContent = "Kopiuj";
-    }, COPIED_LABEL_MS);
-  });
-  return button;
-}
-
 function sourceLink(entry) {
+  if (entry.sourceUrl === null) {
+    return element("span", { className: "source", textContent: entry.sourceLabel });
+  }
   return element("a", {
     className: "source",
     href: entry.sourceUrl,
@@ -63,6 +48,7 @@ function factCheckBody(factCheck) {
     case "working":
       return [
         element("p", { className: "muted", textContent: "Sprawdzam fakty w innych źródłach..." }),
+        element("progress", { ariaLabel: "Sprawdzanie faktów" }),
       ];
     case "failed":
       return [
@@ -106,20 +92,18 @@ function completedEntry(entry) {
   // entries saved before the fact check have no factCheck field
   const factCheck = entry.factCheck ?? null;
   return [
-    element("h2", { textContent: entry.title }),
-    sourceLink(entry),
-    renderMarkdown(entry.summary),
-    ...(factCheck === null ? [] : [factCheckSection(factCheck)]),
-    element("div", { className: "actions" }, [
+    element("h2", {}, [
       element("a", {
-        className: "button",
         href: resultPageUrl(entry),
         target: "_blank",
         rel: "noopener",
-        textContent: "Otwórz na stronie",
+        title: "Otwórz na stronie",
+        textContent: entry.title,
       }),
-      copyButton(entry.summary),
     ]),
+    sourceLink(entry),
+    renderMarkdown(entry.summary),
+    ...(factCheck === null ? [] : [factCheckSection(factCheck)]),
   ];
 }
 
@@ -132,6 +116,7 @@ function entryContent(entry) {
     case "running":
       return [
         element("p", { className: "muted", textContent: "Przygotowuję podsumowanie..." }),
+        element("progress", { ariaLabel: "Przygotowywanie podsumowania" }),
         sourceLink(entry),
       ];
     case "failed":

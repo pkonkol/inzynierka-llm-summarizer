@@ -71,7 +71,12 @@ function RelatedSources({ contextExpansion }: { contextExpansion: ContextExpansi
 function FactCheckBody({ factCheck }: { factCheck: FactCheckView }) {
   switch (factCheck.status) {
     case "working":
-      return <p className="text-caption text-mute">Sprawdzam fakty w innych źródłach...</p>;
+      return (
+        <div className="grid gap-2">
+          <p className="text-caption text-mute">Sprawdzam fakty w innych źródłach...</p>
+          <progress aria-label="Sprawdzanie faktów" className="w-full" />
+        </div>
+      );
     case "failed":
       return <Alert tone="danger">{factCheck.message}</Alert>;
     case "completed":
@@ -126,6 +131,7 @@ function ResultBody({ state }: { state: PublicSummaryState }) {
       return (
         <div aria-busy="true" className="grid gap-3">
           <p className="text-caption text-mute">Przygotowuję podsumowanie...</p>
+          <progress aria-label="Przygotowywanie podsumowania" className="w-full" />
           <div aria-hidden="true" className="grid gap-2">
             <span className="block h-5 w-2/3 rounded-sm bg-surface-card" />
             <span className="block h-4 w-full rounded-sm bg-surface-soft" />

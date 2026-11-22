@@ -31,18 +31,26 @@
         <legend>Źródło</legend>
         <label><input type="radio" name="source" value="url" checked /> Adres strony</label>
         <label><input type="radio" name="source" value="pageText" /> Treść strony</label>
+        <label><input type="radio" name="source" value="pastedText" /> Wklejony tekst</label>
       </fieldset>
 
-      <div class="form-row">
-        <label>
-          Rodzaj
-          <select id="preset" name="preset"></select>
-        </label>
-        <label>
-          Język
-          <select id="language" name="language"></select>
-        </label>
-      </div>
+      <textarea
+        id="pasted-text"
+        name="pastedText"
+        rows="6"
+        aria-label="Wklejony tekst"
+        placeholder="Wklej tekst do podsumowania"
+        hidden
+      ></textarea>
+
+      <fieldset id="preset-options">
+        <legend>Rodzaj</legend>
+      </fieldset>
+
+      <label class="inline-field">
+        Język
+        <select id="language" name="language"></select>
+      </label>
 
       <label for="density">Długość: <span id="density-label"></span></label>
       <input id="density" name="density" type="range" min="0" max="1" step="0.05" />

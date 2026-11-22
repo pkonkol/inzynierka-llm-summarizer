@@ -1,5 +1,6 @@
 """run_grid against a fake backend: login, import, one run at a time, judges only on request, report."""
 
+import itertools
 import json
 from pathlib import Path
 
@@ -31,6 +32,8 @@ class FakeBackend:
         self.run_requests: list[dict] = []
         self.polls: dict[str, int] = {}
         self.run_finishes = True
+        self.stuck_runs: set[str] = set()
+        self.unreachable_polls = 0  # first polls answer 503
         self.deepeval_outcome: dict = {"status": "completed", "error": None}
         self.runs_accepted: int | None = None  # later POST /runs get 500
 
@@ -68,9 +71,15 @@ class FakeBackend:
             return httpx.Response(
                 200, json={"entries": [_entry("ok", None), _entry("bad", "boom")]}
             )
+        if self.unreachable_polls:
+            self.unreachable_polls -= 1
+            return httpx.Response(503, json={"detail": "cold start"})
         run_id = path.rsplit("/", 1)[-1]
+        if run_id not in self.polls:
+            return httpx.Response(404, json={"detail": "run not found"})
         self.polls[run_id] += 1
-        finished = self.run_finishes and self.polls[run_id] >= 2
+        runs = self.run_finishes and run_id not in self.stuck_runs
+        finished = runs and self.polls[run_id] >= 2
         status = "completed" if finished else "running"
         deepeval = self.deepeval_outcome if finished else None
         return httpx.Response(200, json=_run(run_id, status, deepeval))
@@ -237,11 +246,45 @@ def test_wait_for_run_raises_after_timeout(
     client = authenticated_client(API_URL, "secret")
     backend.run_finishes = False
     backend.polls["stuck"] = 0
-    clock = iter([0.0, 10.0, run_grid.RUN_TIMEOUT_SECONDS + 1.0])
+    clock = iter([0.0, 10.0, 31.0])
     monkeypatch.setattr(run_grid.time, "monotonic", lambda: next(clock))
 
     with pytest.raises(TimeoutError, match="run stuck"):
-        wait_for_run(client, "stuck")
+        wait_for_run(client, "stuck", 30)
+
+
+def test_a_timed_out_run_becomes_a_row_and_the_grid_goes_on(
+    backend: FakeBackend, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.stuck_runs.add("run-0")
+    clock = itertools.count(0.0, 600.0)
+    monkeypatch.setattr(run_grid.time, "monotonic", lambda: next(clock))
+
+    results = run_grid.run_grid(client, ["a", "b"], [ModelRef("ollama", "m")], ["direct"], True)
+    print_failures(results)
+
+    assert [result.status for result in results] == ["timeout", "completed"]
+    assert [result.deepeval_status for result in results] == ["skipped", "completed"]
+    report = capsys.readouterr().out
+    assert "| a | ollama:m | direct | run-0 | timeout |" in report
+    assert "- a / ollama:m / direct: run run-0 timed out" in report
+
+
+def test_polling_survives_a_briefly_unreachable_backend(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.unreachable_polls = 2
+
+    results = run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert [result.status for result in results] == ["completed"]
+
+
+def test_polling_stops_on_a_client_error(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+
+    with pytest.raises(httpx.HTTPStatusError, match="404"):
+        wait_for_run(client, "missing", 30)
 
 
 def test_report_rows_and_failures(backend: FakeBackend, capsys: pytest.CaptureFixture[str]) -> None:
@@ -268,6 +311,31 @@ def test_report_marks_deepeval_off_without_the_flag(
     run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
 
     assert "| 1 | 1 | off |" in capsys.readouterr().out
+
+
+def test_report_marks_deepeval_skipped_when_the_run_failed(
+    backend: FakeBackend, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    original_handle = backend.handle
+
+    def failed_run(request: httpx.Request) -> httpx.Response:
+        response = original_handle(request)
+        if (
+            request.method == "GET"
+            and "/runs/run-" in request.url.path
+            and not request.url.path.endswith("/entries")
+        ):
+            body = response.json()
+            body["status"] = "failed" if body["status"] == "completed" else body["status"]
+            return httpx.Response(200, json=body)
+        return response
+
+    monkeypatch.setattr(backend, "handle", failed_run)
+    client = authenticated_client(API_URL, "secret")
+
+    run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], True)
+
+    assert "| failed | 0 | 1 | 1 | skipped |" in capsys.readouterr().out
 
 
 def test_finished_rows_are_printed_before_the_grid_aborts(

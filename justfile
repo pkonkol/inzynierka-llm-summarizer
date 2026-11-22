@@ -177,6 +177,18 @@ calibration-sample *args:
 e3-subsets *args:
     uv run python -m calibration.build_e3_subsets {{args}}
 
+# E3: import evaluation set files through the API (golden metrics off; an existing name fails)
+[group('calibration')]
+[working-directory('backend')]
+e3-import *args:
+    uv run python -m calibration.run_grid import {{args}}
+
+# E3: one run per set × model × strategy, one after another, then a markdown report of failures
+[group('calibration')]
+[working-directory('backend')]
+e3-grid *args:
+    uv run python -m calibration.run_grid grid {{args}}
+
 # Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
 [group('calibration')]
 [working-directory('backend')]

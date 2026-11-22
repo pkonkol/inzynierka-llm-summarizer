@@ -172,19 +172,19 @@ calibration-sample *args:
     uv run python -m calibration.build_sample {{args}}
 
 # E3: 50-entry subsets of every evaluation set, calibration sources excluded, plus a 12-entry smoke cut of each
-[group('calibration')]
+[group('e3')]
 [working-directory('backend')]
 e3-subsets *args:
     uv run python -m calibration.build_e3_subsets {{args}}
 
 # E3: import evaluation set files through the API (golden metrics off; an existing name fails)
-[group('calibration')]
+[group('e3')]
 [working-directory('backend')]
 e3-import *args:
     uv run python -m calibration.run_grid import {{args}}
 
 # E3: one run per set × model × strategy, one after another, then a markdown report of failures
-[group('calibration')]
+[group('e3')]
 [working-directory('backend')]
 e3-grid *args:
     uv run python -m calibration.run_grid grid {{args}}

@@ -120,15 +120,14 @@ def smoke_subset(
 ) -> list[EvaluationSetEntryImport]:
     """12 entries of an E3 subset that reach the length extremes: PSC 2 per cell, GUMSum 1 per genre, others spread by length."""
     if name == "psc":
-        entries_by_cell = _group(entries, lambda entry: psc_cell(entry.title))
-        return [
-            picked
-            for cell_entries in entries_by_cell.values()
-            for picked in (min(cell_entries, key=_word_count), max(cell_entries, key=_word_count))
-        ]
-    if name == "gumsum":
-        return _smoke_gumsum(entries)
-    return spread_by_length(entries, SMOKE_SIZE)
+        smoke = _smoke_psc(entries)
+    elif name == "gumsum":
+        smoke = _smoke_gumsum(entries)
+    else:
+        smoke = spread_by_length(entries, SMOKE_SIZE)
+    if len(smoke) != SMOKE_SIZE:
+        raise ValueError(f"{name}: smoke cut has {len(smoke)} entries, expected {SMOKE_SIZE}")
+    return smoke
 
 
 def spread_by_length(
@@ -138,6 +137,16 @@ def spread_by_length(
     by_length = sorted(entries, key=_word_count)
     last_rank = len(by_length) - 1
     return [by_length[round(index * last_rank / (count - 1))] for index in range(count)]
+
+
+def _smoke_psc(entries: list[EvaluationSetEntryImport]) -> list[EvaluationSetEntryImport]:
+    """Shortest and longest text of each PSC cell."""
+    entries_by_cell = _group(entries, lambda entry: psc_cell(entry.title))
+    return [
+        picked
+        for cell_entries in entries_by_cell.values()
+        for picked in (min(cell_entries, key=_word_count), max(cell_entries, key=_word_count))
+    ]
 
 
 def _smoke_gumsum(entries: list[EvaluationSetEntryImport]) -> list[EvaluationSetEntryImport]:

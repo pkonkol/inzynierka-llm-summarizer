@@ -22,6 +22,15 @@ from calibration.build_e3_subsets import (
 )
 
 GUMSUM_GENRES = ["academic", "bio", "fiction", "interview", "news", "whow"]
+ALL_GUMSUM_GENRES = [
+    *GUMSUM_GENRES,
+    "conversation",
+    "reddit",
+    "speech",
+    "textbook",
+    "vlog",
+    "voyage",
+]
 
 
 def _entry(text_id: str, url: str) -> EvaluationSetEntryImport:
@@ -142,13 +151,13 @@ def test_spread_by_length_includes_shortest_and_longest() -> None:
 def test_smoke_gumsum_takes_one_entry_per_genre_with_the_extremes() -> None:
     entries = [
         _entry_of_length(100 + 10 * index + genre_index, f"gumsum:GUM_{genre}_doc{index}")
-        for genre_index, genre in enumerate(GUMSUM_GENRES)
+        for genre_index, genre in enumerate(ALL_GUMSUM_GENRES)
         for index in range(4)
     ]
 
     smoke = smoke_subset("gumsum", entries)
 
-    assert sorted(gumsum_genre(entry.url) for entry in smoke) == sorted(GUMSUM_GENRES)
+    assert sorted(gumsum_genre(entry.url) for entry in smoke) == sorted(ALL_GUMSUM_GENRES)
     assert _word_counts(smoke)[0] == _word_counts(entries)[0]
     assert _word_counts(smoke)[-1] == _word_counts(entries)[-1]
 
@@ -176,3 +185,13 @@ def test_every_smoke_entry_comes_from_its_subset() -> None:
     smoke = smoke_subset("curation", entries)
 
     assert all(entry in entries for entry in smoke)
+
+
+def test_smoke_cut_of_the_wrong_size_raises() -> None:
+    entries = [
+        _entry_of_length(100 + index, f"gumsum:GUM_{genre}_doc{index}")
+        for index, genre in enumerate(GUMSUM_GENRES)
+    ]
+
+    with pytest.raises(ValueError, match="6 entries, expected 12"):
+        smoke_subset("gumsum", entries)

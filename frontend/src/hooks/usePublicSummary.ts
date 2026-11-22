@@ -119,24 +119,31 @@ export function usePublicSummary() {
     }
   }, [jobId, trackJob]);
 
-  // Polling stopped once the summary settled; it starts again for the fact check.
+  // Polling stopped once the summary settled; it starts again for the fact check. A fact check the
+  // server already has, e.g. when a poll failed while it ran, is followed again: requesting it
+  // twice would only get a 409.
   const checkFacts = useCallback(async () => {
     if (state.phase !== "done") throw new Error("facts can be checked only under a summary");
     const doneJobId = state.jobId;
-    const withFactCheck = (factCheck: FactCheckView) => (current: PublicSummaryState) =>
-      current.phase === "done" && current.jobId === doneJobId ? { ...current, factCheck } : current;
+    const setFactCheck = (factCheck: FactCheckView) => {
+      setState((current) =>
+        current.phase === "done" && current.jobId === doneJobId
+          ? { ...current, factCheck }
+          : current,
+      );
+    };
 
-    setState(withFactCheck({ status: "working" }));
+    setFactCheck({ status: "working" });
     try {
-      await requestFactCheck(doneJobId);
+      const job = await getJobStatus(doneJobId);
+      const isStartable = job.fact_check === null || job.fact_check.status === "failed";
+      if (isStartable) await requestFactCheck(doneJobId);
       trackJob(doneJobId);
     } catch (error) {
-      setState(
-        withFactCheck({
-          status: "failed",
-          message: `Nie udało się sprawdzić faktów: ${errorText(error)}`,
-        }),
-      );
+      setFactCheck({
+        status: "failed",
+        message: `Nie udało się sprawdzić faktów: ${errorText(error)}`,
+      });
     }
   }, [state, trackJob]);
 

@@ -683,6 +683,16 @@ export interface components {
             /** Reviewed At */
             reviewed_at: string | null;
         };
+        /** ClaimSearch */
+        ClaimSearch: {
+            /** Claims */
+            claims: string[];
+            /** Channels */
+            channels: components["schemas"]["ChannelOutcome"][];
+            usage: components["schemas"]["UsageMetadata"];
+            /** Duration Ms */
+            duration_ms: number;
+        };
         /** ContextExpansionResult */
         ContextExpansionResult: {
             /**
@@ -1171,22 +1181,12 @@ export interface components {
             /** Sources */
             sources: components["schemas"]["AssessedSource"][];
             context_expansion: components["schemas"]["ContextExpansionResult"] | null;
-            fact_check_search: components["schemas"]["FactCheckSearch"] | null;
+            claim_search: components["schemas"]["ClaimSearch"] | null;
             usage: components["schemas"]["UsageMetadata"] | null;
             /** Duration Ms */
             duration_ms: number | null;
             /** Error */
             error: string | null;
-        };
-        /** FactCheckSearch */
-        FactCheckSearch: {
-            /** Claims */
-            claims: string[];
-            /** Channels */
-            channels: components["schemas"]["ChannelOutcome"][];
-            usage: components["schemas"]["UsageMetadata"];
-            /** Duration Ms */
-            duration_ms: number;
         };
         /** GoldenMetrics */
         "GoldenMetrics-Input": {
@@ -1707,6 +1707,7 @@ export type CalibrationSampleResponse = components['schemas']['CalibrationSample
 export type CalibrationSource = components['schemas']['CalibrationSource'];
 export type ChannelOutcome = components['schemas']['ChannelOutcome'];
 export type ClaimReview = components['schemas']['ClaimReview'];
+export type ClaimSearch = components['schemas']['ClaimSearch'];
 export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
 export type ContextSection = components['schemas']['ContextSection'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
@@ -1735,7 +1736,6 @@ export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImp
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
 export type FactCheck = components['schemas']['FactCheck'];
-export type FactCheckSearch = components['schemas']['FactCheckSearch'];
 export type GoldenMetricsInput = components['schemas']['GoldenMetrics-Input'];
 export type GoldenMetricsOutput = components['schemas']['GoldenMetrics-Output'];
 export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];

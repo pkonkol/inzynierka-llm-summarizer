@@ -14,7 +14,6 @@ const pastedTextInput = document.getElementById("pasted-text");
 const densityInput = document.getElementById("density");
 const densityLabel = document.getElementById("density-label");
 const languageSelect = document.getElementById("language");
-const checkFactsInput = document.getElementById("check-facts");
 const submitButton = document.getElementById("submit");
 const errorText = document.getElementById("error");
 
@@ -73,7 +72,6 @@ async function restoreSettings(presets) {
     languageSelect.value = settings.language;
   }
   densityInput.value = String(settings.density);
-  checkFactsInput.checked = settings.checkFacts;
   showDensity();
   showSourceMode();
 }
@@ -83,14 +81,13 @@ function showFormError(message) {
   errorText.hidden = false;
 }
 
-/** Current form values as { source, presetKey, density, language, checkFacts }. */
+/** Current form values as { source, presetKey, density, language }. */
 export function readSettings() {
   return {
     source: form.elements.source.value,
     presetKey: form.elements.preset.value,
     density: Number(densityInput.value),
     language: languageSelect.value,
-    checkFacts: checkFactsInput.checked,
   };
 }
 

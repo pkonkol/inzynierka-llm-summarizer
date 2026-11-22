@@ -1,12 +1,14 @@
 from typing import Self
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import Field, model_validator
 
 from ..core.config import settings
+from ..core.mongo import get_jobs_collection
 from ..core.rate_limit import enforce_public_rate_limit, enforce_public_web_search_limit
 from ..schemas.job_api import JobCreatedResponse, SummarizeSourceRequest
+from ..services.fact_check_runner import FactCheckNotAllowedError, start_fact_check
 from .summarize import queue_summarization_job
 
 router = APIRouter(prefix="/api/v1/public", tags=["public"])
@@ -19,7 +21,6 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
     )
     language: str = "auto"
     add_web_context: bool = False
-    check_facts: bool = False
 
     @model_validator(mode="after")
     def _reject_free_text_instructions(self) -> Self:
@@ -54,8 +55,8 @@ async def create_public_summarize_job(
     request: Request,
 ) -> JobCreatedResponse:
     # Inside the handler so a request the body validation rejects does not spend the caller's quota.
-    await enforce_public_rate_limit(request)
-    if payload.add_web_context or payload.check_facts:
+    await enforce_public_rate_limit(request, "summarize")
+    if payload.add_web_context:
         await enforce_public_web_search_limit()
 
     return await queue_summarization_job(
@@ -68,5 +69,27 @@ async def create_public_summarize_job(
         run_deepeval=False,
         origin="public",
         context_expansion_mode="staged" if payload.add_web_context else "none",
-        check_facts=payload.check_facts,
     )
+
+
+@router.post(
+    "/jobs/{job_id}/fact-check",
+    status_code=202,
+    summary="Start a fact check of a completed public summary (daily limit)",
+    responses={404: {"description": "No public job"}, 409: {"description": "Not startable now"}},
+)
+async def request_public_fact_check(job_id: str, request: Request) -> None:
+    log.debug("public fact check requested", job_id=job_id)
+    job = await get_jobs_collection().find_one({"job_id": job_id, "origin": "public"}, {"_id": 1})
+    if job is None:
+        raise HTTPException(status_code=404, detail="Nie znaleziono podsumowania.")
+
+    await enforce_public_rate_limit(request, "fact_check")
+    await enforce_public_web_search_limit()
+    try:
+        await start_fact_check(job_id)
+    except FactCheckNotAllowedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Fakty tego podsumowania są już sprawdzane albo sprawdzone.",
+        ) from exc

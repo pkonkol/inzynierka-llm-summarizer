@@ -70,8 +70,8 @@ Użycie:
 - Prawy przycisk myszy na linku → **Podsumuj link**: panel streści stronę spod linku bez jej otwierania.
 - Zaznacz tekst na stronie, prawy przycisk → **Podsumuj zaznaczenie**.
 - Ikona 🕘 w panelu pokazuje ostatnie podsumowania. Tytuł podsumowania otwiera wynik w aplikacji.
-- **Sprawdź fakty** dopisuje pod streszczeniem ocenę artykułu na tle innych źródeł; pojawia się
-  chwilę po streszczeniu. Wybór zostaje zapamiętany, także dla **Podsumuj link**.
+- Przycisk **Sprawdź fakty** pod streszczeniem dopisuje ocenę artykułu na tle serwisów
+  fact-checkingowych i innych źródeł, ze źródłami w grupach: potwierdzają, podważają, kontekst.
 - „Treść strony” działa także na stronach za logowaniem albo paywallem.
 
 Aktualizacja: podmień zawartość folderu na nowy zip i kliknij ikonę odświeżania przy

@@ -1,6 +1,7 @@
 """Shared LLM utilities: model factory, prompt helpers, output parsers."""
 
 import html
+import re
 from typing import Any, cast
 
 import structlog
@@ -39,17 +40,30 @@ class LlmOutputError(ValueError):
         self.raw_output = raw_output
 
 
+def neutralize_tag(text: str, tag: str) -> str:
+    """Text quoting a block delimiter, in any case or spacing, must not be able to close its block and speak outside it."""
+    return re.sub(rf"<(\s*/?\s*{tag})", r"&lt;\1", text, flags=re.IGNORECASE)
+
+
 def neutralize_block_tags(text: str) -> str:
-    """A source quoting the delimiter must not be able to close its block and speak outside it."""
-    return text.replace("<related_source", "&lt;related_source").replace(
-        "</related_source", "&lt;/related_source"
+    return neutralize_tag(text, "related_source")
+
+
+def _review_lines(source: RelatedSource) -> str:
+    if source.review is None:
+        return ""
+    review = source.review
+    return (
+        f"Checked claim: {neutralize_block_tags(review.claim)}\n"
+        f"Verdict by {neutralize_block_tags(review.publisher)}: {neutralize_block_tags(review.verdict)}\n"
     )
 
 
 def related_source_blocks(related_sources: list[RelatedSource]) -> str:
     return "\n\n".join(
         f'<related_source id="{number}" url="{html.escape(source.url)}">\n'
-        f"{neutralize_block_tags(source.title or '')}\n{neutralize_block_tags(source.excerpt)}\n"
+        f"{neutralize_block_tags(source.title or '')}\n{_review_lines(source)}"
+        f"{neutralize_block_tags(source.excerpt)}\n"
         "</related_source>"
         for number, source in enumerate(related_sources, start=1)
     )

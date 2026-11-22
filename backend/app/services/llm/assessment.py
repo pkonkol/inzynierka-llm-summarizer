@@ -3,7 +3,7 @@
 import structlog
 from pydantic import BaseModel
 
-from ...schemas.fact_check import LlmAssessmentRequest, LlmAssessmentResult
+from ...schemas.fact_check import LlmAssessmentRequest, LlmAssessmentResult, SourceStance
 from ._base import (
     build_language_instruction,
     build_structured_llm,
@@ -16,8 +16,23 @@ from ._prompts import ASSESSMENT_FOCUS, ASSESSMENT_FROM_SOURCES
 log = structlog.get_logger(__name__)
 
 
+class SourceStanceOutput(BaseModel):
+    source: int  # the [n] number of the related source
+    stance: SourceStance
+
+
 class AssessmentOutput(BaseModel):
     text: str
+    source_stances: list[SourceStanceOutput]
+
+
+def _stance_per_source(output: AssessmentOutput, source_count: int) -> list[SourceStance]:
+    """A source the model gave no stance, or named by a number outside the list, counts as context."""
+    stance_by_number = {item.source: item.stance for item in output.source_stances}
+    unknown_numbers = set(stance_by_number) - set(range(1, source_count + 1))
+    if unknown_numbers:
+        log.warning("assessment named unknown sources", numbers=sorted(unknown_numbers))
+    return [stance_by_number.get(number, "context") for number in range(1, source_count + 1)]
 
 
 async def generate_assessment(request: LlmAssessmentRequest) -> LlmAssessmentResult:
@@ -40,4 +55,9 @@ async def generate_assessment(request: LlmAssessmentRequest) -> LlmAssessmentRes
         }
     )
     parsed, raw_str, usage, _raw_metadata = parse_structured_output(raw, "assessment", "assessment")
-    return LlmAssessmentResult(text=parsed.text, usage=usage, raw_output=raw_str)
+    return LlmAssessmentResult(
+        text=parsed.text,
+        source_stances=_stance_per_source(parsed, len(request.related_sources)),
+        usage=usage,
+        raw_output=raw_str,
+    )

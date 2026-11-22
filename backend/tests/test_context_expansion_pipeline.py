@@ -7,7 +7,9 @@ import pytest
 from pydantic import SecretStr
 
 from app.core.config import settings
+from app.schemas import fact_check as fact_check_schemas
 from app.schemas.context_expansion import (
+    ClaimReview,
     ContextExpansionResult,
     PlannedQueries,
     RelatedSource,
@@ -15,7 +17,11 @@ from app.schemas.context_expansion import (
 )
 from app.schemas.summary import UsageMetadata
 from app.services.context_expansion import pipeline
-from app.services.context_expansion.pipeline import ContextExpansionError, expand_context
+from app.services.context_expansion.pipeline import (
+    ContextExpansionError,
+    expand_context,
+    search_fact_checks,
+)
 
 SOURCE_TEXT = "Large language models can summarize web pages for a reader. " * 20
 SOURCE_URL = "https://source.example/article"
@@ -24,7 +30,14 @@ CHANNEL_FUNCTIONS = ("search_web", "search_discussions", "search_science")
 
 def _candidate(channel: str, url: str) -> SearchCandidate:
     return SearchCandidate.model_validate(
-        {"channel": channel, "url": url, "title": "T", "text": "body", "published_at": None}
+        {
+            "channel": channel,
+            "url": url,
+            "title": "T",
+            "text": "body",
+            "published_at": None,
+            "review": None,
+        }
     )
 
 
@@ -49,6 +62,7 @@ def stages(monkeypatch: pytest.MonkeyPatch) -> dict[str, AsyncMock]:
         title="T",
         excerpt="body",
         selection_reason="adds the 2025 figures the source lacks",
+        review=None,
     )
     mocks = {
         "plan_search_queries": AsyncMock(
@@ -182,3 +196,137 @@ async def test_case_7_missing_api_key_fails_before_any_search(
 
     for name in (*CHANNEL_FUNCTIONS, "plan_search_queries"):
         stages[name].assert_not_awaited()
+
+
+CLAIM_REVIEW = ClaimReview(
+    claim="Coffee cures colds.",
+    publisher="PolitiFact",
+    verdict="False",
+    reviewed_at=None,
+)
+GOOGLE_URL = "https://politifact.com/factchecks/coffee"
+
+
+def _fact_check_candidate(channel: str, url: str, review: ClaimReview | None) -> SearchCandidate:
+    return SearchCandidate.model_validate(
+        {
+            "channel": channel,
+            "url": url,
+            "title": "T",
+            "text": "body",
+            "published_at": None,
+            "review": review.model_dump() if review else None,
+            "query": "coffee cures colds",
+        }
+    )
+
+
+@pytest.fixture
+def fact_check_stages(monkeypatch: pytest.MonkeyPatch) -> dict[str, AsyncMock]:
+    monkeypatch.setattr(settings, "exa_api_key", SecretStr("exa-test-key"))
+    monkeypatch.setattr(settings, "factcheck_api_key", SecretStr("google-test-key"))
+    mocks = {
+        "plan_claim_queries": AsyncMock(
+            return_value=(["coffee cures colds"], UsageMetadata(total_tokens=15))
+        ),
+        "search_claim_reviews": AsyncMock(
+            return_value=(
+                [_fact_check_candidate("factcheck_google", GOOGLE_URL, CLAIM_REVIEW)],
+                None,
+            )
+        ),
+        "search_fact_check_sites": AsyncMock(
+            return_value=(
+                [_fact_check_candidate("factcheck_web", "https://snopes.com/coffee", None)],
+                0.007,
+            )
+        ),
+        "select_related_sources": AsyncMock(side_effect=AssertionError("selection must not run")),
+    }
+    for name, mock in mocks.items():
+        monkeypatch.setattr(pipeline, name, mock, raising=False)
+    return mocks
+
+
+async def _search_fact_checks() -> tuple:
+    return await search_fact_checks(SOURCE_TEXT, SOURCE_URL, "gemini", "gemini-3.8-flash")
+
+
+async def test_fact_check_hits_skip_selection(fact_check_stages: dict[str, AsyncMock]) -> None:
+    search, sources = await _search_fact_checks()
+
+    fact_check_stages["select_related_sources"].assert_not_awaited()
+    fact_check_stages["search_claim_reviews"].assert_awaited_once()
+    assert fact_check_stages["search_claim_reviews"].await_args.args[0] == ["coffee cures colds"]
+    assert fact_check_stages["search_fact_check_sites"].await_args.args[0] == ["coffee cures colds"]
+    assert {source.url for source in sources} == {GOOGLE_URL, "https://snopes.com/coffee"}
+    assert {source.channel for source in sources} == {"factcheck_google", "factcheck_web"}
+    assert all(source.selection_reason == "coffee cures colds" for source in sources)
+    assert isinstance(search, fact_check_schemas.ClaimSearch)  # pyrefly: ignore
+    assert search.claims == ["coffee cures colds"]
+    assert {outcome.channel for outcome in search.channels} == {
+        "factcheck_google",
+        "factcheck_web",
+    }
+    assert all(outcome.error is None for outcome in search.channels)
+    assert search.usage.total_tokens == 15
+    assert isinstance(search.duration_ms, int)
+
+
+async def test_fact_check_hits_carry_the_review_over(
+    fact_check_stages: dict[str, AsyncMock],
+) -> None:
+    _search, sources = await _search_fact_checks()
+
+    by_url = {source.url: source for source in sources}
+    assert by_url[GOOGLE_URL].review == CLAIM_REVIEW
+    assert by_url["https://snopes.com/coffee"].review is None
+
+
+async def test_fact_check_hits_are_deduplicated_by_url(
+    fact_check_stages: dict[str, AsyncMock],
+) -> None:
+    fact_check_stages["search_fact_check_sites"].return_value = (
+        [_fact_check_candidate("factcheck_web", GOOGLE_URL, None)],
+        0.007,
+    )
+
+    _search, sources = await _search_fact_checks()
+
+    assert [source.url for source in sources] == [GOOGLE_URL]
+    assert sources[0].review == CLAIM_REVIEW  # the Google hit is the one that has a review
+
+
+async def test_one_failed_fact_check_channel_keeps_the_other(
+    fact_check_stages: dict[str, AsyncMock],
+) -> None:
+    fact_check_stages["search_claim_reviews"].side_effect = _service_unavailable()
+
+    search, sources = await _search_fact_checks()
+
+    google = next(outcome for outcome in search.channels if outcome.channel == "factcheck_google")
+    assert google.result_count == 0
+    assert google.error is not None and "503" in google.error
+    assert [source.url for source in sources] == ["https://snopes.com/coffee"]
+
+
+async def test_all_fact_check_channels_failed_raises_context_expansion_error(
+    fact_check_stages: dict[str, AsyncMock],
+) -> None:
+    fact_check_stages["search_claim_reviews"].side_effect = _service_unavailable()
+    fact_check_stages["search_fact_check_sites"].side_effect = _service_unavailable()
+
+    with pytest.raises(ContextExpansionError):
+        await _search_fact_checks()
+
+
+async def test_fact_check_without_hits_returns_no_sources(
+    fact_check_stages: dict[str, AsyncMock],
+) -> None:
+    fact_check_stages["search_claim_reviews"].return_value = ([], None)
+    fact_check_stages["search_fact_check_sites"].return_value = ([], None)
+
+    search, sources = await _search_fact_checks()
+
+    assert sources == []
+    assert search.claims == ["coffee cures colds"]

@@ -14,12 +14,14 @@ from ...schemas.context_expansion import (
     SearchCandidate,
     SearchChannel,
 )
+from ...schemas.fact_check import ClaimSearch
 from ...schemas.job_db import JobErrorCode
 from ...schemas.summary import UsageMetadata
-from .exa_search import search_web
+from .claim_review_search import search_claim_reviews
+from .exa_search import search_fact_check_sites, search_web
 from .hn_search import search_discussions
 from .openalex_search import search_science
-from .queries import plan_search_queries
+from .queries import plan_claim_queries, plan_search_queries
 from .selection import deduplicate_candidates, select_related_sources
 
 log = structlog.get_logger(__name__)
@@ -182,3 +184,48 @@ async def expand_context(
         usage=usage,
         duration_ms=duration_ms,
     )
+
+
+def _fact_check_source(candidate: SearchCandidate) -> RelatedSource:
+    if candidate.query is None:
+        raise ValueError(f"fact check candidate {candidate.url} has no claim query")
+    return RelatedSource(
+        channel=candidate.channel,
+        url=candidate.url,
+        title=candidate.title,
+        excerpt=candidate.text[: settings.context_excerpt_chars],
+        selection_reason=candidate.query,
+        review=candidate.review,
+    )
+
+
+async def search_fact_checks(
+    source_text: str, source_url: str, model_provider: str, model_name: str
+) -> tuple[ClaimSearch, list[RelatedSource]]:
+    """Claims of the source searched on fact-checking sites; every hit is kept, without an LLM selection."""
+    log.debug("searching fact checks", url=source_url)
+    started = time.perf_counter()
+    claims, usage = await plan_claim_queries(source_text, model_provider, model_name)
+    outcomes, candidates = await _search_channels(
+        [
+            ("factcheck_google", search_claim_reviews, claims),
+            ("factcheck_web", search_fact_check_sites, claims),
+        ]
+    )
+    sources = [
+        _fact_check_source(candidate)
+        for candidate in deduplicate_candidates(candidates, source_url)
+    ]
+
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    log.info(
+        "fact checks found",
+        claim_count=len(claims),
+        source_count=len(sources),
+        duration_ms=duration_ms,
+        token_usage=usage.total_tokens,
+    )
+    claim_search = ClaimSearch(
+        claims=claims, channels=outcomes, usage=usage, duration_ms=duration_ms
+    )
+    return claim_search, sources

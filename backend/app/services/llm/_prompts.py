@@ -75,7 +75,11 @@ ASSESSMENT_FROM_SOURCES = ChatPromptTemplate.from_messages(
             "In it, {focus}. Cite a source only by its number in brackets at the end of the "
             "sentence that draws on it, e.g. 'The figure is overstated [2].', and never name it in "
             "the sentence as well. A sentence that says the sources do not cover a claim cites "
-            "nothing; any other sentence no source supports does not belong in the assessment."
+            "nothing; any other sentence no source supports does not belong in the assessment. "
+            "Then give each related source a stance by its number: 'supports' when it confirms "
+            "the content's claims, 'contradicts' when it refutes or qualifies them, 'context' when "
+            "it only adds background or covers a different claim. A source whose checked claim "
+            "differs from the content's is 'context'."
             "\n\nContent:\n{text}\n\n"
             "Related sources:\n{related_sources}",
         ),

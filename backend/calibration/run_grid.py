@@ -8,7 +8,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import get_args
+from typing import Literal, get_args
 
 import httpx
 import structlog
@@ -34,8 +34,10 @@ log = structlog.get_logger(__name__)
 
 RESEARCH_API = "/api/v1/research"
 POLL_INTERVAL_SECONDS = 10
-RUN_TIMEOUT_SECONDS = 3600
+TIMEOUT_SECONDS_PER_ENTRY = 120  # the 0.8b smoke took ~5 s per entry; bigger models and extract_then_synthesize need the headroom
 FINISHED_STATUSES = frozenset({"completed", "failed"})
+
+CellStatus = RunStatus | Literal["timeout"]
 
 
 @dataclass(frozen=True)
@@ -61,11 +63,12 @@ class GridCellResult:
     model: ModelRef
     strategy: ProcessingStrategy
     run_id: str
-    status: RunStatus
+    status: CellStatus
     seconds: float
     completed_entries: int
     failed_entries: list[EvaluationRunEntryResponse]
-    deepeval: DeepevalPassMetrics | None  # None when the run was made without --deepeval
+    deepeval_status: str  # off (no --deepeval), skipped (run not completed), timeout, or the pass's own completed/failed
+    deepeval_error: str | None
 
 
 def authenticated_client(api_url: str, password: str) -> httpx.Client:
@@ -116,12 +119,12 @@ def run_grid(
     strategies: list[ProcessingStrategy],
     with_deepeval: bool,
 ) -> list[GridCellResult]:
-    """Runs one after another, so Ollama serves one run at a time and each duration means something.
+    """One run per set x model x strategy, each printed as a report row as soon as it ends.
 
-    Each report row is printed as soon as its run ends, so an aborted grid keeps the finished rows.
+    Runs go one after another, so Ollama serves one run at a time and each duration means something;
+    a run that times out becomes a `timeout` row and the grid moves on.
     """
     evaluation_sets = [find_set(client, set_name) for set_name in dict.fromkeys(set_names)]
-    print_report_header()
     results: list[GridCellResult] = []
     for evaluation_set, model, strategy in itertools.product(evaluation_sets, models, strategies):
         result = _run_one_cell(client, evaluation_set, model, strategy, with_deepeval)
@@ -138,6 +141,7 @@ def _run_one_cell(
     with_deepeval: bool,
 ) -> GridCellResult:
     set_name = evaluation_set.name
+    timeout_seconds = evaluation_set.entry_count * TIMEOUT_SECONDS_PER_ENTRY
     started = time.monotonic()
     run_id = start_run(client, evaluation_set, model, strategy)
     log.info(
@@ -147,7 +151,10 @@ def _run_one_cell(
         strategy=strategy,
         run_id=run_id,
     )
-    run = wait_for_run(client, run_id)
+    try:
+        run_status: CellStatus = wait_for_run(client, run_id, timeout_seconds).status
+    except TimeoutError:
+        run_status = "timeout"
     seconds = time.monotonic() - started
     log.info(
         "evaluation run finished",
@@ -155,11 +162,13 @@ def _run_one_cell(
         model=str(model),
         strategy=strategy,
         run_id=run_id,
-        status=run.status,
+        status=run_status,
         duration_ms=round(seconds * 1000),
     )
 
-    deepeval = run_deepeval(client, run_id) if with_deepeval and run.status == "completed" else None
+    deepeval_status, deepeval_error = _judge_run(
+        client, run_id, run_status, with_deepeval, timeout_seconds
+    )
 
     entries = fetch_entries(client, run_id)
     return GridCellResult(
@@ -167,12 +176,32 @@ def _run_one_cell(
         model=model,
         strategy=strategy,
         run_id=run_id,
-        status=run.status,
+        status=run_status,
         seconds=seconds,
         completed_entries=sum(1 for entry in entries if entry.status == "completed"),
         failed_entries=[entry for entry in entries if entry.status == "failed"],
-        deepeval=deepeval,
+        deepeval_status=deepeval_status,
+        deepeval_error=deepeval_error,
     )
+
+
+def _judge_run(
+    client: httpx.Client,
+    run_id: str,
+    run_status: CellStatus,
+    with_deepeval: bool,
+    timeout_seconds: float,
+) -> tuple[str, str | None]:
+    """Report status and error of the G-Eval pass for one cell."""
+    if not with_deepeval:
+        return "off", None
+    if run_status != "completed":
+        return "skipped", None
+    try:
+        deepeval = run_deepeval(client, run_id, timeout_seconds)
+    except TimeoutError:
+        return "timeout", None
+    return deepeval.status, deepeval.error
 
 
 def start_run(
@@ -196,15 +225,17 @@ def start_run(
     return EvaluationRunCreateResponse.model_validate_json(response.content).evaluation_run_id
 
 
-def wait_for_run(client: httpx.Client, run_id: str) -> EvaluationRunResponse:
-    """Poll until completed/failed; TimeoutError after RUN_TIMEOUT_SECONDS."""
-    return _poll_run(client, run_id, lambda run: run.status in FINISHED_STATUSES)
+def wait_for_run(
+    client: httpx.Client, run_id: str, timeout_seconds: float
+) -> EvaluationRunResponse:
+    """Poll until completed/failed; TimeoutError after timeout_seconds."""
+    return _poll_run(client, run_id, timeout_seconds, lambda run: run.status in FINISHED_STATUSES)
 
 
-def run_deepeval(client: httpx.Client, run_id: str) -> DeepevalPassMetrics:
+def run_deepeval(client: httpx.Client, run_id: str, timeout_seconds: float) -> DeepevalPassMetrics:
     """POST /runs/{id}/deepeval and poll aggregate_metrics.deepeval until it finishes."""
     client.post(f"{RESEARCH_API}/runs/{run_id}/deepeval").raise_for_status()
-    run = _poll_run(client, run_id, _deepeval_finished)
+    run = _poll_run(client, run_id, timeout_seconds, _deepeval_finished)
     if run.aggregate_metrics.deepeval is None:
         raise RuntimeError(f"run {run_id}: deepeval pass finished without a status")
     return run.aggregate_metrics.deepeval
@@ -222,27 +253,34 @@ def print_report_header() -> None:
 
 
 def print_report_row(result: GridCellResult) -> None:
-    deepeval_status = "off" if result.deepeval is None else result.deepeval.status
     print(
         f"| {result.set_name} | {result.model} | {result.strategy} | {result.run_id} "
         f"| {result.status} | {result.seconds:.0f} | {result.completed_entries} "
-        f"| {len(result.failed_entries)} | {deepeval_status} |"
+        f"| {len(result.failed_entries)} | {result.deepeval_status} |"
     )
 
 
 def print_failures(results: list[GridCellResult]) -> None:
-    """Each failed entry's title and error, then each failed deepeval pass."""
+    """Each timed-out run, each failed entry's title and error, then each failed or timed-out deepeval pass."""
+    timed_out_runs = [result for result in results if result.status == "timeout"]
     entry_failures = [(result, entry) for result in results for entry in result.failed_entries]
     deepeval_failures = [
-        result for result in results if result.deepeval and result.deepeval.status == "failed"
+        result for result in results if result.deepeval_status in ("failed", "timeout")
     ]
-    if not entry_failures and not deepeval_failures:
+    if not timed_out_runs and not entry_failures and not deepeval_failures:
         return
     print("\nFailures:\n")
+    for result in timed_out_runs:
+        print(
+            f"- {_cell_label(result)}: run {result.run_id} timed out and may still be running on the server"
+        )
     for result, entry in entry_failures:
         print(f"- {_cell_label(result)}: {entry.title}: {_one_line(entry.error)}")
     for result in deepeval_failures:
-        print(f"- {_cell_label(result)}: deepeval pass: {_one_line(result.deepeval.error)}")
+        reason = (
+            "timed out" if result.deepeval_status == "timeout" else _one_line(result.deepeval_error)
+        )
+        print(f"- {_cell_label(result)}: deepeval pass: {reason}")
 
 
 def _cell_label(result: GridCellResult) -> str:
@@ -255,20 +293,39 @@ def _one_line(text: str | None) -> str:
 
 
 def _poll_run(
-    client: httpx.Client, run_id: str, is_done: Callable[[EvaluationRunResponse], bool]
+    client: httpx.Client,
+    run_id: str,
+    timeout_seconds: float,
+    is_done: Callable[[EvaluationRunResponse], bool],
 ) -> EvaluationRunResponse:
-    deadline = time.monotonic() + RUN_TIMEOUT_SECONDS
+    deadline = time.monotonic() + timeout_seconds
     while True:
-        response = client.get(f"{RESEARCH_API}/runs/{run_id}")
-        response.raise_for_status()
-        run = EvaluationRunResponse.model_validate_json(response.content)
-        if is_done(run):
+        run = _fetch_run_unless_unreachable(client, run_id)
+        if run is not None and is_done(run):
             return run
         if time.monotonic() > deadline:
-            raise TimeoutError(
-                f"run {run_id} unfinished after {RUN_TIMEOUT_SECONDS} s ({run.status})"
-            )
+            raise TimeoutError(f"run {run_id} unfinished after {timeout_seconds:.0f} s")
         time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _fetch_run_unless_unreachable(
+    client: httpx.Client, run_id: str
+) -> EvaluationRunResponse | None:
+    """None when the backend is briefly unreachable (network error or 5xx), so one blip does not end an overnight grid."""
+    try:
+        response = client.get(f"{RESEARCH_API}/runs/{run_id}")
+        response.raise_for_status()
+    except httpx.TransportError as error:
+        log.warning("polling the run failed, retrying", run_id=run_id, error=str(error))
+        return None
+    except httpx.HTTPStatusError as error:
+        if not error.response.is_server_error:
+            raise
+        log.warning(
+            "polling the run failed, retrying", run_id=run_id, status=error.response.status_code
+        )
+        return None
+    return EvaluationRunResponse.model_validate_json(response.content)
 
 
 def _deepeval_finished(run: EvaluationRunResponse) -> bool:
@@ -314,7 +371,9 @@ def main() -> None:
     if args.command == "import":
         import_sets(client, args.set_files)
         return
-    print_failures(run_grid(client, args.sets, args.models, args.strategies, args.deepeval))
+    print_report_header()
+    results = run_grid(client, args.sets, args.models, args.strategies, args.deepeval)
+    print_failures(results)
 
 
 if __name__ == "__main__":

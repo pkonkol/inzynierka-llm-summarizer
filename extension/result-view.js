@@ -19,7 +19,9 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 // images are dropped because a remote one is fetched as soon as it renders.
 function renderMarkdown(markdown) {
   const container = element("div", { className: "markdown" });
-  container.innerHTML = DOMPurify.sanitize(marked.parse(markdown), { FORBID_TAGS: ["img"] });
+  container.innerHTML = DOMPurify.sanitize(marked.parse(markdown), {
+    FORBID_TAGS: ["img"],
+  });
   return container;
 }
 
@@ -32,7 +34,10 @@ function resultPageUrl(entry) {
 
 function sourceLink(entry) {
   if (entry.sourceUrl === null) {
-    return element("span", { className: "source", textContent: entry.sourceLabel });
+    return element("span", {
+      className: "source",
+      textContent: entry.sourceLabel,
+    });
   }
   return element("a", {
     className: "source",
@@ -43,11 +48,92 @@ function sourceLink(entry) {
   });
 }
 
-function factCheckBody(factCheck) {
+const CHANNEL_LABELS = {
+  web: "sieć",
+  discussions: "Hacker News",
+  science: "publikacje",
+  factcheck_google: "Google Fact Check",
+  factcheck_web: "serwis fact-checkingowy",
+};
+
+const STANCE_GROUPS = [
+  { stance: "supports", heading: "Potwierdzają" },
+  { stance: "contradicts", heading: "Podważają" },
+  { stance: "context", heading: "Kontekst" },
+];
+
+function reviewNote(review) {
+  const reviewedOn =
+    review.reviewed_at === null
+      ? ""
+      : ` (${new Date(review.reviewed_at).toLocaleDateString("pl-PL")})`;
+  return [
+    element("span", {
+      className: "muted",
+      textContent: ` · ${review.publisher}: ${review.verdict}${reviewedOn}`,
+    }),
+    element("span", {
+      className: "muted checked-claim",
+      textContent: `Sprawdzane twierdzenie: ${review.claim}`,
+    }),
+  ];
+}
+
+function sourceItem(source, number) {
+  return element("li", {}, [
+    `[${number}] `,
+    element("a", {
+      href: source.url,
+      target: "_blank",
+      rel: "noopener",
+      textContent: source.title ?? source.url,
+    }),
+    element("span", {
+      className: "muted",
+      textContent: ` · ${CHANNEL_LABELS[source.channel]}`,
+    }),
+    ...(source.review === null ? [] : reviewNote(source.review)),
+  ]);
+}
+
+// Grouped by stance, each source keeps the [n] the assessment text cites it by.
+function sourcesByStance(sources) {
+  const numbered = sources.map((source, index) => ({
+    source,
+    number: index + 1,
+  }));
+  return STANCE_GROUPS.flatMap(({ stance, heading }) => {
+    const inGroup = numbered.filter(({ source }) => source.stance === stance);
+    if (inGroup.length === 0) return [];
+    return [
+      element("h4", { textContent: heading }),
+      element(
+        "ul",
+        {},
+        inGroup.map(({ source, number }) => sourceItem(source, number)),
+      ),
+    ];
+  });
+}
+
+function checkFactsButton(label, onClick) {
+  const button = element("button", { type: "button", textContent: label });
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    onClick();
+  });
+  return button;
+}
+
+function factCheckBody(factCheck, onCheckFacts) {
+  if (factCheck === null) return [checkFactsButton("Sprawdź fakty", onCheckFacts)];
   switch (factCheck.status) {
     case "working":
       return [
-        element("p", { className: "muted", textContent: "Sprawdzam fakty w innych źródłach..." }),
+        element("p", {
+          className: "muted",
+          textContent: "Sprawdzam fakty w innych źródłach...",
+        }),
         element("progress", { ariaLabel: "Sprawdzanie faktów" }),
       ];
     case "failed":
@@ -56,39 +142,23 @@ function factCheckBody(factCheck) {
           className: "error",
           textContent: factCheck.error,
         }),
+        checkFactsButton("Spróbuj ponownie", onCheckFacts),
       ];
     case "completed":
-      return [
-        renderMarkdown(factCheck.text),
-        element(
-          "ol",
-          {},
-          factCheck.sources.map((source, index) =>
-            element("li", {}, [
-              `[${index + 1}] `,
-              element("a", {
-                href: source.url,
-                target: "_blank",
-                rel: "noopener",
-                textContent: source.title ?? source.url,
-              }),
-            ]),
-          ),
-        ),
-      ];
+      return [renderMarkdown(factCheck.text), ...sourcesByStance(factCheck.sources)];
     default:
       throw new Error(`unknown fact check status "${factCheck.status}"`);
   }
 }
 
-function factCheckSection(factCheck) {
+function factCheckSection(factCheck, onCheckFacts) {
   return element("section", { className: "fact-check" }, [
     element("h3", { textContent: "Weryfikacja faktów" }),
-    ...factCheckBody(factCheck),
+    ...factCheckBody(factCheck, onCheckFacts),
   ]);
 }
 
-function completedEntry(entry) {
+function completedEntry(entry, onCheckFacts) {
   // entries saved before the fact check have no factCheck field
   const factCheck = entry.factCheck ?? null;
   return [
@@ -103,34 +173,45 @@ function completedEntry(entry) {
     ]),
     sourceLink(entry),
     renderMarkdown(entry.summary),
-    ...(factCheck === null ? [] : [factCheckSection(factCheck)]),
+    factCheckSection(factCheck, () => onCheckFacts(entry)),
   ];
 }
 
-function entryContent(entry) {
+function entryContent(entry, onCheckFacts) {
   if (entry === null) {
-    return [element("p", { className: "muted", textContent: "Tu pojawi się podsumowanie." })];
+    return [
+      element("p", {
+        className: "muted",
+        textContent: "Tu pojawi się podsumowanie.",
+      }),
+    ];
   }
   switch (entry.status) {
     case "pending":
     case "running":
       return [
-        element("p", { className: "muted", textContent: "Przygotowuję podsumowanie..." }),
+        element("p", {
+          className: "muted",
+          textContent: "Przygotowuję podsumowanie...",
+        }),
         element("progress", { ariaLabel: "Przygotowywanie podsumowania" }),
         sourceLink(entry),
       ];
     case "failed":
       return [element("p", { className: "error", textContent: entry.error }), sourceLink(entry)];
     case "completed":
-      return completedEntry(entry);
+      return completedEntry(entry, onCheckFacts);
     default:
       throw new Error(`unknown history entry status "${entry.status}"`);
   }
 }
 
-/** Pending and running entries show a placeholder, failed ones their error, completed ones title and markdown. */
-export function renderCurrentEntry(container, entry) {
-  container.replaceChildren(...entryContent(entry));
+/**
+ * Pending and running entries show a placeholder, failed ones their error, completed ones title,
+ * markdown and the fact check; onCheckFacts(entry) runs when the reader asks for one.
+ */
+export function renderCurrentEntry(container, entry, { onCheckFacts }) {
+  container.replaceChildren(...entryContent(entry, onCheckFacts));
 }
 
 const STATUS_LABELS = {
@@ -142,7 +223,10 @@ const STATUS_LABELS = {
 
 function historyItem(entry, isCurrent, onSelect) {
   const button = element("button", { type: "button", className: "history-item" }, [
-    element("span", { className: "history-title", textContent: entry.title ?? entry.sourceLabel }),
+    element("span", {
+      className: "history-title",
+      textContent: entry.title ?? entry.sourceLabel,
+    }),
     element("span", {
       className: "muted",
       textContent: `${STATUS_LABELS[entry.status]} · ${new Date(entry.createdAt).toLocaleString("pl-PL")}`,

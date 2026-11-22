@@ -10,7 +10,6 @@ export const DEFAULT_SETTINGS = {
   presetKey: null,
   density: 0.5,
   language: "auto",
-  checkFacts: false,
 };
 
 /** The settings of the last submit, or the defaults when nothing was submitted yet. */
@@ -54,7 +53,6 @@ export async function startSummaryJob(source, settings, presets) {
     ...source.apiSource,
     language: settings.language,
     summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
-    check_facts: settings.checkFacts,
   });
   await addHistoryEntry({
     jobId,
@@ -65,7 +63,7 @@ export async function startSummaryJob(source, settings, presets) {
     title: null,
     summary: null,
     error: null,
-    factCheck: settings.checkFacts ? { status: "working" } : null,
+    factCheck: null,
     createdAt: new Date().toISOString(),
   });
 }

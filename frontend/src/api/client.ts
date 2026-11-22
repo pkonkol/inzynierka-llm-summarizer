@@ -124,6 +124,12 @@ export const createPublicSummaryJob = (
     body: JSON.stringify(payload),
   });
 
+export async function requestFactCheck(jobId: string): Promise<void> {
+  await request<null>(`/api/v1/public/jobs/${encodeURIComponent(jobId)}/fact-check`, {
+    method: "POST",
+  });
+}
+
 export const listSummarizedUrls = (limit = 50): Promise<UrlSummaryListItem[]> =>
   request<UrlSummaryListItem[]>(`/api/v1/jobs?limit=${limit}`);
 

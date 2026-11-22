@@ -7,9 +7,14 @@ from datetime import date
 import httpx
 import pytest
 from pydantic import SecretStr
+from structlog.testing import capture_logs
 
 from app.core.config import settings
-from app.services.context_expansion.exa_search import search_web
+from app.services.context_expansion.exa_search import (
+    FACT_CHECK_DOMAINS,
+    search_fact_check_sites,
+    search_web,
+)
 
 WEB_RESPONSE = {
     "requestId": "r1",
@@ -86,3 +91,103 @@ async def test_case_16_exa_request_shape(exa_requests: list[httpx.Request]) -> N
     assert all(body["contents"]["text"]["maxCharacters"] > 0 for body in bodies)
     assert any("includeDomains" not in body for body in bodies)
     assert any(body.get("includeDomains") == ["reddit.com"] for body in bodies)
+
+
+EXPECTED_FACT_CHECK_DOMAINS = {
+    "politifact.com",
+    "fullfact.org",
+    "science.feedback.org",
+    "healthfeedback.org",
+    "snopes.com",
+    "factcheck.org",
+    "factcheck.afp.com",
+    "leadstories.com",
+}
+
+
+def test_fact_check_domains_are_the_agreed_sites() -> None:
+    assert set(FACT_CHECK_DOMAINS) == EXPECTED_FACT_CHECK_DOMAINS
+
+
+async def test_fact_check_sites_restrict_domains_and_ask_one_result(
+    exa_requests: list[httpx.Request],
+) -> None:
+    await search_fact_check_sites(["coffee cures colds", "vitamin c prevents colds"])
+
+    bodies = [json.loads(request.content) for request in exa_requests]
+    assert {body["query"] for body in bodies} == {"coffee cures colds", "vitamin c prevents colds"}
+    assert len(bodies) == 2  # one request per query, no Reddit side query
+    for body in bodies:
+        assert set(body["includeDomains"]) == EXPECTED_FACT_CHECK_DOMAINS
+        assert body["numResults"] == 1
+
+
+async def test_fact_check_sites_candidates_use_the_factcheck_web_channel(
+    exa_requests: list[httpx.Request],
+) -> None:
+    candidates, _cost_usd = await search_fact_check_sites(["coffee cures colds"])
+
+    assert candidates
+    assert all(candidate.channel == "factcheck_web" for candidate in candidates)
+    assert all(candidate.review is None for candidate in candidates)
+    assert all(candidate.query == "coffee cures colds" for candidate in candidates)
+
+
+async def test_exa_warnings_are_logged(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "exa_api_key", SecretStr("exa-test-key"))
+    serve_http(
+        lambda _request: httpx.Response(
+            200,
+            json={
+                **EMPTY_RESPONSE,
+                "warnings": ["includeDomains was trimmed"],
+                "notices": ["rate limit nearly reached"],
+            },
+        )
+    )
+
+    with capture_logs() as logs:
+        await search_web(["summarization of web pages"])
+
+    warned = " ".join(str(entry) for entry in logs if entry["log_level"] == "warning")
+    assert "includeDomains was trimmed" in warned
+    assert "rate limit nearly reached" in warned
+
+
+async def test_empty_exa_warnings_log_nothing_at_warning_level(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "exa_api_key", SecretStr("exa-test-key"))
+    serve_http(
+        lambda _request: httpx.Response(200, json={**EMPTY_RESPONSE, "warnings": [], "notices": []})
+    )
+
+    with capture_logs() as logs:
+        await search_web(["summarization of web pages"])
+
+    assert [entry for entry in logs if entry["log_level"] == "warning"] == []
+
+
+NON_HTTP_RESPONSE = {
+    "requestId": "r3",
+    "results": [
+        {"url": "javascript:alert(1)", "title": "Script", "text": "Script text."},
+        {"url": "ftp://files.example/a", "title": "Ftp", "text": "Ftp text."},
+        {"url": "https://kept.example/a", "title": "Kept", "text": "Kept text."},
+    ],
+    "costDollars": {"total": 0.008},
+}
+
+
+@pytest.mark.parametrize("search", [search_web, search_fact_check_sites])
+async def test_a_result_with_a_non_http_url_is_dropped_and_the_others_are_kept(
+    serve_http: Callable, monkeypatch: pytest.MonkeyPatch, search: Callable
+) -> None:
+    monkeypatch.setattr(settings, "exa_api_key", SecretStr("exa-test-key"))
+    serve_http(lambda _request: httpx.Response(200, json=NON_HTTP_RESPONSE))
+
+    candidates, _cost_usd = await search(["coffee cures colds"])
+
+    assert {candidate.url for candidate in candidates} == {"https://kept.example/a"}

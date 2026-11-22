@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from ...core.config import settings
 from ...schemas.context_expansion import RelatedSource, SearchCandidate
 from ...schemas.summary import UsageMetadata
-from ..llm._base import build_structured_llm, parse_structured_output
+from ..llm._base import build_structured_llm, neutralize_tag, parse_structured_output
 
 log = structlog.get_logger(__name__)
 
@@ -54,10 +54,6 @@ def _dedup_key(url: str) -> str:
     return f"{_host_without_www(url)}{parts.path.rstrip('/')}{query}"
 
 
-def _neutralize_block_tags(text: str, tag: str) -> str:
-    return text.replace(f"<{tag}", f"&lt;{tag}").replace(f"</{tag}", f"&lt;/{tag}")
-
-
 def deduplicate_candidates(
     candidates: list[SearchCandidate], source_url: str
 ) -> list[SearchCandidate]:
@@ -78,8 +74,8 @@ def deduplicate_candidates(
 
 
 def _candidate_block(candidate: SearchCandidate) -> str:
-    body = _neutralize_block_tags(candidate.text[:_CANDIDATE_INPUT_CHARS], "candidate")
-    title = _neutralize_block_tags(candidate.title or "", "candidate")
+    body = neutralize_tag(candidate.text[:_CANDIDATE_INPUT_CHARS], "candidate")
+    title = neutralize_tag(candidate.title or "", "candidate")
     return f'<candidate url="{candidate.url}" channel="{candidate.channel}">\n{title}\n{body}\n</candidate>'
 
 
@@ -97,7 +93,7 @@ async def select_related_sources(
     raw = await (_SELECTION_PROMPT | llm).ainvoke(
         {
             "limit": limit,
-            "source": _neutralize_block_tags(source_text[:_SOURCE_INPUT_CHARS], "source"),
+            "source": neutralize_tag(source_text[:_SOURCE_INPUT_CHARS], "source"),
             "candidates": "\n\n".join(_candidate_block(candidate) for candidate in candidates),
         }
     )

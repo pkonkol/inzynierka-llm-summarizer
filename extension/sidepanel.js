@@ -1,4 +1,4 @@
-import { fetchJobStatus } from "./api.js";
+import { fetchJobStatus, requestFactCheck } from "./api.js";
 import {
   onHistoryChanged,
   readCurrentJobId,
@@ -44,7 +44,13 @@ function toFactCheckEntry(factCheck) {
       return {
         status: "completed",
         text: factCheck.text,
-        sources: factCheck.sources.map(({ url, title }) => ({ url, title })),
+        sources: factCheck.sources.map(({ url, title, channel, stance, review }) => ({
+          url,
+          title,
+          channel,
+          stance,
+          review,
+        })),
       };
     default:
       throw new Error(`unknown fact check status "${factCheck.status}"`);
@@ -148,9 +154,23 @@ async function showHistory() {
   }
 
   const currentEntry = history.find((entry) => entry.jobId === currentJobId) ?? null;
-  renderCurrentEntry(resultContainer, currentEntry);
+  renderCurrentEntry(resultContainer, currentEntry, { onCheckFacts: checkFacts });
   renderHistoryList(historyContainer, history, { currentJobId, onSelect: selectEntry });
   for (const entry of history.filter(isUnfinished)) pollUntilDone(entry);
+}
+
+// Marked working only once the server has the fact check: the history change starts polling, and
+// a poll before that would read no fact check and clear the entry.
+async function checkFacts(entry) {
+  try {
+    await requestFactCheck(entry.jobId);
+  } catch (error) {
+    await updateHistoryEntry(entry.jobId, {
+      factCheck: { status: "failed", error: `Nie udało się sprawdzić faktów: ${error.message}` },
+    });
+    return;
+  }
+  await updateHistoryEntry(entry.jobId, { factCheck: { status: "working" } });
 }
 
 const PASTED_LABEL_CHARS = 60;

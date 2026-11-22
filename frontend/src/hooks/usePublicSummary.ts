@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 
-import { createPublicSummaryJob, errorText, getJobStatus } from "../api/client";
+import { createPublicSummaryJob, errorText, getJobStatus, requestFactCheck } from "../api/client";
 import type {
+  AssessedSource,
   ContextExpansionResult,
   FactCheck,
   PublicSummarizeRequest,
-  RelatedSource,
   SummaryResponse,
 } from "../types/api.generated";
 import { isJobInProgress, MAX_PUBLIC_PASTED_CHARS } from "../utils/jobs";
@@ -13,23 +13,26 @@ import { logger } from "../utils/logger";
 import { useListPolling } from "./useListPolling";
 
 export type FactCheckView =
+  | { status: "idle" }
   | { status: "working" }
   | { status: "failed"; message: string }
-  | { status: "completed"; text: string; sources: RelatedSource[] };
+  | { status: "completed"; text: string; sources: AssessedSource[] };
 
 export type PublicSummaryState =
   | { phase: "idle" }
   | { phase: "working" }
   | {
       phase: "done";
+      jobId: string;
       summary: SummaryResponse;
       durationMs: number;
       contextExpansion: ContextExpansionResult | null;
-      factCheck: FactCheckView | null;
+      factCheck: FactCheckView;
     }
   | { phase: "error"; message: string };
 
-function toFactCheckView(factCheck: FactCheck): FactCheckView {
+function toFactCheckView(factCheck: FactCheck | null): FactCheckView {
+  if (factCheck === null) return { status: "idle" };
   if (isJobInProgress(factCheck.status)) return { status: "working" };
   if (factCheck.status === "failed") {
     if (factCheck.error === null) throw new Error("a failed fact check has no error");
@@ -80,11 +83,12 @@ export function usePublicSummary() {
       if (activeJobIdRef.current !== jobId || isJobInProgress(job.status)) return;
 
       if (job.status === "completed" && job.summary_data !== null) {
-        const factCheck = job.fact_check === null ? null : toFactCheckView(job.fact_check);
+        const factCheck = toFactCheckView(job.fact_check);
         // The summary shows at once; polling goes on until the fact check under it settles.
-        if (factCheck?.status !== "working") trackJob(null);
+        if (factCheck.status !== "working") trackJob(null);
         setState({
           phase: "done",
+          jobId,
           summary: job.summary_data,
           durationMs: job.duration_ms,
           contextExpansion: job.context_expansion,
@@ -115,6 +119,34 @@ export function usePublicSummary() {
     }
   }, [jobId, trackJob]);
 
+  // Polling stopped once the summary settled; it starts again for the fact check. A fact check the
+  // server already has, e.g. when a poll failed while it ran, is followed again: requesting it
+  // twice would only get a 409.
+  const checkFacts = useCallback(async () => {
+    if (state.phase !== "done") throw new Error("facts can be checked only under a summary");
+    const doneJobId = state.jobId;
+    const setFactCheck = (factCheck: FactCheckView) => {
+      setState((current) =>
+        current.phase === "done" && current.jobId === doneJobId
+          ? { ...current, factCheck }
+          : current,
+      );
+    };
+
+    setFactCheck({ status: "working" });
+    try {
+      const job = await getJobStatus(doneJobId);
+      const isStartable = job.fact_check === null || job.fact_check.status === "failed";
+      if (isStartable) await requestFactCheck(doneJobId);
+      trackJob(doneJobId);
+    } catch (error) {
+      setFactCheck({
+        status: "failed",
+        message: `Nie udało się sprawdzić faktów: ${errorText(error)}`,
+      });
+    }
+  }, [state, trackJob]);
+
   // Shows the result of a job created elsewhere (the browser extension).
   const followJob = useCallback(
     (handedOverJobId: string) => {
@@ -126,5 +158,5 @@ export function usePublicSummary() {
 
   useListPolling(reloadJob, true, jobId !== null);
 
-  return { state, submit, followJob };
+  return { state, submit, followJob, checkFacts };
 }

@@ -12,9 +12,9 @@ from calibration.run_grid import (
     GridCellResult,
     ModelRef,
     authenticated_client,
-    find_set_id,
+    find_set,
     import_sets,
-    print_report,
+    print_failures,
     wait_for_run,
 )
 
@@ -28,8 +28,11 @@ class FakeBackend:
         self.set_names = list(set_names)
         self.requests: list[tuple[str, str]] = []
         self.imported: list[dict] = []
+        self.run_requests: list[dict] = []
         self.polls: dict[str, int] = {}
         self.run_finishes = True
+        self.deepeval_outcome: dict = {"status": "completed", "error": None}
+        self.runs_accepted: int | None = None  # later POST /runs get 500
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -46,6 +49,9 @@ class FakeBackend:
             self.imported.append(body)
             return httpx.Response(200, json=_created_set(body["name"], len(body["entries"])))
         if path.endswith("/runs") and request.method == "POST":
+            self.run_requests.append(json.loads(request.content))
+            if self.runs_accepted is not None and len(self.polls) >= self.runs_accepted:
+                return httpx.Response(500, json={"detail": "backend restarted"})
             run_id = f"run-{len(self.polls)}"
             self.polls[run_id] = 0
             return httpx.Response(
@@ -65,14 +71,16 @@ class FakeBackend:
         run_id = path.rsplit("/", 1)[-1]
         self.polls[run_id] += 1
         finished = self.run_finishes and self.polls[run_id] >= 2
-        return httpx.Response(200, json=_run(run_id, "completed" if finished else "running"))
+        status = "completed" if finished else "running"
+        deepeval = self.deepeval_outcome if finished else None
+        return httpx.Response(200, json=_run(run_id, status, deepeval))
 
 
 def _set_item(name: str) -> dict:
     return {
         "evaluation_set_id": f"id-{name}",
         "name": name,
-        "language": "en",
+        "language": "pl" if name.endswith("psc") else "en",
         "entry_count": 12,
         "run_count": 0,
         "created_at": "2026-11-22T00:00:00Z",
@@ -90,8 +98,7 @@ def _created_set(name: str, entry_count: int) -> dict:
     }
 
 
-def _run(run_id: str, status: str) -> dict:
-    deepeval = {"status": "completed"} if status == "completed" else None
+def _run(run_id: str, status: str, deepeval: dict | None) -> dict:
     return {
         "id": run_id,
         "evaluation_set_id": "id-a",
@@ -183,14 +190,14 @@ def test_import_sets_turns_golden_metrics_off(backend: FakeBackend, tmp_path: Pa
     assert [body["compute_golden_metrics"] for body in backend.imported] == [False]
 
 
-def test_find_set_id_rejects_missing_and_ambiguous_names(backend: FakeBackend) -> None:
+def test_find_set_rejects_missing_and_ambiguous_names(backend: FakeBackend) -> None:
     client = authenticated_client(API_URL, "secret")
     backend.set_names.append("a")
 
     with pytest.raises(ValueError, match="found 0"):
-        find_set_id(client, "missing")
+        find_set(client, "missing")
     with pytest.raises(ValueError, match="found 2"):
-        find_set_id(client, "a")
+        find_set(client, "a")
 
 
 def test_run_grid_starts_each_run_after_the_previous_one_finished(backend: FakeBackend) -> None:
@@ -214,7 +221,7 @@ def test_run_grid_starts_each_run_after_the_previous_one_finished(backend: FakeB
     assert [result.status for result in results] == ["completed", "completed"]
 
 
-def test_run_grid_skips_deepeval_without_judges_flag(backend: FakeBackend) -> None:
+def test_run_grid_skips_deepeval_without_the_flag(backend: FakeBackend) -> None:
     client = authenticated_client(API_URL, "secret")
 
     run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
@@ -237,17 +244,56 @@ def test_wait_for_run_raises_after_timeout(
         wait_for_run(client, "stuck")
 
 
-def test_print_report_lists_failed_entries_with_errors(
-    backend: FakeBackend, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_report_rows_and_failures(backend: FakeBackend, capsys: pytest.CaptureFixture[str]) -> None:
     client = authenticated_client(API_URL, "secret")
+    backend.deepeval_outcome = {"status": "failed", "error": "no GEMINI_API_KEY\nTraceback ..."}
     results: list[GridCellResult] = run_grid.run_grid(
-        client, ["a"], [ModelRef("ollama", "m")], ["direct"], False
+        client, ["a"], [ModelRef("ollama", "m")], ["direct"], True
     )
 
-    print_report(results)
+    print_failures(results)
 
     report = capsys.readouterr().out
     assert "| a | ollama:m | direct | run-0 | completed |" in report
-    assert "| 1 | 1 |" in report
+    assert "| 1 | 1 | failed |" in report
     assert "- a / ollama:m / direct: bad: boom" in report
+    assert "- a / ollama:m / direct: deepeval pass: no GEMINI_API_KEY Traceback ..." in report
+
+
+def test_report_marks_deepeval_off_without_the_flag(
+    backend: FakeBackend, capsys: pytest.CaptureFixture[str]
+) -> None:
+    client = authenticated_client(API_URL, "secret")
+
+    run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert "| 1 | 1 | off |" in capsys.readouterr().out
+
+
+def test_finished_rows_are_printed_before_the_grid_aborts(
+    backend: FakeBackend, capsys: pytest.CaptureFixture[str]
+) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.runs_accepted = 1
+
+    with pytest.raises(httpx.HTTPStatusError, match="500"):
+        run_grid.run_grid(client, ["a", "b"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert "| a | ollama:m | direct | run-0 | completed |" in capsys.readouterr().out
+
+
+def test_run_grid_runs_a_repeated_set_once(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+
+    results = run_grid.run_grid(client, ["a", "a"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert [result.set_name for result in results] == ["a"]
+
+
+def test_run_grid_asks_for_summaries_in_the_set_language(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.set_names.append("psc")
+
+    run_grid.run_grid(client, ["a", "psc"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert [body["language"] for body in backend.run_requests] == ["en", "pl"]

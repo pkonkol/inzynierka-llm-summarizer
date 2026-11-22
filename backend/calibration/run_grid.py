@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ import structlog
 
 from app.core.config import settings
 from app.schemas.evaluation_run_api import (
+    DeepevalPassMetrics,
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
     EvaluationRunEntriesResponse,
@@ -63,6 +65,7 @@ class GridCellResult:
     seconds: float
     completed_entries: int
     failed_entries: list[EvaluationRunEntryResponse]
+    deepeval: DeepevalPassMetrics | None  # None when the run was made without --deepeval
 
 
 def authenticated_client(api_url: str, password: str) -> httpx.Client:
@@ -96,14 +99,14 @@ def import_sets(client: httpx.Client, set_files: list[Path]) -> None:
         )
 
 
-def find_set_id(client: httpx.Client, set_name: str) -> str:
+def find_set(client: httpx.Client, set_name: str) -> EvaluationSetListItemResponse:
     """Exactly one set with that name, or ValueError."""
     matches = [
         evaluation_set for evaluation_set in _list_sets(client) if evaluation_set.name == set_name
     ]
     if len(matches) != 1:
         raise ValueError(f"expected one set named {set_name}, found {len(matches)}")
-    return matches[0].evaluation_set_id
+    return matches[0]
 
 
 def run_grid(
@@ -111,30 +114,32 @@ def run_grid(
     set_names: list[str],
     models: list[ModelRef],
     strategies: list[ProcessingStrategy],
-    with_judges: bool,
+    with_deepeval: bool,
 ) -> list[GridCellResult]:
-    """Runs one after another, so Ollama serves one run at a time and each duration means something."""
-    set_ids = {set_name: find_set_id(client, set_name) for set_name in set_names}
+    """Runs one after another, so Ollama serves one run at a time and each duration means something.
+
+    Each report row is printed as soon as its run ends, so an aborted grid keeps the finished rows.
+    """
+    evaluation_sets = [find_set(client, set_name) for set_name in dict.fromkeys(set_names)]
+    print_report_header()
     results: list[GridCellResult] = []
-    for set_name, set_id in set_ids.items():
-        for model in models:
-            for strategy in strategies:
-                results.append(
-                    _run_one_cell(client, set_name, set_id, model, strategy, with_judges)
-                )
+    for evaluation_set, model, strategy in itertools.product(evaluation_sets, models, strategies):
+        result = _run_one_cell(client, evaluation_set, model, strategy, with_deepeval)
+        print_report_row(result)
+        results.append(result)
     return results
 
 
 def _run_one_cell(
     client: httpx.Client,
-    set_name: str,
-    set_id: str,
+    evaluation_set: EvaluationSetListItemResponse,
     model: ModelRef,
     strategy: ProcessingStrategy,
-    with_judges: bool,
+    with_deepeval: bool,
 ) -> GridCellResult:
+    set_name = evaluation_set.name
     started = time.monotonic()
-    run_id = start_run(client, set_id, model, strategy)
+    run_id = start_run(client, evaluation_set, model, strategy)
     log.info(
         "evaluation run started",
         set_name=set_name,
@@ -154,8 +159,7 @@ def _run_one_cell(
         duration_ms=round(seconds * 1000),
     )
 
-    if with_judges and run.status == "completed":
-        run_deepeval(client, run_id)
+    deepeval = run_deepeval(client, run_id) if with_deepeval and run.status == "completed" else None
 
     entries = fetch_entries(client, run_id)
     return GridCellResult(
@@ -167,17 +171,26 @@ def _run_one_cell(
         seconds=seconds,
         completed_entries=sum(1 for entry in entries if entry.status == "completed"),
         failed_entries=[entry for entry in entries if entry.status == "failed"],
+        deepeval=deepeval,
     )
 
 
 def start_run(
-    client: httpx.Client, set_id: str, model: ModelRef, strategy: ProcessingStrategy
+    client: httpx.Client,
+    evaluation_set: EvaluationSetListItemResponse,
+    model: ModelRef,
+    strategy: ProcessingStrategy,
 ) -> str:
+    """Summaries in the set's language, the same one its ROUGE is computed in."""
     request = EvaluationRunCreateRequest(
-        model_provider=model.provider, model_name=model.name, processing_strategy=strategy
+        model_provider=model.provider,
+        model_name=model.name,
+        processing_strategy=strategy,
+        language=evaluation_set.language,
     )
     response = client.post(
-        f"{RESEARCH_API}/evaluation-sets/{set_id}/runs", json=request.model_dump(mode="json")
+        f"{RESEARCH_API}/evaluation-sets/{evaluation_set.evaluation_set_id}/runs",
+        json=request.model_dump(mode="json"),
     )
     response.raise_for_status()
     return EvaluationRunCreateResponse.model_validate_json(response.content).evaluation_run_id
@@ -188,10 +201,13 @@ def wait_for_run(client: httpx.Client, run_id: str) -> EvaluationRunResponse:
     return _poll_run(client, run_id, lambda run: run.status in FINISHED_STATUSES)
 
 
-def run_deepeval(client: httpx.Client, run_id: str) -> None:
+def run_deepeval(client: httpx.Client, run_id: str) -> DeepevalPassMetrics:
     """POST /runs/{id}/deepeval and poll aggregate_metrics.deepeval until it finishes."""
     client.post(f"{RESEARCH_API}/runs/{run_id}/deepeval").raise_for_status()
-    _poll_run(client, run_id, _deepeval_finished)
+    run = _poll_run(client, run_id, _deepeval_finished)
+    if run.aggregate_metrics.deepeval is None:
+        raise RuntimeError(f"run {run_id}: deepeval pass finished without a status")
+    return run.aggregate_metrics.deepeval
 
 
 def fetch_entries(client: httpx.Client, run_id: str) -> list[EvaluationRunEntryResponse]:
@@ -200,25 +216,42 @@ def fetch_entries(client: httpx.Client, run_id: str) -> list[EvaluationRunEntryR
     return EvaluationRunEntriesResponse.model_validate_json(response.content).entries
 
 
-def print_report(results: list[GridCellResult]) -> None:
-    """Markdown: a row per run (set, model, strategy, seconds, completed, failed), then each failed entry's title and error."""
-    print("| set | model | strategy | run | status | seconds | completed | failed |")
-    print("|---|---|---|---|---|---|---|---|")
-    for result in results:
-        print(
-            f"| {result.set_name} | {result.model} | {result.strategy} | {result.run_id} "
-            f"| {result.status} | {result.seconds:.0f} | {result.completed_entries} "
-            f"| {len(result.failed_entries)} |"
-        )
+def print_report_header() -> None:
+    print("| set | model | strategy | run | status | seconds | completed | failed | deepeval |")
+    print("|---|---|---|---|---|---|---|---|---|")
 
-    failures = [(result, entry) for result in results for entry in result.failed_entries]
-    if not failures:
+
+def print_report_row(result: GridCellResult) -> None:
+    deepeval_status = "off" if result.deepeval is None else result.deepeval.status
+    print(
+        f"| {result.set_name} | {result.model} | {result.strategy} | {result.run_id} "
+        f"| {result.status} | {result.seconds:.0f} | {result.completed_entries} "
+        f"| {len(result.failed_entries)} | {deepeval_status} |"
+    )
+
+
+def print_failures(results: list[GridCellResult]) -> None:
+    """Each failed entry's title and error, then each failed deepeval pass."""
+    entry_failures = [(result, entry) for result in results for entry in result.failed_entries]
+    deepeval_failures = [
+        result for result in results if result.deepeval and result.deepeval.status == "failed"
+    ]
+    if not entry_failures and not deepeval_failures:
         return
-    print("\nFailed entries:\n")
-    for result, entry in failures:
-        print(
-            f"- {result.set_name} / {result.model} / {result.strategy}: {entry.title}: {entry.error}"
-        )
+    print("\nFailures:\n")
+    for result, entry in entry_failures:
+        print(f"- {_cell_label(result)}: {entry.title}: {_one_line(entry.error)}")
+    for result in deepeval_failures:
+        print(f"- {_cell_label(result)}: deepeval pass: {_one_line(result.deepeval.error)}")
+
+
+def _cell_label(result: GridCellResult) -> str:
+    return f"{result.set_name} / {result.model} / {result.strategy}"
+
+
+def _one_line(text: str | None) -> str:
+    """Multi-line provider errors would break the markdown list."""
+    return " ".join(str(text).split())
 
 
 def _poll_run(
@@ -270,7 +303,9 @@ def main() -> None:
     grid_command.add_argument(
         "--strategies", nargs="+", default=["direct"], choices=get_args(ProcessingStrategy)
     )
-    grid_command.add_argument("--judges", action="store_true", help="GEval pass after each run")
+    grid_command.add_argument(
+        "--deepeval", action="store_true", help="deepeval (G-Eval) metrics after each completed run"
+    )
     for command in (import_command, grid_command):
         command.add_argument("--api-url", default="http://127.0.0.1:8000")
     args = parser.parse_args()
@@ -279,7 +314,7 @@ def main() -> None:
     if args.command == "import":
         import_sets(client, args.set_files)
         return
-    print_report(run_grid(client, args.sets, args.models, args.strategies, args.judges))
+    print_failures(run_grid(client, args.sets, args.models, args.strategies, args.deepeval))
 
 
 if __name__ == "__main__":

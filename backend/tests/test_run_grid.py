@@ -36,7 +36,8 @@ class FakeBackend:
         self.unreachable_polls = 0  # first polls answer 503
         self.unreachable_entry_reads = 0  # first entry reads answer 503
         self.broken_polls = False  # every poll answers 500
-        self.lost_run_responses = 0  # first POST /runs time out after reaching the server
+        # answers to the first POST /runs: a status code, or an error raised after the request was sent
+        self.run_start_failures: list[int | type[httpx.TransportError]] = []
         self.deepeval_outcome: dict = {"status": "completed", "error": None}
         self.runs_accepted: int | None = None  # later POST /runs get 500
 
@@ -56,9 +57,11 @@ class FakeBackend:
             return httpx.Response(200, json=_created_set(body["name"], len(body["entries"])))
         if path.endswith("/runs") and request.method == "POST":
             self.run_requests.append(json.loads(request.content))
-            if self.lost_run_responses:
-                self.lost_run_responses -= 1
-                raise httpx.ReadTimeout("response lost", request=request)
+            if self.run_start_failures:
+                failure = self.run_start_failures.pop(0)
+                if isinstance(failure, int):
+                    return httpx.Response(failure, json={"detail": "proxy"})
+                raise failure("no answer", request=request)
             if self.runs_accepted is not None and len(self.polls) >= self.runs_accepted:
                 return httpx.Response(500, json={"detail": "backend restarted"})
             run_id = f"run-{len(self.polls)}"
@@ -399,8 +402,39 @@ def test_reading_entries_survives_a_backend_restart(backend: FakeBackend) -> Non
 
 def test_a_lost_response_to_starting_a_run_is_not_retried(backend: FakeBackend) -> None:
     client = authenticated_client(API_URL, "secret")
-    backend.lost_run_responses = 1
+    backend.run_start_failures = [httpx.ReadTimeout]
 
     with pytest.raises(httpx.ReadTimeout):
         run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
     assert len(backend.run_requests) == 1
+
+
+def test_a_proxy_error_on_starting_a_run_is_not_retried(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.run_start_failures = [502]
+
+    with pytest.raises(httpx.HTTPStatusError, match="502"):
+        run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+    assert len(backend.run_requests) == 1
+
+
+def test_starting_a_run_survives_a_cold_start(backend: FakeBackend) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.run_start_failures = [httpx.ConnectTimeout, 503]
+
+    results = run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], False)
+
+    assert [result.status for result in results] == ["completed"]
+    assert len(backend.run_requests) == 3
+
+
+def test_failures_list_a_failed_deepeval_pass_without_an_error(
+    backend: FakeBackend, capsys: pytest.CaptureFixture[str]
+) -> None:
+    client = authenticated_client(API_URL, "secret")
+    backend.deepeval_outcome = {"status": "failed", "error": None}
+    results = run_grid.run_grid(client, ["a"], [ModelRef("ollama", "m")], ["direct"], True)
+
+    print_failures(results)
+
+    assert "- a / ollama:m / direct: deepeval pass: None" in capsys.readouterr().out

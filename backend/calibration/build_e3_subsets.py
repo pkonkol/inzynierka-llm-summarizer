@@ -27,8 +27,7 @@ ENGLISH_SETS = {
     "curation": REPO_ROOT / "data" / "evaluation_set_curation.json",
     "gumsum": REPO_ROOT / "data" / "evaluation_set_gumsum.json",
 }
-PSC_SUBSET_FILE = REPO_ROOT / "data" / "psc" / "evaluation_set_e3_psc_50.json"
-PSC_SMOKE_FILE = REPO_ROOT / "data" / "psc" / "evaluation_set_e3_smoke_psc_12.json"
+PSC_DATA_DIR = REPO_ROOT / "data" / "psc"
 
 
 def calibration_texts(sample: CalibrationSample) -> set[str]:
@@ -40,7 +39,7 @@ def sample_english_set(
     set_file: Path, excluded: set[str], rng: random.Random
 ) -> list[EvaluationSetEntryImport]:
     """50 entries without calibration texts; GUMSum stratified by genre."""
-    evaluation_set = _read_set(set_file)
+    evaluation_set = read_set(set_file)
     candidates = [entry for entry in evaluation_set.entries if entry.input_text not in excluded]
     if evaluation_set.name != "gumsum":
         return rng.sample(candidates, SUBSET_SIZE)
@@ -87,7 +86,7 @@ def sample_psc(
             annotator_file = psc_sets_dir / f"psc-{kind}-{annotator}-{percent}.json"
             candidates = [
                 entry
-                for entry in _read_set(annotator_file).entries
+                for entry in read_set(annotator_file).entries
                 if entry.input_text not in excluded and entry.input_text not in taken_texts
             ]
             if not candidates:
@@ -175,7 +174,7 @@ def _word_count(entry: EvaluationSetEntryImport) -> int:
     return len(entry.input_text.split())
 
 
-def _read_set(path: Path) -> EvaluationSetImportRequest:
+def read_set(path: Path) -> EvaluationSetImportRequest:
     return EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
 
 
@@ -195,22 +194,28 @@ def _set_rng(set_name: str) -> random.Random:
     return random.Random(f"{SEED}-{set_name}")
 
 
-def _subset_file(set_name: str) -> Path:
-    return REPO_ROOT / "data" / f"evaluation_set_e3_{set_name}_50.json"
+def set_data_dir(set_name: str) -> Path:
+    """PSC files stay in the gitignored data/psc/, English ones are committed under data/."""
+    return PSC_DATA_DIR if set_name == "psc" else REPO_ROOT / "data"
 
 
-def _smoke_file(set_name: str) -> Path:
-    return REPO_ROOT / "data" / f"evaluation_set_e3_smoke_{set_name}_12.json"
+def subset_file(set_name: str) -> Path:
+    return set_data_dir(set_name) / f"evaluation_set_e3_{set_name}_50.json"
 
 
-def _write_subset(
+def smoke_file(set_name: str) -> Path:
+    return set_data_dir(set_name) / f"evaluation_set_e3_smoke_{set_name}_12.json"
+
+
+def write_set(
     path: Path, name: str, language: str, entries: list[EvaluationSetEntryImport]
 ) -> None:
+    """Imported without golden metrics: the judges score references in their own pass."""
     subset = EvaluationSetImportRequest(
         name=name, language=language, entries=entries, compute_golden_metrics=False
     )
     path.write_text(subset.model_dump_json(indent=2), encoding="utf-8")
-    log.info("e3 subset written", path=str(path), entries=len(entries))
+    log.info("evaluation set file written", path=str(path), entries=len(entries))
 
 
 def _print_composition(label: str, name: str, entries: list[EvaluationSetEntryImport]) -> None:
@@ -256,12 +261,9 @@ def main() -> None:
         return
 
     for name, entries in subsets.items():
-        if name == "psc":
-            _write_subset(PSC_SUBSET_FILE, "e3-psc-50", "pl", entries)
-            _write_subset(PSC_SMOKE_FILE, "e3-smoke-psc-12", "pl", smoke_subsets[name])
-        else:
-            _write_subset(_subset_file(name), f"e3-{name}-50", "en", entries)
-            _write_subset(_smoke_file(name), f"e3-smoke-{name}-12", "en", smoke_subsets[name])
+        language = "pl" if name == "psc" else "en"
+        write_set(subset_file(name), f"e3-{name}-50", language, entries)
+        write_set(smoke_file(name), f"e3-smoke-{name}-12", language, smoke_subsets[name])
 
 
 if __name__ == "__main__":

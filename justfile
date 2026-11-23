@@ -189,6 +189,12 @@ e3-import *args:
 e3-grid *args:
     uv run python -m calibration.run_grid grid {{args}}
 
+# E3: Claude Opus reference summaries through `claude -p` (generate, resumable), then evaluation set files (build-sets)
+[group('e3')]
+[working-directory('backend')]
+e3-opus *args:
+    uv run python -m calibration.opus_sets {{args}}
+
 # Calibration: perturb labelled summaries into review/ for `git -C <data>/review add -p`
 [group('calibration')]
 [working-directory('backend')]

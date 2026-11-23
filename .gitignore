@@ -10,6 +10,8 @@ AGENTS.md
 # Judge calibration: source texts (PSC included) stay local; the author's labels are committed under eval/calibration/labels/.
 data/calibration/
 data/psc/
+# Raw `claude -p` records of E3 Opus summaries: prompts carry full source texts, PSC included.
+data/opus_raw/
 terraform.tfstate
 terraform.tfstate.backup
 .firebase/

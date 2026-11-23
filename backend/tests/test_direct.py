@@ -116,3 +116,15 @@ async def test_a_context_section_without_sources_uses_the_original_template(
     result = await direct.run(_request([], section))
 
     assert result.prompt_template == prompt_texts(EXTRACT_FROM_CONTENT, "summary")
+
+
+async def test_prompt_with_params_is_exactly_what_run_sends(sent_prompts: list[str]) -> None:
+    request = _request([])
+
+    prompt, params = direct.prompt_with_params(request)
+    await direct.run(request)
+
+    rendered = "\n".join(str(message.content) for message in prompt.format_messages(**params))
+    assert rendered == sent_prompts[0]
+    assert params["text"] == request.text
+    assert "approximately 50 words across 2 sentence(s)" in params["detail_guidance"]

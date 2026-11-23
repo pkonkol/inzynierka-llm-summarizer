@@ -1,6 +1,7 @@
 """Direct summarization strategy — extractor + abstractor in one LLM call."""
 
 import structlog
+from langchain_core.prompts import ChatPromptTemplate
 
 from ...schemas.summary import LlmSummaryRequest, LlmSummaryResult
 from ...schemas.summary_spec import ContextSection
@@ -45,11 +46,9 @@ def _section_context_use(section: ContextSection) -> str:
     )
 
 
-async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
-    llm = build_structured_llm(SummaryOutput, request.model_provider, request.model_name)
+def prompt_with_params(request: LlmSummaryRequest) -> tuple[ChatPromptTemplate, dict[str, str]]:
+    """The template and the values run() sends to the model for this request."""
     prompt = DIRECT_WITH_RELATED_SOURCES if request.related_sources else EXTRACT_FROM_CONTENT
-    chain = prompt | llm
-
     text = request.text.strip()
     invoke_params = {
         "language_instruction": build_language_instruction(request.language),
@@ -64,6 +63,13 @@ async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
         invoke_params["context_use"] = (
             _INTEGRATED_CONTEXT_USE if section is None else _section_context_use(section)
         )
+    return prompt, invoke_params
+
+
+async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
+    llm = build_structured_llm(SummaryOutput, request.model_provider, request.model_name)
+    prompt, invoke_params = prompt_with_params(request)
+    chain = prompt | llm
 
     raw = await chain.ainvoke(invoke_params)
     parsed, raw_str, usage, raw_metadata = parse_structured_output(raw, "direct", "summary")
@@ -74,7 +80,7 @@ async def run(request: LlmSummaryRequest) -> LlmSummaryResult:
         usage=usage,
         raw_metadata=raw_metadata,
         raw_output=raw_str,
-        input_text=text,
+        input_text=request.text.strip(),
         prompt_template=prompt_texts(prompt, "summary"),
         prompt_params={k: v for k, v in invoke_params.items() if k != "text"},
     )

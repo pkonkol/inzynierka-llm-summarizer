@@ -9,8 +9,9 @@ import re
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 
 from app.schemas.summary_spec import ResolvedLength, SummarySpec
 from app.services.llm import _base
@@ -128,6 +129,55 @@ def test_ollama_reasoning_follows_thinking_list(
     monkeypatch.setattr(_base.settings, "ollama_thinking_models", thinking_models)
 
     assert build_llm("ollama", "m").reasoning is expected_reasoning
+
+
+@pytest.mark.parametrize(
+    ("non_reasoning_models", "expected_extra_body"),
+    [
+        (
+            ["m"],
+            {"provider": {"require_parameters": True}, "reasoning": {"enabled": False}},
+        ),
+        ([], {"provider": {"require_parameters": True}}),
+    ],
+    ids=["model_on_the_list_has_reasoning_disabled", "model_off_the_list_is_left_alone"],
+)
+def test_openrouter_reasoning_follows_the_non_reasoning_list(
+    monkeypatch: pytest.MonkeyPatch,
+    non_reasoning_models: list[str],
+    expected_extra_body: dict | None,
+) -> None:
+    monkeypatch.setattr(_base.settings, "supported_models", {"openrouter": ["m"]})
+    monkeypatch.setattr(_base.settings, "openrouter_non_reasoning_models", non_reasoning_models)
+    monkeypatch.setattr(_base.settings, "openrouter_api_key", SecretStr("test-key"))
+
+    llm = build_llm("openrouter", "m")
+
+    assert llm.extra_body == expected_extra_body  # pyrefly: ignore
+
+
+class _SchemaProbe(BaseModel):
+    headline: str
+
+
+def test_openrouter_structured_output_requests_a_json_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent: dict = {}
+
+    class _CapturingChatOpenAI(_base.ChatOpenAI):
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001, ANN003, ANN202
+            sent.update(self._get_request_payload(messages, stop=stop, **kwargs))
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(content="{}"))])
+
+    monkeypatch.setattr(_base, "ChatOpenAI", _CapturingChatOpenAI)
+    monkeypatch.setattr(_base.settings, "supported_models", {"openrouter": ["m"]})
+    monkeypatch.setattr(_base.settings, "openrouter_api_key", SecretStr("test-key"))
+
+    _base.build_structured_llm(_SchemaProbe, "openrouter", "m").invoke("text")
+
+    # The OpenAI SDK turns a schema class into response_format type json_schema; json_mode would send a dict.
+    assert sent["response_format"] is _SchemaProbe
 
 
 @pytest.mark.parametrize(

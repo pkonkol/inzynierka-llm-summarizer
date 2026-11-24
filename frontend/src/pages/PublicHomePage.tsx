@@ -8,7 +8,6 @@ import { PublicSummaryResult } from "../components/public/PublicSummaryResult";
 import { buildSourcePayload, SourceField } from "../components/SourceField";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { Checkbox } from "../components/ui/Checkbox";
 import { RangeInput } from "../components/ui/Field";
 import { LinkButton } from "../components/ui/LinkButton";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -21,6 +20,7 @@ import { LOGIN_PATH } from "../utils/routing";
 
 const DEFAULT_LANGUAGE = "auto";
 const DEFAULT_DENSITY = 0.5;
+const CHECK_FACTS_ACTION = "check_facts";
 
 function densityLabel(density: number): string {
   if (density < 1 / 3) return "krótko";
@@ -43,7 +43,6 @@ export function PublicHomePage() {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(null);
   const [density, setDensity] = useState(DEFAULT_DENSITY);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
-  const [addWebContext, setAddWebContext] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isHandoffErrorDismissed, setIsHandoffErrorDismissed] = useState(false);
 
@@ -77,6 +76,10 @@ export function PublicHomePage() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Ctrl+Enter in the source field submits without a button, which means "summarize".
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const checkFacts =
+      submitter instanceof HTMLButtonElement && submitter.value === CHECK_FACTS_ACTION;
     if (presetKey === null || presets.data === null) return;
     setIsHandoffErrorDismissed(true);
 
@@ -99,12 +102,12 @@ export function PublicHomePage() {
       ...source,
       language,
       summary_spec: summarySpec,
-      add_web_context: addWebContext,
+      check_facts: checkFacts,
     });
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
       <header className="shrink-0 border-b border-hairline">
         <div className="mx-auto flex h-nav max-w-frame items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <h1 className="font-bold">Podsumowania</h1>
@@ -113,10 +116,10 @@ export function PublicHomePage() {
       </header>
 
       <main className="mx-auto flex min-h-0 w-full max-w-frame flex-1 flex-col gap-4 px-4 pt-4 pb-4 sm:gap-6 sm:px-6 sm:pt-6 sm:pb-6 lg:px-8">
-        {/* The page is exactly one screen tall. Stacked, the composer takes its content height and the result the rest. */}
+        {/* Side by side the page is exactly one screen tall. Stacked (narrow or zoomed in) the page scrolls, so a short screen never hides the controls inside the composer. */}
         <form
           onSubmit={handleSubmit}
-          className="grid min-h-0 flex-1 grid-rows-[minmax(0,auto)_minmax(8rem,1fr)] gap-4 sm:gap-6 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]"
+          className="grid flex-1 grid-rows-[auto_minmax(16rem,1fr)] gap-4 sm:gap-6 lg:min-h-0 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]"
         >
           <Composer
             source={
@@ -137,7 +140,6 @@ export function PublicHomePage() {
                   key,
                   label: preset.label,
                   description: preset.description,
-                  example: preset.example,
                 }))}
                 selectedKey={presetKey}
                 onSelect={setSelectedPresetKey}
@@ -145,8 +147,8 @@ export function PublicHomePage() {
               />
             )}
 
-            <div className="sticky bottom-0 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-hairline bg-canvas pt-3 pb-4">
-              <div className="flex min-w-56 flex-1 items-center gap-3">
+            <div className="sticky bottom-0 grid gap-3 border-t border-hairline bg-canvas pt-3 pb-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label htmlFor="density" className="whitespace-nowrap">
                   Długość: <span className="font-medium">{densityLabel(density)}</span>
                 </label>
@@ -161,33 +163,30 @@ export function PublicHomePage() {
                   disabled={isWorking}
                   className="min-w-24 flex-1"
                 />
-              </div>
-              <label htmlFor="language" className="flex items-center gap-2 text-caption text-mute">
-                Język
-                <select
-                  id="language"
-                  value={language}
-                  onChange={(event) => setLanguage(event.target.value)}
-                  disabled={isWorking || languages.data === null}
-                  className="field-compact"
+                <label
+                  htmlFor="language"
+                  className="flex items-center gap-2 text-caption text-mute"
                 >
-                  {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
-                    <option key={code} value={code}>
-                      {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Checkbox
-                checked={addWebContext}
-                onChange={(event) => setAddWebContext(event.target.checked)}
-                disabled={isWorking}
-                className="text-caption text-mute"
-              >
-                Dodaj kontekst z sieci
-              </Checkbox>
-              <span className="flex flex-1 items-center justify-end gap-3">
-                <kbd className="hidden text-caption text-mute sm:inline">ctrl+enter</kbd>
+                  Język
+                  <select
+                    id="language"
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value)}
+                    disabled={isWorking || languages.data === null}
+                    className="field-compact"
+                  >
+                    {(languages.data ?? [DEFAULT_LANGUAGE]).map((code) => (
+                      <option key={code} value={code}>
+                        {code === DEFAULT_LANGUAGE ? "auto" : code.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="flex flex-wrap justify-end gap-3">
+                <Button type="submit" disabled={isWorking || !isReady} value={CHECK_FACTS_ACTION}>
+                  Sprawdź fakty
+                </Button>
                 <Button
                   type="submit"
                   variant="primary"
@@ -196,7 +195,7 @@ export function PublicHomePage() {
                 >
                   {isWorking ? "Przetwarzanie..." : "Podsumuj"}
                 </Button>
-              </span>
+              </div>
             </div>
           </Composer>
 

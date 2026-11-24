@@ -106,11 +106,16 @@ def build_llm(model_provider: str, model_name: str) -> BaseChatModel:
     if provider == "openrouter":
         if not settings.openrouter_api_key:
             raise ValueError("Missing OPENROUTER_API_KEY")
+        # Without require_parameters a provider that cannot enforce the json_schema gets the request and drops it.
+        openrouter_options: dict[str, Any] = {"provider": {"require_parameters": True}}
+        if model_name in settings.openrouter_non_reasoning_models:
+            openrouter_options["reasoning"] = {"enabled": False}
         return ChatOpenAI(
             model=model_name,
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
             temperature=settings.llm_temperature,
+            extra_body=openrouter_options,
         )
 
     if provider == "ollama":
@@ -128,11 +133,9 @@ def build_structured_llm(
     structure: type, model_provider: str, model_name: str
 ) -> Runnable[Any, dict[str, Any]]:
     llm = build_llm(model_provider, model_name)
-    extra = {"method": "json_mode"} if model_provider.lower() == "openrouter" else {}
-
     return cast(
         Runnable[Any, dict[str, Any]],
-        llm.with_structured_output(structure, include_raw=True, **extra),
+        llm.with_structured_output(structure, method="json_schema", include_raw=True),
     )
 
 

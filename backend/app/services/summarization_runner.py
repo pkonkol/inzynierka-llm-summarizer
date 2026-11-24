@@ -11,11 +11,13 @@ from pymongo.asynchronous.collection import AsyncCollection
 from ..core.background_work import spawn_tracked_task, track_background_work
 from ..core.config import settings
 from ..core.mongo import get_jobs_collection
+from ..schemas.fact_check import FactCheck
 from ..schemas.job_api import MANUAL_SOURCE_PREFIX
 from ..schemas.job_db import JobErrorCode
 from ..schemas.summary import LlmSummaryRequest, LlmSummaryResult, SummaryResponse
 from ..schemas.summary_spec import ResolvedLength, SummarySpec, resolve_target_length
 from ..services.context_expansion import ContextExpansionError, expand_context
+from ..services.fact_check_runner import pending_fact_check, run_fact_check
 from ..services.job_metrics import (
     store_source_metrics_for_job,
     store_statistical_metrics_for_job,
@@ -113,7 +115,17 @@ async def run_summarization_job(job_id: str) -> None:
             ),
             generate_title(source_text, job["language"]),
         )
-        await _store_completed_job(jobs_collection, job_id, summary, title, length, started_at)
+        # Pending in the same write as "completed", so no poll sees a finished job without its fact check.
+        is_fact_check_requested = job.get(
+            "check_facts_on_completion", False
+        )  # jobs queued before the flag have none
+        fact_check = pending_fact_check(datetime.now(UTC)) if is_fact_check_requested else None
+        await _store_completed_job(
+            jobs_collection, job_id, summary, title, length, started_at, fact_check
+        )
+        if fact_check is not None:
+            log.info("fact check requested with the summary")
+            spawn_tracked_task(run_fact_check(job_id), kind="fact_check")
 
         spawn_metrics_task(store_statistical_metrics_for_job(job_id, summary.summary, source_text))
 
@@ -151,13 +163,16 @@ async def _store_completed_job(
     title: str,
     length: ResolvedLength,
     started_at: datetime,
+    fact_check: FactCheck | None,
 ) -> None:
     log.debug("storing completed job")
     finished_at = datetime.now(UTC)
+    fact_check_fields = {} if fact_check is None else {"fact_check": fact_check.model_dump()}
     await jobs_collection.update_one(
         {"job_id": job_id},
         {
             "$set": {
+                **fact_check_fields,
                 "status": "completed",
                 "summary_data": SummaryResponse.model_validate(
                     {

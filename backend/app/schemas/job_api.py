@@ -109,6 +109,7 @@ class JobStatusResponse(ApiModel):
     context_expansion_mode: ContextExpansionMode = "none"
     context_expansion: ContextExpansionResult | None = None
     fact_check: FactCheck | None = None
+    check_facts_on_completion: bool = False
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics

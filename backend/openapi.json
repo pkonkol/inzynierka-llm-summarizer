@@ -3810,6 +3810,11 @@
               }
             ]
           },
+          "check_facts_on_completion": {
+            "type": "boolean",
+            "title": "Check Facts On Completion",
+            "default": false
+          },
           "resolved_length": {
             "anyOf": [
               {
@@ -3947,6 +3952,7 @@
           "context_expansion_mode",
           "context_expansion",
           "fact_check",
+          "check_facts_on_completion",
           "resolved_length",
           "summary_data",
           "metrics",
@@ -4496,9 +4502,9 @@
             "title": "Language",
             "default": "auto"
           },
-          "add_web_context": {
+          "check_facts": {
             "type": "boolean",
-            "title": "Add Web Context",
+            "title": "Check Facts",
             "default": false
           }
         },
@@ -4889,10 +4895,6 @@
             "type": "string",
             "title": "Description"
           },
-          "example": {
-            "type": "string",
-            "title": "Example"
-          },
           "spec": {
             "$ref": "#/components/schemas/SummarySpec"
           }
@@ -4901,7 +4903,6 @@
         "required": [
           "label",
           "description",
-          "example",
           "spec"
         ],
         "title": "SummaryPresetResponse"

@@ -1,10 +1,12 @@
 {
   "gemini": [
     "gemini-3.8-flash",
+    "gemini-4-hydrogen",
     "gemma-4-31b-it"
   ],
   "openrouter": [
     "deepseek/deepseek-v4.1-flash-1017",
+    "deepseek/deepseek-v4.1-flash-1017:nitro",
     "deepseek/deepseek-v4-pro-0813",
     "qwen/qwen3.8-flash",
     "qwen/qwen3.8-27b",
@@ -14,8 +16,6 @@
     "google/gemma-3-4b-it",
     "mistralai/ministral-3b-2512",
     "liquid/lfm-3-1.7b",
-    "nvidia/nemotron-3.5-lightning:free",
-    "nvidia/nemotron-3-ultra-550b-a55b:free",
     "openai/gpt-oss-120b",
     "openai/gpt-6-luna",
     "openai/gpt-6.1-terra",

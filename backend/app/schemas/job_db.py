@@ -42,6 +42,7 @@ class JobDocument(BaseModel):
     )
     context_expansion: ContextExpansionResult | None = None
     fact_check: FactCheck | None = None
+    check_facts_on_completion: bool = False
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)

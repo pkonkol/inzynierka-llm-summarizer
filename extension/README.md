@@ -1,18 +1,20 @@
 # Extension (Chrome)
 
-How to install, develop and release the Chrome extension that summarizes the current tab, a
-link, selected text or pasted text in the browser's side panel. Recipes run from the repository root.
+How to install, develop and release the Chrome extension that summarizes or fact-checks the
+current tab, an address, a link, selected text or pasted text in the browser's side panel. Recipes run from the repository root.
 
 - The toolbar icon opens the side panel; right-clicking a link offers **Podsumuj link**, and
   right-clicking selected text offers **Podsumuj zaznaczenie**.
-- The panel form holds the summary settings (kind, length, language, fact check) and the source: the page
-  address, which the server fetches, the page text, which the extension extracts with
-  Mozilla Readability, or text pasted into the panel. A link is always summarized by its address
-  and a selection by its text, both with the last form settings.
+- The panel form has one source field: empty means the current tab's address, an http(s) address
+  is summarized by that address (the server fetches both), anything else as pasted text. Below it:
+  kind, length and language, then **Podsumuj**, **Sprawdź fakty** (the summary with the fact
+  check shown above it) and **Otwórz na stronie** for the current result. A link is always
+  summarized by its address and a selection by its text, both with the last form settings.
+- `page-text.js` (Mozilla Readability) is kept but not wired to the form.
 - Jobs go through the public, rate-limited endpoint. The panel polls them and shows the result;
   the clock icon lists the last 20 results, kept in the extension's local storage.
-- `host_permissions` is `<all_urls>`: a side panel gets no `activeTab` grant, and reading the
-  page text needs access to whichever tab is active.
+- `host_permissions` is `<all_urls>`: a side panel gets no `activeTab` grant, and `page-text.js`
+  needs access to whichever tab is active.
 - `vendor/` holds unchanged copies of Readability 0.6.0, marked 18.2.0 and DOMPurify 3.4.18.
   Model markdown is rendered with marked and sanitized with DOMPurify.
 - No bundler and no `package.json`: Chrome loads the directory as it is. Requires Chrome 116+.
@@ -33,7 +35,7 @@ link, selected text or pasted text in the browser's side panel. Recipes run from
 
 ```bash
 just extension-zip      # extension/dist/podsumowania-extension.zip
-gh release create extension-v0.3.0 extension/dist/podsumowania-extension.zip
+gh release create extension-v0.4.0 extension/dist/podsumowania-extension.zip
 ```
 
 Bump `version` in `manifest.json` for every release.
@@ -59,20 +61,21 @@ The next deploy also restores the Terraform values.
    (np. `Dokumenty/podsumowania`). Usunięcie folderu usuwa rozszerzenie.
 2. Otwórz `chrome://extensions` i włącz **Tryb dewelopera** (przełącznik w prawym górnym rogu).
 3. Kliknij **Załaduj rozpakowane** i wskaż rozpakowany folder. Chrome uprzedzi, że rozszerzenie
-   może czytać dane na wszystkich stronach: tego wymaga tryb „Treść strony” w panelu bocznym.
+   może czytać dane na wszystkich stronach.
 4. Kliknij ikonę puzzla obok paska adresu i przypnij **Podsumowania**.
 
 Użycie:
 
-- Kliknij ikonę **Podsumowania**: po prawej otworzy się panel. Wybierz ustawienia na dole panelu
-  i kliknij **Podsumuj tę stronę**; wynik pojawi się w panelu.
-- Źródło **Wklejony tekst** pokazuje pole, do którego wklejasz dowolny tekst.
+- Kliknij ikonę **Podsumowania**: po prawej otworzy się panel. Przy pustym polu „Źródło” kliknij
+  **Podsumuj** albo **Sprawdź fakty**: panel zajmie się otwartą stroną. W pole można wkleić inny
+  adres albo dowolny tekst.
+- **Sprawdź fakty** pokazuje ocenę artykułu na tle serwisów fact-checkingowych i innych źródeł,
+  ze źródłami w grupach: potwierdzają, podważają, kontekst; streszczenie jest zwinięte pod nią.
+- Ctrl+A w wyniku zaznacza tylko wynik, gotowy do skopiowania.
 - Prawy przycisk myszy na linku → **Podsumuj link**: panel streści stronę spod linku bez jej otwierania.
 - Zaznacz tekst na stronie, prawy przycisk → **Podsumuj zaznaczenie**.
 - Ikona 🕘 w panelu pokazuje ostatnie podsumowania. Tytuł podsumowania otwiera wynik w aplikacji.
-- Przycisk **Sprawdź fakty** pod streszczeniem dopisuje ocenę artykułu na tle serwisów
-  fact-checkingowych i innych źródeł, ze źródłami w grupach: potwierdzają, podważają, kontekst.
-- „Treść strony” działa także na stronach za logowaniem albo paywallem.
+- Przycisk **Sprawdź fakty** pod zwykłym streszczeniem dopisuje tę samą ocenę później.
 
 Aktualizacja: podmień zawartość folderu na nowy zip i kliknij ikonę odświeżania przy
 rozszerzeniu w `chrome://extensions`.

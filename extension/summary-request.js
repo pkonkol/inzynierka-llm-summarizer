@@ -6,7 +6,6 @@ const SETTINGS_KEY = "lastSettings";
 const MAX_PUBLIC_INPUT_CHARS = 30_000;
 
 export const DEFAULT_SETTINGS = {
-  source: "url",
   presetKey: null,
   density: 0.5,
   language: "auto",
@@ -46,13 +45,16 @@ export function buildSummarySpec(preset, density) {
 /**
  * Creates the public job for a source and records it as the current history entry.
  * source.apiSource is { url } or { input_text }, as the public endpoint takes it; sourceUrl and
- * sourceLabel name the page in the history until the summary brings its own title.
+ * sourceLabel name the page in the history until the summary brings its own title. With
+ * checkFacts the server checks the facts as soon as the summary is done, and the entry shows the
+ * fact check above the summary.
  */
-export async function startSummaryJob(source, settings, presets) {
+export async function startSummaryJob(source, settings, presets, { checkFacts }) {
   const jobId = await createPublicSummaryJob({
     ...source.apiSource,
     language: settings.language,
     summary_spec: buildSummarySpec(presets[settings.presetKey], settings.density),
+    check_facts: checkFacts,
   });
   await addHistoryEntry({
     jobId,
@@ -64,6 +66,7 @@ export async function startSummaryJob(source, settings, presets) {
     summary: null,
     error: null,
     factCheck: null,
+    isFactCheckFirst: checkFacts,
     createdAt: new Date().toISOString(),
   });
 }
@@ -81,7 +84,7 @@ async function startMenuSummaryJob(source) {
     const presets = await fetchSummaryPresets();
     // No saved settings yet, or a preset removed from the API since: the first one, as in the form.
     if (!Object.hasOwn(presets, settings.presetKey)) settings.presetKey = Object.keys(presets)[0];
-    await startSummaryJob(source, settings, presets);
+    await startSummaryJob(source, settings, presets, { checkFacts: false });
   } catch (error) {
     await addHistoryEntry({
       jobId: `failed-${crypto.randomUUID()}`,

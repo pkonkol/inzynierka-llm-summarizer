@@ -25,7 +25,7 @@ function renderMarkdown(markdown) {
   return container;
 }
 
-function resultPageUrl(entry) {
+export function resultPageUrl(entry) {
   const resultUrl = new URL("/", ACTIVE_ENVIRONMENT.appUrl);
   resultUrl.searchParams.set("job", entry.jobId);
   resultUrl.searchParams.set("preset", entry.presetKey);
@@ -158,9 +158,21 @@ function factCheckSection(factCheck, onCheckFacts) {
   ]);
 }
 
+function collapsedSummary(markdown) {
+  return element("details", { className: "summary-details" }, [
+    element("summary", { textContent: "Streszczenie" }),
+    renderMarkdown(markdown),
+  ]);
+}
+
 function completedEntry(entry, onCheckFacts) {
-  // entries saved before the fact check have no factCheck field
+  // entries saved before the fact check have no factCheck field, before 0.4.0 no isFactCheckFirst
   const factCheck = entry.factCheck ?? null;
+  const isFactCheckFirst = entry.isFactCheckFirst ?? false;
+  const checkFacts = factCheckSection(factCheck, () => onCheckFacts(entry));
+  const body = isFactCheckFirst
+    ? [checkFacts, collapsedSummary(entry.summary)]
+    : [renderMarkdown(entry.summary), checkFacts];
   return [
     element("h2", {}, [
       element("a", {
@@ -172,8 +184,7 @@ function completedEntry(entry, onCheckFacts) {
       }),
     ]),
     sourceLink(entry),
-    renderMarkdown(entry.summary),
-    factCheckSection(factCheck, () => onCheckFacts(entry)),
+    ...body,
   ];
 }
 

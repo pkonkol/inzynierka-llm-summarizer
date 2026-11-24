@@ -22,40 +22,37 @@
     </header>
 
     <main>
-      <section id="result" aria-live="polite"></section>
+      <section id="result" aria-live="polite" aria-label="Wynik" tabindex="0"></section>
       <section id="history" aria-label="Historia" hidden></section>
     </main>
 
     <form id="summary-form">
-      <fieldset>
-        <legend>Źródło</legend>
-        <label><input type="radio" name="source" value="url" checked /> Adres strony</label>
-        <label><input type="radio" name="source" value="pageText" /> Treść strony</label>
-        <label><input type="radio" name="source" value="pastedText" /> Wklejony tekst</label>
-      </fieldset>
-
       <textarea
-        id="pasted-text"
-        name="pastedText"
-        rows="6"
-        aria-label="Wklejony tekst"
-        placeholder="Wklej tekst do podsumowania"
-        hidden
+        id="source-field"
+        name="sourceField"
+        rows="2"
+        aria-label="Źródło"
+        placeholder="Puste: ta strona. Albo wklej adres lub tekst."
       ></textarea>
 
       <fieldset id="preset-options">
-        <legend>Rodzaj</legend>
+        <legend class="visually-hidden">Rodzaj</legend>
       </fieldset>
 
-      <label class="inline-field">
-        Język
-        <select id="language" name="language"></select>
-      </label>
+      <div class="settings-row">
+        <label for="density">Długość: <span id="density-label"></span></label>
+        <input id="density" name="density" type="range" min="0" max="1" step="0.05" />
+        <label class="inline-field">
+          Język
+          <select id="language" name="language"></select>
+        </label>
+      </div>
 
-      <label for="density">Długość: <span id="density-label"></span></label>
-      <input id="density" name="density" type="range" min="0" max="1" step="0.05" />
-
-      <button id="submit" type="submit" disabled>Podsumuj tę stronę</button>
+      <div class="actions">
+        <button type="submit" name="action" value="summarize" disabled>Podsumuj</button>
+        <button type="submit" name="action" value="check_facts" disabled>Sprawdź fakty</button>
+        <a id="open-on-page" target="_blank" rel="noopener" hidden>Otwórz na stronie</a>
+      </div>
       <p id="error" role="alert" hidden></p>
     </form>
   </body>

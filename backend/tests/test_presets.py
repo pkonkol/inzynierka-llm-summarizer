@@ -2,11 +2,10 @@ from app.schemas.summary_spec import ScaledLength
 from app.services.llm.presets import SUMMARY_PRESETS
 
 
-def test_every_preset_explains_itself_with_a_description_and_an_example() -> None:
+def test_every_preset_explains_itself_with_a_description() -> None:
     for key, preset in SUMMARY_PRESETS.items():
         assert preset.label.strip(), key
         assert preset.description.strip(), key
-        assert preset.example.strip(), key
 
 
 def test_every_preset_scales_with_the_slider() -> None:

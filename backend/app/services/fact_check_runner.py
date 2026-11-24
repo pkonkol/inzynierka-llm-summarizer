@@ -25,11 +25,8 @@ class FactCheckNotAllowedError(RuntimeError):
     """The summary is not completed yet, or its fact check is already queued, running or done."""
 
 
-async def start_fact_check(job_id: str) -> None:
-    """Marks the job's fact check pending and runs it in the background; a failed one may be started again."""
-    log.debug("starting fact check", job_id=job_id)
-    requested_at = datetime.now(UTC)
-    pending = FactCheck(
+def pending_fact_check(requested_at: datetime) -> FactCheck:
+    return FactCheck(
         status="pending",
         requested_at=requested_at,
         text=None,
@@ -40,6 +37,13 @@ async def start_fact_check(job_id: str) -> None:
         duration_ms=None,
         error=None,
     )
+
+
+async def start_fact_check(job_id: str) -> None:
+    """Marks the job's fact check pending and runs it in the background; a failed one may be started again."""
+    log.debug("starting fact check", job_id=job_id)
+    requested_at = datetime.now(UTC)
+    pending = pending_fact_check(requested_at)
     # One conditional write, so two clicks at once cannot both start a fact check.
     result = await get_jobs_collection().update_one(
         {

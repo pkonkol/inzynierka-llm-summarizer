@@ -176,48 +176,22 @@ def test_the_public_endpoint_caps_pasted_text_below_the_admin_limit() -> None:
         PublicSummarizeRequest(input_text="x" * 30_001)
 
 
-@pytest.mark.parametrize(
-    ("toggle", "expected_mode"),
-    [
-        pytest.param({}, "none", id="toggle-omitted"),
-        pytest.param({"add_web_context": True}, "staged", id="toggle-on"),
-    ],
-)
-async def test_case_24_the_web_context_toggle_maps_to_a_mode(
-    monkeypatch: pytest.MonkeyPatch, toggle: dict, expected_mode: str
+async def test_a_legacy_web_context_toggle_does_not_turn_on_context_expansion(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     queue = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
     monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", AsyncMock())
     monkeypatch.setattr(public_summarize, "queue_summarization_job", queue)
     payload = PublicSummarizeRequest.model_validate(
-        {"input_text": "An article to summarize.", **toggle}
+        {"input_text": "An article to summarize.", "add_web_context": True}
     )
 
     await public_summarize.create_public_summarize_job(
         payload, MagicMock(), _request("203.0.113.9")
     )
 
-    assert queue.await_args.kwargs["context_expansion_mode"] == expected_mode
-
-
-async def test_the_budget_is_checked_only_when_the_toggle_is_on(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    budget_check = AsyncMock()
-    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", AsyncMock())
-    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", budget_check)
-    monkeypatch.setattr(public_summarize, "queue_summarization_job", AsyncMock())
-
-    for add_web_context in (False, True):
-        payload = PublicSummarizeRequest.model_validate(
-            {"input_text": "An article to summarize.", "add_web_context": add_web_context}
-        )
-        await public_summarize.create_public_summarize_job(
-            payload, MagicMock(), _request("203.0.113.9")
-        )
-
-    budget_check.assert_awaited_once()
+    assert queue.await_args.kwargs["context_expansion_mode"] == "none"
 
 
 def test_the_public_endpoint_rejects_a_context_section() -> None:
@@ -225,7 +199,6 @@ def test_the_public_endpoint_rejects_a_context_section() -> None:
         PublicSummarizeRequest.model_validate(
             {
                 "input_text": "An article to summarize.",
-                "add_web_context": True,
                 "summary_spec": {"context_section": {"stance": "supplement"}},
             }
         )
@@ -244,18 +217,34 @@ def _queued_with(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return queue
 
 
-def test_check_facts_field_is_ignored() -> None:
-    assert "check_facts" not in PublicSummarizeRequest.model_fields
-    payload = PublicSummarizeRequest.model_validate(
-        {"input_text": "An article to summarize.", "check_facts": True}
-    )
-    assert "check_facts" not in payload.model_dump()
+def test_check_facts_defaults_to_off() -> None:
+    assert PublicSummarizeRequest.model_validate({"input_text": "x"}).check_facts is False
 
 
-async def test_the_summarize_endpoint_queues_without_a_fact_check(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("check_facts", [False, True])
+async def test_the_queued_job_carries_the_check_facts_choice(
+    monkeypatch: pytest.MonkeyPatch, check_facts: bool
 ) -> None:
     queue = _queued_with(monkeypatch)
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", "check_facts": check_facts}
+    )
+
+    await public_summarize.create_public_summarize_job(
+        payload, MagicMock(), _request("203.0.113.9")
+    )
+
+    assert queue.await_args.kwargs["check_facts_on_completion"] is check_facts
+
+
+async def test_a_summary_with_check_facts_spends_the_fact_check_scope_and_the_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _queued_with(monkeypatch)
+    ip_limit = AsyncMock()
+    budget_check = AsyncMock()
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", ip_limit)
+    monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", budget_check)
     payload = PublicSummarizeRequest.model_validate(
         {"input_text": "An article to summarize.", "check_facts": True}
     )
@@ -264,7 +253,57 @@ async def test_the_summarize_endpoint_queues_without_a_fact_check(
         payload, MagicMock(), _request("203.0.113.9")
     )
 
-    assert "check_facts" not in queue.await_args.kwargs
+    scopes = [
+        call.args[1] if len(call.args) > 1 else call.kwargs["scope"]
+        for call in ip_limit.await_args_list
+    ]
+    assert "fact_check" in scopes
+    budget_check.assert_awaited_once()
+
+
+async def test_a_summary_with_check_facts_over_the_budget_is_429_and_queues_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queue = _queued_with(monkeypatch)
+    monkeypatch.setattr(
+        public_summarize,
+        "enforce_public_web_search_limit",
+        AsyncMock(side_effect=HTTPException(status_code=429)),
+    )
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", "check_facts": True}
+    )
+
+    with pytest.raises(HTTPException) as refused:
+        await public_summarize.create_public_summarize_job(
+            payload, MagicMock(), _request("203.0.113.9")
+        )
+
+    assert refused.value.status_code == 429
+    queue.assert_not_awaited()
+
+
+async def test_a_summary_with_check_facts_over_the_fact_check_ip_limit_queues_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queue = _queued_with(monkeypatch)
+
+    async def refuse_fact_check_scope(_request: object, scope: str) -> None:
+        if scope == "fact_check":
+            raise HTTPException(status_code=429)
+
+    monkeypatch.setattr(public_summarize, "enforce_public_rate_limit", refuse_fact_check_scope)
+    payload = PublicSummarizeRequest.model_validate(
+        {"input_text": "An article to summarize.", "check_facts": True}
+    )
+
+    with pytest.raises(HTTPException) as refused:
+        await public_summarize.create_public_summarize_job(
+            payload, MagicMock(), _request("203.0.113.9")
+        )
+
+    assert refused.value.status_code == 429
+    queue.assert_not_awaited()
 
 
 async def test_the_summarize_endpoint_spends_the_summarize_scope(
@@ -286,9 +325,7 @@ async def test_the_budget_is_not_spent_by_a_plain_summary(monkeypatch: pytest.Mo
     _queued_with(monkeypatch)
     budget_check = AsyncMock()
     monkeypatch.setattr(public_summarize, "enforce_public_web_search_limit", budget_check)
-    payload = PublicSummarizeRequest.model_validate(
-        {"input_text": "An article to summarize.", "check_facts": True}
-    )
+    payload = PublicSummarizeRequest.model_validate({"input_text": "An article to summarize."})
 
     await public_summarize.create_public_summarize_job(
         payload, MagicMock(), _request("203.0.113.9")

@@ -67,6 +67,7 @@ async def queue_summarization_job(
     processing_strategy: ProcessingStrategy,
     origin: JobOrigin,
     context_expansion_mode: ContextExpansionMode,
+    check_facts_on_completion: bool = False,
 ) -> JobCreatedResponse:
     job_id = str(uuid4())
     now = datetime.now(UTC)
@@ -86,6 +87,7 @@ async def queue_summarization_job(
         language=language,
         origin=origin,
         context_expansion_mode=context_expansion_mode,
+        check_facts_on_completion=check_facts_on_completion,
         status="pending",
         input_text=input_text,
         created_at=now,

@@ -36,7 +36,6 @@ async def get_summary_presets() -> dict[str, SummaryPresetResponse]:
         key: SummaryPresetResponse(
             label=preset.label,
             description=preset.description,
-            example=preset.example,
             spec=preset.spec,
         )
         for key, preset in SUMMARY_PRESETS.items()

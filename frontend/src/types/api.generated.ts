@@ -1350,6 +1350,11 @@ export interface components {
             context_expansion_mode: "none" | "single_search" | "staged";
             context_expansion: components["schemas"]["ContextExpansionResult"] | null;
             fact_check: components["schemas"]["FactCheck"] | null;
+            /**
+             * Check Facts On Completion
+             * @default false
+             */
+            check_facts_on_completion: boolean;
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
@@ -1568,10 +1573,10 @@ export interface components {
              */
             language: string;
             /**
-             * Add Web Context
+             * Check Facts
              * @default false
              */
-            add_web_context: boolean;
+            check_facts: boolean;
         };
         /** RelatedSource */
         RelatedSource: {
@@ -1696,8 +1701,6 @@ export interface components {
             label: string;
             /** Description */
             description: string;
-            /** Example */
-            example: string;
             spec: components["schemas"]["SummarySpec"];
         };
         /**

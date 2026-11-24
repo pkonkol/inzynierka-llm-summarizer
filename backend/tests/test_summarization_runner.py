@@ -245,3 +245,117 @@ async def test_a_failed_summary_leaves_the_fact_check_field_alone(
     assert written["status"] == "failed"
     assert not [key for key in written if key.startswith("fact_check")]
     assert fact_check_starts == []
+
+
+async def _let_background_tasks_run() -> None:
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+@pytest.fixture
+def fact_check_runs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Job ids passed to run_fact_check, whichever module the runner calls it through."""
+    runs: list[str] = []
+
+    async def run_fact_check(job_id: str) -> None:
+        runs.append(job_id)
+
+    monkeypatch.setattr(fact_check_runner, "run_fact_check", run_fact_check)
+    monkeypatch.setattr(summarization_runner, "run_fact_check", run_fact_check, raising=False)
+    return runs
+
+
+def _completion_update(collection: AsyncMock) -> dict:
+    completions = [
+        call.args[1]["$set"]
+        for call in collection.update_one.call_args_list
+        if call.args[1]["$set"].get("status") == "completed"
+    ]
+    assert len(completions) == 1
+    return completions[0]
+
+
+async def test_a_summary_flagged_for_fact_checking_completes_with_a_pending_fact_check(
+    monkeypatch: pytest.MonkeyPatch, fact_check_runs: list[str]
+) -> None:
+    collection = _job_runner(monkeypatch, None, AsyncMock(return_value=_summary_result()))
+    collection.find_one.return_value = {
+        **collection.find_one.return_value,
+        "check_facts_on_completion": True,
+    }
+
+    await summarization_runner.run_summarization_job("j")
+
+    completion = _completion_update(collection)
+    assert completion["fact_check"]["status"] == "pending"
+    assert completion["fact_check"]["sources"] == []
+    assert completion["fact_check"]["text"] is None
+
+
+async def test_a_summary_flagged_for_fact_checking_starts_the_fact_check_in_the_background(
+    monkeypatch: pytest.MonkeyPatch, fact_check_runs: list[str]
+) -> None:
+    collection = _job_runner(monkeypatch, None, AsyncMock(return_value=_summary_result()))
+    collection.find_one.return_value = {
+        **collection.find_one.return_value,
+        "check_facts_on_completion": True,
+    }
+
+    await summarization_runner.run_summarization_job("j")
+    await _let_background_tasks_run()
+
+    assert fact_check_runs == ["j"]
+
+
+@pytest.mark.parametrize(
+    "flag", [pytest.param(False, id="flag_off"), pytest.param(None, id="flag_missing")]
+)
+async def test_a_summary_without_the_flag_completes_without_a_fact_check(
+    monkeypatch: pytest.MonkeyPatch, fact_check_runs: list[str], flag: bool | None
+) -> None:
+    collection = _job_runner(monkeypatch, None, AsyncMock(return_value=_summary_result()))
+    if flag is not None:
+        collection.find_one.return_value = {
+            **collection.find_one.return_value,
+            "check_facts_on_completion": flag,
+        }
+
+    await summarization_runner.run_summarization_job("j")
+    await _let_background_tasks_run()
+
+    assert (
+        "fact_check" not in _completion_update(collection)
+        or _completion_update(collection)["fact_check"] is None
+    )
+    assert fact_check_runs == []
+
+
+async def test_a_failed_summary_flagged_for_fact_checking_starts_no_fact_check(
+    monkeypatch: pytest.MonkeyPatch, fact_check_runs: list[str]
+) -> None:
+    collection = _job_runner(monkeypatch, None, AsyncMock(side_effect=RuntimeError("down")))
+    collection.find_one.return_value = {
+        **collection.find_one.return_value,
+        "check_facts_on_completion": True,
+    }
+
+    await summarization_runner.run_summarization_job("j")
+    await _let_background_tasks_run()
+
+    written = _all_set_fields(collection)
+    assert written["status"] == "failed"
+    assert not [key for key in written if key.startswith("fact_check")]
+    assert fact_check_runs == []
+
+
+def test_pending_fact_check_helper_builds_an_empty_pending_check() -> None:
+    requested_at = datetime.now(UTC)
+
+    pending = fact_check_runner.pending_fact_check(requested_at)
+
+    assert pending.status == "pending"
+    assert pending.requested_at == requested_at
+    assert pending.text is None
+    assert pending.sources == []
+    assert pending.usage is None
+    assert pending.error is None

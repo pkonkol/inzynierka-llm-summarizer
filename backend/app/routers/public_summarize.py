@@ -20,7 +20,7 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
         default=None, min_length=1, max_length=settings.public_max_input_chars
     )
     language: str = "auto"
-    add_web_context: bool = False
+    check_facts: bool = False
 
     @model_validator(mode="after")
     def _reject_free_text_instructions(self) -> Self:
@@ -44,6 +44,11 @@ class PublicSummarizeRequest(SummarizeSourceRequest):
         return self
 
 
+async def _enforce_fact_check_limits(request: Request) -> None:
+    await enforce_public_rate_limit(request, "fact_check")
+    await enforce_public_web_search_limit()
+
+
 @router.post(
     "/summarize",
     response_model=JobCreatedResponse,
@@ -56,8 +61,8 @@ async def create_public_summarize_job(
 ) -> JobCreatedResponse:
     # Inside the handler so a request the body validation rejects does not spend the caller's quota.
     await enforce_public_rate_limit(request, "summarize")
-    if payload.add_web_context:
-        await enforce_public_web_search_limit()
+    if payload.check_facts:
+        await _enforce_fact_check_limits(request)
 
     return await queue_summarization_job(
         payload,
@@ -67,7 +72,8 @@ async def create_public_summarize_job(
         language=payload.language,
         processing_strategy="direct",
         origin="public",
-        context_expansion_mode="staged" if payload.add_web_context else "none",
+        context_expansion_mode="none",
+        check_facts_on_completion=payload.check_facts,
     )
 
 
@@ -83,8 +89,7 @@ async def request_public_fact_check(job_id: str, request: Request) -> None:
     if job is None:
         raise HTTPException(status_code=404, detail="Nie znaleziono podsumowania.")
 
-    await enforce_public_rate_limit(request, "fact_check")
-    await enforce_public_web_search_limit()
+    await _enforce_fact_check_limits(request)
     try:
         await start_fact_check(job_id)
     except FactCheckNotAllowedError as exc:

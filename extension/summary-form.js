@@ -1,20 +1,16 @@
 import { fetchSummaryPresets, fetchSupportedLanguages } from "./api.js";
-import { readArticleText } from "./page-text.js";
 import { assertWithinInputLimit, readSavedSettings, saveSettings } from "./summary-request.js";
 
-const SUBMIT_LABELS = {
-  url: "Podsumuj tę stronę",
-  pageText: "Podsumuj tę stronę",
-  pastedText: "Podsumuj tekst",
-};
+const CHECK_FACTS_ACTION = "check_facts";
+const PASTED_LABEL_CHARS = 60;
 
 const form = document.getElementById("summary-form");
 const presetOptions = document.getElementById("preset-options");
-const pastedTextInput = document.getElementById("pasted-text");
+const sourceField = document.getElementById("source-field");
 const densityInput = document.getElementById("density");
 const densityLabel = document.getElementById("density-label");
 const languageSelect = document.getElementById("language");
-const submitButton = document.getElementById("submit");
+const submitButtons = form.querySelectorAll('button[type="submit"]');
 const errorText = document.getElementById("error");
 
 // Same thresholds as the public page, so the panel and the page name a length the same way.
@@ -28,10 +24,8 @@ function showDensity() {
   densityLabel.textContent = describeDensity(Number(densityInput.value));
 }
 
-function showSourceMode() {
-  const sourceMode = form.elements.source.value;
-  pastedTextInput.hidden = sourceMode !== "pastedText";
-  submitButton.textContent = SUBMIT_LABELS[sourceMode];
+function setSubmitDisabled(isDisabled) {
+  for (const button of submitButtons) button.disabled = isDisabled;
 }
 
 function presetRadio(key, preset, isChecked) {
@@ -65,7 +59,6 @@ async function loadOptions() {
 
 async function restoreSettings(presets) {
   const settings = await readSavedSettings();
-  form.elements.source.value = settings.source;
   // A preset or language removed from the API since the last visit keeps the first option selected.
   if (Object.hasOwn(presets, settings.presetKey)) form.elements.preset.value = settings.presetKey;
   if ([...languageSelect.options].some((option) => option.value === settings.language)) {
@@ -73,7 +66,6 @@ async function restoreSettings(presets) {
   }
   densityInput.value = String(settings.density);
   showDensity();
-  showSourceMode();
 }
 
 function showFormError(message) {
@@ -81,68 +73,85 @@ function showFormError(message) {
   errorText.hidden = false;
 }
 
-/** Current form values as { source, presetKey, density, language }. */
+/** Current form values as { presetKey, density, language }. */
 export function readSettings() {
   return {
-    source: form.elements.source.value,
     presetKey: form.elements.preset.value,
     density: Number(densityInput.value),
     language: languageSelect.value,
   };
 }
 
-function isSummarizable(tab) {
-  return tab.url !== undefined && /^https?:\/\//.test(tab.url);
+function isSummarizable(url) {
+  return /^https?:\/\/\S+$/.test(url);
 }
 
-/** { url } in URL mode, or the tab's Readability text, capped at the public input limit. */
-export async function readSource(tab, sourceMode) {
-  if (!isSummarizable(tab)) {
-    throw new Error("tej strony nie da się podsumować, otwórz artykuł pod adresem http(s)");
+function pastedTextLabel(pastedText) {
+  const firstLine = pastedText.split("\n", 1)[0];
+  return firstLine.length > PASTED_LABEL_CHARS
+    ? `${firstLine.slice(0, PASTED_LABEL_CHARS)}…`
+    : firstLine;
+}
+
+/**
+ * The source field as { apiSource, sourceUrl, sourceLabel }: empty means the active tab's address,
+ * an http(s) address is summarized by that address, anything else as pasted text.
+ */
+export function readSourceField(tab) {
+  const fieldText = sourceField.value.trim();
+  if (fieldText === "") {
+    if (tab.url === undefined || !isSummarizable(tab.url)) {
+      throw new Error("tej strony nie da się podsumować, otwórz artykuł pod adresem http(s)");
+    }
+    return {
+      apiSource: { url: tab.url },
+      sourceUrl: tab.url,
+      sourceLabel: tab.title || tab.url,
+    };
   }
-  if (sourceMode === "url") return { url: tab.url };
-
-  const articleText = await readArticleText(tab.id);
-  assertWithinInputLimit(articleText, "artykuł");
-  return { input_text: articleText };
+  if (isSummarizable(fieldText)) {
+    return {
+      apiSource: { url: fieldText },
+      sourceUrl: fieldText,
+      sourceLabel: fieldText,
+    };
+  }
+  assertWithinInputLimit(fieldText, "tekst");
+  return {
+    apiSource: { input_text: fieldText },
+    sourceUrl: null,
+    sourceLabel: pastedTextLabel(fieldText),
+  };
 }
 
-/** The text pasted into the panel, trimmed; throws when it is empty or over the public input limit. */
-export function readPastedText() {
-  const pastedText = pastedTextInput.value.trim();
-  if (pastedText === "") throw new Error("wklej tekst do pola nad ustawieniami");
-  assertWithinInputLimit(pastedText, "tekst");
-  return pastedText;
-}
-
-/** Loads presets and languages, restores the last settings, and calls onSubmit(settings, presets) on submit. */
+/**
+ * Loads presets and languages, restores the last settings, and calls
+ * onSubmit(settings, presets, { checkFacts }) when either action button submits the form.
+ */
 export async function initSummaryForm({ onSubmit }) {
   let presets = {};
 
   densityInput.addEventListener("input", showDensity);
-  for (const sourceRadio of form.elements.source) {
-    sourceRadio.addEventListener("change", showSourceMode);
-  }
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     errorText.hidden = true;
-    submitButton.disabled = true;
-    submitButton.textContent = "Wysyłanie...";
+    setSubmitDisabled(true);
     try {
       const settings = readSettings();
       await saveSettings(settings);
-      await onSubmit(settings, presets);
+      await onSubmit(settings, presets, {
+        checkFacts: event.submitter.value === CHECK_FACTS_ACTION,
+      });
     } catch (error) {
       showFormError(`Nie udało się podsumować: ${error.message}`);
     }
-    submitButton.disabled = false;
-    showSourceMode();
+    setSubmitDisabled(false);
   });
 
   try {
     presets = await loadOptions();
     await restoreSettings(presets);
-    submitButton.disabled = false;
+    setSubmitDisabled(false);
   } catch (error) {
     showFormError(`Nie udało się wczytać opcji: ${error.message}`);
   }

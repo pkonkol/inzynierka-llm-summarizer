@@ -151,8 +151,55 @@ textarea {
   font: inherit;
 }
 
-textarea[hidden] {
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+fieldset#preset-options {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 4px 8px;
+}
+
+fieldset#preset-options label {
+  white-space: nowrap;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+}
+
+.settings-row input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.actions a[hidden] {
   display: none;
+}
+
+.summary-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.summary-details[open] summary {
+  margin-bottom: 8px;
 }
 
 .inline-field {

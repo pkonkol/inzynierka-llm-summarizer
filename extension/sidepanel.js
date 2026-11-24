@@ -6,8 +6,8 @@ import {
   setCurrentJobId,
   updateHistoryEntry,
 } from "./history-store.js";
-import { renderCurrentEntry, renderHistoryList } from "./result-view.js";
-import { initSummaryForm, readPastedText, readSource } from "./summary-form.js";
+import { renderCurrentEntry, renderHistoryList, resultPageUrl } from "./result-view.js";
+import { initSummaryForm, readSourceField } from "./summary-form.js";
 import { startSummaryJob } from "./summary-request.js";
 
 const POLL_INTERVAL_MS = 2000;
@@ -17,6 +17,7 @@ const GENERATION_FAILED_MESSAGE = "Nie udało się wygenerować podsumowania. Sp
 const resultContainer = document.getElementById("result");
 const historyContainer = document.getElementById("history");
 const historyToggle = document.getElementById("history-toggle");
+const openOnPageLink = document.getElementById("open-on-page");
 const jobsBeingPolled = new Set();
 
 let isHistoryOpen = false;
@@ -155,6 +156,7 @@ async function showHistory() {
 
   const currentEntry = history.find((entry) => entry.jobId === currentJobId) ?? null;
   renderCurrentEntry(resultContainer, currentEntry, { onCheckFacts: checkFacts });
+  showOpenOnPage(currentEntry);
   renderHistoryList(historyContainer, history, { currentJobId, onSelect: selectEntry });
   for (const entry of history.filter(isUnfinished)) pollUntilDone(entry);
 }
@@ -173,32 +175,30 @@ async function checkFacts(entry) {
   await updateHistoryEntry(entry.jobId, { factCheck: { status: "working" } });
 }
 
-const PASTED_LABEL_CHARS = 60;
-
-function pastedTextSource() {
-  const pastedText = readPastedText();
-  const firstLine = pastedText.split("\n", 1)[0];
-  const sourceLabel =
-    firstLine.length > PASTED_LABEL_CHARS
-      ? `${firstLine.slice(0, PASTED_LABEL_CHARS)}…`
-      : firstLine;
-  return { apiSource: { input_text: pastedText }, sourceUrl: null, sourceLabel };
+async function summarizeFromPanel(settings, presets, { checkFacts }) {
+  const source = readSourceField(await activeTab());
+  await startSummaryJob(source, settings, presets, { checkFacts });
 }
 
-async function summarizeFromPanel(settings, presets) {
-  if (settings.source === "pastedText") {
-    await startSummaryJob(pastedTextSource(), settings, presets);
-    return;
-  }
-  const tab = await activeTab();
-  const apiSource = await readSource(tab, settings.source);
-  await startSummaryJob(
-    { apiSource, sourceUrl: tab.url, sourceLabel: tab.title || tab.url },
-    settings,
-    presets,
-  );
+// Ctrl+A (Cmd+A) inside the result selects the result alone, ready to copy.
+function selectResultOnly(event) {
+  const isSelectAll = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a";
+  if (!isSelectAll) return;
+  event.preventDefault();
+  const resultRange = document.createRange();
+  resultRange.selectNodeContents(resultContainer);
+  document.getSelection().removeAllRanges();
+  document.getSelection().addRange(resultRange);
 }
 
+// A failed entry has no summary to show on the page.
+function showOpenOnPage(entry) {
+  const hasResultPage = entry !== null && entry.status !== "failed";
+  openOnPageLink.hidden = !hasResultPage;
+  if (hasResultPage) openOnPageLink.href = resultPageUrl(entry);
+}
+
+resultContainer.addEventListener("keydown", selectResultOnly);
 historyToggle.addEventListener("click", () => {
   isHistoryOpen = !isHistoryOpen;
   showView();

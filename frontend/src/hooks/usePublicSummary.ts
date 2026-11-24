@@ -28,6 +28,7 @@ export type PublicSummaryState =
       durationMs: number;
       contextExpansion: ContextExpansionResult | null;
       factCheck: FactCheckView;
+      isFactCheckFirst: boolean;
     }
   | { phase: "error"; message: string };
 
@@ -93,6 +94,7 @@ export function usePublicSummary() {
           durationMs: job.duration_ms,
           contextExpansion: job.context_expansion,
           factCheck,
+          isFactCheckFirst: job.check_facts_on_completion,
         });
         return;
       }

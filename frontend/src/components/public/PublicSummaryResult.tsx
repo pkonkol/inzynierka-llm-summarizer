@@ -217,20 +217,35 @@ function ResultBody({ state, onCheckFacts }: ResultProps) {
     case "error":
       return <Alert tone="danger">{state.message}</Alert>;
     case "done": {
-      const { summary, durationMs, contextExpansion, factCheck } = state;
+      const { summary, durationMs, contextExpansion, factCheck, isFactCheckFirst } = state;
       const copySummary = () => {
         navigator.clipboard
           .writeText(summaryPlainText(summary))
           .then(() => showFlash("Skopiowano podsumowanie do schowka"))
           .catch(() => showFlash("Nie udało się skopiować do schowka", "danger"));
       };
+      const summaryText = (
+        <div className="markdown max-w-measure font-reading text-reading">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
+        </div>
+      );
       return (
         <article className="flex flex-1 flex-col gap-3">
           <h2 className="text-subtitle">{summary.title}</h2>
-          <div className="markdown max-w-measure flex-1 font-reading text-reading">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
-          </div>
-          <FactCheckSection factCheck={factCheck} onCheckFacts={onCheckFacts} />
+          {isFactCheckFirst ? (
+            <>
+              <FactCheckSection factCheck={factCheck} onCheckFacts={onCheckFacts} />
+              <details className="grid gap-2 border-t border-hairline pt-3">
+                <summary className="cursor-pointer font-medium">Streszczenie</summary>
+                {summaryText}
+              </details>
+            </>
+          ) : (
+            <>
+              {summaryText}
+              <FactCheckSection factCheck={factCheck} onCheckFacts={onCheckFacts} />
+            </>
+          )}
           {contextExpansion !== null && contextExpansion.mode !== "none" ? (
             <RelatedSources contextExpansion={contextExpansion} />
           ) : null}

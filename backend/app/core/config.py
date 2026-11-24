@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     ollama_url: str = ""
     # Ollama models allowed to think; every other Ollama model runs with reasoning off, since small Qwens loop when thinking.
     ollama_thinking_models: list[str] = []
+    # OpenRouter models sent with reasoning off: the public page waits on them, and thinking took most of a ~14 s summary.
+    openrouter_non_reasoning_models: list[str] = ["deepseek/deepseek-v4.1-flash-1017:nitro"]
     debug: bool = False
     # "pretty" — colored human-readable output for local dev.
     # "json" — one JSON object per line with a `severity` field, parsed by GCP Cloud Logging.
@@ -66,10 +68,12 @@ class Settings(BaseSettings):
     supported_models: dict[str, list[str]] = {
         "gemini": [
             "gemini-3.8-flash",
+            "gemini-4-hydrogen",
             "gemma-4-31b-it",
         ],
         "openrouter": [
             "deepseek/deepseek-v4.1-flash-1017",
+            "deepseek/deepseek-v4.1-flash-1017:nitro",
             "deepseek/deepseek-v4-pro-0813",
             "qwen/qwen3.8-flash",
             "qwen/qwen3.8-27b",
@@ -79,8 +83,6 @@ class Settings(BaseSettings):
             "google/gemma-3-4b-it",
             "mistralai/ministral-3b-2512",
             "liquid/lfm-3-1.7b",
-            "nvidia/nemotron-3.5-lightning:free",
-            "nvidia/nemotron-3-ultra-550b-a55b:free",
             "openai/gpt-oss-120b",
             "openai/gpt-6-luna",
             "openai/gpt-6.1-terra",
@@ -123,8 +125,8 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = SecretStr("")
     jwt_expire_hours: int = 168
     public_summary_model: dict[str, str] = {
-        "model_provider": "gemini",
-        "model_name": "gemini-3.8-flash",
+        "model_provider": "openrouter",
+        "model_name": "deepseek/deepseek-v4.1-flash-1017:nitro",
     }
     # Characters of source text a public job may carry, whether pasted or scraped from a URL.
     public_max_input_chars: int = 30_000
@@ -138,8 +140,8 @@ class Settings(BaseSettings):
     context_excerpt_chars: int = 3000
     fact_check_claim_count: int = 5
     title_model: dict[str, str] = {
-        "model_provider": "gemini",
-        "model_name": "gemini-3.8-flash",
+        "model_provider": "openrouter",
+        "model_name": "deepseek/deepseek-v4.1-flash-1017:nitro",
     }
     # Sent explicitly to every model, judge included, and stored on each run and judge pass.
     llm_temperature: float = 1.0
@@ -171,6 +173,17 @@ class Settings(BaseSettings):
         if unknown:
             raise ValueError(
                 f"OLLAMA_THINKING_MODELS {sorted(unknown)} are not in supported_models"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _require_supported_non_reasoning_models(self) -> Settings:
+        unknown = set(self.openrouter_non_reasoning_models) - set(
+            self.supported_models.get("openrouter", [])
+        )
+        if unknown:
+            raise ValueError(
+                f"openrouter_non_reasoning_models {sorted(unknown)} are not in supported_models['openrouter']"
             )
         return self
 

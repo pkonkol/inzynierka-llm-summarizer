@@ -54,3 +54,4 @@ e2e/test-results/
 frontend/MVP Frontend for Summaries/
 .aider*
 evaluation_set_curation_full.json
+.claude/skills/validate-evaluator

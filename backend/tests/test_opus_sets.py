@@ -2,7 +2,7 @@
 
 import json
 import subprocess
-from collections.abc import Callable
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -17,7 +17,6 @@ from app.services.llm.presets import SUMMARY_PRESETS
 from calibration import opus_sets
 from calibration.opus_sets import (
     GENERATOR_MODEL,
-    SPEC_NAMES,
     ClaudeAnswer,
     OpusPrompt,
     OpusRecord,
@@ -90,6 +89,8 @@ def _record(url: str, spec_name: str = "e3", summary: str = "S") -> OpusRecord:
 @pytest.fixture
 def source_sets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]:
     """Two sets: E3-5 files plus smoke-2 files in tmp_path; returns the url order expected per set."""
+    monkeypatch.setattr(opus_sets, "E3_SETS", ("cnn_dailymail", "psc"))
+    monkeypatch.setattr(opus_sets, "RAW_DIR", tmp_path / "raw")
     subset_paths: dict[str, Path] = {}
     smoke_paths: dict[str, Path] = {}
     for set_name, language in (("cnn_dailymail", "en"), ("psc", "pl")):
@@ -107,11 +108,35 @@ def source_sets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, li
     return {"cnn_dailymail": order, "psc": order}
 
 
+@pytest.fixture
+def claude_calls(monkeypatch: pytest.MonkeyPatch) -> list[OpusPrompt]:
+    """Replaces the claude call with a fake answer; returns the prompts it received."""
+    prompts: list[OpusPrompt] = []
+
+    def fake_summarize(prompt: OpusPrompt) -> ClaudeAnswer:
+        prompts.append(prompt)
+        return _fake_answer(prompt)
+
+    monkeypatch.setattr(opus_sets, "summarize_with_claude", fake_summarize)
+    return prompts
+
+
+@pytest.fixture
+def raw_dir(tmp_path: Path) -> Path:
+    return tmp_path / "raw"
+
+
+def _only_sets(monkeypatch: pytest.MonkeyPatch, *set_names: str) -> None:
+    monkeypatch.setattr(opus_sets, "E3_SETS", set_names)
+
+
+def _matching_record(set_name: str, language: str, index: int) -> OpusRecord:
+    entry = _entry(index)
+    prompt = opus_prompt(opus_request(entry, spec_for("e3"), language))
+    return OpusRecord.from_answer(entry.url, "e3", prompt, _fake_answer(prompt), CLAUDE_VERSION)
+
+
 # --- specs ---
-
-
-def test_spec_names_are_e3_then_every_preset() -> None:
-    assert SPEC_NAMES == ["e3", *SUMMARY_PRESETS]
 
 
 def test_spec_for_preset_returns_the_preset_spec() -> None:
@@ -266,10 +291,6 @@ def test_claude_command_passes_the_system_prompt_and_isolation_flags() -> None:
     assert "--no-session-persistence" in command
 
 
-def test_generator_model_is_the_exact_opus_id() -> None:
-    assert GENERATOR_MODEL == "claude-opus-5-5"
-
-
 def test_claude_command_asks_for_the_summary_output_schema() -> None:
     command = claude_command(OpusPrompt(system="s", user="u"))
 
@@ -309,17 +330,23 @@ def test_parse_claude_output_reads_summary_usage_and_duration() -> None:
     assert answer.duration_ms == 4321
 
 
-def test_parse_claude_output_takes_the_model_from_model_usage() -> None:
-    stdout = _claude_stdout(modelUsage={"claude-opus-9-9": {"inputTokens": 1}})
-
-    assert parse_claude_output(stdout, 1).model == "claude-opus-9-9"
+def test_parse_claude_output_reports_the_generator_model() -> None:
+    assert parse_claude_output(_claude_stdout(), 1).model == GENERATOR_MODEL
 
 
-def test_parse_claude_output_raises_on_several_models() -> None:
-    stdout = _claude_stdout(modelUsage={"claude-opus-5-5": {}, "claude-haiku-5": {}})
+def test_parse_claude_output_accepts_a_helper_model_next_to_the_generator() -> None:
+    stdout = _claude_stdout(modelUsage={"claude-haiku-5": {}, GENERATOR_MODEL: {}})
 
-    with pytest.raises(ValueError):
+    assert parse_claude_output(stdout, 1).model == GENERATOR_MODEL
+
+
+def test_parse_claude_output_raises_naming_the_models_when_the_generator_is_absent() -> None:
+    stdout = _claude_stdout(modelUsage={"claude-haiku-5": {}, "claude-sonnet-5": {}})
+
+    with pytest.raises(ValueError, match="claude-haiku-5") as error:
         parse_claude_output(stdout, 1)
+
+    assert "claude-sonnet-5" in str(error.value)
 
 
 def test_parse_claude_output_raises_without_any_model() -> None:
@@ -398,37 +425,33 @@ def test_records_survive_a_write_and_read(tmp_path: Path) -> None:
 
 
 def test_generate_writes_one_record_per_source_in_order(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+    source_sets: dict[str, list[str]], claude_calls: list[OpusPrompt], raw_dir: Path
 ) -> None:
-    raw_dir = tmp_path / "raw"
-
-    created = generate(
-        "e3",
-        3,
-        set_names=["cnn_dailymail"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    created = generate("e3", 3, CLAUDE_VERSION)
 
     records = read_records(raw_file(raw_dir, "cnn_dailymail", "e3"))
-    assert created == 3
+    assert created == 6  # three per set, two sets
     assert [record.url for record in records] == source_sets["cnn_dailymail"][:3]
 
 
-def test_generate_record_stores_prompt_answer_and_metadata(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+def test_generate_keeps_a_raw_file_per_set_and_spec(
+    source_sets: dict[str, list[str]], claude_calls: list[OpusPrompt], raw_dir: Path
 ) -> None:
-    raw_dir = tmp_path / "raw"
+    generate("topics", 2, CLAUDE_VERSION)
 
-    generate(
-        "facts",
-        1,
-        set_names=["psc"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    assert len(read_records(raw_file(raw_dir, "cnn_dailymail", "topics"))) == 2
+    assert len(read_records(raw_file(raw_dir, "psc", "topics"))) == 2
+
+
+def test_generate_record_stores_prompt_answer_and_metadata(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _only_sets(monkeypatch, "psc")
+
+    generate("facts", 1, CLAUDE_VERSION)
 
     (record,) = read_records(raw_file(raw_dir, "psc", "facts"))
     assert record.spec_name == "facts"
@@ -443,60 +466,42 @@ def test_generate_record_stores_prompt_answer_and_metadata(
 
 
 def test_generate_sends_the_prompt_the_backend_would_build(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    prompts: list[OpusPrompt] = []
+    _only_sets(monkeypatch, "psc")
 
-    def capture(prompt: OpusPrompt) -> ClaudeAnswer:
-        prompts.append(prompt)
-        return _fake_answer(prompt)
-
-    generate(
-        "e3",
-        1,
-        set_names=["psc"],
-        raw_dir=tmp_path / "raw",
-        summarize=capture,
-        claude_version=CLAUDE_VERSION,
-    )
+    generate("e3", 1, CLAUDE_VERSION)
 
     entry = _entry(3, golden_words=5)  # first in order; the fixture builds every entry the same way
-    assert prompts == [opus_prompt(opus_request(entry, spec_for("e3"), "pl"))]
+    assert claude_calls == [opus_prompt(opus_request(entry, spec_for("e3"), "pl"))]
 
 
 def test_generate_skips_urls_already_in_the_raw_file(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls: list[OpusPrompt] = []
+    _only_sets(monkeypatch, "cnn_dailymail")
 
-    def counting(prompt: OpusPrompt) -> ClaudeAnswer:
-        calls.append(prompt)
-        return _fake_answer(prompt)
+    first = generate("e3", 2, CLAUDE_VERSION)
+    second = generate("e3", 4, CLAUDE_VERSION)
+    third = generate("e3", 4, CLAUDE_VERSION)
 
-    def run(per_set: int) -> int:
-        return generate(
-            "e3",
-            per_set,
-            set_names=["cnn_dailymail"],
-            raw_dir=tmp_path / "raw",
-            summarize=counting,
-            claude_version=CLAUDE_VERSION,
-        )
-
-    first = run(2)
-    second = run(4)
-    third = run(4)
-
-    records = read_records(raw_file(tmp_path / "raw", "cnn_dailymail", "e3"))
+    records = read_records(raw_file(raw_dir, "cnn_dailymail", "e3"))
     assert (first, second, third) == (2, 2, 0)
-    assert len(calls) == 4
+    assert len(claude_calls) == 4
     assert [record.url for record in records] == source_sets["cnn_dailymail"][:4]
 
 
 def test_generate_stops_on_a_failing_call_and_keeps_earlier_records(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+    source_sets: dict[str, list[str]],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
+    _only_sets(monkeypatch, "cnn_dailymail")
     calls: list[OpusPrompt] = []
 
     def fails_on_third(prompt: OpusPrompt) -> ClaudeAnswer:
@@ -505,184 +510,160 @@ def test_generate_stops_on_a_failing_call_and_keeps_earlier_records(
             raise RuntimeError("claude failed")
         return _fake_answer(prompt)
 
+    monkeypatch.setattr(opus_sets, "summarize_with_claude", fails_on_third)
+
     with pytest.raises(RuntimeError, match="claude failed"):
-        generate(
-            "e3",
-            5,
-            set_names=["cnn_dailymail"],
-            raw_dir=raw_dir,
-            summarize=fails_on_third,
-            claude_version=CLAUDE_VERSION,
-        )
+        generate("e3", 5, CLAUDE_VERSION)
 
     records = read_records(raw_file(raw_dir, "cnn_dailymail", "e3"))
     assert len(calls) == 3
     assert [record.url for record in records] == source_sets["cnn_dailymail"][:2]
 
 
-def test_generate_stores_the_model_the_answer_reports(
-    tmp_path: Path, source_sets: dict[str, list[str]]
-) -> None:
-    def answering_newer_model(prompt: OpusPrompt) -> ClaudeAnswer:
-        return _fake_answer(prompt).model_copy(update={"model": "claude-opus-9-9"})
-
-    generate(
-        "e3",
-        1,
-        set_names=["psc"],
-        raw_dir=tmp_path / "raw",
-        summarize=answering_newer_model,
-        claude_version=CLAUDE_VERSION,
-    )
-
-    (record,) = read_records(raw_file(tmp_path / "raw", "psc", "e3"))
-    assert record.model == "claude-opus-9-9"
-
-
-def _generate_e3_psc(
-    raw_dir: Path, per_set: int, summarize: Callable[[OpusPrompt], ClaudeAnswer]
-) -> int:
-    return generate(
-        "e3",
-        per_set,
-        set_names=["psc"],
-        raw_dir=raw_dir,
-        summarize=summarize,
-        claude_version=CLAUDE_VERSION,
-    )
-
-
-def test_generate_refuses_a_stored_prompt_that_differs_and_leaves_the_file_alone(
-    tmp_path: Path, source_sets: dict[str, list[str]]
-) -> None:
-    raw_dir = tmp_path / "raw"
-    stale = _record(source_sets["psc"][0])  # system "sys" / user "usr" never match the real prompt
-    path = raw_file(raw_dir, "psc", "e3")
-    write_records(path, [stale])
-    before = path.read_bytes()
-    calls: list[OpusPrompt] = []
-
-    def counting(prompt: OpusPrompt) -> ClaudeAnswer:
-        calls.append(prompt)
-        return _fake_answer(prompt)
-
-    with pytest.raises(ValueError):
-        _generate_e3_psc(raw_dir, 3, counting)
-
-    assert calls == []
-    assert path.read_bytes() == before
-
-
-def test_generate_ignores_a_stale_record_beyond_per_set(
-    tmp_path: Path, source_sets: dict[str, list[str]]
-) -> None:
-    raw_dir = tmp_path / "raw"
-    path = raw_file(raw_dir, "psc", "e3")
-    write_records(path, [_record(source_sets["psc"][4])])  # fifth in order, outside per_set=2
-
-    created = _generate_e3_psc(raw_dir, 2, _fake_answer)
-
-    assert created == 2
-    assert source_sets["psc"][4] in [record.url for record in read_records(path)]
-
-
 def test_generate_writes_the_raw_file_after_every_summary(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+    source_sets: dict[str, list[str]], raw_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    raw_dir = tmp_path / "raw"
+    _only_sets(monkeypatch, "psc")
     saved_before_each_call: list[int] = []
 
     def watching(prompt: OpusPrompt) -> ClaudeAnswer:
         saved_before_each_call.append(len(read_records(raw_file(raw_dir, "psc", "e3"))))
         return _fake_answer(prompt)
 
-    generate(
-        "e3",
-        3,
-        set_names=["psc"],
-        raw_dir=raw_dir,
-        summarize=watching,
-        claude_version=CLAUDE_VERSION,
-    )
+    monkeypatch.setattr(opus_sets, "summarize_with_claude", watching)
+
+    generate("e3", 3, CLAUDE_VERSION)
 
     assert saved_before_each_call == [0, 1, 2]
 
 
-def test_generate_keeps_a_raw_file_per_set_and_spec(
-    tmp_path: Path, source_sets: dict[str, list[str]]
+def test_generate_refuses_a_stored_prompt_that_differs_and_leaves_the_file_alone(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
+    _only_sets(monkeypatch, "psc")
+    path = raw_file(raw_dir, "psc", "e3")
+    write_records(path, [_record(source_sets["psc"][0])])  # "sys"/"usr" never match the real prompt
+    before = path.read_bytes()
 
-    created = generate(
-        "topics",
-        2,
-        set_names=["cnn_dailymail", "psc"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    with pytest.raises(ValueError):
+        generate("e3", 3, CLAUDE_VERSION)
 
-    assert created == 4
-    assert len(read_records(raw_file(raw_dir, "cnn_dailymail", "topics"))) == 2
-    assert len(read_records(raw_file(raw_dir, "psc", "topics"))) == 2
+    assert claude_calls == []
+    assert path.read_bytes() == before
+
+
+def test_generate_refuses_a_stale_record_beyond_per_set(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _only_sets(monkeypatch, "psc")
+    path = raw_file(raw_dir, "psc", "e3")
+    write_records(path, [_record(source_sets["psc"][4])])  # fifth in order, outside per_set=2
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError):
+        generate("e3", 2, CLAUDE_VERSION)
+
+    assert claude_calls == []
+    assert path.read_bytes() == before
+
+
+def test_generate_accepts_a_matching_record_beyond_per_set(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _only_sets(monkeypatch, "psc")
+    path = raw_file(raw_dir, "psc", "e3")
+    write_records(path, [_matching_record("psc", "pl", 4)])  # fifth in order, outside per_set=2
+
+    created = generate("e3", 2, CLAUDE_VERSION)
+
+    assert created == 2
+    assert source_sets["psc"][4] in [record.url for record in read_records(path)]
+
+
+@pytest.mark.parametrize("per_set", [0, -1])
+def test_generate_rejects_a_per_set_below_one(
+    source_sets: dict[str, list[str]], claude_calls: list[OpusPrompt], per_set: int
+) -> None:
+    with pytest.raises(ValueError):
+        generate("e3", per_set, CLAUDE_VERSION)
+
+    assert claude_calls == []
+
+
+def test_cli_rejects_per_set_zero(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["opus_sets", "generate", "--spec", "e3", "--per-set", "0"])
+
+    with pytest.raises(SystemExit):
+        opus_sets.main()
+
+    assert claude_calls == []
 
 
 # --- ordered_sources ---
 
 
-def test_ordered_sources_returns_language_and_sources_in_source_order(
+def test_ordered_sources_returns_sources_in_source_order(
     source_sets: dict[str, list[str]],
 ) -> None:
-    language, sources = ordered_sources("psc")
+    _, sources = ordered_sources("psc")
 
-    assert language == "pl"
     assert _urls(sources) == source_sets["psc"]
 
 
-def test_ordered_sources_of_an_english_set_has_language_en(
-    source_sets: dict[str, list[str]],
+@pytest.mark.parametrize(("set_name", "language"), [("cnn_dailymail", "en"), ("psc", "pl")])
+def test_ordered_sources_returns_the_set_language(
+    source_sets: dict[str, list[str]], set_name: str, language: str
 ) -> None:
-    language, _ = ordered_sources("cnn_dailymail")
+    returned_language, _ = ordered_sources(set_name)
 
-    assert language == "en"
+    assert returned_language == language
 
 
 # --- build_sets ---
 
 
 @pytest.fixture
-def opus_outputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
-    outputs = {
-        "cnn_dailymail": tmp_path / "out" / "cnn.json",
-        "psc": tmp_path / "out" / "psc.json",
-    }
+def opus_outputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    out_dir = tmp_path / "out"
     monkeypatch.setattr(
         opus_sets,
         "opus_set_file",
-        lambda spec_name, set_name, count: outputs[set_name].with_name(
-            f"{spec_name}_{set_name}_{count}.json"
-        ),
+        lambda spec_name, set_name, count: out_dir / f"{spec_name}_{set_name}_{count}.json",
     )
-    return outputs
+    return out_dir
+
+
+def _built(path: Path) -> EvaluationSetImportRequest:
+    return EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
 
 
 def test_build_sets_replaces_golden_summary_and_keeps_other_fields(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "e3",
-        3,
-        set_names=["cnn_dailymail"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    _only_sets(monkeypatch, "cnn_dailymail")
+    generate("e3", 3, CLAUDE_VERSION)
     records = read_records(raw_file(raw_dir, "cnn_dailymail", "e3"))
 
-    (path,) = build_sets("e3", set_names=["cnn_dailymail"], raw_dir=raw_dir)
+    (path,) = build_sets("e3")
 
-    built = EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
+    built = _built(path)
     originals = {entry.url: entry for entry in (_entry(index) for index in range(5))}
     assert len(built.entries) == 3
     for entry, record in zip(built.entries, records, strict=True):
@@ -695,100 +676,83 @@ def test_build_sets_replaces_golden_summary_and_keeps_other_fields(
 
 
 def test_build_sets_names_the_set_after_spec_set_and_entry_count(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "facts",
-        4,
-        set_names=["cnn_dailymail"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    _only_sets(monkeypatch, "cnn_dailymail")
+    generate("facts", 4, CLAUDE_VERSION)
 
-    (path,) = build_sets("facts", set_names=["cnn_dailymail"], raw_dir=raw_dir)
+    (path,) = build_sets("facts")
 
-    built = EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
-    assert built.name == "e3-opus-facts-cnn_dailymail-4"
+    assert _built(path).name == "e3-opus-facts-cnn_dailymail-4"
 
 
+@pytest.mark.parametrize(("set_name", "language"), [("cnn_dailymail", "en"), ("psc", "pl")])
 def test_build_sets_takes_language_from_the_subset_and_skips_golden_metrics(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    set_name: str,
+    language: str,
 ) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "e3",
-        2,
-        set_names=["psc"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    _only_sets(monkeypatch, set_name)
+    generate("e3", 2, CLAUDE_VERSION)
 
-    (path,) = build_sets("e3", set_names=["psc"], raw_dir=raw_dir)
+    (path,) = build_sets("e3")
 
-    built = EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
-    assert built.language == "pl"
+    built = _built(path)
+    assert built.language == language
     assert built.compute_golden_metrics is False
 
 
-def test_build_sets_of_an_english_set_has_language_en(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
-) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "e3",
-        2,
-        set_names=["cnn_dailymail"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
-
-    (path,) = build_sets("e3", set_names=["cnn_dailymail"], raw_dir=raw_dir)
-
-    built = EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
-    assert built.language == "en"
-
-
 def test_build_sets_keeps_the_source_order(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "e3",
-        5,
-        set_names=["cnn_dailymail"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    _only_sets(monkeypatch, "cnn_dailymail")
+    generate("e3", 5, CLAUDE_VERSION)
 
-    (path,) = build_sets("e3", set_names=["cnn_dailymail"], raw_dir=raw_dir)
+    (path,) = build_sets("e3")
 
-    built = EvaluationSetImportRequest.model_validate_json(path.read_text("utf-8"))
-    assert _urls(built.entries) == source_sets["cnn_dailymail"]
+    assert _urls(_built(path).entries) == source_sets["cnn_dailymail"]
 
 
 def test_build_sets_skips_a_set_without_records(
-    tmp_path: Path, source_sets: dict[str, list[str]], opus_outputs: dict[str, Path]
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    raw_dir = tmp_path / "raw"
-    generate(
-        "e3",
-        2,
-        set_names=["psc"],
-        raw_dir=raw_dir,
-        summarize=_fake_answer,
-        claude_version=CLAUDE_VERSION,
-    )
+    _only_sets(monkeypatch, "psc")
+    generate("e3", 2, CLAUDE_VERSION)
+    _only_sets(monkeypatch, "cnn_dailymail", "psc")
 
-    paths = build_sets("e3", set_names=["cnn_dailymail", "psc"], raw_dir=raw_dir)
+    paths = build_sets("e3")
 
-    assert len(paths) == 1
-    assert "psc" in paths[0].name
-    assert not any("cnn_dailymail" in path.name for path in paths)
+    assert [path.name for path in paths] == ["e3_psc_2.json"]
+
+
+def test_build_sets_refuses_a_stored_prompt_that_differs_and_writes_no_set_file(
+    source_sets: dict[str, list[str]],
+    claude_calls: list[OpusPrompt],
+    raw_dir: Path,
+    opus_outputs: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _only_sets(monkeypatch, "cnn_dailymail")
+    generate("e3", 2, CLAUDE_VERSION)
+    _only_sets(monkeypatch, "cnn_dailymail", "psc")
+    write_records(raw_file(raw_dir, "psc", "e3"), [_record(source_sets["psc"][0])])
+
+    with pytest.raises(ValueError):
+        build_sets("e3")
+
+    assert not opus_outputs.exists() or list(opus_outputs.iterdir()) == []
 
 
 def test_opus_set_file_lives_in_data_for_english_and_data_psc_for_polish() -> None:

@@ -7,7 +7,6 @@ import json
 import subprocess
 import tempfile
 import time
-from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -171,11 +170,13 @@ def parse_claude_output(stdout: str, duration_ms: int) -> ClaudeAnswer:
         raise ValueError(f"claude reported an error: {stdout[:500]}")
     if "structured_output" not in result:
         raise ValueError(f"claude answered without structured output: {stdout[:500]}")
-    (model,) = result["modelUsage"]
+    answering_models = list(result["modelUsage"])  # a helper model may report usage next to Opus
+    if GENERATOR_MODEL not in answering_models:
+        raise ValueError(f"{GENERATOR_MODEL} did not answer, models that did: {answering_models}")
     usage = {field: int(result["usage"][field]) for field in USAGE_FIELDS}
     return ClaudeAnswer(
         summary=result["structured_output"]["summary"],
-        model=model,
+        model=GENERATOR_MODEL,
         usage=usage,
         duration_ms=duration_ms,
     )
@@ -183,14 +184,12 @@ def parse_claude_output(stdout: str, duration_ms: int) -> ClaudeAnswer:
 
 def summarize_with_claude(prompt: OpusPrompt) -> ClaudeAnswer:
     started = time.monotonic()
-    with (
-        tempfile.TemporaryDirectory() as empty_dir
-    ):  # the working directory's environment details would enter the context
+    with tempfile.TemporaryDirectory() as empty_dir:
         completed = subprocess.run(
             claude_command(prompt),
             capture_output=True,
             text=True,
-            cwd=empty_dir,
+            cwd=empty_dir,  # the working directory's environment details would enter the context
             timeout=CLAUDE_TIMEOUT_SECONDS,
         )
     if completed.returncode != 0:
@@ -226,11 +225,16 @@ def write_records(path: Path, records: list[OpusRecord]) -> None:
     temporary.replace(path)
 
 
+def set_prompts(set_name: str, spec_name: str) -> dict[str, OpusPrompt]:
+    """The prompt for every source of the set, by url, in source order."""
+    spec = spec_for(spec_name)
+    language, sources = ordered_sources(set_name)
+    return {entry.url: opus_prompt(opus_request(entry, spec, language)) for entry in sources}
+
+
 def _assert_same_prompts(records: list[OpusRecord], prompts: dict[str, OpusPrompt]) -> None:
-    """A resumed set must not mix summaries written from two versions of the backend prompt."""
+    """One set must not mix summaries written from two versions of the backend prompt."""
     for record in records:
-        if record.url not in prompts:  # recorded by an earlier run with a larger --per-set
-            continue
         current = prompts[record.url]
         if (record.system, record.user) != (current.system, current.user):
             raise ValueError(
@@ -239,77 +243,67 @@ def _assert_same_prompts(records: list[OpusRecord], prompts: dict[str, OpusPromp
             )
 
 
+def _generate_set(set_name: str, spec_name: str, per_set: int, claude_version: str) -> int:
+    prompts = set_prompts(set_name, spec_name)
+    path = raw_file(RAW_DIR, set_name, spec_name)
+    records = read_records(path)
+    _assert_same_prompts(records, prompts)
+
+    # resume: skip the sources already recorded
+    done_urls = {record.url for record in records}
+    todo = [url for url in list(prompts)[:per_set] if url not in done_urls]
+    log.info(
+        "opus set started", set_name=set_name, spec=spec_name, done=len(done_urls), todo=len(todo)
+    )
+
+    for url in todo:
+        answer = summarize_with_claude(prompts[url])
+        records.append(OpusRecord.from_answer(url, spec_name, prompts[url], answer, claude_version))
+        write_records(path, records)
+        log.info(
+            "opus summary written",
+            set_name=set_name,
+            url=url,
+            model=answer.model,
+            duration_ms=answer.duration_ms,
+            **answer.usage,
+        )
+    return len(todo)
+
+
 # entry points
 
 
-def generate(
-    spec_name: str,
-    per_set: int,
-    *,
-    set_names: Sequence[str] = E3_SETS,
-    raw_dir: Path = RAW_DIR,
-    summarize: Callable[[OpusPrompt], ClaudeAnswer] = summarize_with_claude,
-    claude_version: str,
-) -> int:
+def generate(spec_name: str, per_set: int, claude_version: str) -> int:
     """Summarize the first `per_set` sources of every set, skipping those already recorded; returns the number of new summaries.
 
     The raw file is rewritten after every summary, so an interrupted run loses nothing already written.
     """
-    spec = spec_for(spec_name)
-    written = 0
-    for set_name in set_names:
-        language, sources = ordered_sources(set_name)
-        prompts = {
-            entry.url: opus_prompt(opus_request(entry, spec, language))
-            for entry in sources[:per_set]
-        }
-        path = raw_file(raw_dir, set_name, spec_name)
-        records = read_records(path)
-        _assert_same_prompts(records, prompts)
-        done_urls = {record.url for record in records}
-        todo = [url for url in prompts if url not in done_urls]
-        log.info(
-            "opus set started",
-            set_name=set_name,
-            spec=spec_name,
-            done=len(prompts) - len(todo),
-            todo=len(todo),
-        )
-
-        for url in todo:
-            answer = summarize(prompts[url])
-            records.append(
-                OpusRecord.from_answer(url, spec_name, prompts[url], answer, claude_version)
-            )
-            write_records(path, records)
-            written += 1
-            log.info(
-                "opus summary written",
-                set_name=set_name,
-                url=url,
-                model=answer.model,
-                duration_ms=answer.duration_ms,
-                **answer.usage,
-            )
-    return written
+    if per_set < 1:
+        raise ValueError(f"per_set must be at least 1, got {per_set}")
+    return sum(_generate_set(set_name, spec_name, per_set, claude_version) for set_name in E3_SETS)
 
 
 def opus_set_file(spec_name: str, set_name: str, count: int) -> Path:
     return set_data_dir(set_name) / f"evaluation_set_e3_opus_{spec_name}_{set_name}_{count}.json"
 
 
-def build_sets(
-    spec_name: str, *, set_names: Sequence[str] = E3_SETS, raw_dir: Path = RAW_DIR
-) -> list[Path]:
-    """Evaluation set files whose golden summary is Opus's: the E3 entry with its human reference replaced."""
+def build_sets(spec_name: str) -> list[Path]:
+    """Evaluation set files whose golden summary is Opus's: the E3 entry with its human reference replaced.
+
+    Every set's records are checked against the current prompts before any file is written.
+    """
+    records_by_set = {
+        set_name: read_records(raw_file(RAW_DIR, set_name, spec_name)) for set_name in E3_SETS
+    }
+    for set_name, records in records_by_set.items():
+        _assert_same_prompts(records, set_prompts(set_name, spec_name))
+
     paths = []
-    for set_name in set_names:
-        summaries = {
-            record.url: record.summary
-            for record in read_records(raw_file(raw_dir, set_name, spec_name))
-        }
-        if not summaries:
+    for set_name, records in records_by_set.items():
+        if not records:
             continue
+        summaries = {record.url: record.summary for record in records}
         language, sources = ordered_sources(set_name)
         entries = [
             entry.model_copy(
@@ -325,6 +319,13 @@ def build_sets(
     return paths
 
 
+def _positive_int(text: str) -> int:
+    value = int(text)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {value}")
+    return value
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -333,7 +334,7 @@ def main() -> None:
     generate_command.add_argument("--spec", choices=SPEC_NAMES, required=True)
     generate_command.add_argument(
         "--per-set",
-        type=int,
+        type=_positive_int,
         required=True,
         help="first N sources of every set: smoke-12 first, then the rest of E3-50",
     )
@@ -345,7 +346,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "generate":
-        written = generate(args.spec, args.per_set, claude_version=installed_claude_version())
+        written = generate(args.spec, args.per_set, installed_claude_version())
         print(f"{written} new summaries for spec {args.spec}")
     else:
         for path in build_sets(args.spec):

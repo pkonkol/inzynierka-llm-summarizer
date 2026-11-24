@@ -7,7 +7,7 @@ import type {
 import { TprTnrLegend } from "../calibration/TprTnrLegend";
 import { Table, Td, Tr } from "../ui/Table";
 
-type ScoreKey = Exclude<keyof JudgeScoreSummary, "judged" | "unusable">;
+type ScoreKey = Exclude<keyof JudgeScoreSummary, "judged" | "unusable" | "compared">;
 
 const SCORE_ROWS: { key: ScoreKey; label: string; calibration?: keyof JudgeCalibration }[] = [
   { key: "faithfulness_mean", label: "wierność (zdania)", calibration: "faithfulness" },
@@ -56,6 +56,12 @@ export function RunJudgeAggregate({
           <Td>ocenionych (nieużywalnych)</Td>
           <Td className="text-right">{`${golden.judged} (${golden.unusable})`}</Td>
           <Td className="text-right">{`${ai.judged} (${ai.unusable})`}</Td>
+          <Td className="text-right">—</Td>
+        </Tr>
+        <Tr>
+          <Td>porównanych (podstawa średnich)</Td>
+          <Td className="text-right">{golden.compared}</Td>
+          <Td className="text-right">{ai.compared}</Td>
           <Td className="text-right">—</Td>
         </Tr>
       </Table>

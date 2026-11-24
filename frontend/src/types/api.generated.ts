@@ -1449,13 +1449,19 @@ export interface components {
         };
         /**
          * JudgeScoreSummary
-         * @description Means and shares over the usable judgements of one judge; None when nothing was judged.
+         * @description One judge's results on one side (AI or golden) of a run.
+         *
+         *     `judged` and `unusable` count the judgements on the entries this judge judged in the run;
+         *     the means and shares come from the `compared` entries, the same sample on both sides.
+         *     None when no entry could be compared.
          */
         JudgeScoreSummary: {
             /** Judged */
             judged: number;
             /** Unusable */
             unusable: number;
+            /** Compared */
+            compared: number;
             /** Faithfulness Mean */
             faithfulness_mean: number | null;
             /** Completeness Mean */

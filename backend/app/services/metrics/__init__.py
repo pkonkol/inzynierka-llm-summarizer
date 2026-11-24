@@ -43,9 +43,10 @@ async def judge_summary(
             evaluate_summarization_metric(judge, source_text, summary),
         )
     except (
+        KeyError,
         LlmOutputError,
         ValueError,
-    ) as error:  # deepeval raises ValueError on a malformed answer
+    ) as error:  # deepeval: ValueError on a malformed answer, KeyError on a missing key
         return SummaryJudgement(judge_model=judge.model_id(), error=str(error))
 
     return SummaryJudgement(

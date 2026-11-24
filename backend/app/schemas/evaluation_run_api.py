@@ -5,6 +5,7 @@ from typing import Literal, Self
 
 from pydantic import Field, model_validator
 
+from ..services.metrics.fact_level_judges import MAIN_JUDGE
 from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .job_api import check_context_expansion_settings
@@ -167,7 +168,7 @@ class EvaluationRunDeletedResponse(ApiModel):
 
 
 class JudgesRequest(ApiModel):
-    judge_model: str | None = None  # provider:name; None means the main calibrated judge
+    judge_model: str = MAIN_JUDGE.model_id()  # provider:name
     force: bool = False
 
 

@@ -1483,8 +1483,11 @@ export interface components {
         };
         /** JudgesRequest */
         JudgesRequest: {
-            /** Judge Model */
-            judge_model?: string | null;
+            /**
+             * Judge Model
+             * @default openrouter:tencent/hy4-flash
+             */
+            judge_model: string;
             /**
              * Force
              * @default false
@@ -2809,7 +2812,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["JudgesRequest"] | null;
+                "application/json": components["schemas"]["JudgesRequest"];
             };
         };
         responses: {

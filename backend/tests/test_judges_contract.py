@@ -510,20 +510,81 @@ async def test_judge_pass_skips_an_entry_this_judge_already_judged(
     assert _stored_judges(mongo, run_id, "e1") == [existing]
 
 
-async def test_a_judgement_with_error_counts_as_judged_and_is_not_retried(
+async def test_a_judgement_with_error_is_retried_and_replaced_by_the_new_result(
     mongo: SimpleNamespace, judge_calls: list[dict]
 ) -> None:
-    unusable = _unusable_judgement(MAIN_ID)
     run_id = _seed(
         mongo,
-        [_run_entry("e1", golden=None, judges=[unusable])],
+        [_run_entry("e1", golden=None, judges=[_unusable_judgement(MAIN_ID)])],
         [_set_entry("e1", golden=None)],
     )
 
     await run_judge_pass(run_id, MAIN_ID)
 
-    assert [call for call in judge_calls if call["kind"] == "judge_summary"] == []
-    assert _stored_judges(mongo, run_id, "e1") == [unusable]
+    assert len([call for call in judge_calls if call["kind"] == "judge_summary"]) == 1
+    [only] = _stored_judges(mongo, run_id, "e1")
+    assert only["judge_model"] == MAIN_ID
+    assert only["error"] is None
+    assert only["fact_level"] is not None
+
+
+async def test_ai_and_golden_judgements_with_error_are_both_retried_and_replaced(
+    mongo: SimpleNamespace, judge_calls: list[dict]
+) -> None:
+    run_id = _seed(
+        mongo,
+        [_run_entry("e1", judges=[_unusable_judgement(MAIN_ID)])],
+        [_set_entry("e1", golden_judges=[_unusable_judgement(MAIN_ID)])],
+    )
+
+    await run_judge_pass(run_id, MAIN_ID)
+
+    [ai_judgement] = _stored_judges(mongo, run_id, "e1")
+    assert ai_judgement["error"] is None
+    [golden_judgement] = _stored_set_entry(mongo, "e1")["golden_judges"]
+    assert golden_judgement["judge_model"] == MAIN_ID
+    assert golden_judgement["error"] is None
+    golden_calls = [c for c in judge_calls if c.get("summary") == GOLDEN_TEXT]
+    assert len(golden_calls) == 1
+
+
+async def test_retrying_an_error_judgement_leaves_other_judges_and_useful_results_untouched(
+    mongo: SimpleNamespace, judge_calls: list[dict]
+) -> None:
+    second_ai = _dump(_judgement(SECOND_ID, faithfulness=0.5))
+    second_golden = _dump(_judgement(SECOND_ID, faithfulness=0.25))
+    run_id = _seed(
+        mongo,
+        [_run_entry("e1", judges=[_unusable_judgement(MAIN_ID), second_ai])],
+        [_set_entry("e1", golden_judges=[_unusable_judgement(MAIN_ID), second_golden])],
+    )
+
+    await run_judge_pass(run_id, MAIN_ID)
+
+    judges = _stored_judges(mongo, run_id, "e1")
+    assert second_ai in judges
+    assert [j["error"] for j in judges if j["judge_model"] == MAIN_ID] == [None]
+    golden_judges = _stored_set_entry(mongo, "e1")["golden_judges"]
+    assert second_golden in golden_judges
+    assert [j["error"] for j in golden_judges if j["judge_model"] == MAIN_ID] == [None]
+
+
+async def test_a_useful_golden_judgement_is_kept_when_only_the_ai_judgement_had_error(
+    mongo: SimpleNamespace, judge_calls: list[dict]
+) -> None:
+    useful_golden = _dump(_judgement(MAIN_ID, faithfulness=0.25))
+    run_id = _seed(
+        mongo,
+        [_run_entry("e1", judges=[_unusable_judgement(MAIN_ID)])],
+        [_set_entry("e1", golden_judges=[useful_golden])],
+    )
+
+    await run_judge_pass(run_id, MAIN_ID)
+
+    [ai_judgement] = _stored_judges(mongo, run_id, "e1")
+    assert ai_judgement["error"] is None
+    assert _stored_set_entry(mongo, "e1")["golden_judges"] == [useful_golden]
+    assert [c for c in judge_calls if c.get("summary") == GOLDEN_TEXT] == []
 
 
 async def test_a_pairwise_answer_that_cannot_be_used_stores_no_pairwise_item(
@@ -730,6 +791,41 @@ async def test_an_unusable_judge_answer_is_stored_with_error_and_the_pass_contin
     assert mongo.runs.documents[0]["aggregate_metrics"]["judges"]["status"] == "completed"
 
 
+async def test_failed_keyfact_extraction_stores_error_judgements_and_the_pass_continues(
+    monkeypatch: pytest.MonkeyPatch, mongo: SimpleNamespace, judge_calls: list[dict]
+) -> None:
+    unextractable_source = "A source the model returned no key facts for."
+
+    async def extract_keyfacts_failing_on_one_source(
+        source_text: str, language: str, judge: JudgeModelRef
+    ) -> list[str]:
+        if source_text == unextractable_source:
+            raise LlmOutputError("0 keyfacts", "raw")
+        return list(KEYFACTS)
+
+    _patch_everywhere(monkeypatch, "extract_keyfacts", extract_keyfacts_failing_on_one_source)
+    run_id = _seed(
+        mongo,
+        [_run_entry("e1"), _run_entry("e2")],
+        [_set_entry("e1", input_text=unextractable_source), _set_entry("e2")],
+    )
+
+    await run_judge_pass(run_id, MAIN_ID)
+
+    [broken_ai] = _stored_judges(mongo, run_id, "e1")
+    assert broken_ai["judge_model"] == MAIN_ID
+    assert isinstance(broken_ai["error"], str)
+    assert broken_ai["error"]
+    [broken_golden] = _stored_set_entry(mongo, "e1")["golden_judges"]
+    assert broken_golden["judge_model"] == MAIN_ID
+    assert isinstance(broken_golden["error"], str)
+    assert broken_golden["error"]
+    assert not _stored_set_entry(mongo, "e1").get("keyfacts")
+    [fine] = _stored_judges(mongo, run_id, "e2")
+    assert fine["error"] is None
+    assert mongo.runs.documents[0]["aggregate_metrics"]["judges"]["status"] == "completed"
+
+
 # ---------------------------------------------------------------- judge_summary
 
 
@@ -776,7 +872,10 @@ async def test_judge_summary_runs_all_three_judges_with_the_chosen_model(
 
 
 @pytest.mark.parametrize("stage", ["fact_level", "coherence", "summarization"])
-@pytest.mark.parametrize("failure", [LlmOutputError("bad json", "raw"), ValueError("bad value")])
+@pytest.mark.parametrize(
+    "failure",
+    [LlmOutputError("bad json", "raw"), ValueError("bad value"), KeyError("missing key")],
+)
 async def test_judge_summary_returns_an_error_judgement_when_any_stage_is_unusable(
     judge_stages: dict[str, Any], stage: str, failure: Exception
 ) -> None:
@@ -800,13 +899,14 @@ def _entry_response(
     ai_judges: list[SummaryJudgement],
     golden_judges: list[SummaryJudgement],
     pairwise_scores: list[tuple[str, float]],
+    golden_summary: str | None = GOLDEN_TEXT,
 ) -> EvaluationRunEntryResponse:
     return EvaluationRunEntryResponse.model_validate(
         {
             "entry_id": entry_id,
             "title": entry_id,
             "url": "https://example.com",
-            "golden_summary": GOLDEN_TEXT,
+            "golden_summary": golden_summary,
             "golden_judges": [_dump(judge) for judge in golden_judges],
             "status": "completed",
             "ai_metrics": {
@@ -866,8 +966,8 @@ def test_aggregate_averages_ai_and_golden_scores_of_the_requested_judge_only() -
 def test_aggregate_leaves_unusable_judgements_out_of_the_means_and_counts_them() -> None:
     unusable = SummaryJudgement.model_validate(_unusable_judgement(MAIN_ID))
     entries = [
-        _entry_response("e1", [_judgement(MAIN_ID, faithfulness=0.5)], [], []),
-        _entry_response("e2", [unusable], [], []),
+        _entry_response("e1", [_judgement(MAIN_ID, faithfulness=0.5)], [], [], golden_summary=None),
+        _entry_response("e2", [unusable], [], [], golden_summary=None),
     ]
 
     aggregate = aggregate_run_judgements(entries, MAIN_ID)
@@ -875,6 +975,77 @@ def test_aggregate_leaves_unusable_judgements_out_of_the_means_and_counts_them()
     assert aggregate.ai.judged == 2  # judged counts every stored judgement, unusable ones included
     assert aggregate.ai.unusable == 1
     assert aggregate.ai.faithfulness_mean == pytest.approx(0.5)
+
+
+def test_aggregate_ai_means_come_only_from_entries_whose_golden_judgement_is_useful() -> None:
+    unusable = SummaryJudgement.model_validate(_unusable_judgement(MAIN_ID))
+    entries = [
+        _entry_response(
+            "e1",
+            [_judgement(MAIN_ID, faithfulness=0.5)],
+            [_judgement(MAIN_ID, faithfulness=0.5)],
+            [],
+        ),
+        _entry_response(
+            "e2",
+            [_judgement(MAIN_ID, faithfulness=0.0, has_repetition=True)],
+            [unusable],
+            [],
+        ),
+    ]
+
+    aggregate = aggregate_run_judgements(entries, MAIN_ID)
+
+    assert aggregate.ai.faithfulness_mean == pytest.approx(0.5)
+    assert aggregate.ai.repetition_share == pytest.approx(0.0)
+    assert aggregate.ai.judged == 2
+    assert aggregate.ai.unusable == 0
+    assert aggregate.golden.judged == 2
+    assert aggregate.golden.unusable == 1
+
+
+def test_aggregate_golden_means_come_only_from_entries_whose_ai_judgement_is_useful() -> None:
+    unusable = SummaryJudgement.model_validate(_unusable_judgement(MAIN_ID))
+    entries = [
+        _entry_response(
+            "e1",
+            [_judgement(MAIN_ID, faithfulness=1.0)],
+            [_judgement(MAIN_ID, faithfulness=0.5)],
+            [],
+        ),
+        _entry_response(
+            "e2",
+            [unusable],
+            [_judgement(MAIN_ID, faithfulness=0.0)],
+            [],
+        ),
+    ]
+
+    aggregate = aggregate_run_judgements(entries, MAIN_ID)
+
+    assert aggregate.golden.faithfulness_mean == pytest.approx(0.5)
+    assert aggregate.ai.faithfulness_mean == pytest.approx(1.0)
+    assert aggregate.golden.judged == 2
+    assert aggregate.ai.unusable == 1
+
+
+def test_aggregate_uses_ai_judgement_alone_for_an_entry_without_golden_summary() -> None:
+    entries = [
+        _entry_response(
+            "e1", [_judgement(MAIN_ID, faithfulness=0.25)], [], [], golden_summary=None
+        ),
+        _entry_response(
+            "e2",
+            [_judgement(MAIN_ID, faithfulness=0.75)],
+            [_judgement(MAIN_ID, faithfulness=0.5)],
+            [],
+        ),
+    ]
+
+    aggregate = aggregate_run_judgements(entries, MAIN_ID)
+
+    assert aggregate.ai.faithfulness_mean == pytest.approx(0.5)
+    assert aggregate.golden.faithfulness_mean == pytest.approx(0.5)
 
 
 def test_aggregate_without_any_judgement_has_no_means() -> None:

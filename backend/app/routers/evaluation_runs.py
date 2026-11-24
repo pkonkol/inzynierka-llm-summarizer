@@ -23,14 +23,14 @@ from ..schemas.evaluation_run_api import (
     JudgesRequest,
 )
 from ..schemas.evaluation_run_db import EvaluationRunDocument, EvaluationRunEntryDocument
-from ..services.evaluation_run_metrics import aggregate_run_judgements, run_judge_pass
+from ..services.evaluation_run_metrics import aggregate_run_judgements_per_judge, run_judge_pass
 from ..services.evaluation_runner import run_evaluation_batch
 from ..services.interrupted_work import (
     claim_evaluation_run_for_resume,
     claim_judge_pass_for_queue,
 )
 from ..services.llm import validate_model, validate_processing_strategy
-from ..services.metrics.fact_level_judges import JUDGE_CALIBRATION, MAIN_JUDGE, JudgeModelRef
+from ..services.metrics.fact_level_judges import JUDGE_CALIBRATION, JudgeModelRef
 from .evaluation_sets import find_evaluation_set_or_404
 
 log = structlog.get_logger(__name__)
@@ -179,16 +179,6 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
 
     document = documents[0]
     entries = await _run_entries_with_set_fields(run_id)
-    judge_models = sorted(
-        {
-            judgement.judge_model
-            for entry in entries
-            for judgement in [
-                *(entry.ai_metrics.judges if entry.ai_metrics else []),
-                *entry.golden_judges,
-            ]
-        }
-    )
 
     return EvaluationRunResponse(
         id=str(document["_id"]),
@@ -209,9 +199,7 @@ async def get_evaluation_run(run_id: str) -> EvaluationRunResponse:
         git_sha=document.get("git_sha"),  # absent on runs created before provenance was stored
         temperature=document.get("temperature"),
         aggregate_metrics=document.get("aggregate_metrics", {}),
-        judge_aggregates=[
-            aggregate_run_judgements(entries, judge_model) for judge_model in judge_models
-        ],
+        judge_aggregates=aggregate_run_judgements_per_judge(entries),
         judge_calibration=JUDGE_CALIBRATION,
     )
 
@@ -259,11 +247,9 @@ async def _run_entries_with_set_fields(run_id: str) -> list[EvaluationRunEntryRe
 async def judge_run(
     run_id: str,
     background_tasks: BackgroundTasks,
-    payload: JudgesRequest | None = None,
+    request: JudgesRequest = JudgesRequest(),  # noqa: B008 - no body means the main judge
 ) -> JudgesQueuedResponse:
-    request = payload or JudgesRequest()
-    requested_judge = MAIN_JUDGE.model_id() if request.judge_model is None else request.judge_model
-    judge_model = _supported_judge_model(requested_judge)
+    judge_model = _supported_judge_model(request.judge_model)
     document = await find_evaluation_run_or_404(run_id, {"status": 1})
 
     if document["status"] in {"pending", "running"}:

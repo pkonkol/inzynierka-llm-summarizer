@@ -1275,15 +1275,11 @@
           "content": {
             "application/json": {
               "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/JudgesRequest"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Payload"
+                "$ref": "#/components/schemas/JudgesRequest",
+                "default": {
+                  "judge_model": "openrouter:tencent/hy4-flash",
+                  "force": false
+                }
               }
             }
           }
@@ -4267,15 +4263,9 @@
       "JudgesRequest": {
         "properties": {
           "judge_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Judge Model"
+            "type": "string",
+            "title": "Judge Model",
+            "default": "openrouter:tencent/hy4-flash"
           },
           "force": {
             "type": "boolean",

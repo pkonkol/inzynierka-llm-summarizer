@@ -22,7 +22,6 @@ def _job(origin: str) -> dict:
         "summary_spec": {},
         "language": "auto",
         "origin": origin,
-        "run_deepeval": False,
         "context_expansion_mode": "none",
         "input_text": "",
         "created_at": now,

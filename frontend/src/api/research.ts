@@ -1,5 +1,4 @@
 import type {
-  DeepevalQueuedResponse,
   EvaluationRunCreateRequest,
   EvaluationRunCreateResponse,
   EvaluationRunDeletedResponse,
@@ -15,6 +14,8 @@ import type {
   EvaluationSetListItemResponse,
   GoldenMetricsPassQueuedResponse,
   GoldenMetricsPassResponse,
+  JudgesQueuedResponse,
+  JudgesRequest,
 } from "../types/api.generated";
 import { request } from "./client";
 
@@ -85,9 +86,10 @@ export const getEvaluationRun = (runId: string): Promise<EvaluationRunResponse> 
 export const getEvaluationRunEntries = (runId: string): Promise<EvaluationRunEntriesResponse> =>
   request<EvaluationRunEntriesResponse>(`/api/v1/research/runs/${runId}/entries`);
 
-export const evaluateRunDeepeval = (runId: string): Promise<DeepevalQueuedResponse> =>
-  request<DeepevalQueuedResponse>(`/api/v1/research/runs/${runId}/deepeval`, {
+export const runJudges = (runId: string, judgeModel: string): Promise<JudgesQueuedResponse> =>
+  request<JudgesQueuedResponse>(`/api/v1/research/runs/${runId}/judges`, {
     method: "POST",
+    body: JSON.stringify({ judge_model: judgeModel, force: false } satisfies JudgesRequest),
   });
 
 export const deleteEvaluationRun = (runId: string): Promise<EvaluationRunDeletedResponse> =>

@@ -23,7 +23,7 @@ function toEntry(job: JobStatusResponse, sourceUrl: string): EvaluationSetEntryI
     golden_summary: job.summary_data.summary,
     title: `${modelLabel}:${job.processing_strategy}:${timestamp}:${job.summary_data.title}`,
     url: sourceUrl,
-    golden_metrics: source && summary ? { source, summary, deepeval: job.deepeval_metrics } : null,
+    golden_metrics: source && summary ? { source, summary } : null,
   };
 }
 

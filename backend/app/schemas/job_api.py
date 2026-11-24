@@ -10,7 +10,6 @@ from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .fact_check import FactCheck
 from .job_db import JobErrorCode, JobMetrics
-from .shared_metrics import DeepevalItem
 from .summary import SummaryResponse, UsageMetadata
 from .summary_spec import ProcessingStrategy, ResolvedLength, SummarySpec
 
@@ -87,7 +86,6 @@ class JobCreateRequest(SummarizeSourceRequest):
     model_provider: str
     language: str = "en"
     processing_strategy: ProcessingStrategy = "direct"
-    run_deepeval: bool = False
     context_expansion_mode: ContextExpansionMode = "none"
 
     @model_validator(mode="after")
@@ -114,7 +112,6 @@ class JobStatusResponse(ApiModel):
     resolved_length: ResolvedLength | None = None
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics
-    deepeval_metrics: list[DeepevalItem]
     usage: UsageMetadata
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
     raw_output: str = ""

@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { errorText, getJobStatus } from "../api/client";
 import { useFetchOnMount } from "../hooks/useFetchOnMount";
-import type { DeepevalItemOutput, JobMetrics, JobStatusResponse } from "../types/api.generated";
+import type { JobMetrics, JobStatusResponse } from "../types/api.generated";
 import type { JobStatus, PromptMessage } from "../types/local";
 import { downloadJson } from "../utils/download";
 import { buildExportPayload, exportFilename } from "../utils/evaluationSetExport";
@@ -16,14 +16,12 @@ import {
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
 import { ContextExpansionDetails } from "./ContextExpansionDetails";
-import { DeepevalItems } from "./DeepevalItems";
 import { useFlash } from "./FlashProvider";
 import { InfoList, InfoRow } from "./InfoRow";
 import { MetricsSection } from "./MetricsSection";
 import { StatusLabel } from "./StatusLabel";
 import { Button, type ButtonVariant } from "./ui/Button";
 import { DisclosureSections } from "./ui/DisclosureSections";
-import { SectionHeading } from "./ui/PageShell";
 import { PreBlock } from "./ui/PreBlock";
 
 interface JobDetailPanelProps {
@@ -45,31 +43,14 @@ const METRIC_SECTIONS = [
   { key: "summary", label: "Podsumowanie", field: "summary" as const },
 ] as const;
 
-function JobMetricsPanel({
-  metrics,
-  deepevalMetrics,
-}: {
-  metrics: JobMetrics;
-  deepevalMetrics: DeepevalItemOutput[];
-}) {
-  const defaultMetricsBlocks = METRIC_SECTIONS.map((section) => {
-    const data = metrics[section.field];
-    if (!data) return null;
-    return <MetricsSection key={section.key} title={section.label} data={data} />;
-  });
-
-  const deepevalBlock =
-    deepevalMetrics.length > 0 ? (
-      <div className="grid gap-3">
-        <SectionHeading>Deepeval</SectionHeading>
-        <DeepevalItems items={deepevalMetrics} />
-      </div>
-    ) : null;
-
+function JobMetricsPanel({ metrics }: { metrics: JobMetrics }) {
   return (
     <div className="grid gap-4">
-      {defaultMetricsBlocks}
-      {deepevalBlock}
+      {METRIC_SECTIONS.map((section) => {
+        const data = metrics[section.field];
+        if (!data) return null;
+        return <MetricsSection key={section.key} title={section.label} data={data} />;
+      })}
     </div>
   );
 }
@@ -272,9 +253,7 @@ function JobDetails({ job }: { job: JobStatusResponse }) {
           {
             key: "metrics",
             label: "Metryki",
-            content: (
-              <JobMetricsPanel metrics={job.metrics} deepevalMetrics={job.deepeval_metrics} />
-            ),
+            content: <JobMetricsPanel metrics={job.metrics} />,
           },
           ...(fullJob?.context_expansion
             ? [

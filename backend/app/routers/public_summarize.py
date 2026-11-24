@@ -66,7 +66,6 @@ async def create_public_summarize_job(
         model_name=settings.public_summary_model["model_name"],
         language=payload.language,
         processing_strategy="direct",
-        run_deepeval=False,
         origin="public",
         context_expansion_mode="staged" if payload.add_web_context else "none",
     )

@@ -30,7 +30,12 @@ from app.schemas.summary_spec import (
 )
 from app.services.calibration_files import REPO_ROOT, read_sample, write_sample
 from app.services.llm import generate_summary
-from app.services.metrics.fact_level_judges import JudgeModelRef, extract_keyfacts, split_sentences
+from app.services.metrics.fact_level_judges import (
+    KEYFACT_MODEL,
+    JudgeModelRef,
+    extract_keyfacts,
+    split_sentences,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -59,7 +64,6 @@ AI_GENERATORS = [
     JudgeModelRef("openrouter", "qwen/qwen3.5-9b"),
 ]
 AI_STRATEGIES: list[ProcessingStrategy] = ["direct", "extract_then_synthesize"]
-DEFAULT_KEYFACT_MODEL = "openrouter:deepseek/deepseek-v4-pro-0813"
 _CONCURRENT_SOURCES = 4
 
 
@@ -236,7 +240,7 @@ async def build(data_dir: Path, seed: int, keyfact_model: JudgeModelRef, dry_run
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=2026)
-    parser.add_argument("--keyfact-model", default=DEFAULT_KEYFACT_MODEL, help="provider:model")
+    parser.add_argument("--keyfact-model", default=KEYFACT_MODEL.model_id(), help="provider:model")
     parser.add_argument(
         "--dry-run", action="store_true", help="print the chosen sources and splits, call no model"
     )

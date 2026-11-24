@@ -28,7 +28,7 @@
                 <mxCell id="llm_layer" parent="boundary" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=12;verticalAlign=top;spacingTop=4;" value="&lt;b&gt;Warstwa LLM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[komponent: LangChain]&lt;br&gt;direct / extract_then_synthesize&lt;br&gt;SummarySpec + LengthSpec&lt;br&gt;_prompts, title, presets&lt;/font&gt;" vertex="1">
                     <mxGeometry height="110" width="180" x="220" y="330" as="geometry"/>
                 </mxCell>
-                <mxCell id="metrics" parent="boundary" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=12;verticalAlign=top;spacingTop=4;" value="&lt;b&gt;Metryki&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[komponent: deepeval, rouge-score, nltk]&lt;br&gt;statistical (forma, FK)&lt;br&gt;cross (ROUGE, METEOR,&lt;br&gt;G-Eval parami)&lt;/font&gt;" vertex="1">
+                <mxCell id="metrics" parent="boundary" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#85BBF0;strokeColor=#5D82A8;fontColor=#000000;fontSize=12;verticalAlign=top;spacingTop=4;" value="&lt;b&gt;Metryki&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;[komponent: deepeval, rouge-score, nltk]&lt;br&gt;statistical (forma, FK)&lt;br&gt;cross (ROUGE, METEOR, para)&lt;br&gt;sędziowie (FineSurE, spójność)&lt;/font&gt;" vertex="1">
                     <mxGeometry height="110" width="180" x="420" y="330" as="geometry"/>
                 </mxCell>
                 <mxCell id="e-routers" edge="1" parent="boundary" source="routers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;" target="orchestration" value="uruchamia zadania w">
@@ -73,7 +73,7 @@
                 <mxCell id="e-llm" edge="1" parent="1" source="llm_layer" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;entryX=0.24;entryY=0;entryDx=0;entryDy=0;strokeColor=#444444;" target="llm" value="wysyła prompty do&lt;br&gt;[HTTPS]">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e-geval" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;entryX=0.576;entryY=-0.017;entryDx=0;entryDy=0;strokeColor=#444444;entryPerimeter=0;" target="llm" value="ocenia G-Eval przez&lt;br&gt;[HTTPS]">
+                <mxCell id="e-geval" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=1;endArrow=block;endFill=1;strokeWidth=1.5;labelBackgroundColor=#FFFFFF;fontSize=11;entryX=0.576;entryY=-0.017;entryDx=0;entryDy=0;strokeColor=#444444;entryPerimeter=0;" target="llm" value="sędziowie LLM przez&lt;br&gt;[HTTPS]">
                     <mxGeometry relative="1" x="0.0109" as="geometry">
                         <mxPoint as="offset"/>
                         <mxPoint x="480" y="612.97" as="sourcePoint"/>

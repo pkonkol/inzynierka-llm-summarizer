@@ -17,7 +17,6 @@ from ..schemas.summary import LlmSummaryRequest, LlmSummaryResult, SummaryRespon
 from ..schemas.summary_spec import ResolvedLength, SummarySpec, resolve_target_length
 from ..services.context_expansion import ContextExpansionError, expand_context
 from ..services.job_metrics import (
-    store_deepeval_metrics_for_job,
     store_source_metrics_for_job,
     store_statistical_metrics_for_job,
 )
@@ -117,12 +116,6 @@ async def run_summarization_job(job_id: str) -> None:
         await _store_completed_job(jobs_collection, job_id, summary, title, length, started_at)
 
         spawn_metrics_task(store_statistical_metrics_for_job(job_id, summary.summary, source_text))
-        if job["run_deepeval"]:
-            spawn_metrics_task(
-                store_deepeval_metrics_for_job(
-                    job_id, summary.summary, source_text, spec.output_format
-                )
-            )
 
     except Exception as exc:
         log.exception(

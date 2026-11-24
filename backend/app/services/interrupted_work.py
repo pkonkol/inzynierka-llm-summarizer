@@ -1,5 +1,5 @@
 """The lifecycle of background work — summarisation jobs, evaluation runs, golden-metrics passes
-and GEval passes — once the process that owned it may have died.
+and judge passes — once the process that owned it may have died.
 
 `recover_interrupted_work` runs once in the lifespan, before the app serves anything. Because
 this process has just started, nothing it finds unfinished can belong to it, so the startup path
@@ -26,10 +26,9 @@ from ..core.mongo import (
     get_jobs_collection,
     stale_work_cutoff,
 )
-from .evaluation_run_metrics import run_deepeval_pass
+from .evaluation_run_metrics import run_judge_pass
 from .evaluation_runner import run_evaluation_batch
 from .evaluation_set_metrics import run_golden_metrics_pass
-from .metrics.deepeval import judge_model_id
 from .summarization_runner import run_summarization_job
 
 log = structlog.get_logger(__name__)
@@ -45,10 +44,10 @@ _RESUMABLE_GOLDEN_METRICS = {
     "golden_metrics_pass.resume_attempts": {"$lt": settings.max_resume_attempts},
 }
 
-_UNFINISHED_DEEPEVAL = {"aggregate_metrics.deepeval.status": {"$in": ["pending", "running"]}}
-_RESUMABLE_DEEPEVAL = {
-    **_UNFINISHED_DEEPEVAL,
-    "aggregate_metrics.deepeval.resume_attempts": {"$lt": settings.max_resume_attempts},
+_UNFINISHED_JUDGE_PASS = {"aggregate_metrics.judges.status": {"$in": ["pending", "running"]}}
+_RESUMABLE_JUDGE_PASS = {
+    **_UNFINISHED_JUDGE_PASS,
+    "aggregate_metrics.judges.resume_attempts": {"$lt": settings.max_resume_attempts},
 }
 
 
@@ -84,12 +83,12 @@ async def claim_evaluation_run_for_resume(
     return result.modified_count == 1
 
 
-def judge_pass_provenance() -> dict[str, Any]:
-    """What a judge pass records about the code and settings it scored with."""
+def judge_pass_provenance(judge_model: str) -> dict[str, Any]:
+    """What a judge pass records about the code, settings and judge it scored with."""
     return {
         "git_sha": settings.git_sha,
         "temperature": settings.llm_temperature,
-        "judge_model": judge_model_id(settings),
+        "judge_model": judge_model,
     }
 
 
@@ -118,18 +117,15 @@ async def claim_golden_metrics_pass_for_queue(set_id: ObjectId) -> bool:
                 "golden_metrics_pass.heartbeat_at": datetime.now(UTC),
                 "golden_metrics_pass.resume_attempts": 0,
                 "golden_metrics_pass.error": None,
-                **{
-                    f"golden_metrics_pass.{key}": value
-                    for key, value in judge_pass_provenance().items()
-                },
+                "golden_metrics_pass.git_sha": settings.git_sha,
             }
         },
     )
     return result.modified_count == 1
 
 
-async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
-    """Takes the GEval pass of a finished run for POST .../deepeval. False means it is not claimable.
+async def claim_judge_pass_for_queue(run_id: ObjectId, judge_model: str) -> bool:
+    """Takes the judge pass of a finished run for POST .../judges. False means it is not claimable.
 
     Atomic for the same reason as the golden-metrics claim: two clicks must not start two passes
     that both pay the judge for the same entries.
@@ -138,11 +134,11 @@ async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
         "_id": run_id,
         "status": {"$nin": ["pending", "running"]},
         "$or": [
-            {"aggregate_metrics.deepeval": None},
-            {"aggregate_metrics.deepeval.status": {"$in": ["completed", "failed"]}},
+            {"aggregate_metrics.judges": None},
+            {"aggregate_metrics.judges.status": {"$in": ["completed", "failed"]}},
             {
-                **_UNFINISHED_DEEPEVAL,
-                "aggregate_metrics.deepeval.heartbeat_at": {"$lt": stale_work_cutoff()},
+                **_UNFINISHED_JUDGE_PASS,
+                "aggregate_metrics.judges.heartbeat_at": {"$lt": stale_work_cutoff()},
             },
         ],
     }
@@ -150,11 +146,11 @@ async def claim_deepeval_pass_for_queue(run_id: ObjectId) -> bool:
         query,
         {
             "$set": {
-                "aggregate_metrics.deepeval": {
+                "aggregate_metrics.judges": {
                     "status": "pending",
                     "heartbeat_at": datetime.now(UTC),
                     "resume_attempts": 0,
-                    **judge_pass_provenance(),
+                    **judge_pass_provenance(judge_model),
                 }
             }
         },
@@ -175,7 +171,7 @@ async def recover_interrupted_work() -> None:
         stale_jobs=await cleanup_stale_pending_jobs(),
         stale_runs=await cleanup_stale_evaluation_runs(),
         stale_golden_metrics_passes=await cleanup_stale_golden_metrics_passes(),
-        stale_deepeval_passes=await cleanup_stale_deepeval_passes(),
+        stale_judge_passes=await cleanup_stale_judge_passes(),
         stale_fact_checks=await cleanup_stale_fact_checks(),
     )
 
@@ -211,24 +207,25 @@ async def _resume_resumable_work() -> None:
         spawn_tracked_task(run_golden_metrics_pass(set_id), kind="golden_metrics_pass")
         resumed_golden_metrics_passes += 1
 
-    resumed_deepeval_passes = 0
-    async for run in runs.find(_RESUMABLE_DEEPEVAL, {"_id": 1}):
+    resumed_judge_passes = 0
+    async for run in runs.find(_RESUMABLE_JUDGE_PASS, {"_id": 1, "aggregate_metrics.judges": 1}):
         await runs.update_one(
             {"_id": run["_id"]},
             {
-                "$set": {"aggregate_metrics.deepeval.heartbeat_at": datetime.now(UTC)},
-                "$inc": {"aggregate_metrics.deepeval.resume_attempts": 1},
+                "$set": {"aggregate_metrics.judges.heartbeat_at": datetime.now(UTC)},
+                "$inc": {"aggregate_metrics.judges.resume_attempts": 1},
             },
         )
-        spawn_tracked_task(run_deepeval_pass(str(run["_id"])), kind="deepeval_pass")
-        resumed_deepeval_passes += 1
+        judge_model = run["aggregate_metrics"]["judges"]["judge_model"]
+        spawn_tracked_task(run_judge_pass(str(run["_id"]), judge_model), kind="judge_pass")
+        resumed_judge_passes += 1
 
     log.info(
         "interrupted work resumed",
         resumed_runs=resumed_runs,
         resumed_jobs=resumed_jobs,
         resumed_golden_metrics_passes=resumed_golden_metrics_passes,
-        resumed_deepeval_passes=resumed_deepeval_passes,
+        resumed_judge_passes=resumed_judge_passes,
     )
 
 
@@ -298,17 +295,17 @@ async def cleanup_stale_golden_metrics_passes() -> int:
     return result.modified_count
 
 
-async def cleanup_stale_deepeval_passes() -> int:
+async def cleanup_stale_judge_passes() -> int:
     result = await get_evaluation_runs_collection().update_many(
         {
-            **_UNFINISHED_DEEPEVAL,
-            "aggregate_metrics.deepeval.heartbeat_at": {"$lt": stale_work_cutoff()},
+            **_UNFINISHED_JUDGE_PASS,
+            "aggregate_metrics.judges.heartbeat_at": {"$lt": stale_work_cutoff()},
         },
         {
             "$set": {
-                "aggregate_metrics.deepeval.status": "failed",
-                "aggregate_metrics.deepeval.finished_at": datetime.now(UTC),
-                "aggregate_metrics.deepeval.error": "GEval pass stopped responding",
+                "aggregate_metrics.judges.status": "failed",
+                "aggregate_metrics.judges.finished_at": datetime.now(UTC),
+                "aggregate_metrics.judges.error": "Judge pass stopped responding",
             }
         },
     )

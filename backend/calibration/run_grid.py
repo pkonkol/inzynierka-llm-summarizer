@@ -15,12 +15,13 @@ import structlog
 
 from app.core.config import settings
 from app.schemas.evaluation_run_api import (
-    DeepevalPassMetrics,
     EvaluationRunCreateRequest,
     EvaluationRunCreateResponse,
     EvaluationRunEntriesResponse,
     EvaluationRunEntryResponse,
     EvaluationRunResponse,
+    JudgePassMetrics,
+    JudgesRequest,
     RunStatus,
 )
 from app.schemas.evaluation_set_api import (
@@ -29,20 +30,22 @@ from app.schemas.evaluation_set_api import (
     EvaluationSetListItemResponse,
 )
 from app.schemas.summary_spec import ProcessingStrategy
+from app.services.metrics.fact_level_judges import MAIN_JUDGE
 
 log = structlog.get_logger(__name__)
 
 RESEARCH_API = "/api/v1/research"
 POLL_INTERVAL_SECONDS = 10
+JUDGE_TIMEOUT_SECONDS_PER_ENTRY = 300  # the hy4-flash smoke took 2.5-3.5 min per entry, most of it deepeval's SummarizationMetric.
 TIMEOUT_SECONDS_PER_ENTRY = 120  # the 0.8b smoke took ~5 s per entry; bigger models and extract_then_synthesize need the headroom.
-RESTART_WAIT_SECONDS = 600  # how long starting a run or a deepeval pass, or reading entries, waits out a backend restart; polling waits until its own run deadline instead.
+RESTART_WAIT_SECONDS = 600  # how long starting a run or a judge pass, or reading entries, waits out a backend restart; polling waits until its own run deadline instead.
 RESTART_STATUS_CODES = frozenset({502, 503, 504})
 # The app never answers 503, so the request did not reach it; after 502/504 a proxy may already have passed a POST on.
 UNPROCESSED_STATUS_CODES = frozenset({503})
 FINISHED_STATUSES = frozenset({"completed", "failed"})
 
 CellStatus = RunStatus | Literal["timeout"]
-DeepevalCellStatus = Literal["off", "skipped", "timeout", "completed", "failed"]
+JudgeCellStatus = Literal["off", "skipped", "timeout", "completed", "failed"]
 
 
 @dataclass(frozen=True)
@@ -72,8 +75,8 @@ class GridCellResult:
     seconds: float
     completed_entries: int
     failed_entries: list[EvaluationRunEntryResponse]
-    deepeval_status: DeepevalCellStatus
-    deepeval_error: str | None
+    judges_status: JudgeCellStatus
+    judges_error: str | None
 
 
 def authenticated_client(api_url: str, password: str) -> httpx.Client:
@@ -122,7 +125,7 @@ def run_grid(
     set_names: list[str],
     models: list[ModelRef],
     strategies: list[ProcessingStrategy],
-    with_deepeval: bool,
+    judge_model: str | None,
 ) -> list[GridCellResult]:
     """One run per set x model x strategy, each printed as a report row as soon as it ends.
 
@@ -132,7 +135,7 @@ def run_grid(
     evaluation_sets = [find_set(client, set_name) for set_name in dict.fromkeys(set_names)]
     results: list[GridCellResult] = []
     for evaluation_set, model, strategy in itertools.product(evaluation_sets, models, strategies):
-        result = _run_one_cell(client, evaluation_set, model, strategy, with_deepeval)
+        result = _run_one_cell(client, evaluation_set, model, strategy, judge_model)
         print_report_row(result)
         results.append(result)
     return results
@@ -143,7 +146,7 @@ def _run_one_cell(
     evaluation_set: EvaluationSetListItemResponse,
     model: ModelRef,
     strategy: ProcessingStrategy,
-    with_deepeval: bool,
+    judge_model: str | None,
 ) -> GridCellResult:
     set_name = evaluation_set.name
     timeout_seconds = evaluation_set.entry_count * TIMEOUT_SECONDS_PER_ENTRY
@@ -168,8 +171,12 @@ def _run_one_cell(
         duration_ms=round(seconds * 1000),
     )
 
-    deepeval_status, deepeval_error = _deepeval_outcome(
-        client, run_id, run_status, with_deepeval, timeout_seconds
+    judges_status, judges_error = _judges_outcome(
+        client,
+        run_id,
+        run_status,
+        judge_model,
+        evaluation_set.entry_count * JUDGE_TIMEOUT_SECONDS_PER_ENTRY,
     )
 
     entries = fetch_entries(client, run_id)
@@ -182,8 +189,8 @@ def _run_one_cell(
         seconds=seconds,
         completed_entries=sum(1 for entry in entries if entry.status == "completed"),
         failed_entries=[entry for entry in entries if entry.status == "failed"],
-        deepeval_status=deepeval_status,
-        deepeval_error=deepeval_error,
+        judges_status=judges_status,
+        judges_error=judges_error,
     )
 
 
@@ -194,27 +201,27 @@ def _run_status_or_timeout(client: httpx.Client, run_id: str, timeout_seconds: f
         return "timeout"
 
 
-def _deepeval_outcome(
+def _judges_outcome(
     client: httpx.Client,
     run_id: str,
     run_status: CellStatus,
-    with_deepeval: bool,
+    judge_model: str | None,
     timeout_seconds: float,
-) -> tuple[DeepevalCellStatus, str | None]:
-    """The deepeval column of the report row and the error behind it."""
-    if not with_deepeval:
+) -> tuple[JudgeCellStatus, str | None]:
+    """The judges column of the report row and the error behind it."""
+    if judge_model is None:
         return "off", None
     if run_status != "completed":
         return "skipped", None
     try:
-        deepeval = run_deepeval(client, run_id, timeout_seconds)
+        judge_pass = run_judges(client, run_id, judge_model, timeout_seconds)
     except TimeoutError:
         return "timeout", "timed out"
-    if deepeval.status == "completed":
+    if judge_pass.status == "completed":
         return "completed", None
-    if deepeval.status == "failed":
-        return "failed", deepeval.error
-    raise RuntimeError(f"run {run_id}: deepeval pass ended as {deepeval.status}")
+    if judge_pass.status == "failed":
+        return "failed", judge_pass.error
+    raise RuntimeError(f"run {run_id}: judge pass ended as {judge_pass.status}")
 
 
 def start_run(
@@ -247,15 +254,21 @@ def wait_for_run(
     return _poll_run(client, run_id, timeout_seconds, lambda run: run.status in FINISHED_STATUSES)
 
 
-def run_deepeval(client: httpx.Client, run_id: str, timeout_seconds: float) -> DeepevalPassMetrics:
-    """POST /runs/{id}/deepeval and poll aggregate_metrics.deepeval until it finishes."""
+def run_judges(
+    client: httpx.Client, run_id: str, judge_model: str, timeout_seconds: float
+) -> JudgePassMetrics:
+    """POST /runs/{id}/judges and poll aggregate_metrics.judges until it finishes."""
     _request_waiting_out_restart(
-        client, "POST", f"{RESEARCH_API}/runs/{run_id}/deepeval", _restart_wait_deadline()
+        client,
+        "POST",
+        f"{RESEARCH_API}/runs/{run_id}/judges",
+        _restart_wait_deadline(),
+        json=JudgesRequest(judge_model=judge_model).model_dump(mode="json"),
     )
-    run = _poll_run(client, run_id, timeout_seconds, _deepeval_finished)
-    if run.aggregate_metrics.deepeval is None:
-        raise RuntimeError(f"run {run_id}: deepeval pass finished without a status")
-    return run.aggregate_metrics.deepeval
+    run = _poll_run(client, run_id, timeout_seconds, _judge_pass_finished)
+    if run.aggregate_metrics.judges is None:
+        raise RuntimeError(f"run {run_id}: judge pass finished without a status")
+    return run.aggregate_metrics.judges
 
 
 def fetch_entries(client: httpx.Client, run_id: str) -> list[EvaluationRunEntryResponse]:
@@ -266,7 +279,7 @@ def fetch_entries(client: httpx.Client, run_id: str) -> list[EvaluationRunEntryR
 
 
 def print_report_header() -> None:
-    print("| set | model | strategy | run | status | seconds | completed | failed | deepeval |")
+    print("| set | model | strategy | run | status | seconds | completed | failed | judges |")
     print("|---|---|---|---|---|---|---|---|---|")
 
 
@@ -274,18 +287,16 @@ def print_report_row(result: GridCellResult) -> None:
     print(
         f"| {result.set_name} | {result.model} | {result.strategy} | {result.run_id} "
         f"| {result.status} | {result.seconds:.0f} | {result.completed_entries} "
-        f"| {len(result.failed_entries)} | {result.deepeval_status} |"
+        f"| {len(result.failed_entries)} | {result.judges_status} |"
     )
 
 
 def print_failures(results: list[GridCellResult]) -> None:
-    """Each timed-out run, each failed entry's title and error, then each failed or timed-out deepeval pass."""
+    """Each timed-out run, each failed entry's title and error, then each failed or timed-out judge pass."""
     timed_out_runs = [result for result in results if result.status == "timeout"]
     entry_failures = [(result, entry) for result in results for entry in result.failed_entries]
-    deepeval_failures = [
-        result for result in results if result.deepeval_status in ("failed", "timeout")
-    ]
-    if not timed_out_runs and not entry_failures and not deepeval_failures:
+    judge_failures = [result for result in results if result.judges_status in ("failed", "timeout")]
+    if not timed_out_runs and not entry_failures and not judge_failures:
         return
     print("\nFailures:\n")
     for result in timed_out_runs:
@@ -294,8 +305,8 @@ def print_failures(results: list[GridCellResult]) -> None:
         )
     for result, entry in entry_failures:
         print(f"- {_cell_label(result)}: {entry.title}: {_one_line(entry.error)}")
-    for result in deepeval_failures:
-        print(f"- {_cell_label(result)}: deepeval pass: {_one_line(result.deepeval_error)}")
+    for result in judge_failures:
+        print(f"- {_cell_label(result)}: judge pass: {_one_line(result.judges_error)}")
 
 
 def _cell_label(result: GridCellResult) -> str:
@@ -364,9 +375,9 @@ def _restart_wait_deadline() -> float:
     return time.monotonic() + RESTART_WAIT_SECONDS
 
 
-def _deepeval_finished(run: EvaluationRunResponse) -> bool:
-    deepeval = run.aggregate_metrics.deepeval
-    return deepeval is not None and deepeval.status in FINISHED_STATUSES
+def _judge_pass_finished(run: EvaluationRunResponse) -> bool:
+    judge_pass = run.aggregate_metrics.judges
+    return judge_pass is not None and judge_pass.status in FINISHED_STATUSES
 
 
 def _list_sets(client: httpx.Client) -> list[EvaluationSetListItemResponse]:
@@ -397,7 +408,12 @@ def main() -> None:
         "--strategies", nargs="+", default=["direct"], choices=get_args(ProcessingStrategy)
     )
     grid_command.add_argument(
-        "--deepeval", action="store_true", help="deepeval (G-Eval) metrics after each completed run"
+        "--judge",
+        nargs="?",
+        const=MAIN_JUDGE.model_id(),
+        default=None,
+        metavar="PROVIDER:MODEL",
+        help=f"run the judges after each completed run; without a value {MAIN_JUDGE.model_id()}",
     )
     for command in (import_command, grid_command):
         command.add_argument("--api-url", default="http://127.0.0.1:8000")
@@ -408,7 +424,7 @@ def main() -> None:
         import_sets(client, args.set_files)
         return
     print_report_header()
-    results = run_grid(client, args.sets, args.models, args.strategies, args.deepeval)
+    results = run_grid(client, args.sets, args.models, args.strategies, args.judge)
     print_failures(results)
 
 

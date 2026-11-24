@@ -152,15 +152,15 @@ def test_an_unusable_pair_answer_skips_that_pair_only(
     judged_inputs: list[str] = []
 
     async def fake_pairwise(
-        _settings: object, input_text: str, ai_text: str, *_args: object, **_kwargs: object
-    ) -> tuple[dict[str, object]]:
+        _judge: object, input_text: str, ai_text: str, *_args: object, **_kwargs: object
+    ) -> dict[str, object]:
         judged_inputs.append(ai_text)
         if len(judged_inputs) == 1:
             raise KeyError("score")
-        return ({"score": 0.8, "consistent": True},)
+        return {"score": 0.8, "consistent": True}
 
     monkeypatch.setattr(run_judges, "evaluate_pairwise_cross_deepeval", fake_pairwise)
-    predictions = CandidatePredictions(judge_model="m", prompt_version="v")
+    predictions = CandidatePredictions(judge_model="openrouter:m", prompt_version="v")
 
     asyncio.run(
         run_judges._judge_pairs(

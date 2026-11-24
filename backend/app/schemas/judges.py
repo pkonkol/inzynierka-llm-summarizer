@@ -2,6 +2,8 @@
 
 from typing import Literal
 
+from pydantic import Field
+
 from .base import ApiModel
 from .usage import UsageMetadata
 
@@ -61,3 +63,41 @@ class CoherenceResult(ApiModel):
     judge_model: str
     prompt_version: str
     usage: UsageMetadata
+
+
+class DeepevalItem(ApiModel):
+    name: str
+    score: float
+    passed: bool
+    reason: str
+    judge_model: str | None = None  # None on results judged before judge provenance was stored
+    rubric_version: str | None = None
+
+
+class SummaryJudgement(ApiModel):
+    """Every judge on one summary with one judge model; error set means the judge answer was unusable."""
+
+    judge_model: str
+    sentences: list[str] = Field(default_factory=list)  # the split the sentence verdicts index into
+    fact_level: FactLevelResult | None = None
+    coherence: CoherenceResult | None = None
+    summarization_metric: DeepevalItem | None = None
+    error: str | None = None
+
+
+class SourceKeyfacts(ExtractedKeyfacts):
+    model: str  # provider:name of the model that extracted them
+
+
+class TprTnr(ApiModel):
+    tpr: float
+    tnr: float
+
+
+class JudgeCalibration(ApiModel):
+    """TPR/TNR of a judge model on the test split of the calibration set (data/calibration/report_test.md)."""
+
+    faithfulness: TprTnr
+    keyfact_present: TprTnr
+    sentence_carries_keyfact: TprTnr
+    coherence: TprTnr

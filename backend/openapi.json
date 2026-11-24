@@ -1248,13 +1248,13 @@
         }
       }
     },
-    "/api/v1/research/runs/{run_id}/deepeval": {
+    "/api/v1/research/runs/{run_id}/judges": {
       "post": {
         "tags": [
           "research"
         ],
-        "summary": "Evaluate Run Deepeval",
-        "operationId": "evaluate_run_deepeval_api_v1_research_runs__run_id__deepeval_post",
+        "summary": "Judge Run",
+        "operationId": "judge_run_api_v1_research_runs__run_id__judges_post",
         "security": [
           {
             "HTTPBearer": []
@@ -1269,25 +1269,32 @@
               "type": "string",
               "title": "Run Id"
             }
-          },
-          {
-            "name": "force",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Force"
-            }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/JudgesRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeepevalQueuedResponse"
+                  "$ref": "#/components/schemas/JudgesQueuedResponse"
                 }
               }
             }
@@ -1583,27 +1590,36 @@
           "summary": {
             "$ref": "#/components/schemas/SummaryStatisticalMetrics"
           },
-          "deepeval": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/DeepevalItem-Output"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deepeval"
+          "judges": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryJudgement"
+            },
+            "type": "array",
+            "title": "Judges"
           }
         },
         "type": "object",
         "required": [
           "summary",
-          "deepeval"
+          "judges"
         ],
         "title": "AiMetrics"
+      },
+      "AlignmentJudgement": {
+        "properties": {
+          "keyfacts": {
+            "items": {
+              "$ref": "#/components/schemas/KeyfactMatch"
+            },
+            "type": "array",
+            "title": "Keyfacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyfacts"
+        ],
+        "title": "AlignmentJudgement"
       },
       "AssessedSource": {
         "properties": {
@@ -1986,6 +2002,50 @@
         ],
         "title": "ClaimSearch"
       },
+      "CoherenceJudgement": {
+        "properties": {
+          "coherent": {
+            "type": "boolean",
+            "title": "Coherent"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "coherent",
+          "reason"
+        ],
+        "title": "CoherenceJudgement"
+      },
+      "CoherenceResult": {
+        "properties": {
+          "judgement": {
+            "$ref": "#/components/schemas/CoherenceJudgement"
+          },
+          "judge_model": {
+            "type": "string",
+            "title": "Judge Model"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "judgement",
+          "judge_model",
+          "prompt_version",
+          "usage"
+        ],
+        "title": "CoherenceResult"
+      },
       "ContextExpansionResult": {
         "properties": {
           "mode": {
@@ -2084,12 +2144,12 @@
             ],
             "title": "Meteor"
           },
-          "deepeval": {
+          "pairwise": {
             "items": {
               "$ref": "#/components/schemas/PairwiseDeepevalItem"
             },
             "type": "array",
-            "title": "Deepeval"
+            "title": "Pairwise"
           }
         },
         "type": "object",
@@ -2098,61 +2158,11 @@
           "rouge2",
           "rougeL",
           "meteor",
-          "deepeval"
+          "pairwise"
         ],
         "title": "CrossMetrics"
       },
-      "DeepevalItem-Input": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "score": {
-            "type": "number",
-            "title": "Score"
-          },
-          "passed": {
-            "type": "boolean",
-            "title": "Passed"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason"
-          },
-          "judge_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Judge Model"
-          },
-          "rubric_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rubric Version"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "score",
-          "passed",
-          "reason"
-        ],
-        "title": "DeepevalItem"
-      },
-      "DeepevalItem-Output": {
+      "DeepevalItem": {
         "properties": {
           "name": {
             "type": "string",
@@ -2204,174 +2214,6 @@
         ],
         "title": "DeepevalItem"
       },
-      "DeepevalPassMetrics": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "failed"
-            ],
-            "title": "Status"
-          },
-          "heartbeat_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Heartbeat At"
-          },
-          "resume_attempts": {
-            "type": "integer",
-            "title": "Resume Attempts",
-            "default": 0
-          },
-          "started_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Started At"
-          },
-          "finished_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
-          },
-          "updated_entries": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated Entries"
-          },
-          "skipped_entries": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Skipped Entries"
-          },
-          "already_scored_entries": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Already Scored Entries"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "git_sha": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Git Sha"
-          },
-          "temperature": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Temperature"
-          },
-          "judge_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Judge Model"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "heartbeat_at",
-          "resume_attempts",
-          "started_at",
-          "finished_at",
-          "updated_entries",
-          "skipped_entries",
-          "already_scored_entries",
-          "error",
-          "git_sha",
-          "temperature",
-          "judge_model"
-        ],
-        "title": "DeepevalPassMetrics",
-        "description": "Progress of the GEval pass, which runs separately from the run itself.\n\ngit_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a\ngiven score is the judge_model stored with that score."
-      },
-      "DeepevalQueuedResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "queued",
-            "title": "Status"
-          },
-          "run_id": {
-            "type": "string",
-            "title": "Run Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "run_id"
-        ],
-        "title": "DeepevalQueuedResponse"
-      },
       "EvaluationRunAggregateMetrics": {
         "properties": {
           "entry_count": {
@@ -2418,10 +2260,10 @@
             ],
             "title": "Error"
           },
-          "deepeval": {
+          "judges": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DeepevalPassMetrics"
+                "$ref": "#/components/schemas/JudgePassMetrics"
               },
               {
                 "type": "null"
@@ -2435,7 +2277,7 @@
           "completed_entries",
           "failed_entries",
           "error",
-          "deepeval"
+          "judges"
         ],
         "title": "EvaluationRunAggregateMetrics"
       },
@@ -2582,7 +2424,24 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics-Output"
+                "$ref": "#/components/schemas/GoldenMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "golden_judges": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryJudgement"
+            },
+            "type": "array",
+            "title": "Golden Judges"
+          },
+          "keyfacts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceKeyfacts"
               },
               {
                 "type": "null"
@@ -2670,6 +2529,8 @@
           "url",
           "golden_summary",
           "golden_metrics",
+          "golden_judges",
+          "keyfacts",
           "ai_summary",
           "context_expansion",
           "resolved_length",
@@ -2864,6 +2725,20 @@
           },
           "aggregate_metrics": {
             "$ref": "#/components/schemas/EvaluationRunAggregateMetrics"
+          },
+          "judge_aggregates": {
+            "items": {
+              "$ref": "#/components/schemas/RunJudgeAggregate"
+            },
+            "type": "array",
+            "title": "Judge Aggregates"
+          },
+          "judge_calibration": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JudgeCalibration"
+            },
+            "type": "object",
+            "title": "Judge Calibration"
           }
         },
         "type": "object",
@@ -2883,7 +2758,9 @@
           "entry_count",
           "git_sha",
           "temperature",
-          "aggregate_metrics"
+          "aggregate_metrics",
+          "judge_aggregates",
+          "judge_calibration"
         ],
         "title": "EvaluationRunResponse"
       },
@@ -3034,7 +2911,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics-Input"
+                "$ref": "#/components/schemas/GoldenMetrics"
               },
               {
                 "type": "null"
@@ -3078,7 +2955,7 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics-Output"
+                "$ref": "#/components/schemas/GoldenMetrics"
               },
               {
                 "type": "null"
@@ -3142,12 +3019,29 @@
           "golden_metrics": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/GoldenMetrics-Output"
+                "$ref": "#/components/schemas/GoldenMetrics"
               },
               {
                 "type": "null"
               }
             ]
+          },
+          "keyfacts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceKeyfacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "golden_judges": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryJudgement"
+            },
+            "type": "array",
+            "title": "Golden Judges"
           }
         },
         "type": "object",
@@ -3156,7 +3050,9 @@
           "golden_summary",
           "title",
           "url",
-          "golden_metrics"
+          "golden_metrics",
+          "keyfacts",
+          "golden_judges"
         ],
         "title": "EvaluationSetEntryResponse",
         "description": "input_text is deliberately excluded \u2014 fetched separately via the input-text endpoint."
@@ -3418,51 +3314,105 @@
         ],
         "title": "FactCheck"
       },
-      "GoldenMetrics-Input": {
+      "FactLevelResult": {
         "properties": {
-          "source": {
-            "$ref": "#/components/schemas/SourceMetrics"
+          "scores": {
+            "$ref": "#/components/schemas/FactLevelScores"
           },
-          "summary": {
-            "$ref": "#/components/schemas/SummaryStatisticalMetrics"
+          "faithfulness": {
+            "$ref": "#/components/schemas/FaithfulnessJudgement"
           },
-          "deepeval": {
-            "items": {
-              "$ref": "#/components/schemas/DeepevalItem-Input"
-            },
-            "type": "array",
-            "title": "Deepeval"
+          "alignment": {
+            "$ref": "#/components/schemas/AlignmentJudgement"
+          },
+          "judge_model": {
+            "type": "string",
+            "title": "Judge Model"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageMetadata"
           }
         },
         "type": "object",
         "required": [
-          "source",
-          "summary",
-          "deepeval"
+          "scores",
+          "faithfulness",
+          "alignment",
+          "judge_model",
+          "prompt_version",
+          "usage"
         ],
-        "title": "GoldenMetrics"
+        "title": "FactLevelResult"
       },
-      "GoldenMetrics-Output": {
+      "FactLevelScores": {
+        "properties": {
+          "faithfulness": {
+            "type": "number",
+            "title": "Faithfulness"
+          },
+          "completeness": {
+            "type": "number",
+            "title": "Completeness"
+          },
+          "conciseness": {
+            "type": "number",
+            "title": "Conciseness"
+          },
+          "has_repetition": {
+            "type": "boolean",
+            "title": "Has Repetition"
+          },
+          "repeated_sentence_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Repeated Sentence Indices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "faithfulness",
+          "completeness",
+          "conciseness",
+          "has_repetition",
+          "repeated_sentence_indices"
+        ],
+        "title": "FactLevelScores"
+      },
+      "FaithfulnessJudgement": {
+        "properties": {
+          "sentences": {
+            "items": {
+              "$ref": "#/components/schemas/SentenceFaithfulness"
+            },
+            "type": "array",
+            "title": "Sentences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentences"
+        ],
+        "title": "FaithfulnessJudgement"
+      },
+      "GoldenMetrics": {
         "properties": {
           "source": {
             "$ref": "#/components/schemas/SourceMetrics"
           },
           "summary": {
             "$ref": "#/components/schemas/SummaryStatisticalMetrics"
-          },
-          "deepeval": {
-            "items": {
-              "$ref": "#/components/schemas/DeepevalItem-Output"
-            },
-            "type": "array",
-            "title": "Deepeval"
           }
         },
         "type": "object",
         "required": [
           "source",
-          "summary",
-          "deepeval"
+          "summary"
         ],
         "title": "GoldenMetrics"
       },
@@ -3627,11 +3577,6 @@
             ],
             "title": "Processing Strategy",
             "default": "direct"
-          },
-          "run_deepeval": {
-            "type": "boolean",
-            "title": "Run Deepeval",
-            "default": false
           },
           "context_expansion_mode": {
             "type": "string",
@@ -3892,13 +3837,6 @@
           "metrics": {
             "$ref": "#/components/schemas/JobMetrics"
           },
-          "deepeval_metrics": {
-            "items": {
-              "$ref": "#/components/schemas/DeepevalItem-Output"
-            },
-            "type": "array",
-            "title": "Deepeval Metrics"
-          },
           "usage": {
             "$ref": "#/components/schemas/UsageMetadata"
           },
@@ -4016,7 +3954,6 @@
           "resolved_length",
           "summary_data",
           "metrics",
-          "deepeval_metrics",
           "usage",
           "raw_metadata",
           "raw_output",
@@ -4031,6 +3968,317 @@
           "error_code"
         ],
         "title": "JobStatusResponse"
+      },
+      "JudgeCalibration": {
+        "properties": {
+          "faithfulness": {
+            "$ref": "#/components/schemas/TprTnr"
+          },
+          "keyfact_present": {
+            "$ref": "#/components/schemas/TprTnr"
+          },
+          "sentence_carries_keyfact": {
+            "$ref": "#/components/schemas/TprTnr"
+          },
+          "coherence": {
+            "$ref": "#/components/schemas/TprTnr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "faithfulness",
+          "keyfact_present",
+          "sentence_carries_keyfact",
+          "coherence"
+        ],
+        "title": "JudgeCalibration",
+        "description": "TPR/TNR of a judge model on the test split of the calibration set (data/calibration/report_test.md)."
+      },
+      "JudgePassMetrics": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "heartbeat_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heartbeat At"
+          },
+          "resume_attempts": {
+            "type": "integer",
+            "title": "Resume Attempts",
+            "default": 0
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "updated_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated Entries"
+          },
+          "skipped_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Entries"
+          },
+          "already_scored_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Already Scored Entries"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "git_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Sha"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "heartbeat_at",
+          "resume_attempts",
+          "started_at",
+          "finished_at",
+          "updated_entries",
+          "skipped_entries",
+          "already_scored_entries",
+          "error",
+          "git_sha",
+          "temperature",
+          "judge_model"
+        ],
+        "title": "JudgePassMetrics",
+        "description": "Progress of the judge pass, which runs separately from the run itself.\n\ngit_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a\ngiven score is the judge_model stored with that score."
+      },
+      "JudgeScoreSummary": {
+        "properties": {
+          "judged": {
+            "type": "integer",
+            "title": "Judged"
+          },
+          "unusable": {
+            "type": "integer",
+            "title": "Unusable"
+          },
+          "faithfulness_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faithfulness Mean"
+          },
+          "completeness_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completeness Mean"
+          },
+          "conciseness_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conciseness Mean"
+          },
+          "repetition_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetition Share"
+          },
+          "coherent_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherent Share"
+          },
+          "summarization_metric_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summarization Metric Mean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "judged",
+          "unusable",
+          "faithfulness_mean",
+          "completeness_mean",
+          "conciseness_mean",
+          "repetition_share",
+          "coherent_share",
+          "summarization_metric_mean"
+        ],
+        "title": "JudgeScoreSummary",
+        "description": "Means and shares over the usable judgements of one judge; None when nothing was judged."
+      },
+      "JudgesQueuedResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "judge_model": {
+            "type": "string",
+            "title": "Judge Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "run_id",
+          "judge_model"
+        ],
+        "title": "JudgesQueuedResponse"
+      },
+      "JudgesRequest": {
+        "properties": {
+          "judge_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "JudgesRequest"
       },
       "KeepaliveResponse": {
         "properties": {
@@ -4049,6 +4297,32 @@
           "held_seconds"
         ],
         "title": "KeepaliveResponse"
+      },
+      "KeyfactMatch": {
+        "properties": {
+          "keyfact_index": {
+            "type": "integer",
+            "title": "Keyfact Index"
+          },
+          "present": {
+            "type": "boolean",
+            "title": "Present"
+          },
+          "sentence_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Sentence Indices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyfact_index",
+          "present",
+          "sentence_indices"
+        ],
+        "title": "KeyfactMatch"
       },
       "KeyfactsApproval": {
         "properties": {
@@ -4317,6 +4591,47 @@
         ],
         "title": "ResolvedLength"
       },
+      "RunJudgeAggregate": {
+        "properties": {
+          "judge_model": {
+            "type": "string",
+            "title": "Judge Model"
+          },
+          "ai": {
+            "$ref": "#/components/schemas/JudgeScoreSummary"
+          },
+          "golden": {
+            "$ref": "#/components/schemas/JudgeScoreSummary"
+          },
+          "pairwise_judged": {
+            "type": "integer",
+            "title": "Pairwise Judged"
+          },
+          "pairwise_ai_wins": {
+            "type": "integer",
+            "title": "Pairwise Ai Wins"
+          },
+          "pairwise_golden_wins": {
+            "type": "integer",
+            "title": "Pairwise Golden Wins"
+          },
+          "pairwise_ties": {
+            "type": "integer",
+            "title": "Pairwise Ties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "judge_model",
+          "ai",
+          "golden",
+          "pairwise_judged",
+          "pairwise_ai_wins",
+          "pairwise_golden_wins",
+          "pairwise_ties"
+        ],
+        "title": "RunJudgeAggregate"
+      },
       "ScaledLength": {
         "properties": {
           "policy": {
@@ -4359,6 +4674,47 @@
         "title": "ScaledLength",
         "description": "max_sentences pins the sentence count instead of deriving it from the words, and\nwords_multiplier shrinks the whole word range: a one-sentence summary still gets a slider,\nbut over roughly a tenth of the words a multi-sentence one spans."
       },
+      "SentenceFaithfulness": {
+        "properties": {
+          "sentence_index": {
+            "type": "integer",
+            "title": "Sentence Index"
+          },
+          "faithful": {
+            "type": "boolean",
+            "title": "Faithful"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unsupported",
+                  "contradicted",
+                  "out_of_context",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentence_index",
+          "faithful",
+          "error_type",
+          "reason"
+        ],
+        "title": "SentenceFaithfulness"
+      },
       "SentenceLabel": {
         "properties": {
           "faithful": {
@@ -4391,6 +4747,27 @@
         ],
         "title": "SentenceLabel"
       },
+      "SourceKeyfacts": {
+        "properties": {
+          "keyfacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keyfacts"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyfacts",
+          "model"
+        ],
+        "title": "SourceKeyfacts"
+      },
       "SourceMetrics": {
         "properties": {
           "char_count": {
@@ -4408,6 +4785,73 @@
           "flesch_kincaid_grade"
         ],
         "title": "SourceMetrics"
+      },
+      "SummaryJudgement": {
+        "properties": {
+          "judge_model": {
+            "type": "string",
+            "title": "Judge Model"
+          },
+          "sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sentences"
+          },
+          "fact_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactLevelResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coherence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoherenceResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summarization_metric": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeepevalItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "judge_model",
+          "sentences",
+          "fact_level",
+          "coherence",
+          "summarization_metric",
+          "error"
+        ],
+        "title": "SummaryJudgement",
+        "description": "Every judge on one summary with one judge model; error set means the judge answer was unusable."
       },
       "SummaryLabels": {
         "properties": {
@@ -4622,6 +5066,24 @@
           "token"
         ],
         "title": "TokenResponse"
+      },
+      "TprTnr": {
+        "properties": {
+          "tpr": {
+            "type": "number",
+            "title": "Tpr"
+          },
+          "tnr": {
+            "type": "number",
+            "title": "Tnr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tpr",
+          "tnr"
+        ],
+        "title": "TprTnr"
       },
       "UrlSummaryListItem": {
         "properties": {

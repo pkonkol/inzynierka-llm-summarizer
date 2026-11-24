@@ -14,9 +14,10 @@ from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 
-from ...core.config import Settings
+from ...core.config import settings
 from ...core.executors import run_geval
 from ..llm import build_llm, extract_text_from_content
+from .fact_level_judges import JudgeModelRef
 
 log = structlog.get_logger(__name__)
 
@@ -82,28 +83,25 @@ def _apply_deepeval_timeout_override(timeout_seconds: int) -> None:
     log.info("deepeval per-task timeout overridden", timeout_seconds=timeout_seconds)
 
 
-def _build_deepeval_model(settings: Settings) -> DeepEvalBaseLLM:
+def _build_deepeval_model(judge: JudgeModelRef) -> DeepEvalBaseLLM:
     if settings.deepeval_timeout_seconds:
         _apply_deepeval_timeout_override(settings.deepeval_timeout_seconds)
 
-    model_provider = settings.deepeval_judge_model["model_provider"]
-    model_name = settings.deepeval_judge_model["model_name"]
-    log.info("building deepeval judge model", provider=model_provider, model=model_name)
-    chat_model = build_llm(model_provider, model_name)
-    if model_provider.lower() == "openrouter":
+    log.info("building deepeval judge model", provider=judge.provider, model=judge.name)
+    chat_model = build_llm(judge.provider, judge.name)
+    if judge.provider.lower() == "openrouter":
         chat_model = chat_model.bind(response_format={"type": "json_object"})
-    return _LangchainDeepEvalModel(chat_model, model_name)
+    return _LangchainDeepEvalModel(chat_model, judge.name)
 
 
 _judge_models: dict[str, DeepEvalBaseLLM] = {}
 
 
-def get_deepeval_judge_model(settings: Settings) -> DeepEvalBaseLLM:
+def get_deepeval_judge_model(judge: JudgeModelRef) -> DeepEvalBaseLLM:
     """One build per judge model. Each build opens an HTTP client that is never closed."""
-    judge_model = judge_model_id(settings)
-    if judge_model not in _judge_models:
-        _judge_models[judge_model] = _build_deepeval_model(settings)
-    return _judge_models[judge_model]
+    if judge.model_id() not in _judge_models:
+        _judge_models[judge.model_id()] = _build_deepeval_model(judge)
+    return _judge_models[judge.model_id()]
 
 
 def run_metric(
@@ -149,74 +147,16 @@ def rubric_version(spec: GEvalSpec) -> str:
     return hashlib.sha256(json.dumps(rubric, sort_keys=True).encode()).hexdigest()[:8]
 
 
-def judge_model_id(settings: Settings) -> str:
-    return f"{settings.deepeval_judge_model['model_provider']}:{settings.deepeval_judge_model['model_name']}"
-
-
-SUMMARY_SPECS = [
-    GEvalSpec(
-        name="summary_coherence",
-        criteria=(
-            "Assess whether the summary is logically coherent, thematically consistent, and easy to follow "
-            "for its length. A single-sentence summary can score highly if it presents one clear, unified idea "
-            "without contradictions, abrupt shifts, or confusing structure."
-        ),
-        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-    GEvalSpec(
-        name="summary_fluency",
-        criteria=(
-            "Assess whether the summary is fluent, grammatically correct, natural-sounding, "
-            "and easy to read. Penalize awkward wording, grammar mistakes, and unnatural phrasing."
-        ),
-        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-]
-
-SUMMARY_INPUT_SPECS = [
-    GEvalSpec(
-        name="summary_completeness",
-        criteria=(
-            "Assess whether the summary preserves the key information from the input text "
-            "without omitting major facts, claims, or conclusions."
-        ),
-        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-]
-
-TAKEAWAYS_SPECS = [
-    GEvalSpec(
-        name="takeaways_non_redundancy",
-        criteria=(
-            "Assess whether the key takeaways are non-redundant. Penalize repeated ideas, "
-            "near-duplicate bullets, and multiple points that express the same fact."
-        ),
-        params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-]
-
-TAKEAWAYS_INPUT_SPECS = [
-    GEvalSpec(
-        name="takeaways_coverage",
-        criteria=(
-            "Assess whether the key takeaways cover the most important facts and ideas from the input text. "
-            "Penalize missing major points and overemphasis on minor details."
-        ),
-        params=[LLMTestCaseParams.INPUT, LLMTestCaseParams.ACTUAL_OUTPUT],
-    ),
-]
-
-
 SUMMARIZATION_METRIC_QUESTIONS = 5
 # deepeval generates its own questions and truths, so the version names the settings rather than a rubric text.
-SUMMARIZATION_METRIC_RUBRIC = f"summarization-strict-n{SUMMARIZATION_METRIC_QUESTIONS}"
+SUMMARIZATION_METRIC_RUBRIC = f"summarization-n{SUMMARIZATION_METRIC_QUESTIONS}"
 
 
 async def evaluate_summarization_metric(
-    settings: Settings, source_text: str, summary: str
+    judge: JudgeModelRef, source_text: str, summary: str
 ) -> DeepEvalMetricResult:
-    """deepeval's SummarizationMetric in strict mode, as an off-the-shelf reference point."""
-    model = get_deepeval_judge_model(settings)
+    """deepeval's SummarizationMetric, as an off-the-shelf reference point."""
+    model = get_deepeval_judge_model(judge)
     test_case = LLMTestCase(input=source_text, actual_output=summary)
 
     def measure() -> DeepEvalMetricResult:
@@ -224,14 +164,13 @@ async def evaluate_summarization_metric(
             model=model,
             threshold=DEEPEVAL_THRESHOLD,
             n=SUMMARIZATION_METRIC_QUESTIONS,
-            strict_mode=True,
             async_mode=False,  # same reason as in evaluate_geval
         )
         return run_metric(
             metric,
             test_case,
             "summarization_metric",
-            judge_model_id(settings),
+            judge.model_id(),
             SUMMARIZATION_METRIC_RUBRIC,
         )
 
@@ -239,7 +178,7 @@ async def evaluate_summarization_metric(
 
 
 async def evaluate_geval(
-    settings: Settings, work: list[tuple[GEvalSpec, LLMTestCase]]
+    judge: JudgeModelRef, work: list[tuple[GEvalSpec, LLMTestCase]]
 ) -> list[DeepEvalMetricResult]:
     """Run every (spec, test case) pair against a single judge model.
 
@@ -250,8 +189,8 @@ async def evaluate_geval(
     """
     if not work:
         return []
-    model = get_deepeval_judge_model(settings)
-    judge_model = judge_model_id(settings)
+    model = get_deepeval_judge_model(judge)
+    judge_model = judge.model_id()
 
     def measure(spec: GEvalSpec, test_case: LLMTestCase) -> DeepEvalMetricResult:
         metric = GEval(

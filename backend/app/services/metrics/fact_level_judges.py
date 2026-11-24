@@ -24,6 +24,8 @@ from ...schemas.judges import (
     FactLevelResult,
     FactLevelScores,
     FaithfulnessJudgement,
+    JudgeCalibration,
+    TprTnr,
 )
 from ...schemas.usage import UsageMetadata
 from ..llm._base import LlmOutputError, build_structured_llm, parse_structured_output
@@ -59,6 +61,35 @@ class JudgeModelRef:
 
     def model_id(self) -> str:
         return f"{self.provider}:{self.name}"
+
+    @classmethod
+    def parse(cls, model_id: str) -> JudgeModelRef:
+        """'provider:name', as model_id() writes it."""
+        provider, separator, name = model_id.partition(":")
+        if not separator or not provider or not name:
+            raise ValueError(f"judge model must be 'provider:name', got {model_id!r}")
+        return cls(provider, name)
+
+
+# The judges chosen on the calibration test split (E2); their TPR/TNR come from data/calibration/report_test.md.
+MAIN_JUDGE = JudgeModelRef("openrouter", "tencent/hy4-flash")
+SECOND_JUDGE = JudgeModelRef("openrouter", "deepseek/deepseek-v4-pro-0813")
+KEYFACT_MODEL = SECOND_JUDGE  # extracted the key facts of the calibration sample
+
+JUDGE_CALIBRATION: dict[str, JudgeCalibration] = {
+    MAIN_JUDGE.model_id(): JudgeCalibration(
+        faithfulness=TprTnr(tpr=0.92, tnr=1.00),
+        keyfact_present=TprTnr(tpr=0.93, tnr=0.81),
+        sentence_carries_keyfact=TprTnr(tpr=0.85, tnr=0.77),
+        coherence=TprTnr(tpr=0.93, tnr=0.75),
+    ),
+    SECOND_JUDGE.model_id(): JudgeCalibration(
+        faithfulness=TprTnr(tpr=0.91, tnr=1.00),
+        keyfact_present=TprTnr(tpr=0.93, tnr=0.81),
+        sentence_carries_keyfact=TprTnr(tpr=0.85, tnr=0.73),
+        coherence=TprTnr(tpr=1.00, tnr=0.75),
+    ),
+}
 
 
 def as_data(text: str, tag: str) -> str:

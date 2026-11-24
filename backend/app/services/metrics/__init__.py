@@ -1,19 +1,15 @@
+from __future__ import annotations
+
+import asyncio
 from dataclasses import asdict
-from typing import Any
 
-from deepeval.test_case import LLMTestCase
-
-from ...core.config import settings
 from ...core.executors import run_blocking
-from ...schemas.summary_spec import OutputFormat
-from .cross import evaluate_pairwise_cross_deepeval, rouge_meteor_scores
-from .deepeval import (
-    SUMMARY_INPUT_SPECS,
-    SUMMARY_SPECS,
-    TAKEAWAYS_INPUT_SPECS,
-    TAKEAWAYS_SPECS,
-    evaluate_geval,
-)
+from ...schemas.judges import DeepevalItem, SummaryJudgement
+from ..llm import LlmOutputError
+from .coherence import judge_coherence
+from .cross import rouge_meteor_scores
+from .deepeval import evaluate_summarization_metric
+from .fact_level_judges import JudgeModelRef, judge_fact_level, split_sentences
 from .statistical import summary_metrics
 
 
@@ -27,32 +23,6 @@ async def compute_statistical_metrics(
     return await run_blocking(compute)
 
 
-async def compute_deepeval_metrics(
-    summary_text: str,
-    source_text: str,
-    output_format: OutputFormat,
-) -> list[dict]:
-    """summary_text/source_text are always non-empty (AI summary, required input_text).
-
-    The list-quality judges (redundancy, coverage) only make sense for a bullet list, so they
-    run when the spec asked for one.
-    """
-    summary_case = LLMTestCase(input="", actual_output=summary_text)
-    summary_input_case = LLMTestCase(input=source_text, actual_output=summary_text)
-
-    work = [
-        *((spec, summary_case) for spec in SUMMARY_SPECS),
-        *((spec, summary_input_case) for spec in SUMMARY_INPUT_SPECS),
-    ]
-    if output_format == "bullets":
-        work += [
-            *((spec, summary_case) for spec in TAKEAWAYS_SPECS),
-            *((spec, summary_input_case) for spec in TAKEAWAYS_INPUT_SPECS),
-        ]
-
-    return [asdict(x) for x in await evaluate_geval(settings, work)]
-
-
 async def compute_cross_metrics(
     reference_text: str,
     summary_text: str,
@@ -61,14 +31,27 @@ async def compute_cross_metrics(
     return await run_blocking(rouge_meteor_scores, reference_text, summary_text, language)
 
 
-async def compute_pairwise_cross_deepeval_metrics(
-    source_text: str,
-    golden_summary: str,
-    ai_summary: str,
-) -> list[dict[str, Any]]:
-    return await evaluate_pairwise_cross_deepeval(
-        settings=settings,
-        source_text=source_text,
-        ai_summary=ai_summary,
-        golden_summary=golden_summary,
+async def judge_summary(
+    source_text: str, summary: str, keyfacts: list[str], language: str, judge: JudgeModelRef
+) -> SummaryJudgement:
+    """Fact-level judges, coherence and SummarizationMetric on one summary with one judge model."""
+    try:
+        sentences = split_sentences(summary, language)
+        fact_level, coherence, summarization_metric = await asyncio.gather(
+            judge_fact_level(source_text, summary, keyfacts, language, judge),
+            judge_coherence(summary, judge),
+            evaluate_summarization_metric(judge, source_text, summary),
+        )
+    except (
+        LlmOutputError,
+        ValueError,
+    ) as error:  # deepeval raises ValueError on a malformed answer
+        return SummaryJudgement(judge_model=judge.model_id(), error=str(error))
+
+    return SummaryJudgement(
+        judge_model=judge.model_id(),
+        sentences=sentences,
+        fact_level=fact_level,
+        coherence=coherence,
+        summarization_metric=DeepevalItem.model_validate(asdict(summarization_metric)),
     )

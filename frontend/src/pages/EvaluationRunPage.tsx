@@ -1,178 +1,30 @@
 import { type ReactNode, useMemo, useState } from "react";
-import { evaluateRunDeepeval, getEvaluationRun, getEvaluationRunEntries } from "../api/research";
+import { getEvaluationRun, getEvaluationRunEntries, runJudges } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
-import { type DeepevalDisplayItem, DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
 import { InfoList, InfoRow, InfoRowContent } from "../components/InfoRow";
-import { InputTextSection } from "../components/InputTextSection";
+import { RunJudgeAggregate } from "../components/judges/RunJudgeAggregate";
 import { EVALUATION_TRAIL } from "../components/NavDock";
+import { RunEntryCard } from "../components/runs/RunEntryCard";
 import { StatusLabel } from "../components/StatusLabel";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import { cn } from "../components/ui/cn";
-import { DisclosureSections } from "../components/ui/DisclosureSections";
+import { FieldLabel, Select } from "../components/ui/Field";
 import { PageSection, PageShell, SectionHeading } from "../components/ui/PageShell";
 import { useAsyncAction } from "../hooks/useAsyncAction";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useListPolling } from "../hooks/useListPolling";
 import { useReloadableResource } from "../hooks/useReloadableResource";
 import { useWorkFinished } from "../hooks/useWorkFinished";
-import type {
-  EvaluationRunEntryResponse,
-  EvaluationRunResponse,
-  SummaryStatisticalMetrics,
-} from "../types/api.generated";
-import { formatDateMinute, formatMetricLabel, formatScore } from "../utils/format";
+import type { EvaluationRunResponse } from "../types/api.generated";
+import { formatDateMinute } from "../utils/format";
 import { evaluationSetPath } from "../utils/routing";
 import {
   FUNCTION_LABELS,
-  formatLengthTarget,
   LENGTH_POLICY_LABELS,
   OUTPUT_FORMAT_LABELS,
   STANCE_LABELS,
 } from "../utils/summarySpecLabels";
-
-const PAIRWISE_TIE_MARGIN = 0.05;
-
-function pairwiseWinnerLabel(score: number): "golden" | "ai" | "tie" {
-  if (score > 0.5 + PAIRWISE_TIE_MARGIN) return "ai";
-  if (score < 0.5 - PAIRWISE_TIE_MARGIN) return "golden";
-  return "tie";
-}
-
-// The label is named once and the two values line up under their column heading, so the pair
-// cannot break apart the way a repeated label in two narrow columns does.
-const COMPARISON_COLUMNS = "grid grid-cols-[minmax(8rem,auto)_1fr_1fr] items-baseline gap-x-4";
-
-function MetricRow({
-  label,
-  golden,
-  ai,
-}: {
-  label: string;
-  golden: number | null | undefined;
-  ai: number | null | undefined;
-}) {
-  return (
-    <>
-      <span className="text-mute">{label}:</span>
-      <span className="tabular-nums">{golden != null ? formatScore(golden) : "—"}</span>
-      <span className="tabular-nums">{ai != null ? formatScore(ai) : "—"}</span>
-    </>
-  );
-}
-
-function ColumnsHeader() {
-  return (
-    <>
-      <span />
-      <SectionHeading>Wzorzec</SectionHeading>
-      <SectionHeading>AI</SectionHeading>
-    </>
-  );
-}
-
-function StatisticalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }) {
-  const goldenSummary: Partial<SummaryStatisticalMetrics> = entry.golden_metrics?.summary ?? {};
-  const aiSummary: Partial<SummaryStatisticalMetrics> = entry.ai_metrics?.summary ?? {};
-
-  const allLabels = Array.from(
-    new Set([...Object.keys(goldenSummary), ...Object.keys(aiSummary)]),
-  ) as (keyof SummaryStatisticalMetrics)[];
-
-  return (
-    <div className="grid gap-2">
-      <SectionHeading>Metryki statystyczne</SectionHeading>
-      {allLabels.length > 0 ? (
-        <>
-          <div className={cn(COMPARISON_COLUMNS, "gap-y-1 text-caption")}>
-            <ColumnsHeader />
-            {allLabels.map((label) => (
-              <MetricRow
-                key={label}
-                label={formatMetricLabel(label)}
-                golden={goldenSummary[label]}
-                ai={aiSummary[label]}
-              />
-            ))}
-          </div>
-          {!entry.golden_metrics ? (
-            <p className="text-mute">Metryki wzorca nie zostały policzone dla tego wpisu.</p>
-          ) : null}
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function DeepevalMetricsColumns({ entry }: { entry: EvaluationRunEntryResponse }) {
-  const goldenItems: DeepevalDisplayItem[] = entry.golden_metrics?.deepeval ?? [];
-  const aiItems: DeepevalDisplayItem[] = entry.ai_metrics?.deepeval ?? [];
-
-  if (goldenItems.length === 0 && aiItems.length === 0) return null;
-
-  return (
-    <div className="grid gap-2">
-      <SectionHeading>Metryki deepeval</SectionHeading>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          {goldenItems.length > 0 ? (
-            <DeepevalItems items={goldenItems} />
-          ) : (
-            <p className="text-mute">—</p>
-          )}
-        </div>
-        <div>
-          {aiItems.length > 0 ? <DeepevalItems items={aiItems} /> : <p className="text-mute">—</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CrossMetricsSection({ entry }: { entry: EvaluationRunEntryResponse }) {
-  if (!entry.cross_metrics) {
-    return <p className="text-mute">Jeszcze nie policzone.</p>;
-  }
-
-  const { rouge1, rouge2, rougeL, meteor, deepeval } = entry.cross_metrics;
-  const pairwiseItems: DeepevalDisplayItem[] = deepeval.map((item) => ({
-    ...item,
-    statusLabel: pairwiseWinnerLabel(item.score),
-  }));
-
-  return (
-    <div className="grid gap-3">
-      <SectionHeading>Metryki statystyczne porównawcze</SectionHeading>
-      <InfoList>
-        <InfoRow label="rouge1" value={rouge1} />
-        <InfoRow label="rouge2" value={rouge2} />
-        <InfoRow label="rougeL" value={rougeL} />
-        <InfoRow label="meteor" value={meteor === null ? "— (tylko EN)" : meteor} />
-      </InfoList>
-      {pairwiseItems.length > 0 ? (
-        <div className="grid gap-2">
-          <SectionHeading>Metryki deepeval porównawcze</SectionHeading>
-          <DeepevalItems items={pairwiseItems} />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function EntryMetrics({ entry }: { entry: EvaluationRunEntryResponse }) {
-  return (
-    <div className="grid gap-4">
-      <div className="grid gap-2">
-        <CrossMetricsSection entry={entry} />
-      </div>
-      <div className="grid gap-4">
-        <StatisticalMetricsColumns entry={entry} />
-        <DeepevalMetricsColumns entry={entry} />
-      </div>
-    </div>
-  );
-}
 
 interface EntryProgress {
   completedEntryCount: number;
@@ -182,13 +34,13 @@ interface EntryProgress {
 function RunSummary({
   run,
   progress,
-  deepevalButton,
+  judgeControls,
 }: {
   run: EvaluationRunResponse;
   progress: EntryProgress;
-  deepevalButton: ReactNode;
+  judgeControls: ReactNode;
 }) {
-  const { error, deepeval } = run.aggregate_metrics;
+  const { error, judges: judgePass } = run.aggregate_metrics;
 
   return (
     <div className="grid gap-4">
@@ -221,20 +73,21 @@ function RunSummary({
 
       <div className="grid gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <SectionHeading>G-Eval</SectionHeading>
-          {deepevalButton}
+          <SectionHeading>Sędziowie</SectionHeading>
+          {judgeControls}
         </div>
         <InfoList>
-          {deepeval ? (
+          {judgePass ? (
             <>
               <InfoRowContent label="status">
-                <StatusLabel status={deepeval.status} />
+                <StatusLabel status={judgePass.status} />
               </InfoRowContent>
-              <InfoRow label="zaktualizowanych" value={deepeval.updated_entries} />
-              <InfoRow label="pominiętych" value={deepeval.skipped_entries} />
-              <InfoRow label="rozpoczęto" value={formatDateMinute(deepeval.started_at)} />
-              <InfoRow label="zakończono" value={formatDateMinute(deepeval.finished_at)} />
-              <InfoRow label="już ocenionych" value={deepeval.already_scored_entries} />
+              <InfoRow label="sędzia" value={judgePass.judge_model} />
+              <InfoRow label="zaktualizowanych" value={judgePass.updated_entries} />
+              <InfoRow label="pominiętych" value={judgePass.skipped_entries} />
+              <InfoRow label="rozpoczęto" value={formatDateMinute(judgePass.started_at)} />
+              <InfoRow label="zakończono" value={formatDateMinute(judgePass.finished_at)} />
+              <InfoRow label="już ocenionych" value={judgePass.already_scored_entries} />
             </>
           ) : (
             // StatusLabel carries the four job statuses shared with jobs, runs and entries;
@@ -244,97 +97,13 @@ function RunSummary({
             </InfoRowContent>
           )}
         </InfoList>
-        {deepeval?.error ? (
-          <p className="wrap-anywhere text-danger-hover">{deepeval.error}</p>
+        {judgePass?.error ? (
+          <p className="wrap-anywhere text-danger-hover">{judgePass.error}</p>
         ) : null}
       </div>
 
       {error ? <p className="wrap-anywhere text-danger-hover">{error}</p> : null}
     </div>
-  );
-}
-
-function RunEntryCard({
-  index,
-  entry,
-  evaluationSetId,
-}: {
-  index: number;
-  entry: EvaluationRunEntryResponse;
-  evaluationSetId: string;
-}) {
-  const [isOpen, setIsOpen] = useState(index === 0);
-
-  return (
-    <article className="min-w-0 border-b border-hairline">
-      <h3 className="font-normal">
-        <button
-          type="button"
-          onClick={() => setIsOpen((value) => !value)}
-          aria-expanded={isOpen}
-          className="flex min-h-11 w-full cursor-pointer items-baseline gap-3 py-3 text-left"
-        >
-          <span aria-hidden="true" className="shrink-0">
-            {isOpen ? "[-]" : "[+]"}
-          </span>
-          <span className="grid min-w-0 flex-1">
-            <span className="wrap-anywhere">
-              {index + 1}
-              {" · "}
-              {entry.title}
-            </span>
-            <span className="truncate text-caption text-mute">{entry.url}</span>
-          </span>
-          <span className="shrink-0 text-caption">
-            <StatusLabel status={entry.status} />
-          </span>
-        </button>
-      </h3>
-
-      {isOpen ? (
-        <div className="grid min-w-0 gap-4 pb-4">
-          {entry.error ? <p className="wrap-anywhere text-danger-hover">{entry.error}</p> : null}
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="grid min-w-0 content-start gap-2">
-              <h4>Podsumowanie wzorcowe</h4>
-              <p className="whitespace-pre-wrap font-reading text-reading">
-                {entry.golden_summary ?? "—"}
-              </p>
-            </div>
-
-            <div className="grid min-w-0 content-start gap-2">
-              <h4>
-                Podsumowanie AI
-                {entry.resolved_length ? (
-                  <span className="font-normal text-mute">
-                    {" · cel: "}
-                    {formatLengthTarget(
-                      entry.resolved_length.target_words,
-                      entry.resolved_length.target_sentences,
-                    )}
-                  </span>
-                ) : null}
-              </h4>
-              <p className="whitespace-pre-wrap font-reading text-reading">
-                {entry.ai_summary ?? "—"}
-              </p>
-            </div>
-          </div>
-
-          <DisclosureSections
-            sections={[
-              {
-                key: "input",
-                label: "Tekst źródłowy",
-                content: <InputTextSection setId={evaluationSetId} entryId={entry.entry_id} />,
-              },
-              { key: "metrics", label: "Metryki", content: <EntryMetrics entry={entry} /> },
-            ]}
-          />
-        </div>
-      ) : null}
-    </article>
   );
 }
 
@@ -364,32 +133,38 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
   };
 
   const isRunInProgress = run?.status === "pending" || run?.status === "running";
-  // The GEval pass is queued separately and keeps running after the run itself has finished.
-  const deepevalStatus = run?.aggregate_metrics.deepeval?.status ?? null;
-  const isDeepevalRunning = deepevalStatus === "pending" || deepevalStatus === "running";
+  // The judge pass is queued separately and keeps running after the run itself has finished.
+  const judgePassStatus = run?.aggregate_metrics.judges?.status ?? null;
+  const isJudgePassRunning = judgePassStatus === "pending" || judgePassStatus === "running";
+  const knownJudges = Object.keys(run?.judge_calibration ?? {});
+  const [chosenJudge, setChosenJudge] = useState<string | null>(null);
+  const judgeModel = chosenJudge ?? knownJudges[0] ?? "";
 
   useDocumentTitle(
     run ? `${run.model_provider}:${run.model_name} · ${run.evaluation_set_name}` : null,
   );
 
-  useListPolling(runResource.reload, isRunInProgress || isDeepevalRunning);
-  useListPolling(entriesResource.reload, true, isRunInProgress || isDeepevalRunning);
+  useListPolling(runResource.reload, isRunInProgress || isJudgePassRunning);
+  useListPolling(entriesResource.reload, true, isRunInProgress || isJudgePassRunning);
 
   useWorkFinished(run?.status ?? null, isRunInProgress, (status) => {
     showFlash(`Run zakończony ze statusem: ${status}.`);
     void entriesResource.reload();
   });
 
-  // GEval writes its scores into the entries, which the run document does not carry.
-  useWorkFinished(deepevalStatus, isDeepevalRunning, (status) => {
-    showFlash(`G-Eval zakończony ze statusem: ${status}.`);
+  // The judges write their verdicts into the entries, which the run document does not carry.
+  useWorkFinished(judgePassStatus, isJudgePassRunning, (status) => {
+    showFlash(`Ocena sędzią zakończona ze statusem: ${status}.`);
     void entriesResource.reload();
   });
 
-  const startDeepeval = useAsyncAction(() => evaluateRunDeepeval(runId), {
-    errorPrefix: "Nie udało się uruchomić G-Eval",
+  const startJudges = useAsyncAction(() => runJudges(runId, judgeModel), {
+    errorPrefix: "Nie udało się uruchomić sędziów",
     onSuccess: () => runResource.reload(),
   });
+  const judgeAggregate = run?.judge_aggregates.find(
+    (aggregate) => aggregate.judge_model === judgeModel,
+  );
 
   let runSummary = null;
   if (run) {
@@ -397,14 +172,30 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
       <RunSummary
         run={run}
         progress={entryProgress}
-        deepevalButton={
-          <Button
-            variant="primary"
-            onClick={() => void startDeepeval.run()}
-            disabled={isRunInProgress || isDeepevalRunning || startDeepeval.isPending}
-          >
-            {startDeepeval.isPending ? "Liczenie..." : "Policz G-Eval"}
-          </Button>
+        judgeControls={
+          <div className="flex flex-wrap items-end gap-3">
+            <FieldLabel htmlFor="judge-model">
+              sędzia
+              <Select
+                id="judge-model"
+                value={judgeModel}
+                onChange={(event) => setChosenJudge(event.target.value)}
+              >
+                {knownJudges.map((judge) => (
+                  <option key={judge} value={judge}>
+                    {judge}
+                  </option>
+                ))}
+              </Select>
+            </FieldLabel>
+            <Button
+              variant="primary"
+              onClick={() => void startJudges.run()}
+              disabled={isRunInProgress || isJudgePassRunning || startJudges.isPending}
+            >
+              {startJudges.isPending ? "Ocenianie..." : "Oceń sędzią"}
+            </Button>
+          </div>
         }
       />
     );
@@ -424,11 +215,12 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
             index={index}
             entry={entry}
             evaluationSetId={evaluationSetId}
+            judgeModel={judgeModel}
           />
         ))}
       </div>
     );
-  }, [entries, evaluationSetId]);
+  }, [entries, evaluationSetId, judgeModel]);
 
   const entriesSection = entriesResource.isInitialLoading ? (
     <p className="text-mute">Ładowanie wpisów...</p>
@@ -483,6 +275,15 @@ export function EvaluationRunPage({ runId }: EvaluationRunPageProps) {
           {/* Always mounted: a live region only announces content inserted after it exists. */}
           <div aria-live="polite">{runSummary}</div>
         </div>
+
+        {judgeAggregate ? (
+          <PageSection title={`Wyniki sędziego ${judgeModel}`}>
+            <RunJudgeAggregate
+              aggregate={judgeAggregate}
+              calibration={run?.judge_calibration[judgeModel]}
+            />
+          </PageSection>
+        ) : null}
 
         <PageSection title="Wpisy">{entriesSection}</PageSection>
       </div>

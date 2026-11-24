@@ -69,7 +69,6 @@ async def test_case_13_14_a_new_job_has_no_fact_check(jobs_collection: AsyncMock
         model_name="gemini-3.8-flash",
         language="en",
         processing_strategy="direct",
-        run_deepeval=False,
         origin="public",
         context_expansion_mode="none",
     )

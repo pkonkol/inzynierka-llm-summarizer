@@ -12,7 +12,6 @@ import {
   SummarySpecFields,
 } from "./SummarySpecFields";
 import { Button } from "./ui/Button";
-import { Checkbox } from "./ui/Checkbox";
 import { FieldLabel, ModelOptions, Select } from "./ui/Field";
 
 interface SummarySubmitCardProps {
@@ -24,7 +23,6 @@ interface SummarySubmitCardProps {
 export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardProps) {
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [runDeepeval, setRunDeepeval] = useState(false);
   const [contextExpansionMode, setContextExpansionMode] = useState<ContextExpansionMode>("none");
   const {
     models,
@@ -66,7 +64,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
       // always one the backend supports — the hook just doesn't narrow the string literal.
       processing_strategy: selectedProcessingStrategy as JobCreateRequest["processing_strategy"],
       summary_spec: specForm.buildSpec(),
-      run_deepeval: runDeepeval,
       context_expansion_mode: contextExpansionMode,
     });
     if (!isCreated) return;
@@ -128,14 +125,6 @@ export function SummarySubmitCard({ onSubmit, isSubmitting }: SummarySubmitCardP
             onChange={setContextExpansionMode}
             disabled={isSubmitting || isLoadingMeta}
           />
-
-          <Checkbox
-            checked={runDeepeval}
-            onChange={(e) => setRunDeepeval(e.target.checked)}
-            disabled={isSubmitting || isLoadingMeta}
-          >
-            Policz G-Eval
-          </Checkbox>
         </div>
 
         <SummarySpecFields form={specForm} disabled={isSubmitting || isLoadingMeta} />

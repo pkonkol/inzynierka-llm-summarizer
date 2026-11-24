@@ -3,8 +3,11 @@
 from datetime import datetime
 from typing import Literal
 
+from pydantic import Field
+
 from .base import ApiModel
 from .evaluation_set_db import GoldenMetricsPassStatus
+from .judges import SourceKeyfacts, SummaryJudgement
 from .shared_metrics import GoldenMetrics
 
 
@@ -33,6 +36,8 @@ class EvaluationSetEntryResponse(ApiModel):
     title: str
     url: str
     golden_metrics: GoldenMetrics | None = None
+    keyfacts: SourceKeyfacts | None = None
+    golden_judges: list[SummaryJudgement] = Field(default_factory=list)
 
 
 class EvaluationSetEntryInputTextResponse(ApiModel):

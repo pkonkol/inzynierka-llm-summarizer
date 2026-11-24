@@ -9,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pymongo import DESCENDING
 
 from ..core.auth import require_auth
+from ..core.config import settings
 from ..core.mongo import (
     find_evaluation_set_entry,
     get_evaluation_runs_collection,
@@ -34,10 +35,7 @@ from ..schemas.evaluation_set_db import (
     GoldenMetricsPassStatus,
 )
 from ..services.evaluation_set_metrics import run_golden_metrics_pass
-from ..services.interrupted_work import (
-    claim_golden_metrics_pass_for_queue,
-    judge_pass_provenance,
-)
+from ..services.interrupted_work import claim_golden_metrics_pass_for_queue
 
 log = structlog.get_logger(__name__)
 
@@ -105,7 +103,7 @@ async def create_evaluation_set(
         golden_metrics_pass=GoldenMetricsPassDocument(
             status="pending" if needs_golden_metrics_pass else "skipped",
             heartbeat_at=created_at,
-            **(judge_pass_provenance() if needs_golden_metrics_pass else {}),
+            git_sha=settings.git_sha if needs_golden_metrics_pass else None,
         ),
     )
 

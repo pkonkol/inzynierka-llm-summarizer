@@ -3,15 +3,9 @@
 from pydantic import Field
 
 from .base import ApiModel
+from .judges import DeepevalItem, SummaryJudgement
 
-
-class DeepevalItem(ApiModel):
-    name: str
-    score: float
-    passed: bool
-    reason: str
-    judge_model: str | None = None  # None on results judged before judge provenance was stored
-    rubric_version: str | None = None
+__all__ = ["DeepevalItem"]
 
 
 class PairwiseDeepevalItem(ApiModel):
@@ -35,7 +29,7 @@ class CrossMetrics(ApiModel):
     meteor: (
         float | None
     )  # None for non-English sets: nltk's METEOR relies on an English stemmer and WordNet
-    deepeval: list[PairwiseDeepevalItem] = Field(default_factory=list)
+    pairwise: list[PairwiseDeepevalItem] = Field(default_factory=list)  # one per judge model
 
 
 class SourceMetrics(ApiModel):
@@ -52,9 +46,8 @@ class SummaryStatisticalMetrics(ApiModel):
 class GoldenMetrics(ApiModel):
     source: SourceMetrics
     summary: SummaryStatisticalMetrics
-    deepeval: list[DeepevalItem]
 
 
 class AiMetrics(ApiModel):
     summary: SummaryStatisticalMetrics
-    deepeval: list[DeepevalItem] | None = None  # None until the separate GEval pass runs
+    judges: list[SummaryJudgement] = Field(default_factory=list)  # one per judge model

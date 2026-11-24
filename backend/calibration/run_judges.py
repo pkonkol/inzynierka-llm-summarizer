@@ -38,10 +38,12 @@ from app.services.calibration_files import (
 )
 from app.services.llm import LlmOutputError, validate_model
 from app.services.metrics.coherence import COHERENCE_PROMPT_VERSION, judge_coherence
-from app.services.metrics.cross import PAIRWISE_WITH_INPUT, evaluate_pairwise_cross_deepeval
+from app.services.metrics.cross import evaluate_pairwise_cross_deepeval
 from app.services.metrics.deepeval import evaluate_summarization_metric
 from app.services.metrics.fact_level_judges import (
     FACT_LEVEL_PROMPT_VERSION,
+    MAIN_JUDGE,
+    SECOND_JUDGE,
     JudgeModelRef,
     judge_fact_level_sentences,
 )
@@ -70,7 +72,7 @@ JUDGE_CANDIDATES: list[JudgeModelRef] = [
     JudgeModelRef("openrouter", "deepseek/deepseek-v4.1-flash-1017"),
     JudgeModelRef("openrouter", "z-ai/glm-5.3-flash"),
     JudgeModelRef("openrouter", "xiaomi/mimo-v2.6-flash"),
-    JudgeModelRef("openrouter", "tencent/hy4-flash"),
+    MAIN_JUDGE,
     JudgeModelRef("openrouter", "anthropic/claude-haiku-5.5"),
     JudgeModelRef("openrouter", "openai/gpt-6-luna"),
     JudgeModelRef("openrouter", "meta/muse-ember"),
@@ -79,7 +81,7 @@ JUDGE_CANDIDATES: list[JudgeModelRef] = [
     JudgeModelRef("openrouter", "z-ai/glm-5.3"),
     JudgeModelRef("openrouter", "google/gemini-4-hydrogen"),
     # ceiling: the model the prompts were tuned on
-    JudgeModelRef("openrouter", "deepseek/deepseek-v4-pro-0813"),
+    SECOND_JUDGE,
     JudgeModelRef("ollama", "mimo-v2.6:9b"),  # last: needs the local daemon and a pulled model
 ]
 
@@ -197,12 +199,11 @@ async def _judge_pairs(
             if summary.source_id == source_id
         }
         try:
-            (with_input,) = await evaluate_pairwise_cross_deepeval(
-                settings,
+            with_input = await evaluate_pairwise_cross_deepeval(
+                JudgeModelRef.parse(predictions.judge_model),
                 sources[source_id].input_text,
                 by_origin["ai"],
                 by_origin["golden"],
-                specs=[PAIRWISE_WITH_INPUT],
             )
         except (KeyError, ValueError) as error:  # deepeval: KeyError on a missing "score"
             log.warning("pair answer unusable", source_id=source_id, error=repr(error))
@@ -231,7 +232,9 @@ async def _summarization_reference(
     ][:limit]
     for summary in pending:
         result = await evaluate_summarization_metric(
-            settings, sources[summary.source_id].input_text, summary.text
+            JudgeModelRef.parse(predictions.judge_model),
+            sources[summary.source_id].input_text,
+            summary.text,
         )
         predictions.summarization_metric[summary.summary_id] = SummarizationReference(
             summary_id=summary.summary_id, score=result.score, passed=result.passed
@@ -298,8 +301,6 @@ def main() -> None:
         return
 
     provider, name = args.model.split(":", 1)
-    # Pairwise and SummarizationMetric run through deepeval, whose judge comes from settings.
-    settings.deepeval_judge_model = {"model_provider": provider, "model_name": name}
     ensure_nltk_resources()
     path = asyncio.run(
         run_candidate(

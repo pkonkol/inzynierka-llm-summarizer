@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .job_api import check_context_expansion_settings
+from .judges import JudgeCalibration, SourceKeyfacts, SummaryJudgement
 from .shared_metrics import AiMetrics, CrossMetrics, GoldenMetrics
 from .summary_spec import MatchReferenceLength, ProcessingStrategy, ResolvedLength, SummarySpec
 
@@ -15,8 +16,8 @@ RunStatus = Literal["pending", "running", "completed", "failed"]
 EntryStatus = Literal["pending", "running", "completed", "failed"]
 
 
-class DeepevalPassMetrics(ApiModel):
-    """Progress of the GEval pass, which runs separately from the run itself.
+class JudgePassMetrics(ApiModel):
+    """Progress of the judge pass, which runs separately from the run itself.
 
     git_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a
     given score is the judge_model stored with that score.
@@ -38,12 +39,12 @@ class DeepevalPassMetrics(ApiModel):
 
 class EvaluationRunAggregateMetrics(ApiModel):
     # Every field is optional because the document fills up over the run's lifetime: `{}` at
-    # creation, counts when the run ends, `deepeval` only once the GEval pass is asked for.
+    # creation, counts when the run ends, `judges` only once a judge pass is asked for.
     entry_count: int | None = None
     completed_entries: int | None = None
     failed_entries: int | None = None
     error: str | None = None
-    deepeval: DeepevalPassMetrics | None = None
+    judges: JudgePassMetrics | None = None
 
 
 class EvaluationRunEntryResponse(ApiModel):
@@ -54,6 +55,8 @@ class EvaluationRunEntryResponse(ApiModel):
     url: str
     golden_summary: str | None
     golden_metrics: GoldenMetrics | None = None
+    golden_judges: list[SummaryJudgement] = Field(default_factory=list)
+    keyfacts: SourceKeyfacts | None = None
     ai_summary: str | None = None
     context_expansion: ContextExpansionResult | None = None
     resolved_length: ResolvedLength | None = None
@@ -82,6 +85,29 @@ class EvaluationRunCreateRequest(ApiModel):
         return self
 
 
+class JudgeScoreSummary(ApiModel):
+    """Means and shares over the usable judgements of one judge; None when nothing was judged."""
+
+    judged: int
+    unusable: int
+    faithfulness_mean: float | None
+    completeness_mean: float | None
+    conciseness_mean: float | None
+    repetition_share: float | None
+    coherent_share: float | None
+    summarization_metric_mean: float | None
+
+
+class RunJudgeAggregate(ApiModel):
+    judge_model: str
+    ai: JudgeScoreSummary
+    golden: JudgeScoreSummary
+    pairwise_judged: int
+    pairwise_ai_wins: int
+    pairwise_golden_wins: int
+    pairwise_ties: int
+
+
 class EvaluationRunResponse(ApiModel):
     id: str
     evaluation_set_id: str
@@ -101,6 +127,8 @@ class EvaluationRunResponse(ApiModel):
     aggregate_metrics: EvaluationRunAggregateMetrics = Field(
         default_factory=EvaluationRunAggregateMetrics
     )
+    judge_aggregates: list[RunJudgeAggregate] = Field(default_factory=list)  # one per judge model
+    judge_calibration: dict[str, JudgeCalibration] = Field(default_factory=dict)
 
 
 class EvaluationRunEntriesResponse(ApiModel):
@@ -138,6 +166,12 @@ class EvaluationRunDeletedResponse(ApiModel):
     evaluation_run_id: str
 
 
-class DeepevalQueuedResponse(ApiModel):
+class JudgesRequest(ApiModel):
+    judge_model: str | None = None  # provider:name; None means the main calibrated judge
+    force: bool = False
+
+
+class JudgesQueuedResponse(ApiModel):
     status: Literal["queued"]
     run_id: str
+    judge_model: str

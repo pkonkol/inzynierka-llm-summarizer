@@ -434,7 +434,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/research/runs/{run_id}/deepeval": {
+    "/api/v1/research/runs/{run_id}/judges": {
         parameters: {
             query?: never;
             header?: never;
@@ -443,8 +443,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Evaluate Run Deepeval */
-        post: operations["evaluate_run_deepeval_api_v1_research_runs__run_id__deepeval_post"];
+        /** Judge Run */
+        post: operations["judge_run_api_v1_research_runs__run_id__judges_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -560,8 +560,13 @@ export interface components {
         /** AiMetrics */
         AiMetrics: {
             summary: components["schemas"]["SummaryStatisticalMetrics"];
-            /** Deepeval */
-            deepeval: components["schemas"]["DeepevalItem-Output"][] | null;
+            /** Judges */
+            judges: components["schemas"]["SummaryJudgement"][];
+        };
+        /** AlignmentJudgement */
+        AlignmentJudgement: {
+            /** Keyfacts */
+            keyfacts: components["schemas"]["KeyfactMatch"][];
         };
         /** AssessedSource */
         AssessedSource: {
@@ -693,6 +698,22 @@ export interface components {
             /** Duration Ms */
             duration_ms: number;
         };
+        /** CoherenceJudgement */
+        CoherenceJudgement: {
+            /** Coherent */
+            coherent: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** CoherenceResult */
+        CoherenceResult: {
+            judgement: components["schemas"]["CoherenceJudgement"];
+            /** Judge Model */
+            judge_model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            usage: components["schemas"]["UsageMetadata"];
+        };
         /** ContextExpansionResult */
         ContextExpansionResult: {
             /**
@@ -737,26 +758,11 @@ export interface components {
             rougeL: number;
             /** Meteor */
             meteor: number | null;
-            /** Deepeval */
-            deepeval: components["schemas"]["PairwiseDeepevalItem"][];
+            /** Pairwise */
+            pairwise: components["schemas"]["PairwiseDeepevalItem"][];
         };
         /** DeepevalItem */
-        "DeepevalItem-Input": {
-            /** Name */
-            name: string;
-            /** Score */
-            score: number;
-            /** Passed */
-            passed: boolean;
-            /** Reason */
-            reason: string;
-            /** Judge Model */
-            judge_model?: string | null;
-            /** Rubric Version */
-            rubric_version?: string | null;
-        };
-        /** DeepevalItem */
-        "DeepevalItem-Output": {
+        DeepevalItem: {
             /** Name */
             name: string;
             /** Score */
@@ -770,55 +776,6 @@ export interface components {
             /** Rubric Version */
             rubric_version: string | null;
         };
-        /**
-         * DeepevalPassMetrics
-         * @description Progress of the GEval pass, which runs separately from the run itself.
-         *
-         *     git_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a
-         *     given score is the judge_model stored with that score.
-         */
-        DeepevalPassMetrics: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "running" | "completed" | "failed";
-            /** Heartbeat At */
-            heartbeat_at: string | null;
-            /**
-             * Resume Attempts
-             * @default 0
-             */
-            resume_attempts: number;
-            /** Started At */
-            started_at: string | null;
-            /** Finished At */
-            finished_at: string | null;
-            /** Updated Entries */
-            updated_entries: number | null;
-            /** Skipped Entries */
-            skipped_entries: number | null;
-            /** Already Scored Entries */
-            already_scored_entries: number | null;
-            /** Error */
-            error: string | null;
-            /** Git Sha */
-            git_sha: string | null;
-            /** Temperature */
-            temperature: number | null;
-            /** Judge Model */
-            judge_model: string | null;
-        };
-        /** DeepevalQueuedResponse */
-        DeepevalQueuedResponse: {
-            /**
-             * Status
-             * @constant
-             */
-            status: "queued";
-            /** Run Id */
-            run_id: string;
-        };
         /** EvaluationRunAggregateMetrics */
         EvaluationRunAggregateMetrics: {
             /** Entry Count */
@@ -829,7 +786,7 @@ export interface components {
             failed_entries: number | null;
             /** Error */
             error: string | null;
-            deepeval: components["schemas"]["DeepevalPassMetrics"] | null;
+            judges: components["schemas"]["JudgePassMetrics"] | null;
         };
         /** EvaluationRunCreateRequest */
         EvaluationRunCreateRequest: {
@@ -904,7 +861,10 @@ export interface components {
             url: string;
             /** Golden Summary */
             golden_summary: string | null;
-            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+            /** Golden Judges */
+            golden_judges: components["schemas"]["SummaryJudgement"][];
+            keyfacts: components["schemas"]["SourceKeyfacts"] | null;
             /** Ai Summary */
             ai_summary: string | null;
             context_expansion: components["schemas"]["ContextExpansionResult"] | null;
@@ -998,6 +958,12 @@ export interface components {
             /** Temperature */
             temperature: number | null;
             aggregate_metrics: components["schemas"]["EvaluationRunAggregateMetrics"];
+            /** Judge Aggregates */
+            judge_aggregates: components["schemas"]["RunJudgeAggregate"][];
+            /** Judge Calibration */
+            judge_calibration: {
+                [key: string]: components["schemas"]["JudgeCalibration"];
+            };
         };
         /** EvaluationRunResumeResponse */
         EvaluationRunResumeResponse: {
@@ -1065,7 +1031,7 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics?: components["schemas"]["GoldenMetrics-Input"] | null;
+            golden_metrics?: components["schemas"]["GoldenMetrics"] | null;
         };
         /** EvaluationSetEntryImport */
         "EvaluationSetEntryImport-Output": {
@@ -1077,7 +1043,7 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
         };
         /** EvaluationSetEntryInputTextResponse */
         EvaluationSetEntryInputTextResponse: {
@@ -1099,7 +1065,10 @@ export interface components {
             title: string;
             /** Url */
             url: string;
-            golden_metrics: components["schemas"]["GoldenMetrics-Output"] | null;
+            golden_metrics: components["schemas"]["GoldenMetrics"] | null;
+            keyfacts: components["schemas"]["SourceKeyfacts"] | null;
+            /** Golden Judges */
+            golden_judges: components["schemas"]["SummaryJudgement"][];
         };
         /**
          * EvaluationSetExportResponse
@@ -1188,19 +1157,39 @@ export interface components {
             /** Error */
             error: string | null;
         };
-        /** GoldenMetrics */
-        "GoldenMetrics-Input": {
-            source: components["schemas"]["SourceMetrics"];
-            summary: components["schemas"]["SummaryStatisticalMetrics"];
-            /** Deepeval */
-            deepeval: components["schemas"]["DeepevalItem-Input"][];
+        /** FactLevelResult */
+        FactLevelResult: {
+            scores: components["schemas"]["FactLevelScores"];
+            faithfulness: components["schemas"]["FaithfulnessJudgement"];
+            alignment: components["schemas"]["AlignmentJudgement"];
+            /** Judge Model */
+            judge_model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            usage: components["schemas"]["UsageMetadata"];
+        };
+        /** FactLevelScores */
+        FactLevelScores: {
+            /** Faithfulness */
+            faithfulness: number;
+            /** Completeness */
+            completeness: number;
+            /** Conciseness */
+            conciseness: number;
+            /** Has Repetition */
+            has_repetition: boolean;
+            /** Repeated Sentence Indices */
+            repeated_sentence_indices: number[];
+        };
+        /** FaithfulnessJudgement */
+        FaithfulnessJudgement: {
+            /** Sentences */
+            sentences: components["schemas"]["SentenceFaithfulness"][];
         };
         /** GoldenMetrics */
-        "GoldenMetrics-Output": {
+        GoldenMetrics: {
             source: components["schemas"]["SourceMetrics"];
             summary: components["schemas"]["SummaryStatisticalMetrics"];
-            /** Deepeval */
-            deepeval: components["schemas"]["DeepevalItem-Output"][];
         };
         /** GoldenMetricsPassQueuedResponse */
         GoldenMetricsPassQueuedResponse: {
@@ -1257,11 +1246,6 @@ export interface components {
              * @enum {string}
              */
             processing_strategy: "direct" | "extract_then_synthesize";
-            /**
-             * Run Deepeval
-             * @default false
-             */
-            run_deepeval: boolean;
             /**
              * Context Expansion Mode
              * @default none
@@ -1369,8 +1353,6 @@ export interface components {
             resolved_length: components["schemas"]["ResolvedLength"] | null;
             summary_data: components["schemas"]["SummaryResponse"] | null;
             metrics: components["schemas"]["JobMetrics"];
-            /** Deepeval Metrics */
-            deepeval_metrics: components["schemas"]["DeepevalItem-Output"][];
             usage: components["schemas"]["UsageMetadata"];
             /** Raw Metadata */
             raw_metadata: {
@@ -1411,12 +1393,114 @@ export interface components {
             /** Error Code */
             error_code: ("source_too_long" | "context_expansion_failed") | null;
         };
+        /**
+         * JudgeCalibration
+         * @description TPR/TNR of a judge model on the test split of the calibration set (data/calibration/report_test.md).
+         */
+        JudgeCalibration: {
+            faithfulness: components["schemas"]["TprTnr"];
+            keyfact_present: components["schemas"]["TprTnr"];
+            sentence_carries_keyfact: components["schemas"]["TprTnr"];
+            coherence: components["schemas"]["TprTnr"];
+        };
+        /**
+         * JudgePassMetrics
+         * @description Progress of the judge pass, which runs separately from the run itself.
+         *
+         *     git_sha, temperature and judge_model describe the pass as it was claimed; the judge behind a
+         *     given score is the judge_model stored with that score.
+         */
+        JudgePassMetrics: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Heartbeat At */
+            heartbeat_at: string | null;
+            /**
+             * Resume Attempts
+             * @default 0
+             */
+            resume_attempts: number;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Updated Entries */
+            updated_entries: number | null;
+            /** Skipped Entries */
+            skipped_entries: number | null;
+            /** Already Scored Entries */
+            already_scored_entries: number | null;
+            /** Error */
+            error: string | null;
+            /** Git Sha */
+            git_sha: string | null;
+            /** Temperature */
+            temperature: number | null;
+            /** Judge Model */
+            judge_model: string | null;
+        };
+        /**
+         * JudgeScoreSummary
+         * @description Means and shares over the usable judgements of one judge; None when nothing was judged.
+         */
+        JudgeScoreSummary: {
+            /** Judged */
+            judged: number;
+            /** Unusable */
+            unusable: number;
+            /** Faithfulness Mean */
+            faithfulness_mean: number | null;
+            /** Completeness Mean */
+            completeness_mean: number | null;
+            /** Conciseness Mean */
+            conciseness_mean: number | null;
+            /** Repetition Share */
+            repetition_share: number | null;
+            /** Coherent Share */
+            coherent_share: number | null;
+            /** Summarization Metric Mean */
+            summarization_metric_mean: number | null;
+        };
+        /** JudgesQueuedResponse */
+        JudgesQueuedResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "queued";
+            /** Run Id */
+            run_id: string;
+            /** Judge Model */
+            judge_model: string;
+        };
+        /** JudgesRequest */
+        JudgesRequest: {
+            /** Judge Model */
+            judge_model?: string | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+        };
         /** KeepaliveResponse */
         KeepaliveResponse: {
             /** Active Work */
             active_work: number;
             /** Held Seconds */
             held_seconds: number;
+        };
+        /** KeyfactMatch */
+        KeyfactMatch: {
+            /** Keyfact Index */
+            keyfact_index: number;
+            /** Present */
+            present: boolean;
+            /** Sentence Indices */
+            sentence_indices: number[];
         };
         /** KeyfactsApproval */
         KeyfactsApproval: {
@@ -1513,6 +1597,21 @@ export interface components {
             /** Target Sentences */
             target_sentences: number;
         };
+        /** RunJudgeAggregate */
+        RunJudgeAggregate: {
+            /** Judge Model */
+            judge_model: string;
+            ai: components["schemas"]["JudgeScoreSummary"];
+            golden: components["schemas"]["JudgeScoreSummary"];
+            /** Pairwise Judged */
+            pairwise_judged: number;
+            /** Pairwise Ai Wins */
+            pairwise_ai_wins: number;
+            /** Pairwise Golden Wins */
+            pairwise_golden_wins: number;
+            /** Pairwise Ties */
+            pairwise_ties: number;
+        };
         /**
          * ScaledLength
          * @description max_sentences pins the sentence count instead of deriving it from the words, and
@@ -1535,6 +1634,17 @@ export interface components {
              */
             words_multiplier: number;
         };
+        /** SentenceFaithfulness */
+        SentenceFaithfulness: {
+            /** Sentence Index */
+            sentence_index: number;
+            /** Faithful */
+            faithful: boolean;
+            /** Error Type */
+            error_type: ("unsupported" | "contradicted" | "out_of_context" | "other") | null;
+            /** Reason */
+            reason: string;
+        };
         /** SentenceLabel */
         SentenceLabel: {
             /** Faithful */
@@ -1542,12 +1652,34 @@ export interface components {
             /** Carries Keyfact */
             carries_keyfact: boolean | null;
         };
+        /** SourceKeyfacts */
+        SourceKeyfacts: {
+            /** Keyfacts */
+            keyfacts: string[];
+            /** Model */
+            model: string;
+        };
         /** SourceMetrics */
         SourceMetrics: {
             /** Char Count */
             char_count: number;
             /** Flesch Kincaid Grade */
             flesch_kincaid_grade: number;
+        };
+        /**
+         * SummaryJudgement
+         * @description Every judge on one summary with one judge model; error set means the judge answer was unusable.
+         */
+        SummaryJudgement: {
+            /** Judge Model */
+            judge_model: string;
+            /** Sentences */
+            sentences: string[];
+            fact_level: components["schemas"]["FactLevelResult"] | null;
+            coherence: components["schemas"]["CoherenceResult"] | null;
+            summarization_metric: components["schemas"]["DeepevalItem"] | null;
+            /** Error */
+            error: string | null;
         };
         /** SummaryLabels */
         SummaryLabels: {
@@ -1628,6 +1760,13 @@ export interface components {
             /** Token */
             token: string;
         };
+        /** TprTnr */
+        TprTnr: {
+            /** Tpr */
+            tpr: number;
+            /** Tnr */
+            tnr: number;
+        };
         /**
          * UrlSummaryListItem
          * @description One entry per unique source_url for the home page list.
@@ -1698,6 +1837,7 @@ export interface components {
     pathItems: never;
 }
 export type AiMetrics = components['schemas']['AiMetrics'];
+export type AlignmentJudgement = components['schemas']['AlignmentJudgement'];
 export type AssessedSource = components['schemas']['AssessedSource'];
 export type AuthStatusResponse = components['schemas']['AuthStatusResponse'];
 export type BlindPair = components['schemas']['BlindPair'];
@@ -1708,13 +1848,12 @@ export type CalibrationSource = components['schemas']['CalibrationSource'];
 export type ChannelOutcome = components['schemas']['ChannelOutcome'];
 export type ClaimReview = components['schemas']['ClaimReview'];
 export type ClaimSearch = components['schemas']['ClaimSearch'];
+export type CoherenceJudgement = components['schemas']['CoherenceJudgement'];
+export type CoherenceResult = components['schemas']['CoherenceResult'];
 export type ContextExpansionResult = components['schemas']['ContextExpansionResult'];
 export type ContextSection = components['schemas']['ContextSection'];
 export type CrossMetrics = components['schemas']['CrossMetrics'];
-export type DeepevalItemInput = components['schemas']['DeepevalItem-Input'];
-export type DeepevalItemOutput = components['schemas']['DeepevalItem-Output'];
-export type DeepevalPassMetrics = components['schemas']['DeepevalPassMetrics'];
-export type DeepevalQueuedResponse = components['schemas']['DeepevalQueuedResponse'];
+export type DeepevalItem = components['schemas']['DeepevalItem'];
 export type EvaluationRunAggregateMetrics = components['schemas']['EvaluationRunAggregateMetrics'];
 export type EvaluationRunCreateRequest = components['schemas']['EvaluationRunCreateRequest'];
 export type EvaluationRunCreateResponse = components['schemas']['EvaluationRunCreateResponse'];
@@ -1736,8 +1875,10 @@ export type EvaluationSetImportRequest = components['schemas']['EvaluationSetImp
 export type EvaluationSetListItemResponse = components['schemas']['EvaluationSetListItemResponse'];
 export type ExplicitLength = components['schemas']['ExplicitLength'];
 export type FactCheck = components['schemas']['FactCheck'];
-export type GoldenMetricsInput = components['schemas']['GoldenMetrics-Input'];
-export type GoldenMetricsOutput = components['schemas']['GoldenMetrics-Output'];
+export type FactLevelResult = components['schemas']['FactLevelResult'];
+export type FactLevelScores = components['schemas']['FactLevelScores'];
+export type FaithfulnessJudgement = components['schemas']['FaithfulnessJudgement'];
+export type GoldenMetrics = components['schemas']['GoldenMetrics'];
 export type GoldenMetricsPassQueuedResponse = components['schemas']['GoldenMetricsPassQueuedResponse'];
 export type GoldenMetricsPassResponse = components['schemas']['GoldenMetricsPassResponse'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
@@ -1747,7 +1888,13 @@ export type JobDeletedResponse = components['schemas']['JobDeletedResponse'];
 export type JobListItemResponse = components['schemas']['JobListItemResponse'];
 export type JobMetrics = components['schemas']['JobMetrics'];
 export type JobStatusResponse = components['schemas']['JobStatusResponse'];
+export type JudgeCalibration = components['schemas']['JudgeCalibration'];
+export type JudgePassMetrics = components['schemas']['JudgePassMetrics'];
+export type JudgeScoreSummary = components['schemas']['JudgeScoreSummary'];
+export type JudgesQueuedResponse = components['schemas']['JudgesQueuedResponse'];
+export type JudgesRequest = components['schemas']['JudgesRequest'];
 export type KeepaliveResponse = components['schemas']['KeepaliveResponse'];
+export type KeyfactMatch = components['schemas']['KeyfactMatch'];
 export type KeyfactsApproval = components['schemas']['KeyfactsApproval'];
 export type MatchReferenceLength = components['schemas']['MatchReferenceLength'];
 export type PairVerdict = components['schemas']['PairVerdict'];
@@ -1755,9 +1902,13 @@ export type PairwiseDeepevalItem = components['schemas']['PairwiseDeepevalItem']
 export type PublicSummarizeRequest = components['schemas']['PublicSummarizeRequest'];
 export type RelatedSource = components['schemas']['RelatedSource'];
 export type ResolvedLength = components['schemas']['ResolvedLength'];
+export type RunJudgeAggregate = components['schemas']['RunJudgeAggregate'];
 export type ScaledLength = components['schemas']['ScaledLength'];
+export type SentenceFaithfulness = components['schemas']['SentenceFaithfulness'];
 export type SentenceLabel = components['schemas']['SentenceLabel'];
+export type SourceKeyfacts = components['schemas']['SourceKeyfacts'];
 export type SourceMetrics = components['schemas']['SourceMetrics'];
+export type SummaryJudgement = components['schemas']['SummaryJudgement'];
 export type SummaryLabels = components['schemas']['SummaryLabels'];
 export type SummaryPresetResponse = components['schemas']['SummaryPresetResponse'];
 export type SummaryResponse = components['schemas']['SummaryResponse'];
@@ -1765,6 +1916,7 @@ export type SummarySpec = components['schemas']['SummarySpec'];
 export type SummaryStatisticalMetrics = components['schemas']['SummaryStatisticalMetrics'];
 export type TokenRequest = components['schemas']['TokenRequest'];
 export type TokenResponse = components['schemas']['TokenResponse'];
+export type TprTnr = components['schemas']['TprTnr'];
 export type UrlSummaryListItem = components['schemas']['UrlSummaryListItem'];
 export type UsageMetadata = components['schemas']['UsageMetadata'];
 export type ValidationError = components['schemas']['ValidationError'];
@@ -2643,18 +2795,20 @@ export interface operations {
             };
         };
     };
-    evaluate_run_deepeval_api_v1_research_runs__run_id__deepeval_post: {
+    judge_run_api_v1_research_runs__run_id__judges_post: {
         parameters: {
-            query?: {
-                force?: boolean;
-            };
+            query?: never;
             header?: never;
             path: {
                 run_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["JudgesRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2662,7 +2816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeepevalQueuedResponse"];
+                    "application/json": components["schemas"]["JudgesQueuedResponse"];
                 };
             };
             /** @description Validation Error */

@@ -52,7 +52,6 @@ async def create_summarize_job(
         model_name=payload.model_name,
         language=payload.language,
         processing_strategy=payload.processing_strategy,
-        run_deepeval=payload.run_deepeval,
         origin="admin",
         context_expansion_mode=payload.context_expansion_mode,
     )
@@ -66,7 +65,6 @@ async def queue_summarization_job(
     model_name: str,
     language: str,
     processing_strategy: ProcessingStrategy,
-    run_deepeval: bool,
     origin: JobOrigin,
     context_expansion_mode: ContextExpansionMode,
 ) -> JobCreatedResponse:
@@ -87,7 +85,6 @@ async def queue_summarization_job(
         summary_spec=source.summary_spec,
         language=language,
         origin=origin,
-        run_deepeval=run_deepeval,
         context_expansion_mode=context_expansion_mode,
         status="pending",
         input_text=input_text,

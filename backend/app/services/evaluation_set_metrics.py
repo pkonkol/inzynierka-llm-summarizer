@@ -1,44 +1,29 @@
 from __future__ import annotations
 
-import asyncio
-from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
 import structlog
 from bson import ObjectId
-from deepeval.test_case import LLMTestCase
 
 from ..core.background_work import track_background_work
-from ..core.config import settings
 from ..core.executors import run_blocking
 from ..core.mongo import find_evaluation_set_entry, get_evaluation_sets_collection
-from .metrics.deepeval import SUMMARY_INPUT_SPECS, SUMMARY_SPECS, evaluate_geval
 from .metrics.statistical import source_metrics, summary_metrics
 
 log = structlog.get_logger(__name__)
 
 
 async def build_golden_metrics(input_text: str, golden_summary: str) -> dict[str, Any]:
+    """Statistics only; the judges score the golden summary inside a run's judge pass."""
+
     def statistical() -> dict[str, Any]:
         return {
             "source": source_metrics(input_text),
             "summary": summary_metrics(golden_summary, input_text),
         }
 
-    work = [
-        *((spec, LLMTestCase(input="", actual_output=golden_summary)) for spec in SUMMARY_SPECS),
-        *(
-            (spec, LLMTestCase(input=input_text, actual_output=golden_summary))
-            for spec in SUMMARY_INPUT_SPECS
-        ),
-    ]
-    judged, stats = await asyncio.gather(
-        evaluate_geval(settings, work),
-        run_blocking(statistical),
-    )
-
-    return {**stats, "deepeval": [asdict(x) for x in judged]}
+    return await run_blocking(statistical)
 
 
 async def _store_pass_status(set_id: str, fields: dict[str, Any]) -> None:

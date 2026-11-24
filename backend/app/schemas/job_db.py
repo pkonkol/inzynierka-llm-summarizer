@@ -9,7 +9,6 @@ from .base import ApiModel
 from .context_expansion import ContextExpansionMode, ContextExpansionResult
 from .fact_check import FactCheck
 from .shared_metrics import (
-    DeepevalItem,
     SourceMetrics,
     SummaryStatisticalMetrics,
 )
@@ -38,7 +37,6 @@ class JobDocument(BaseModel):
     resolved_length: ResolvedLength | None = None
     language: str
     origin: Literal["admin", "public"]
-    run_deepeval: bool
     context_expansion_mode: ContextExpansionMode = (
         "none"  # jobs stored before context expansion had none
     )
@@ -47,7 +45,6 @@ class JobDocument(BaseModel):
     status: Literal["pending", "running", "completed", "failed"]
     summary_data: SummaryResponse | None = None
     metrics: JobMetrics = Field(default_factory=JobMetrics)
-    deepeval_metrics: list[DeepevalItem] = Field(default_factory=list)
     usage: UsageMetadata = Field(default_factory=UsageMetadata)
     raw_metadata: dict[str, Any] = Field(default_factory=dict)
     raw_output: str = ""

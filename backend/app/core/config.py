@@ -122,10 +122,6 @@ class Settings(BaseSettings):
     auth_secret: SecretStr = SecretStr("")
     jwt_secret: SecretStr = SecretStr("")
     jwt_expire_hours: int = 168
-    deepeval_judge_model: dict[str, str] = {
-        "model_provider": "gemini",
-        "model_name": "gemini-3.8-flash",
-    }
     public_summary_model: dict[str, str] = {
         "model_provider": "gemini",
         "model_name": "gemini-3.8-flash",

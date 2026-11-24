@@ -135,8 +135,8 @@ async def _finalize_run(runs: AsyncCollection, run_id: str) -> None:
     run_status, entry_count, completed, failed = summarize_entry_statuses(entry_statuses)
     await runs.update_one(
         {"_id": ObjectId(run_id)},
-        # Dotted keys, so finishing a run does not wipe aggregate_metrics.deepeval written by a
-        # GEval pass that already ran.
+        # Dotted keys, so finishing a run does not wipe aggregate_metrics.judges written by a
+        # judge pass that already ran.
         {
             "$set": {
                 "status": run_status,

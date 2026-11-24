@@ -125,58 +125,85 @@ async def test_golden_metrics_queue_claim_allows_missing_failed_or_stale(
     assert update["$set"]["golden_metrics_pass.error"] is None
 
 
-async def test_deepeval_claim_requires_a_finished_run_and_resets_the_pass(
+async def test_judge_claim_requires_a_finished_run_and_resets_the_pass(
     runs_collection: AsyncMock,
 ) -> None:
     runs_collection.update_one.return_value.modified_count = 1
-    assert await interrupted_work.claim_deepeval_pass_for_queue(ObjectId()) is True
+    assert await interrupted_work.claim_judge_pass_for_queue(ObjectId(), "openrouter:judge") is True
 
     query, update = runs_collection.update_one.call_args.args
     assert query["status"] == {"$nin": ["pending", "running"]}
     conditions = query["$or"]
-    assert {"aggregate_metrics.deepeval": None} in conditions
-    assert {"aggregate_metrics.deepeval.status": {"$in": ["completed", "failed"]}} in conditions
+    assert {"aggregate_metrics.judges": None} in conditions
+    assert {"aggregate_metrics.judges.status": {"$in": ["completed", "failed"]}} in conditions
     # A pass with a fresh heartbeat is still owned by a live loop; taking it is how two passes pay the judge twice.
-    assert any("aggregate_metrics.deepeval.heartbeat_at" in cond for cond in conditions)
-    new_pass = update["$set"]["aggregate_metrics.deepeval"]
+    assert any("aggregate_metrics.judges.heartbeat_at" in cond for cond in conditions)
+    new_pass = update["$set"]["aggregate_metrics.judges"]
     assert new_pass["status"] == "pending"
     assert new_pass["resume_attempts"] == 0
 
     runs_collection.update_one.return_value.modified_count = 0
-    assert await interrupted_work.claim_deepeval_pass_for_queue(ObjectId()) is False
+    assert (
+        await interrupted_work.claim_judge_pass_for_queue(ObjectId(), "openrouter:judge") is False
+    )
 
 
-async def test_claim_deepeval_pass_records_provenance(
+async def test_claim_judge_pass_records_provenance(
     runs_collection: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "git_sha", "abc1234")
     monkeypatch.setattr(settings, "llm_temperature", 1.0)
-    monkeypatch.setattr(
-        settings, "deepeval_judge_model", {"model_provider": "gemini", "model_name": "judge"}
-    )
     runs_collection.update_one.return_value.modified_count = 1
 
-    await interrupted_work.claim_deepeval_pass_for_queue(ObjectId())
+    await interrupted_work.claim_judge_pass_for_queue(ObjectId(), "openrouter:judge")
 
-    new_pass = runs_collection.update_one.call_args.args[1]["$set"]["aggregate_metrics.deepeval"]
+    new_pass = runs_collection.update_one.call_args.args[1]["$set"]["aggregate_metrics.judges"]
     assert (new_pass["git_sha"], new_pass["temperature"], new_pass["judge_model"]) == (
         "abc1234",
         1.0,
-        "gemini:judge",
+        "openrouter:judge",
     )
 
 
-async def test_deepeval_passes_are_resumed_by_attempt_budget_not_heartbeat(
+async def test_judge_passes_are_resumed_by_attempt_budget_not_heartbeat(
     runs_collection: AsyncMock, jobs_collection: AsyncMock, sets_collection: AsyncMock
 ) -> None:
     await interrupted_work._resume_resumable_work()
 
-    deepeval_query = runs_collection.find.call_args_list[-1].args[0]
-    assert deepeval_query["aggregate_metrics.deepeval.status"] == {"$in": ["pending", "running"]}
-    assert deepeval_query["aggregate_metrics.deepeval.resume_attempts"] == {
+    judge_query = runs_collection.find.call_args_list[-1].args[0]
+    assert judge_query["aggregate_metrics.judges.status"] == {"$in": ["pending", "running"]}
+    assert judge_query["aggregate_metrics.judges.resume_attempts"] == {
         "$lt": settings.max_resume_attempts
     }
-    assert "aggregate_metrics.deepeval.heartbeat_at" not in deepeval_query
+    assert "aggregate_metrics.judges.heartbeat_at" not in judge_query
+
+
+async def test_a_resumed_judge_pass_keeps_the_judge_it_was_claimed_with(
+    runs_collection: AsyncMock,
+    jobs_collection: AsyncMock,
+    sets_collection: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    run_id = ObjectId()
+    interrupted_pass = {
+        "_id": run_id,
+        "aggregate_metrics": {"judges": {"judge_model": "openrouter:second"}},
+    }
+    one_pass = MagicMock()
+    one_pass.__aiter__.return_value = iter([interrupted_pass])
+    runs_collection.find = MagicMock(side_effect=[_empty_cursor(), one_pass])
+    resumed: list[tuple[str, str]] = []
+
+    def fake_pass(resumed_run_id: str, judge_model: str) -> str:
+        resumed.append((resumed_run_id, judge_model))
+        return "judge pass"
+
+    monkeypatch.setattr(interrupted_work, "run_judge_pass", fake_pass)
+    monkeypatch.setattr(interrupted_work, "spawn_tracked_task", lambda work, kind: None)
+
+    await interrupted_work._resume_resumable_work()
+
+    assert resumed == [(str(run_id), "openrouter:second")]
 
 
 async def test_runs_expire_on_the_heartbeat_rather_than_creation_time(
@@ -195,12 +222,12 @@ async def test_stale_jobs_are_counted(jobs_collection: AsyncMock) -> None:
     assert await interrupted_work.cleanup_stale_pending_jobs() == 2
 
 
-async def test_deepeval_passes_expire_on_their_own_heartbeat(runs_collection: AsyncMock) -> None:
-    await interrupted_work.cleanup_stale_deepeval_passes()
+async def test_judge_passes_expire_on_their_own_heartbeat(runs_collection: AsyncMock) -> None:
+    await interrupted_work.cleanup_stale_judge_passes()
 
     query, update = runs_collection.update_many.call_args.args
-    assert "aggregate_metrics.deepeval.heartbeat_at" in query
-    assert update["$set"]["aggregate_metrics.deepeval.status"] == "failed"
+    assert "aggregate_metrics.judges.heartbeat_at" in query
+    assert update["$set"]["aggregate_metrics.judges.status"] == "failed"
 
 
 async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -213,7 +240,7 @@ async def test_recovery_resumes_before_it_fails_stale_work(monkeypatch: pytest.M
         "cleanup_stale_pending_jobs",
         "cleanup_stale_evaluation_runs",
         "cleanup_stale_golden_metrics_passes",
-        "cleanup_stale_deepeval_passes",
+        "cleanup_stale_judge_passes",
         "cleanup_stale_fact_checks",
     ]
     for name in ["_resume_resumable_work", *cleanups]:

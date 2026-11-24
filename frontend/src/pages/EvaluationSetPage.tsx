@@ -12,9 +12,9 @@ import {
 } from "../api/research";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { DeepevalItems } from "../components/DeepevalItems";
 import { useFlash } from "../components/FlashProvider";
 import { InputTextSection } from "../components/InputTextSection";
+import { SummaryVerdicts } from "../components/judges/SummaryVerdicts";
 import { MetricsSection } from "../components/MetricsSection";
 import { EVALUATION_TRAIL } from "../components/NavDock";
 import { StatusLabel } from "../components/StatusLabel";
@@ -116,12 +116,12 @@ function EntryCard({
               <div className="grid gap-4">
                 <MetricsSection title="Źródło" data={entry.golden_metrics.source} />
                 <MetricsSection title="Podsumowanie" data={entry.golden_metrics.summary} />
-                {entry.golden_metrics.deepeval.length > 0 ? (
-                  <div className="grid gap-2">
-                    <SectionHeading>Deepeval</SectionHeading>
-                    <DeepevalItems items={entry.golden_metrics.deepeval} />
+                {entry.golden_judges.map((judgement) => (
+                  <div key={judgement.judge_model} className="grid gap-2">
+                    <SectionHeading>Sędzia {judgement.judge_model}</SectionHeading>
+                    <SummaryVerdicts judgement={judgement} keyfacts={entry.keyfacts} />
                   </div>
-                ) : null}
+                ))}
               </div>
             ) : (
               <p className="text-mute">
